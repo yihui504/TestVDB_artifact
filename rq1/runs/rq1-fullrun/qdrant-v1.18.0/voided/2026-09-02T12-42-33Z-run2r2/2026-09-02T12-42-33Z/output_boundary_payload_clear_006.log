@@ -1,0 +1,25 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+baseline: both payloads visible via scroll
+
+case points='all' (string, spec types array[PointId]) -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PointsSelector"},"time":0.0}
+OK: case points='all' (string, spec types array[PointId]) cleanly rejected with 400 naming the selector
+
+case points=123 (integer, spec types array[PointId]) -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PointsSelector"},"time":0.0}
+OK: case points=123 (integer, spec types array[PointId]) cleanly rejected with 400 naming the selector
+
+case points=[null] (null element, PointId=integer|string) -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PointsSelector"},"time":0.0}
+OK: case points=[null] (null element, PointId=integer|string) cleanly rejected with 400 naming the selector
+
+case filter='city=par' (string, spec types Filter object) -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PointsSelector"},"time":0.0}
+OK: case filter='city=par' (string, spec types Filter object) cleanly rejected with 400 naming the selector
+
+case filter=[] (array, spec types Filter object) -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PointsSelector"},"time":0.0}
+OK: case filter=[] (array, spec types Filter object) cleanly rejected with 400 naming the selector
+all five type-confused selectors rejected; payloads deep-equal baseline
+VERDICT: NO_DEFECT

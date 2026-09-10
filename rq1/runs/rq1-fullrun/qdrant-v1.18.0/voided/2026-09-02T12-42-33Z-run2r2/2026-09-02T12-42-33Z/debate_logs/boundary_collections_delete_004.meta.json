@@ -1,0 +1,15 @@
+{
+  "defect_id": "boundary_collections_delete_004",
+  "endpoint": "collections+delete",
+  "param": "collection_name",
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "special_value",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_delete_001"
+  ],
+  "oracle": {
+    "statement": "DELETE with hostile never-created names (%00 NUL, unicode, 1000-char, SQL/JSON metacharacters) -> 4xx only; 2xx = Type1_IllegalSuccess, 5xx/panic = Type3_RuntimeFailure",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

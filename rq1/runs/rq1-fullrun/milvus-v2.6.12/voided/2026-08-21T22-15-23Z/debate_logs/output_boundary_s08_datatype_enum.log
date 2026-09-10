@@ -1,0 +1,19 @@
+CASE valid dataType Int64               ok=True | {"code":0,"data":{}}
+CASE valid dataType VarChar             ok=True | {"code":0,"data":{}}
+CASE valid dataType Bool                ok=True | {"code":0,"data":{}}
+CASE valid dataType Int8                ok=True | {"code":0,"data":{}}
+CASE valid dataType Float16Vector       ok=True | {"code":0,"data":{}}
+CASE bogus FloatVectr                   ok=False | {"code":1100,"message":"invalid parameter, data type FloatVectr is invalid(case sensitive)."}
+CASE lowercase floatvector              ok=False | {"code":1100,"message":"invalid parameter, data type floatvector is invalid(case sensitive)."}
+CASE null dataType                      ok=False | {"code":1100,"message":"invalid parameter, data type  is invalid(case sensitive)."}
+CASE dataType 42                        ok=False | {"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number into Go struct field FieldSchema
+CASE BinaryVector dim=8                 ok=True | {"code":0,"data":{}}
+CASE BinaryVector dim=9 (not %8)        ok=False | {"code":65535,"message":"invalid dimension: 9 of field vector. binary vector dimension should be multiple of 8. "}
+CASE BinaryVector dim=16                ok=True | {"code":0,"data":{}}
+CASE BinaryVector dim=0                 ok=False | {"code":65535,"message":"invalid dimension: 0. should be in range 2 ~ 32768"}
+CASE Array w/o elementDataType          ok=False | {"code":1100,"message":"invalid parameter, element data type  is invalid(case sensitive)."}
+CASE Array with bogus elementDataType   ok=False | {"code":1100,"message":"invalid parameter, element data type BogusType is invalid(case sensitive)."}
+CASE Array with valid elementDataType   ok=True | {"code":0,"data":{}}
+CASE extra field missing fieldName      ok=False | {"code":1701,"message":"field name should not be empty: field name invalid[field=]"}
+CASE extra field missing dataType       ok=False | {"code":1100,"message":"invalid parameter, data type  is invalid(case sensitive)."}
+VERDICT_NO_DEFECT

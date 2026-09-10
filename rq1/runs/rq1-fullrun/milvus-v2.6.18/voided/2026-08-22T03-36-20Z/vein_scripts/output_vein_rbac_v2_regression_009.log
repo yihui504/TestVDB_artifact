@@ -1,0 +1,8 @@
+role create: 200 {"code":0,"data":{}}
+grant_privilege_v2 (correct shape): 200 {"code":65535,"message":"fail to get authorization from the md, authorization:[token]"}
+grant_privilege (v1 shape): 200 {"code":65535,"message":"fail to get authorization from the md, authorization:[token]"}
+describe: 200 {"code":0,"data":[]}
+drop: 200 {"code":0,"data":{}}
+roles list contains role after drop: False
+DEFECT: privilege grant/revoke unusable over REST (code 65535 credential propagation gap) while role lifecycle works in same deployment (Type4 state-consistency, source: proxy/impl.go:5622 + service.go:130 + handler_v2.go:516-527)
+VERDICT: DEFECT_FOUND

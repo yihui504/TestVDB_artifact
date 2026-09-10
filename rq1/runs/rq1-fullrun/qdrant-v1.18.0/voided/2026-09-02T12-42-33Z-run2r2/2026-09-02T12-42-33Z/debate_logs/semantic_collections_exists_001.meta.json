@@ -1,0 +1,15 @@
+{
+  "defect_id": "semantic_collections_exists_001",
+  "endpoint": "collections+exists",
+  "param": "collection_name",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_exists_001"
+  ],
+  "oracle": {
+    "statement": "leg A (self-created) returns 200 with result an object and result.exists boolean True; legs B/B2 (never-created, unique prefix, re-probed) return 200 with result.exists boolean False - a 404 or any non-200 on the never-created name = Type4_StateLogicViolation (never-404 clause); untruthful exists values, non-boolean exists or non-object result = Type4 (response-shape grid); leg C after a 200 delete flips to 200+False; 5xx with /healthz alive = Type3; create/delete setup failures = SCRIPT_ERROR",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

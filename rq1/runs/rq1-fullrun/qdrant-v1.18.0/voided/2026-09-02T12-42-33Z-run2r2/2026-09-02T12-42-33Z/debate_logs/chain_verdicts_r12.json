@@ -1,0 +1,138 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "r12",
+  "verdicts": [
+    {
+      "defect_id": "boundary_collections_delete_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true, constraint qdrant_behavioral_collections_delete_001) -> implied_verdict=DEFECT -> final=DEFECT (mechanical; doc-side 404-clause over-claim recorded as doubt for main-process manual review, not a verdict change)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED: qdrant_behavioral_collections_delete_001 quote verbatim (expected_behavior), violates=true; log '[delete never-created bcd2695fb2never404] status=200 raw={result:false,status:ok}' contradicts the assertion's 404 branch, and source traces toc/collection_meta_ops.rs:211-296 Ok(false) -> helpers.rs:52 unconditional 200 with the NotFound->404 mapping (helpers.rs:246) never reached on delete. B=NEUTRAL: well-formed name, no numeric/enum/mutex/type class; non-existence is resource-state not parameter-validation and the live doc claims no error form, so the HTTP-semantics tautology's two prongs fail; the 422-vs-200 split is structural-validation vs existence, not a same-family inconsistency. Doc-side doubt recorded: the live v1.18.x page documents only 200 (404 clause is a J1 extraction over-claim, source_verified=false) and the RFC 9110 DELETE-idempotency defense survives unannotated — source doubt exists, flagged for main-process manual review; verdict stands DEFECT per the mechanized aggregation rule.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_collections_delete_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true, constraint qdrant_behavioral_collections_delete_001) -> implied_verdict=DEFECT -> final=DEFECT (mechanical; chain_broken_at=doc transcribed, doubt routed to manual review)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": null,
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED: same constraint, quote verbatim, violates=true; primary log '[delete #2 replay bcd33db352dbl] status=200 raw={result:false}' on a name the server itself confirms gone (delete#1 returned result:true), while the GET face of the identical state returns 404 with a named diagnostic. chain_broken_at=doc transcribed per completeness rule: the endpoint_registry doc_quote's 404 half is not verbatim on the cited v1.18.x page (content_consistency FAIL) — a contract-layer grounding gap, not an evidence contradiction, and the same RFC 9110 idempotency defense survives unannotated in source (validation_absent). B=NEUTRAL (no objective class; non-existence is state-conditioned, no doc error-form claim); verdict DEFECT per the mechanized aggregation rule, doc-side over-claim doubt flagged for main-process manual review.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_collections_delete_004",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true, constraint qdrant_behavioral_collections_delete_001) -> implied_verdict=DEFECT -> final=DEFECT (mechanical; DOC_MISMATCH on the violated half transcribed as doubt for manual review)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": null,
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED: same constraint, quote verbatim, violates=true; primary log '[unicode-cjk-emoji] status=200 raw={result:false}' for a charset-legal never-created name, with the same script showing the route's validation layer works (nul-percent00/overlong-1000 -> 422 via validation.rs INVALID_CHARS + length 1-255) yet no existence check (CollectionPath validates format only). B=NEUTRAL: the 422-vs-200 disposition split is structural-validation vs existence — different violation classes, so the same-family inconsistency rule does not fire, and no other objective class fits a free-form string parameter. chain_broken_at=doc transcribed (doc aggregate DOC_MISMATCH: the 404 clause appears nowhere in page/OpenAPI shard/repo OpenAPI/concept doc — J1 over-claim, raw_knowledge even carries a '(runtime verified 200 on real delete)' annotation); verdict DEFECT per the mechanized aggregation rule with the over-claim doubt flagged for main-process manual review.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_collections_delete_005",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true, constraint qdrant_bc_delete_invisibility_001) -> implied_verdict=DEFECT -> final=DEFECT (mechanical)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED: qdrant_bc_delete_invisibility_001 description quoted verbatim from behavioral_contracts[1], violates=true; log lines 10-12 show DELETE by alias -> 200 {result:false}, then GET real -> 200 and the alias mapping unchanged, violating 'a successfully deleted collection disappears ... direct access returns 404' under the concept doc's verbatim premise 'All queries to the collection can also be done identically, using an alias instead of the collection name.' Source: the delete path never calls resolve_name (applied on the read face only, toc/mod.rs:407-420) and alias_persistence.remove_collection treats the supplied alias as a target, removing nothing — no comment, docstring, or test marks this asymmetry intentional, so C=CONFIRMED and the run2r defect-17 family reading holds. B=NEUTRAL (alias-resolution semantics fit no objective class); D=NO_SIGNAL (no alias-write-resolution anchor in cognition); residual doubt — the api-reference path-param text scopes to 'Name of the collection to delete' — recorded for main-process manual review, verdict DEFECT per the mechanized aggregation rule.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_collections_delete_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true, constraint qdrant_behavioral_collections_delete_001) -> implied_verdict=DEFECT -> final=DEFECT (mechanical; chain_broken_at=doc transcribed, doubt routed to manual review)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": null,
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED: same constraint, quote verbatim, violates=true; legs A ('[A delete-never-created] status=200 raw={result:false}') and D ('[D double-delete] status=200 raw={result:false}') both violate the 404 branch while positive control C (delete-existing -> 200 result:true) confirms the endpoint discriminates only via the body boolean. Source grounds it mechanically: collections map miss -> Ok(false) (collection_meta_ops.rs:272-284) with validate_collection_exists (collections_ops.rs:25) invoked by resolve_name/update_aliases but never on the delete path. chain_broken_at=doc transcribed (page documents only 200 + result:boolean; the 404 promise is contract-build inference, source_verified=false); the OpenAPI boolean schema and RFC 9110 idempotency leave a surviving unannotated by-design consideration — source doubt exists, flagged for main-process manual review; verdict DEFECT per the mechanized aggregation rule.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_collections_delete_005",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true, constraint qdrant_behavioral_collections_delete_001, non-existent branch) -> implied_verdict=DEFECT -> final=DEFECT (mechanical; chain_broken_at=contract transcribed — no alias-delete constraint exists, 404-branch reading is the covered one)"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": null,
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED: qdrant_behavioral_collections_delete_001, description quoted verbatim, violates=true on the non-existent branch (an alias names no collection, and the observed disposition is 200 not 404); primary log L2 '[delete-by-alias scdl5_...ala2] status=200 raw={result:false}' with verify legs showing the underlying collection survives (GET 200, list present=True) against the L1 control where delete-by-name yields result:true and a post-delete 404. chain_broken_at=contract transcribed: dispatch constraint_id was empty and no alias-interplay-with-delete constraint exists anywhere in the contract (checked assertions/behavioral_contracts/state_invariants), so the script's Type4 half-delete framing partially exceeds what any unit asserts — the covered 404-branch reading is violated by the same raw observation, so the chain is consistent through it and correspondence holds (claimed phenomenon = examined phenomenon). B=NEUTRAL, C=CONFIRMED (silent no-op through the alias seam with resolve_name absent from the delete path and no intent marker); verdict DEFECT per the mechanized aggregation rule.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "defect": 6,
+    "not_defect": 0,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {},
+    "constraint_category_distribution": {"state": 6},
+    "candidate_class_distribution": {"strict_defect": 6, "exploratory_candidate": 0, "rejected": 0}
+  }
+}

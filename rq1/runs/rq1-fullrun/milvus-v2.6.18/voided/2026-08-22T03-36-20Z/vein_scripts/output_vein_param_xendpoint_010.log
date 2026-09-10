@@ -1,0 +1,9 @@
+v2 create autoID=true: 200 {"code":0,"data":{}}
+v2 upsert user-pk on autoID: 200 {"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[468547910209326036]}}
+v1 upsert user-pk on autoID: 200 {"code":1100,"message":"cannot upsert an autoID collection: invalid parameter[expected=autoID: false][actual=autoID: true]"}
+query-visible rows after v2+v1 upsert: 1 {"code":0,"cost":0,"data":[{"id":468547910209326036}]}
+
+row ids: [468547910209326036]
+user pk 100 present: False
+DEFECT: cross-endpoint autoID upsert divergence — /v2/vectordb/entities/upsert accepts user-pk upsert on autoID collection (pk silently replaced by server id, user id=100 discarded) while /v1/vector/upsert rejects the identical payload with 1100 'cannot upsert an autoID collection' (Type2 semantic + Type4 state: user pk 100 not addressable). v1 handler path: handler_v1.go upsert -> v2 path: handler_v2.go upsert skips autoID guard
+VERDICT: DEFECT_FOUND

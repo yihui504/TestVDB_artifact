@@ -1,0 +1,82 @@
+{
+  "defect_id": "boundary_collections_create_01",
+  "endpoint": "PUT /collections/{collection_name} (contract path: collections+create)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "WebFetch api.qdrant.tech 被网络策略拦截 -> domain_blocked（不视为 FAIL）。本地缓存 raw_knowledge.md（契约上游，版本 1.18.x 匹配）与 structured_contract.json endpoint_registry 一致证实：CreateCollection Body 中 vectors 为 required 字段（'vectors (required): VectorsConfig — one of VectorParams{size*, distance*} (unnamed/default vector) or named map of VectorParams'），size/distance 均标 * 必填。endpoint_registry 查表命中 collections+create（schema 类，PUT，source_status reachable）。版本 1.18.x == 1.18.0 宽松匹配 PASS。内容一致性 PASS：文档层面 vectors 缺失/空对象均违反 required+VectorsConfig 最小形态。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "CASE vectors={} empty: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.223438327} -> VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)",
+      "secondary_observations": [
+        "CASE vectors missing entirely: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.221132689} -> VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — required 字段整体缺失同样被接受",
+        "CASE vectors=null: status=400 body={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 17\"}} — null 显式拒绝（对照组）",
+        "Type2 次发现 x9：distance=Bogus/euclid lowercase/null/123、size=0/-1/1.5/'4'/null 均 400 拒绝但错误信息只报 'data did not match any variant of untagged enum VectorsConfig'，不点名 distance/size 字段（NOTE Type2 行）",
+        "同族脚本 04：CASE vectors map with '' empty name: status=200（空向量名 map 也被接受）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务成功码",
+        "note": "claim 主张即缺省 required 字段以 200 {\"result\":true} 返回成功；此为 Type1 主观测本身，非附带语义问题。"
+      },
+      "reproducibility": "单脚本",
+      "reproducibility_note": "同一脚本内两个独立构造（vectors={} 与 vectors 缺失）均稳定命中 200；Grep 其他 output_boundary_collections_create_0*.log：03/04 为同端点不同参数族缺陷（datatype/sparse/空向量名），未覆盖 missing-vectors 这一确切模式，按单脚本 Type1 记 grade B。",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_create_01"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "endpoint_registry:collections+create#vectors(required=true)",
+      "assertion_text_quoted": "vectors (required): VectorsConfig — one of: VectorParams{size*, distance*} (unnamed/default vector) or named map of VectorParams (raw_knowledge.md L60; structured_contract.json api_endpoints[collections+create].parameters.vectors required=true)",
+      "api_violates_assertion": true,
+      "note": "候选机械关联 constraint_id=qdrant_type_collections_create_001（distance enum），但其约束域不含 vectors 缺失/空对象现象，按 violates 自检条款换约束引用至 endpoint_registry 的 vectors required 声明（契约与 raw_knowledge 同源）。violates=True 理由：契约声明 vectors 为 required 且最小合法形态为 VectorParams{size*,distance*} 或其 named map；观测中 {} 与整体缺失均返回 200 成功，直接违反 required 约束。观测参数在引用断言约束域内。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: structured_contract.json api_endpoints[collections+create].parameters.vectors required=true（原派发 constraint qdrant_type_collections_create_001 域不覆盖主观测，已换引）",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection（1.18.x）—— WebFetch domain_blocked，以本地 raw_knowledge.md L60-61 同源缓存佐证 vectors (required)",
+        "script: debate_logs/boundary_collections_create_01.py —— 12 cases type_confusion；case 'vectors={} empty' 与 'vectors missing entirely' PUT /collections/{bnd_crt_tc_*}",
+        "log: output_boundary_collections_create_01.log L22-24 —— 两 CASE status=200 {\"result\":true} -> VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) x2"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "note": "四环齐全一致：契约 required → 文档 required（缓存同源）→ 脚本构造缺失/空 → log 200 成功。源码环（step2）给出机制解释，链无断点。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["enum VectorsConfig", "struct CreateCollection", "impl Validate for VectorsConfig", "vectors_num()", "fn create_collection", "at least one vector / no vectors（英文短语搜校验缺失）"],
+      "files_examined": [
+        "lib/collection/src/operations/types.rs (L1455-1530, L1596-1602)",
+        "lib/storage/src/content_manager/collection_meta_ops.rs (L105-175)",
+        "lib/storage/src/content_manager/toc/create_collection.rs (L20-140)",
+        "lib/collection/src/config.rs (L85-180)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/collection_meta_ops.rs L111-115:\n    pub struct CreateCollection {\n        ...\n        #[serde(default)]\n        #[validate(nested)]\n        pub vectors: VectorsConfig,\n\nlib/collection/src/operations/types.rs L1470-1483:\n    pub enum VectorsConfig {\n        Single(VectorParams),\n        Multi(BTreeMap<VectorNameBuf, VectorParams>),\n    }\n    impl Default for VectorsConfig {\n        fn default() -> Self { VectorsConfig::Multi(Default::default()) }  // 即空 BTreeMap\n    }\n\nlib/collection/src/operations/types.rs L1596-1602:\n    impl Validate for VectorsConfig {\n        fn validate(&self) -> Result<(), ValidationErrors> {\n            match self {\n                VectorsConfig::Single(single) => single.validate(),\n                VectorsConfig::Multi(multi) => common::validation::validate_iter(multi.values()),  // 空 map -> 空迭代 -> 恒 Ok\n            }\n        }\n    }",
+      "call_chain_traced": "actix JSON body -> serde Deserialize CreateCollection：vectors 带 #[serde(default)]，字段缺失时静默取 Default = VectorsConfig::Multi(BTreeMap::new())；vectors={} 经 untagged enum 匹配 Multi 分支同为空 map。校验链仅有 #[validate(nested)] -> Validate for VectorsConfig -> Multi 分支 validate_iter(空 map) 空迭代恒通过；toc/create_collection.rs 中后续仅对 shard_number/replication_factor 做 NonZeroU32 校验，无任何 vectors_num()==0 / 至少一个向量的检查；创建路径直接进入落盘注册。",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "vectors_num()==0 与 'at least one vector' 短语在创建校验路径零命中（唯一命中为测试 fixture）。潜在 by-design 抗辩信号如实记录：字段级 #[serde(default)] + Default=空 Multi 是显式写法，且 CreateCollection 支持 sparse_vectors-only 集合场景可能是有意放开（log 03 显示 sparse-only 创建成功）——但文档/契约从未将 vectors 标为 optional，doc-code 分歧成立。该抗辩交由 chain-auditor 终判。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "environment（exit_code=0，无 REQUEST_ERROR/SCRIPT_ERROR，其余 10 个非法值 case 均正常 400）",
+        "request typo（两 case 独立构造：显式空对象与整体缺失，均 200）",
+        "cache/delay（创建类 PUT 即时返回，无读旧态问题）",
+        "concurrency race（单线程顺序请求）"
+      ],
+      "surviving": "sparse-only collection 语义放宽（源码 #[serde(default)] 显式允许 vectors 缺省，若官方意图是'有 sparse_vectors 时 vectors 可空'则属 doc 落后于 code 而非运行时缺陷）——留 auditor 终判",
+      "note": "主观测（{} 且无 sparse_vectors 的裸创建）在此抗辩下仍无豁免依据：脚本 01 请求体不含 sparse_vectors，创建出的是零向量零索引的空壳 collection。"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+CASE hnsw.m=-1: status=400 body={"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 70"},"time":0.0}
+CASE hnsw.m=0 (spec min, allowed): status=200 body={"result":true,"status":"ok","time":0.235131083}
+  DESCRIBE: {"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":0,"ef_construct":100,"full_scan_threshold":10000,"max_indexing_threads":0,"on_disk":false},"optimizer_config":{"d
+CASE hnsw.m=-100: status=400 body={"status":{"error":"Format error in JSON body: invalid value: integer `-100`, expected usize at line 1 column 72"},"time":0.0}
+CASE hnsw.m='16' string: status=400 body={"status":{"error":"Format error in JSON body: invalid type: string \"16\", expected usize at line 1 column 72"},"time":0.0}
+CASE hnsw.ef_construct=3: status=422 body={"status":{"error":"Validation error in JSON body: [hnsw_config.ef_construct: value 3 invalid, must be 4 or larger]"},"time":0.0}
+CASE hnsw.ef_construct=4 (min, allowed): status=200 body={"result":true,"status":"ok","time":0.223712608}
+  DESCRIBE: {"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_construct":4,"full_scan_threshold":10000,"max_indexing_threads":0,"on_disk":false},"optimizer_config":{"de
+CASE hnsw.ef_construct=0: status=422 body={"status":{"error":"Validation error in JSON body: [hnsw_config.ef_construct: value 0 invalid, must be 4 or larger]"},"time":0.0}
+CASE hnsw.ef_construct=-1: status=400 body={"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 81"},"time":0.0}
+NOTE Type2 — hnsw.ef_construct=-1 rejected but error lacks 'ef_construct': {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 81"},"time":0.0}
+CASE hnsw.full_scan_threshold=-1: status=400 body={"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 88"},"time":0.0}
+NOTE Type2 — hnsw.full_scan_threshold=-1 rejected but error lacks 'full_scan': {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 88"},"time":0.0}
+CASE hnsw.full_scan_threshold=0 (min, allowed): status=422 body={"status":{"error":"Validation error in JSON body: [hnsw_config.full_scan_threshold: value 0 invalid, must be 10 or larger]"},"time":0.0}
+NOTE — hnsw.full_scan_threshold=0 (min, allowed) spec-min rejected with 422 (possible over-strict validation)
+CASE hnsw.full_scan_threshold=-10: status=400 body={"status":{"error":"Format error in JSON body: invalid value: integer `-10`, expected usize at line 1 column 89"},"time":0.0}
+NOTE Type2 — hnsw.full_scan_threshold=-10 rejected but error lacks 'full_scan': {"status":{"error":"Format error in JSON body: invalid value: integer `-10`, expected usize at line 1 column 89"},"time":0.0}
+VERDICT: NO_DEFECT

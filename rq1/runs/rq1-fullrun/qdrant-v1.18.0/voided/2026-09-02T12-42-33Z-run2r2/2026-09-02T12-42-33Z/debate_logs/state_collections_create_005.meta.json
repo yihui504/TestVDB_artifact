@@ -1,0 +1,12 @@
+{
+ "defect_id": "state_collections_create_005",
+ "endpoint": "collections+create",
+ "param": "sharding_method",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "oracle": {
+  "statement": "custom+shard_number=3 create -> 200 and readback params.sharding_method==custom and params.shard_number==3; hash_slot -> 400/422 and describe 404 with name absent from list (2xx = Type1; mismatch/residue = Type4)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

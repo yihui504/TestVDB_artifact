@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_facet_001",
+ "endpoint": "facet",
+ "param": "key (per-key payload-index gating across the index lifecycle)",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "index_state",
+ "constraint_ids": [
+  "qdrant_state_facet_001"
+ ],
+ "source_url": "https://qdrant.tech/documentation/manage-data/payload/",
+ "doc_version": "current (site latest; no version archive)",
+ "oracle": {
+  "statement": "facet on an UNINDEXED keyword key returns 400 at every lifecycle point (before any index, and again after its index is deleted); facet on an indexed keyword key returns 200 with hits; any 200-on-unindexed-key = Type1_IllegalSuccess, any 400-on-indexed-key = Type1_IllegalSuccess (rejection of legal input), 5xx with /healthz alive = Type3_RuntimeFailure",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

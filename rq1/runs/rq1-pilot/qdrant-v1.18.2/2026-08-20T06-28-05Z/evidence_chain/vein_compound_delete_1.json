@@ -1,0 +1,77 @@
+{
+  "defect_id": "vein_compound_delete_1",
+  "endpoint": "POST /collections/{collection_name}/points",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "DELETE endpoint documented at https://api.qdrant.tech/api-reference/points/delete-points with two selection modes: 'points' (array of IDs) or 'filter' (Filter object). Docs state 'Must specify either points or filter parameter' but don't clarify exclusivity of compound filter with ids field. Contract qdrant_type_delete_points_001 asserts '(points IS NOT NULL AND len(points) > 0) OR (filter IS NOT NULL)'.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[Compound AND] price 200-400 AND category B: HTTP Status: 400, Deleted: 0 points → [Compound OR] price=100 OR category A: HTTP Status: 400, Deleted: 50 points → response_excerpt: {'error': 'HTTP Error 400: Bad Request', 'body': '{\"status\":{\"error\":\"Format error in JSON body: missing field `ids` at line 1 column 121\"},\"time\":0.0}'}",
+      "secondary_observations": [
+        "Size 50: AND 400/0 del, OR 400/50 del",
+        "Size 200: AND 400/0 del, OR 400/50 del",
+        "Size 500: AND 400/0 del, OR 400/50 del"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx",
+        "note": "Correctly returns HTTP 400 but error message 'missing field `ids`' is misleading when filter was provided. Response format: {\"status\":{\"error\":\"Format error in JSON body: missing field `ids` at line 1 column 121\"},\"time\":0.0}"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_compound_delete_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_delete_points_001",
+      "assertion_text_quoted": "(points IS NOT NULL AND len(points) > 0) OR (filter IS NOT NULL)",
+      "api_violates_assertion": false,
+      "note": "Request provides valid filter (not null, not empty), so constraint satisfied. Defect is error message misattribution, not constraint violation. API correctly rejects malformed request but diagnosis points to wrong field.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_type_delete_points_001 (requires points XOR filter)",
+        "doc:https://api.qdrant.tech/api-reference/points/delete-points (documents two selection modes)",
+        "script:vein_compound_delete_1.py (POST /collections/{collection}/points with body={filter: {must: [...]}})",
+        "log:HTTP 400 with 'missing field `ids`' despite filter being present"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Error message claims 'missing field ids' but request body actually contains filter. Either: (a) REST schema requires wrapper object with 'filter' key but script sent filter directly, or (b) deserialization expects 'ids' field as default name for point_ids array. Error diagnostic is factually incorrect.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "struct PointsSelector",
+        "PointIdsSelector",
+        "FilterSelector",
+        "missing field.*ids",
+        "points.*delete"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/point_ops.rs",
+        "lib/api/src/rest/conversions.rs",
+        "src/actix/api/update_api.rs",
+        "lib/segment/src/types.rs"
+      ],
+      "source_excerpt": "PointsSelector enum at lib/collection/src/operations/point_ops.rs:21-26 has two variants: PointIdsSelector(PointIdsList) and FilterSelector(Filter). REST API schema defines PointsSelector as request body for DELETE /collections/{name}/points. Error 'missing field `ids`' comes from serde deserialization failing to match either variant due to body structure mismatch. The 'ids' field name refers to internal PointIdsList field, not user-provided filter.",
+      "call_chain_traced": "REST POST /collections/{name}/points → actix update_api.rs:delete_points(Json<PointsSelector>) → serde deserializes request body into PointsSelector enum → fails to match PointIdsSelector (missing 'ids' field) or FilterSelector (expects 'filter' wrapper key) → returns 400 with serde's raw error message.",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "race"],
+      "surviving": "Type2_PoorDiagnostics confirmed across 3 collection sizes (50, 200, 500) with 2 compound filter types (AND, OR). All 6 test cases return HTTP 400 (correct) but with misleading error message 'missing field `ids`' when filter was actually provided. Error quality systematically poor: misattributes root cause, points to wrong field."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_list_003",
+ "endpoint": "aliases+list",
+ "param": "collection_name",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "special_value",
+ "oracle": {
+  "statement": "for every malformed probe GET /aliases answers 200 with the documented envelope intact (result.aliases array present, prefix-owned alias still listed) or a 4xx with non-empty diagnostics — never 5xx/panic (5xx = Type3_RuntimeFailure); a 200 whose envelope lost result.aliases = Type4_StateLogicViolation; after all probes one clean GET /aliases must still return 200 with the alias listed, and a transport failure only counts as Type3 if the /healthz liveness re-check also fails (constraint qdrant_behavioral_aliases_list_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

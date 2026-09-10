@@ -1,0 +1,73 @@
+{
+  "defect_id": "vein_shardstatus_phantom_03",
+  "endpoint": "PUT /v1/schema/{className}/shards/{shardName}",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint_id vein_phantom_resource_silent_ok 为 vein 探索性约束（契约无内置条目）；endpoint_registry 含 PUT /schema/{className}/shards/{shardName}；行为断言（不存在资源应报错而非 200）与 REST 语义一致",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "phantom shard update: 200 {\"status\":\"READONLY\"}",
+      "secondary_observations": [
+        "real shard status after phantom update: READY",
+        "control invalid status: 500 {\"error\":[{\"message\":\"updating db: TYPE_UPDATE_SHARD_STATUS: NOTASTATUS: invalid storage status\"}]}",
+        "control nonexistent class: 500 {\"error\":[{\"message\":\"updating db: TYPE_UPDATE_SHARD_STATUS: cannot update shard status to a non-exi..."
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "不存在的 shard 名（caller 路径参数错误）→ 200 + 回显请求体；类不存在和非法 status 值均报错 —— 三种输入错误仅 shard 存在性被静默吞掉"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_shardstatus_phantom_03.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_phantom_resource_silent_ok",
+      "assertion_text_quoted": "对不存在资源（shard）的写操作应返回 4xx 错误，不得返回 200 成功",
+      "api_violates_assertion": true,
+      "note": "200 回显 + 实际状态未变（真实 shard 仍 READY）= 静默 no-op 成功，violates=True",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:vein_phantom_resource_silent_ok（推断性）",
+        "doc:REST PUT 语义：更新不存在资源应报错",
+        "script:vein_shardstatus_phantom_03.py 幻影 shard PUT + 真实 shard 状态核验 + 两个对照",
+        "log:phantom 200 回显 / 真实 shard 状态未变 READY / 类不存在与非法 status 均报错"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["IsLocalShard", "func (i *Index) updateShardStatus", "cannot update shard status to a non-existing index", "NewSchemaObjectsShardsUpdateOK"],
+      "files_examined": [
+        "adapters/repos/db/index.go (L3539-3559)",
+        "adapters/repos/db/migrator.go (L584-595)",
+        "adapters/handlers/rest/handlers_schema.go (L431-454)"
+      ],
+      "source_excerpt": "adapters/repos/db/index.go L3539-3551:\nfunc (i *Index) updateShardStatus(ctx context.Context, shardName, targetStatus string) error {\n\tisOwner := false\n\tif err := i.schemaReader.Read(i.Config.ClassName.String(), true, func(_ *models.Class, state *sharding.State) error {\n\t\tif state != nil {\n\t\t\tisOwner = state.IsLocalShard(shardName)\n\t\t}\n\t\treturn nil\n\t}); err != nil { return err }\n\tif !isOwner {\n\t\treturn nil   // ← 幻影 shard：非本节点 shard 直接返回 nil（成功）\n\t}\n... }\nadapters/handlers/rest/handlers_schema.go L435-453: err==nil 即 NewSchemaObjectsShardsUpdateOK().WithPayload(params.Body)（回显请求体）。",
+      "call_chain_traced": "handler → manager.UpdateShardStatus → migrator.UpdateShardStatus（类存在校验 L591-593）→ idx.updateShardStatus → IsLocalShard(shardName)==false → return nil → handler 视为成功回显 params.Body。类存在与 status 值均有校验，唯独 shard 存在性在 !isOwner 分支被静默吞掉。单节点部署下 IsLocalShard 对任意幻影名恒 false → 恒 200 no-op",
+      "verification_outcome": "validation_absent",
+      "note": "源码级确证：!isOwner return nil 是显式代码路径（可能为多节点委托语义而设计），但该 API 是运维入口且本地节点持有该类时对拼错 shard 名无任何错误信号，回显体造成虚假成功",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "多节点部署下 !isOwner-静默 可能是 cluster 委托设计意图（by-design 抗辩线索，但单节点 + 运维入口语义下仍无错误反馈）"
+    }
+  }
+}

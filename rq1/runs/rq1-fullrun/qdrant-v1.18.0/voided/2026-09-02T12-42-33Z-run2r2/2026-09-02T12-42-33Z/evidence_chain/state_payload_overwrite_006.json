@@ -1,0 +1,79 @@
+{
+  "defect_id": "state_payload_overwrite_006",
+  "endpoint": "payload+overwrite (PUT /collections/{collection_name}/points/payload); co-exercised: payload+set (POST same URL), points+get (POST /collections/{collection_name}/points)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: no doc_preflight.json sidecar exists in the contract dir; live verification succeeded — WebFetch was blocked for qdrant.tech in this environment but full page content of both https://qdrant.tech/documentation/manage-data/points/ and https://qdrant.tech/documentation/manage-data/payload/ was retrieved via the alternate web reader (content quoted below, so not domain_blocked). version: concept docs carry no version routing (Hugo site-current; script header itself notes 'BC source is site-current (no version archive)'); the endpoint_registry uses api.qdrant.tech/v-1-18-x which matches v1.18.0 -> PARTIAL per no_version_in_url rule. content: the documentation states verbatim 'The set payload method updates specific fields while keeping others unchanged, while the overwrite method replaces the entire payload', 'Set payload — Set only the given payload values on a point', 'Overwrite payload — Fully replace any existing payload with the given one' (manage-data/payload/; the cited points page defers: 'Learn how to modify the payload of a point in the Payload section') — the contract's replace-not-merge claim is the documentation's own words for the PUT overwrite face, and the documentation does NOT attribute replace semantics to the POST set face. endpoint precision: payload+set/payload+overwrite/points+get all present in endpoint_registry; the overwrite doc_quote pins 'Replaces the entire payload of targeted points (set semantics: keys missing from the new payload are removed)' while the set doc_quote carries no replace claim. Overall DOC_PARTIAL only because version layer is PARTIAL; the content itself is verified.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "DEFECT: (B readback) point 1 payload {'orig': True, 'a': 1, 'b': 'two'} != expected EXACT {'a': 1, 'b': 'two'} — qdrant_bc_payload_overwrite_replace_001 pins replace-not-merge — Type4_StateLogicViolation",
+      "secondary_observations": [
+        "rest POST payload+set [B set {a,b} POST {'a': 1, 'b': 'two'}] status=200 raw={\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.002893171}; readback [B readback points+get] status=200 raw={\"result\":[{\"id\":1,\"payload\":{\"orig\":true,\"a\":1,\"b\":\"two\"},...}]} — pre-existing key 'orig' from step A KEPT (merge disposition on the set face)",
+        "rest PUT payload+overwrite [C overwrite {c} PUT {'c': 'three'}] status=200 raw={\"result\":{\"operation_id\":3,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.004138654}",
+        "rest PUT payload+overwrite readback [D readback] OK: point 1 payload exactly {'c': 'three'} / [D readback] OK: point 2 payload exactly {'c': 'three'} — the contract's actual pinned assertion (exact {c}, previously stored keys removed) PASSED in the same log",
+        "rest POST payload+set (comparative, same collection/points after overwrite) [E set {a} merge POST {'a': 1}] status=200; [E readback] OK: point 1 payload exactly {'a': 1, 'c': 'three'} — POST merged into {'c':'three'} exactly as the script's own E-step design predicted, internally contradicting the B-step EXACT expectation",
+        "reproducibility: the 'pins replace-not-merge' DEFECT line appears in exactly one log (this one); sibling scripts state_payload_overwrite_001-005 exercising the same endpoints all returned VERDICT: NO_DEFECT"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "no request-side-decidable error involved — every request (upsert/set/overwrite/get/count) was a valid, well-formed call returning a legitimate 200; the dispute is post-200 state semantics of a valid set operation, not error-status mapping"
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["state_payload_overwrite_006"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_bc_payload_overwrite_replace_001",
+      "assertion_text_quoted": "payload overwrite replaces the whole payload of the targeted points instead of merging",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "constraint_id recovered from the script header (debate_logs/state_payload_overwrite_006.py line 6) and the log DEFECT line — the candidates.jsonl constraint_id field was empty. assertion_text_quoted is the verbatim description field of the contract (structured_contract.json behavioral_contracts[].contract_id == qdrant_bc_payload_overwrite_replace_001); the contract's full entry additionally pins scenario 'set payload keys {a,b} -> PUT payload+overwrite with {c} (wait=true) -> GET the points with payload' and expected_behavior 'after overwrite the record payload equals exactly {c}; the previously stored keys {a,b} are removed (set semantics, not merge)'. Violates-declaration self-check: the DEFECT observation (B-step POST payload+set merged with the pre-existing 'orig' key) lies OUTSIDE the quoted assertion's constraint domain — the quote pins replace semantics only for the PUT payload+overwrite face and only AFTER the overwrite step; it asserts nothing about the post-set readback. The tested phenomenon is thus under the wrong constraint citation: the script's B-step EXACT-after-set expectation is grounded neither in this contract nor in the documentation. The contract's own pinned assertion was actually satisfied by the API (D readback exactly {'c': 'three'} on both points, a/b/orig removed), so api_violates_assertion=false is the genuinely-compliant branch, not vague acceptance."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_bc_payload_overwrite_replace_001 present in structured_contract.json behavioral_contracts; pins replace-not-merge for PUT payload+overwrite within the set{a,b} -> PUT overwrite{c} -> points+get scenario; related_endpoints [payload+overwrite, payload+set, points+get]",
+        "doc: cited points page defers payload semantics to the payload page, which states verbatim that set 'updates specific fields while keeping others unchanged' while overwrite 'replaces the entire payload' / 'Fully replace any existing payload with the given one' — consistent with the contract's replace claim on the PUT face; the docs attribute merge semantics to the POST set face",
+        "script: state_payload_overwrite_006.py replays the contract scenario but adds an EXTRA B-step oracle — points+get readback must be EXACTLY {'a':1,'b':'two'} after POST payload+set, erasing the step-A {'orig':true} baseline — an expectation not present in the contract text, contradicted by the documented set semantics, and internally contradicted by the script's own E step (which expects POST set to merge, and which passed)",
+        "log: DEFECT lines derive solely from the B-step extra oracle (2 lines, points 1 and 2); the contract's actual pinned assertion (D readback exactly {'c':'three'} with a/b absent) PASSED in the same log; the DEFECT_FOUND verdict is produced by the script's precondition oracle, not by the pinned contract"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "Script oracle overreach (milvus_030-pattern: chain internally consistent but the defecting assertion is not the contract's assertion). The B-step 'EXACT after set' expectation is the script author's own construction: the contract's expected_behavior pins exact-equality only after the PUT overwrite, and both the official documentation ('set payload ... keeping others unchanged') and the source (PayloadStorage::set -> point_payload.merge) define POST set as key-merge. The script even planted a pre-existing {'orig':true} payload in step A and then required set to erase it — which the script's own E-step (merge expected, observed, and marked OK) contradicts. Verdict DEFECT_FOUND is a testing artifact at the script link; contract, doc, and the API's actual behavior are mutually consistent.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["overwrite_payload", "assign_payload", "SetPayloadOp", "PayloadOps::SetPayload", "set_full_payload", "PayloadOperation("],
+      "files_examined": [
+        "src/actix/api/update_api.rs",
+        "src/common/update.rs",
+        "lib/shard/src/operations/payload_ops.rs",
+        "lib/shard/src/update.rs",
+        "lib/segment/src/segment/entry.rs",
+        "lib/segment/src/index/struct_payload_index.rs",
+        "lib/segment/src/payload_storage/in_memory_payload_storage_impl.rs",
+        "lib/collection/src/shards/conversions.rs"
+      ],
+      "source_excerpt": "// lib/shard/src/operations/payload_ops.rs:16-27 — explicit design-intent doc comments on the two op variants\npub enum PayloadOps {\n    /// Set payload value, overrides if it is already exists\n    SetPayload(SetPayloadOp),\n    /// Deletes specified payload values if they are assigned\n    DeletePayload(DeletePayloadOp),\n    /// Drops all Payload values associated with given points.\n    ClearPayload { points: Vec<PointIdType> },\n    /// Clear all Payload values by given filter criteria.\n    ClearPayloadByFilter(Filter),\n    /// Overwrite full payload with given keys\n    OverwritePayload(SetPayloadOp),\n}\n\n// src/actix/api/update_api.rs:194-195, 227-228 — same URL, two verbs, two handlers\n#[post(\"/collections/{collection_name}/points/payload\")]\nasync fn set_payload(...) { ... let res = do_set_payload(...) ... }\n#[put(\"/collections/{collection_name}/points/payload\")]\nasync fn overwrite_payload(...) { ... let res = do_overwrite_payload(...) ... }\n\n// src/common/update.rs:600-601, 647-648 — verb -> op mapping\nlet operation = CollectionUpdateOperations::PayloadOperation(PayloadOps::SetPayload(SetPayloadOp { ... }));   // do_set_payload\nlet operation = CollectionUpdateOperations::PayloadOperation(PayloadOps::OverwritePayload(SetPayloadOp { ... })); // do_overwrite_payload\n\n// lib/shard/src/update.rs:105-118, 137-149 — dispatch\nPayloadOps::SetPayload(sp) => { ... set_payload(segments, op_num, &payload, &points, &sp.key, hw_counter) ... }\nPayloadOps::OverwritePayload(sp) => { ... overwrite_payload(segments, op_num, &payload, &points, hw_counter) ... }\n\n// lib/segment/src/segment/entry.rs:737-748, 751-775 — segment entry: two distinct primitives\nfn set_full_payload(...) { ... segment.payload_index.borrow_mut().overwrite_payload(internal_id, full_payload, hw_counter)?; ... }\nfn set_payload(...) { ... segment.payload_index.borrow_mut().set_payload(internal_id, payload, key, hw_counter)?; ... }\n\n// lib/segment/src/index/struct_payload_index.rs:909-948 — index layer\nfn overwrite_payload(...) { self.payload.borrow_mut().overwrite(point_id, payload, hw_counter)?; ... }   // full replace\nfn set_payload(...) { if let Some(key) = key { self.payload.borrow_mut().set_by_key(...) } else { self.payload.borrow_mut().set(...) }; ... }\n\n// lib/segment/src/payload_storage/in_memory_payload_storage_impl.rs:67-90 — storage layer: THE semantic fork\nfn overwrite(&mut self, point_id, payload, _hw_counter) -> OperationResult<()> {\n    self.payload.insert(point_id, payload.to_owned());   // FULL REPLACEMENT\n    Ok(())\n}\nfn set(&mut self, point_id, payload, _hw_counter) -> OperationResult<()> {\n    match self.payload.get_mut(&point_id) {\n        Some(point_payload) => point_payload.merge(payload),  // MERGE into existing payload\n        None => { self.payload.insert(point_id, payload.to_owned()); }\n    }\n    Ok(())\n}",
+      "call_chain_traced": "POST set face: REST #[post] set_payload (update_api.rs:194) -> do_set_payload -> PayloadOps::SetPayload (src/common/update.rs:600) -> process_payload_operation (lib/shard/src/update.rs:106) -> segment set_payload (entry.rs:751) -> struct_payload_index set_payload (:934) -> payload storage set (in_memory_payload_storage_impl.rs:77) -> point_payload.merge(payload) = MERGE. PUT overwrite face: REST #[put] overwrite_payload (update_api.rs:227) -> do_overwrite_payload -> PayloadOps::OverwritePayload (src/common/update.rs:647) -> process_payload_operation (lib/shard/src/update.rs:137) -> segment set_full_payload (entry.rs:737) -> struct_payload_index overwrite_payload (:909) -> payload storage overwrite (in_memory_payload_storage_impl.rs:67) -> payload.insert(...) = FULL REPLACE. The two faces are deliberately distinct primitives end to end; no validation is missing — the distinction IS the feature.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source",
+      "note": "by_design evidence is explicit at three layers: (1) enum doc comments 'Set payload value, overrides if it is already exists' vs 'Overwrite full payload with given keys' (lib/shard/src/operations/payload_ops.rs:17,25); (2) dedicated storage primitives with a literal merge call vs insert call (in_memory_payload_storage_impl.rs:77-90); (3) maintainer documentation prose 'The set payload method updates specific fields while keeping others unchanged, while the overwrite method replaces the entire payload' (qdrant.tech manage-data/payload). The API's observed behavior on both faces (B: set merged; D: overwrite replaced to exactly {c}) matches both the pinned contract's actual assertion and the documented/source intent. validation_absent does not apply — the replace semantics the contract pins on the PUT face is implemented and executed correctly in the very same log."
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache-delay", "request-typo"],
+      "surviving": "script-oracle overreach: the B-step 'EXACT {a,b} after POST set' expectation is the script author's own construction (it requires set to erase the step-A 'orig' baseline), grounded neither in the contract (which pins exact-{c} only after PUT overwrite) nor in the documentation (set = merge) nor in the source (PayloadStorage::set -> merge). The observed POST-set merge and PUT-overwrite replace are both documented, by-design behavior; the DEFECT_FOUND verdict is a testing artifact at the script link, not a product state-logic violation."
+    }
+  }
+}

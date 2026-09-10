@@ -1,0 +1,69 @@
+{
+  "defect_id": "boundary_fieldname_rules_018",
+  "endpoint": "entities+insert",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "milvus.io/docs/limitations.md 抓取成功，原文在页：'Field | 255 characters'、'The name of a resource ... can contain numbers, letters, and underscores (_). A resource name must start with a letter or an underscore (_).' —— 与契约断言 ^[A-Za-z_][A-Za-z0-9_]*$ <=255 一致。注意：文档表格明列 Field 属于资源命名规则域。继承背景：契约 field_name_rules_001 系 v2.6.10→2612→2616→2617 契约继承链产物（派发方指示如实标注），本轮 live 文档复核仍成立",
+      "evidence_source": "doc",
+      "doc_quote": "The name of a resource such the collection name, partition name, or index name can contain numbers, letters, and underscores (_). A resource name must start with a letter or an underscore (_). | Field | 255 characters"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "dyn field '1abc' (leading digit) -> http=200 code=0 raw={\"code\":0,\"cost\":0,\"data\":{\"insertCount\":1,\"insertIds\":[1]}}（数字开头非法名接受并持久化）",
+      "secondary_observations": [
+        "dyn field 'a-b'/'a.b'/'$x'/'a b'/''（空串）/256 长/'ffffffff...'（256 字符）/NUL 字段 -> 全部 http=200 code=0（七类非法形态全接受）",
+        "合法对照 '_ok'/'x'/255 长 -> code=0（合法值正常）",
+        "NUL dyn field -> code=0 insertIds=[2]（第二行）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "非法字段名以 2xx+code:0 接受"},
+      "reproducibility": "单脚本（9+2 用例同脚本内稳定复现）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_fieldname_rules_018.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_field_name_rules_001",
+      "assertion_text_quoted": "field names: ^[A-Za-z_][A-Za-z0-9_]*$, length<=255, enforced at insert-time (dynamic fields included)",
+      "api_violates_assertion": true,
+      "note": "断言明文 'dynamic fields included'；'1abc'/'a-b'/256 长等七形态全部落在违反域且被接受——violates=true 干净成立",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_field_name_rules_001（enforced at insert-time, dynamic fields included）",
+        "doc: limitations.md Resource Naming Rules 原文在页（Field 255 + 字符集规则）",
+        "script: boundary_fieldname_rules_018.py 9 非法 + 3 合法动态字段名",
+        "log: 全部非法名 http=200 code=0"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["validateFieldName(", "ValidateField(", "EnableDynamicField", "mapKey == common.MetaFieldName"],
+      "files_examined": [
+        "internal/proxy/util.go (L362-396 validateFieldName；L598-649 ValidateField)",
+        "internal/proxy/task.go (L485 createCollectionTask 校验调用)",
+        "internal/distributed/proxy/httpserver/utils.go (L666-690 动态字段填充循环)"
+      ],
+      "source_excerpt": "util.go validateFieldName（L362-396）完整实现文档规则（空串/长度/首字符/字符集/关键字五查），但 grep 全仓调用点仅两处：task.go:485（createCollectionTask 对 schema 声明字段）与 task.go:638（addField 任务）——insert 路径零调用。REST 动态字段入口 utils.go L666-690：`for mapKey, mapValue := range data.Map() { if !containsString(fieldNames, mapKey) { if collSchema.EnableDynamicField { if mapKey == common.MetaFieldName { return ...invalid... } ... reallyData[mapKey] = mapValue...` —— 动态字段名唯一被拒的形态是字面 '$meta'，其余任意键（含空串、NUL、数字开头、256 长）直接进入 reallyData。",
+      "call_chain_traced": "REST insert -> checkAndSetData 动态循环（仅拒 $meta）-> anyToColumns -> 无 validateFieldName 调用 -> 持久化非法名",
+      "verification_outcome": "validation_absent",
+      "note": "校验函数存在（validateFieldName 完整且被 create/addField 使用）但 insert 动态字段路径未接线——'校验存在但不在该路径'型 validation_absent；sufficiency: grep_hit_pursued（调用点已全部枚举）",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "request-typo（九种形态系统性构造）", "by-design（源码无任何'动态字段豁免命名规则'注释；$meta 特判说明作者考虑过键名问题却只挡了一个）"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "strong（doc 原文逐字 + behavior 七形态 + 源码调用点全枚举证明 insert 路径未接线；继承链背景已标注）"
+}

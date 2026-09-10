@@ -1,0 +1,88 @@
+{
+  "defect_id": "state_points_batch_concurrent_010",
+  "endpoint": "points+batch (POST /collections/{collection_name}/points/batch); read faces exercised: points+count (exact=true), points+get (POST /collections/{collection_name}/points)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS: https://qdrant.tech/documentation/manage-data/points/ fetched in full (title 'Points'); the WebFetch tool was domain-blocked for qdrant.tech and api.qdrant.tech (domain_blocked) and the fetch was performed via the web-reader MCP; no doc_preflight.json sidecar exists in the contract dir (contract recorded source_status 'degraded'; my re-verification succeeded, so the environment recovered). Version PARTIAL (no_version_in_url): the page carries no version routing, matching the contract's own doc_version declaration 'current (site latest; no version archive)'; page prose cites features 'Available as of v1.17.0'/'v1.16.0', consistent with a current >=1.17 site but not pinnable to 1.18. Content PASS: the page contains verbatim 'A batch update request consists of a list of operations. These are executed in order.' — the exact behavior the constraint asserts — plus two load-bearing sections for this candidate: Idempotence ('All APIs in Qdrant, including point loading, are idempotent... points with the same id will be overwritten when re-uploaded') and Awaiting Result ('use the flag ?wait=true... the API will return the result only after the operation is finished'); the Counting Points section documents exact=true. Endpoint PASS: endpoint_registry points+batch = POST /collections/{collection_name}/points/batch (source_status reachable, doc_quote 'Operations are executed in order; returns 200 with per-operation results', verified_at 2026-09-02T12:34:08), identical to the URL the script registered (rt.PATHS['batch_update']). No SDK/REST confusion: the doc shows REST + all SDK clients for the same operation; the script used REST.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "DEFECT: (P2) exact count 50 != 51 after concurrent identical batches on one id — Type4_StateLogicViolation  [log line 62; raw basis: '[P2 count] status=200 raw={\"result\":{\"count\":50},\"status\":\"ok\",\"time\":0.000225684}' after '[P2 get 1 ids] status=200 raw={\"result\":[{\"id\":5000}],\"status\":\"ok\"}]",
+      "secondary_observations": [
+        "DEFECT: (P3) read-face disagreement: exact count 54 != 59 (fixed 51 + visible shared 8) — count and batch-get faces disagree after concurrent batches — Type4_StateLogicViolation  [log line 63; raw basis: '[P3 get 8 ids] status=200 raw={\"result\":[{\"id\":6001},{\"id\":6002},{\"id\":6003},{\"id\":6004},{\"id\":6005},{\"id\":6006},{\"id\":6007},{\"id\":6008}],\"status\":\"ok\"}' and '[P3 count] status=200 raw={\"result\":{\"count\":54},\"status\":\"ok\"}']",
+        "ORACLE-ARITHMETIC CORRECTION (evidence-builder, from script source debate_logs/state_points_batch_concurrent_010.py): P1 t4 wrote ids base=(4+1)*1000+j = 5000..5004 and P1 t5 wrote 6000..6004; P2's id 5000 and P3's shared ids 6001..6004 were therefore PRE-EXISTING. Correct expectations: P2 count = 50 (id 5000 overwritten, doc: 'points with the same id will be overwritten when re-uploaded'), P3 count = 46 non-shared + 8 shared visible = 54. Observed 50 and 54 EXACTLY match; the script's 51 and 59 double-count the 5 colliding ids (59-54 = 5 = |{5000,6001,6002,6003,6004}|).",
+        "COMPARATIVE OBSERVATION (count face vs batch-get face, same final state, rest): count(P3 exact)=54 equals 46 non-shared + 8 shared returned by batch-get — the two read faces AGREE; the log's 'read-face disagreement' is an artifact of the script's expected-value arithmetic, not of the server. The collections+get points_count third face was not called by the script (face_unavailable).",
+        "P1 control leg behaved correctly: all 10 concurrent disjoint single-op batches returned 200 with per-op results ('[P1 count] status=200 raw={\"result\":{\"count\":50}...' -> '[P1] OK: count == 50'); all P2/P3 race requests returned 200 (no 4xx/5xx, no transport failure, wait=true on every batch).",
+        "Reproducibility context: this exact pattern (count/get claimed to disagree with each other after concurrent batches) appears in only this one log. Sibling output_state_points_batch_count_003.log on the same endpoint shows a count-vs-SCRIPT-EXPECTATION mismatch ('DEFECT: (M2) duplicate-id upsert + delete: exact count 3 != 2') where both server faces agree with each other at 3 — a different mechanism, same oracle-expectation smell."
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No client-decidable error was sent: every request in this run was a valid batch upsert/delete with wait=true and every response was HTTP 200 with a well-formed result envelope (operation_id/status per op). No 2xx-with-business-error-code masking occurred."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["state_points_batch_concurrent_010"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_points_batch_001",
+      "assertion_text_quoted": "batch operations are applied sequentially in the order given; each operation reports its own result",
+      "api_violates_assertion": false,
+      "note": "violates=false, genuinely compliant, for two independent reasons. (1) The raw responses satisfy the assertion and the corrected arithmetic: every batch returned a per-operation result in order ('{\"operation_id\":N,\"status\":\"completed\"}'), and the count-face values (50/50/54) equal the corrected expectations once the script's 5 id collisions are accounted for (see secondary_observations); the documentation's own Idempotence prose ('points with the same id will be overwritten when re-uploaded') confirms re-upserting existing ids must not increase the count, so P2's observed 50 is the documented-correct value. (2) Domain note: the phenomenon the script actually attacked (cross-batch concurrency and count/get read-face agreement) lies OUTSIDE this assertion's constraint domain — each batch contained exactly ONE operation, so in-batch sequential ordering was never exercised. No contract constraint anchors cross-batch read-face agreement (closest: qdrant_behavioral_points_count_001 'exact=true returns the exact number of points matching' — count 54 with 54 live points complies; qdrant_bc_delete_points_invisibility_001 'deleted points are no longer returned by reads' — final state has all 8 shared points live after the last upserts, complies). Constraint-id recovery note: candidates.jsonl carried constraint_id=\"\" (empty); recovered from the script header 'constraint_ids: qdrant_state_points_batch_001' and confirmed present in structured_contract.json state_constraints.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_points_batch_001 present in structured_contract.json state_constraints (endpoint points+batch, evidence_tier explicit, source_url https://qdrant.tech/documentation/manage-data/points/); candidates.jsonl constraint_id field was EMPTY and was recovered from the script header.",
+        "doc: page fetched; contains verbatim 'A batch update request consists of a list of operations. These are executed in order.' plus Idempotence ('points with the same id will be overwritten when re-uploaded') — supports the assertion AND contradicts the script's P2 expectation of 51.",
+        "script: requests are valid single-op batch POSTs (wait=true) — well-formed; BUT the oracle's expected-count arithmetic collides ids: P2 'fresh' id 5000 is inside P1 t4's range [5000..5004] and P3 shared ids 6001..6004 are inside P1 t5's range [6000..6004] (script line: base = (t + 1) * 1000, 5 points per thread).",
+        "log: both DEFECT lines (62, 63) are computed FROM those wrong expectations; the raw count/get values (50/50/54 vs corrected 50/50/54) show the server's count face and batch-get face mutually consistent — the DEFECT_FOUND verdict is not supported by the raw observations."
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "Break originates at the script layer: the oracle assumed id 5000 and ids 6001..6004 were new, but P1's own disjoint ranges ((t+1)*1000..+4) had already inserted them; expected counts 51 and 59 are arithmetically wrong (correct: 50 and 54). The log layer inherits the break (DEFECT lines quote the wrong expectations); the contract and doc links are intact. Net: DEFECT_FOUND verdict rests on a test-oracle arithmetic error, not on server behavior.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "batch_update|BatchPoints (src/)",
+        "fn count_points|CountPointsInstant (lib/)",
+        "fn count|fn update_from_batch|fn batch_update (lib/collection/src/shards/local_shard/shard_ops.rs)",
+        "async fn update_batch|pub async fn|points/batch (src/actix/api/update_api.rs)",
+        "fn upsert_point (lib/segment/src)",
+        "fn insert_with_payload (lib/segment/src)"
+      ],
+      "files_examined": [
+        "src/actix/api/update_api.rs (lines 327-372: #[post(\"/collections/{collection_name}/points/batch\")] update_batch)",
+        "src/common/update.rs (full file, 1316 lines; core: do_batch_update_points lines 752-895, UpdateParams wait/ordering/timeout lines 35-64)",
+        "lib/collection/src/shards/local_shard/shard_ops.rs (lines 346-390: async fn count, exact branch)",
+        "lib/segment/src/entry/entry_point.rs (lines 294-406: SegmentEntry trait, idempotence doc comment)",
+        "lib/segment/src/segment/entry.rs (lines 653-710: fn upsert_point replace-or-insert branch, fn update_vectors)"
+      ],
+      "source_excerpt": "1) src/common/update.rs:783-891 (do_batch_update_points) — sequential per-operation loop, exactly what the assertion requires:\n    for operation in operations {\n        let current_update_result = match operation {\n            UpdateOperation::Upsert(operation) => {\n                let (result, usage) = do_upsert_points(toc_provider.clone(), collection_name.clone(), operation.upsert, internal_params, params, auth.clone(), inference_params.clone(), hw_measurement_acc.clone()).await?;\n                inference_usage.merge_opt(usage);\n                result\n            }\n            UpdateOperation::Delete(operation) => { do_delete_points(...).await? }\n            /* ... SetPayload / OverwritePayload / DeletePayload / ClearPayload / UpdateVectors / DeleteVectors, each awaited in turn ... */\n        };\n        results.push(current_update_result);\n    }\n    Ok((results, inference_usage.into_non_empty()))\n\n2) lib/segment/src/segment/entry.rs:653-673 (upsert_point) — replace-or-insert by external id, the mechanism making the observed counts correct:\n    fn upsert_point(&mut self, op_num: SeqNumberType, point_id: PointIdType, mut vectors: NamedVectors, hw_counter: &HardwareCounterCell) -> OperationResult<bool> {\n        debug_assert!(self.is_appendable());\n        check_named_vectors(&vectors, &self.segment_config)?;\n        vectors.preprocess(|name| self.config().vector_data.get(name).unwrap());\n        let stored_internal_point = self.id_tracker.borrow().internal_id(point_id);\n        self.handle_point_version_and_failure(op_num, stored_internal_point, |segment| {\n            if let Some(existing_internal_id) = stored_internal_point {\n                segment.replace_all_vectors(existing_internal_id, op_num, &vectors, hw_counter)?;\n                Ok((true, Some(existing_internal_id)))          // EXISTING id -> replace, count unchanged\n            } else {\n                let new_index = segment.insert_new_vectors(point_id, op_num, &vectors, hw_counter)?;\n                Ok((false, Some(new_index)))                    // NEW id -> insert, count +1\n            }\n        })\n    }\n\n3) lib/collection/src/shards/local_shard/shard_ops.rs:365-382 (count, exact branch) — exact count enumerates live points:\n        let result: CollectionResult<usize> = if request.exact {\n            let timeout = self.timeout_or_default_search_timeout(timeout);\n            match tokio::time::timeout(timeout, self.read_filtered(request.filter.as_ref(), search_runtime_handle, hw_measurement_acc, Some(timeout), deferred_behavior)).await {\n                Ok(Ok(all_points)) => Ok(all_points.len()),\n                ...\n\n4) lib/segment/src/entry/entry_point.rs:395-398 — maintainer-declared idempotent semantics at the SegmentEntry trait:\n    /// Define mutable operations which can be performed with Segment or Segment-like entity.\n    ///\n    /// Assume all operations are idempotent - which means that no matter how many times an operation\n    /// is executed - the storage state will be the same.",
+      "call_chain_traced": "REST actix update_batch (src/actix/api/update_api.rs:327, route /collections/{collection_name}/points/batch) -> do_batch_update_points (src/common/update.rs:752; strict-mode pre-check loop over ALL ops BEFORE applying, then sequential for-loop with per-op results.push — the assertion's 'applied sequentially in order; each operation reports its own result' is implemented verbatim) -> per-op do_upsert_points/do_delete_points -> update() -> toc.update (wait from UpdateParams.wait, honoring ?wait=true) -> shard -> segment upsert_point (replace-if-exists else insert). Read faces: points+count exact -> shard count (shard_ops.rs:347) -> read_filtered(...).len(); points+get -> retrieve by ids. Under this chain the observed numbers are exactly right: P2's ten identical batches on pre-existing id 5000 all take the replace branch (count stays 50); P3's seed adds only 6005..6008 (6001..6004 pre-existing) giving 50+4 = 54, matching both the count face and the batch-get face (46 non-shared + 8 shared). No validation that the contract requires is missing; no cross-face inconsistency mechanism is exercised by this scenario.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env: no 5xx and no transport failure anywhere in the log; every request returned 200",
+        "concurrency race: under the corrected arithmetic the count face and batch-get face agree on the same final state (54 = 46 + 8); the races produced no divergence",
+        "cache/eventual-consistency delay: every batch was sent with wait=true (doc: returns only after the operation is finished) and the script sleeps 2s after each join before adjudicating",
+        "request-parameter typo: requests themselves were valid and well-formed"
+      ],
+      "surviving": null,
+      "accepted_mundane_explanation": "test-oracle id-collision arithmetic error: the script's P2/P3 expected counts (51, 59) assumed ids 5000 and 6001..6004 were new, but P1's own disjoint ranges ((t+1)*1000..+4, t=4 and t=5) had already inserted them; 59-54 = 5 = exactly the count of colliding ids. Both DEFECT lines are fully explained by this; no server-side violation of the cited constraint survives."
+    }
+  }
+}

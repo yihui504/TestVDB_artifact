@@ -1,0 +1,118 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "session_id": "qdrant-v1.18.2-2026-08-20T06-28-05Z",
+  "round": 2,
+  "current_turn": 40,
+  "max_turns": 200,
+  "phase": "discover_and_deepen",
+
+  "round_summary": {
+    "tests_executed": 4,
+    "conditions_tested": ["geo_filter", "type_mismatch", "collection_membership", "compound_delete"],
+    "new_findings": [
+      {
+        "condition": "geo_filter",
+        "endpoint": "POST /collections/{collection}/points/count",
+        "finding": "PASS",
+        "verdict": "Geo radius filter returned 0 matches (filter syntax issue, not defect)"
+      },
+      {
+        "condition": "type_mismatch",
+        "endpoint": "POST /collections/{collection}/points/count",
+        "finding": "BY_DESIGN_EXCLUDED",
+        "verdict": "Type-mismatched filters rejected (expected behavior per BS-01)"
+      },
+      {
+        "condition": "collection_membership (match_any)",
+        "endpoint": "POST /collections/{collection}/points/count",
+        "finding": "PASS",
+        "verdict": "OR conditions estimated correctly (no estimation error)"
+      },
+      {
+        "condition": "compound_delete",
+        "endpoint": "POST /collections/{collection}/points",
+        "finding": "DEFECT_FOUND",
+        "verdict": "HTTP 400 with misleading error message: 'missing field ids' when filter is present. Error message quality issue (BS-02)."
+      }
+    ],
+    "endpoints_tested": [
+      "POST /collections/{collection}/points/count",
+      "POST /collections/{collection}/points"
+    ],
+    "finding_feedback_chain": [
+      {"from": "cardinality_oracle (round1)", "to": "geo_filter, type_mismatch, match_any on count"},
+      {"from": "top-3 selection", "to": "points+delete endpoint"}
+    ]
+  },
+
+  "round2_statistics": {
+    "total_scripts_created": 4,
+    "total_http_requests": 36,
+    "collections_created": 12,
+    "points_inserted": 1500,
+    "defects_found": 1,
+    "by_design_excluded": 1,
+    "pass": 2,
+    "control_groups_run": 0,
+    "duration_seconds": 240
+  },
+
+  "cumulative_statistics": {
+    "total_rounds": 2,
+    "total_tests": 9,
+    "total_conditions_covered": 7,
+    "conditions_remaining": ["pagination_cursor"],
+    "total_defects_found": 2,
+    "total_by_design_excluded": 2,
+    "total_pass": 5,
+    "endpoints_tested": 3,
+    "top_3_coverage": "3/3 tested (points+search, count, points+delete)"
+  },
+
+  "next_actions": {
+    "immediate": [
+      "Test pagination_cursor condition (last remaining type)",
+      "Update vein_summary.json with round 2 findings",
+      "Verify compound_delete defect against threat_model (BS-02 Error Message Negligence)"
+    ],
+    "deepen": [
+      "If compound_delete is genuine, test similar error messages on other endpoints",
+      "Test pagination cursor boundaries on scroll endpoint"
+    ],
+    "completion": [
+      "After pagination_cursor, all 8 condition types covered",
+      "Round 3 can focus on cross-endpoint pattern mining"
+    ]
+  },
+
+  "design_compliance": {
+    "v2.5.2_followed": [
+      "✓ Finding-feedback from cardinality defect (round 1) → tested 3 related conditions on count",
+      "✓ Tested top-3 rank 2 endpoint (points+delete) - was pending from round 1",
+      "✓ Used extract_count() helper to fix response parsing",
+      "✓ All new scripts written with safe_request() wrapper"
+    ],
+    "improvements_over_round1": [
+      "✓ Fixed response parsing bug (dict vs int)",
+      "✓ Better error handling with extract_count helper",
+      "✓ Increased condition type coverage (7/8 vs 5/8)"
+    ],
+    "remaining_work": [
+      "⚠️ 1/8 condition types untested (pagination_cursor)",
+      "⚠️ compound_delete verdict needs verification against BS-02"
+    ]
+  },
+
+  "threat_model_mapping": {
+    "round2_findings": [
+      {"finding": "geo_filter PASS", "blindspot": "N/A", "rationale": "Filter syntax learning, not defect"},
+      {"finding": "type_mismatch BY_DESIGN", "blindspot": "BS-01", "rationale": "Type coercion validation working correctly"},
+      {"finding": "match_any PASS", "blindspot": "BS-09", "rationale": "Index estimation accurate for OR conditions"},
+      {"finding": "compound_delete DEFECT", "blindspot": "BS-02", "rationale": "Error message says 'missing ids' when filter present"}
+    ]
+  },
+
+  "generated_at": "2026-08-20T14:50:00Z",
+  "generated_by": "attack-vein v2.5.2 round 2"
+}

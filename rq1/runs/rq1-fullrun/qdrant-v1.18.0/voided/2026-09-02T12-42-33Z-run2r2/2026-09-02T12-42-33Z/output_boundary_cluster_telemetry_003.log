@@ -1,0 +1,20 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[url-derived] cluster+telemetry -> /cluster/telemetry
+ownership tag: bct3-e5df9c9d
+[constraint quote] timeout default 60, minimum 1 — strategy6/7 target the implementation layer: crash is the defect, 200-or-4xx both conform
+[resource timeout=1000000] status=500 raw={"status":{"error":"Service internal error: Could not get telemetry from cluster"},"time":0.000140954}
+[healthz attempt 1] status=200 raw=healthz check passed
+[resource timeout=2147483647 (i32 max)] status=500 raw={"status":{"error":"Service internal error: Could not get telemetry from cluster"},"time":0.000157272}
+[healthz attempt 1] status=200 raw=healthz check passed
+[resource timeout=18446744073709551615 (u64 max, spec-legal: no maximum)] status=500 raw={"status":{"error":"Service internal error: Could not get telemetry from cluster"},"time":0.000154979}
+[healthz attempt 1] status=200 raw=healthz check passed
+[overflow timeout=18446744073709551616 (u64 max+1, parse overflow)] status=400 raw={"status":{"error":"Deserialize error in query parameters: number too large to fit in target type"},"time":0.0}
+[conform] 'timeout=18446744073709551616 (u64 max+1, parse overflow)' cleanly rejected with 400
+[malformed timeout='9'*4000 (overlong digit stream)] status=400 raw={"status":{"error":"Deserialize error in query parameters: number too large to fit in target type"},"time":0.0}
+[conform] 'timeout='9'*4000 (overlong digit stream)' cleanly rejected with 400
+[malformed timeout='a\x00b' (NUL byte in query value)] status=400 raw={"status":{"error":"Deserialize error in query parameters: invalid digit found in string"},"time":0.0}
+[conform] 'timeout='a\x00b' (NUL byte in query value)' cleanly rejected with 400
+[malformed timeout=Arabic-Indic digits (non-ASCII numerals)] status=400 raw={"status":{"error":"Deserialize error in query parameters: invalid digit found in string"},"time":0.0}
+[conform] 'timeout=Arabic-Indic digits (non-ASCII numerals)' cleanly rejected with 400
+VERDICT: DEFECT_FOUND (Type3_RuntimeFailure: 'timeout=1000000' -> body crash marker present (['internal error']) with /healthz alive; body: {"status":{"error":"Service internal error: Could not get telemetry from cluster"},"time":0.000140954})

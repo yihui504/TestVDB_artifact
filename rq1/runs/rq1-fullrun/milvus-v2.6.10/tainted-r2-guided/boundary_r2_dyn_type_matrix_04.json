@@ -1,0 +1,69 @@
+{
+  "defect_id": "boundary_r2_dyn_type_matrix_04",
+  "endpoint": "entities/insert (dynamic field type consistency)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "锚约束 milvus_type_dynamic_field_consistency_001（source_url https://milvus.io/docs/insert-update-delete.md Entity Schema Consistency，R2 补锚时已核 quoted/verified）；文档明确同一 Collection 内 Entities 具有相同属性（字段名/类型）；endpoint registry 覆盖 entities/insert。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "dynf string('hello') -> int(1): second insert ok=True raw={\"code\":0,\"cost\":0,\"data\":{\"insertCount\":1,\"insertIds\":[2]}}",
+      "secondary_observations": [
+        "dynf string('hello') -> int(-5): second insert ok=True code:0 insertIds:[2]",
+        "dynf string('') -> int(1): second insert ok=True code:0 insertIds:[2]",
+        "dynf string('') -> int(-5): second insert ok=True code:0 insertIds:[2]",
+        "（约束期望：不兼容类型第二笔应 1100 拒绝——未发生）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "类型不兼容行以 HTTP 200 + code:0 全额接受，无任何业务错误码"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_dyn_type_matrix_04.py", "debate_logs/boundary_r2_dyn_type_upsert_05.py (upsert/跨通道同模式)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_dynamic_field_consistency_001",
+      "assertion_text_quoted": "dynamic field type consistency: second insert with incompatible type for established dynamic field -> 1100",
+      "api_violates_assertion": true,
+      "note": "string→int 四种组合（含空串边界）第二笔 insert 均 code:0 而非 1100——观测参数在约束域内且值确实不兼容，violates=True 成立。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_dynamic_field_consistency_001 (verified tier)",
+        "doc: insert-update-delete.md Entity Schema Consistency（同 Collection entities 同属性）",
+        "script: boundary_r2_dyn_type_matrix_04.py 先建 string 动态字段再 insert int 值",
+        "log: second insert ok=True code:0 ×4（期望 1100）"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["EnableDynamicField (httpserver/utils.go)", "gjson.Number", "dynamic field type", "checkAndSetData"],
+      "files_examined": [
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go (checkAndSetData L590-621; anyToColumns L947-957, L1202-1217)",
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go (insert L1234-1252)"
+      ],
+      "source_excerpt": "httpserver/utils.go L598-609：`mapValueStr := mapValue.String(); switch mapValue.Type { case gjson.True, gjson.False: reallyData[mapKey] = cast.ToBool(mapValueStr); case gjson.String: reallyData[mapKey] = mapValueStr; case gjson.Number: if strings.Contains(mapValue.Raw, \".\") { cast.ToFloat64 } else { cast.ToInt64 } }`——动态字段值仅按当笔请求的 JSON 类型 cast，不对照历史/已建立的动态字段类型。anyToColumns L947-957 把未匹配 schema 的字段 marshal 成整行 JSON：`m := make(map[string]interface{}); for name, candi := range set { m[name] = candi.v.Interface() }; bs, _ := json.Marshal(m); dynamicCol = append(dynamicCol, bs)`；L1202-1217 以匿名 DataType_JSON 列（IsDynamic:true, FieldName:\"\"）下发。动态字段本就以 JSON 承载，string 与 int 值可并存于不同行——服务端 insert 路径不存在『同字段历史类型』校验点。",
+      "call_chain_traced": "REST insert → checkAndSetData（gjson 类型 cast，无历史类型对照）→ anyToColumns（动态字段→JSON 列）→ proxy insert → code:0。约束声称的 1100 拒绝点在 insert 路径不存在。",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error", "env", "concurrency", "request_typo"],
+      "surviving": "by_design_抗辩线索：动态字段实现为 JSON 列，JSON 本身允许异构值——源码无注释显式声明 by-design，但 auditor 需权衡文档 schema-consistency 承诺与 JSON 存储模型的张力（未在 insert 路径找到任何类型一致性校验）。"
+    }
+  },
+  "evidence_weight": "MODERATE_STRONG",
+  "evidence_weight_rationale": "verified 文档契约 + 四格矩阵 code:0 逐字 + 源码确认 insert 路径无类型一致性校验点；扣分项：动态字段 JSON 承载模型提供潜在 by-design 抗辩，且 query 侧回读行为未在 log 中取证。"
+}

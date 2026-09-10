@@ -1,0 +1,94 @@
+{
+  "defect_id": "boundary_collections_create_006",
+  "endpoint": "collections+create (PUT /collections/{collection_name})",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No doc_preflight.json sidecar exists anywhere under results/qdrant/v1.18.0 (checked), so live verification was performed: the versioned URL https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection was fetched successfully via server-side reader (real page 'Create a collection | Qdrant | API Reference', path param collection_name, query timeout>=1, vectors object documented) — reachability PASS; direct WebFetch and curl from this sandbox are network-blocked (domain_blocked for those channels only, not treated as FAIL since the server-side fetch succeeded). Version: URL is the pinned v-1-18-x archive matching target v1.18.0 — PASS. Content consistency PARTIAL: the Fern render collapses the nested VectorParams fields (page shows 'vectors: object or map from strings to objects' without inner fields), so the exact 'memory IN {cold, cached, pinned}' / 'pinned is not supported for dense vector storage' prose could NOT be directly eyeballed on the rendered page; the /v-1-18-x/openapi.json URL returns a Fern 'Available APIs' selector page, not the raw spec; the contract entry itself records source_verified:false. The enum prose is attested only by (a) the contract's [SPEC] description and (b) the script header's R8-lesson cross-check quoting the merged OpenAPI ('Memory enum [cold,cached,pinned] ... Default: cached') — both agent-authored, neither independently re-verified here. NOTE for auditor: the v1.18.0 SOURCE contains no 'memory' field anywhere (see source_grounding), so if the versioned page does document it, this is a doc/code divergence for 1.18.x. Endpoint precision: contract endpoint_registry has collections+create = PUT /collections/{collection_name} with the same source_url and verified_at 2026-09-02T12:34:08Z — matches the script's requests exactly — PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[positive memory='cached' closure] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.33675004} -> VERDICT: DEFECT_FOUND (Type4_StateLogicViolation: memory cached accepted but readback vectors.memory=None != 'cached')",
+      "secondary_observations": [
+        "[vectors.memory='hot' (not in enum)] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.240675721}",
+        "[conform*] 'vectors.memory='hot' (not in enum)' 200 but memory dropped/defaulted (lenient path)",
+        "[vectors.memory='pinned' (dense storage unsupported)] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.218631713}",
+        "[conform*] 'vectors.memory='pinned' (dense storage unsupported)' 200 but memory dropped/defaulted (lenient path)",
+        "sibling script output_semantic_collections_create_007.log [describe scc07_1788388168_ok_cached] status=200 raw={\"result\":{...\"config\":{\"params\":{\"vectors\":{\"size\":4,\"distance\":\"Cosine\"},... — raw readback shows vectors WITHOUT any memory key",
+        "sibling script output_semantic_collections_create_007.log [memory cold] persisted echo = '__absent__' / [memory cached] persisted echo = '__absent__'",
+        "sibling script output_semantic_collections_create_007.log [pinned] vectors.memory='pinned' (memory 'pinned' on a DENSE vectors config ...) was ACCEPTED with status 200; constraint qdrant_type_collections_create_006"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Request-side-decidable errors (out-of-enum value 'hot'; dense-unsupported 'pinned') were returned as flat HTTP 200 with the SUCCESS envelope {result:true, status:ok} — qdrant REST carries no body error code at all here, which is the strong form of the 2xx-masking pattern (clean acceptance, not 200+error-code as in the milvus face)."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_collections_create_006",
+        "semantic_collections_create_007"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_collections_create_006",
+      "assertion_text_quoted": "memory IN {cold, cached, pinned}; pinned is not supported for dense vector storage",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "Dispatch constraint_id field was empty; constraint resolved from the script header (constraint_ids: qdrant_type_collections_create_006) and the attack string, and located at structured_contract.json (results/qdrant/v1.18.0) constraint block qdrant_type_collections_create_006, endpoint collections+create, type_constraint, evidence_tier explicit. Violates-declaration self-check: the observed parameter (vectors.memory) IS the parameter named in the quoted assertion's domain, and in-chain observations include direct violations of the quoted clause — out-of-enum 'hot' accepted 200 and dense-unsupported 'pinned' accepted 200 — so api_violates_assertion=true is not conservative hedging. The candidate's PRIMARY claim (Type4: legal 'cached' accepted but readback None) rests on the script's openly declared oracle (header lines: positive closure requires readback vectors.memory=='cached', other readback = Type4), a derivation from the assertion plus describe semantics rather than a verbatim clause; the direct enum-domain violations carried as secondary observations share the same root cause per source_grounding."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_collections_create_006 present in structured_contract.json with the quoted assertion, source_url https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection, source_status reachable, source_verified false, doc_version 1.18.x",
+        "doc: URL live and version-matched (server-side fetch of the v-1-18-x page succeeded); exact nested memory-enum prose NOT directly verifiable in the collapsed Fern render — weakest link, flagged; contract source_verified=false",
+        "script: debate_logs/boundary_collections_create_006.py sends PUT create_collection with body {vectors:{size:4,distance:'Cosine',memory:X}} for X in {hot,pinned,cached} against exactly the constraint's parameter; declared oracle binds positive closure to describe readback equality",
+        "log: exit code 1; VERDICT: DEFECT_FOUND (Type4_StateLogicViolation: memory cached accepted but readback vectors.memory=None != 'cached') — matches claim_hint verbatim; raw readback body not printed in THIS log (walk result embedded in verdict line), corroborated with full raw describe bodies by sibling output_semantic_collections_create_007.log"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "not supported for dense vector storage (whole tree, 0 hits)",
+        "MemoryStorage|pinned (rust, only unrelated disk_cache is_pinned)",
+        "pub struct VectorParams (3 files, none contain memory)",
+        "\"memory\"|memory: in lib/api/src/rest (0 hits)",
+        "Memory\\b in lib/api/src/grpc/qdrant.rs (0 hits)",
+        "always_ram|on_disk_vector_storage (16 files, on_disk is the live 1.18.0 field)",
+        "deny_unknown_fields in lib/collection/src/operations/types.rs (0 hits)"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/types.rs (VectorParams L1332-1375, VectorsConfig L1470-1479, CollectionConfig L163-180)",
+        "lib/storage/src/content_manager/collection_meta_ops.rs (CreateCollection L106-144)",
+        "lib/storage/src/content_manager/toc/create_collection.rs (create_collection L20-148)",
+        "lib/common/common/src/universal_io/disk_cache/controller.rs (is_pinned L326-329, unrelated subsystem)",
+        "openapi/*.ytt.yaml (schemas/ dir is a placeholder; no memory anywhere)"
+      ],
+      "source_excerpt": "lib/collection/src/operations/types.rs L1332-1375 (v1.18.0, git describe v1.18.0, lib/api Cargo.toml version=1.18.0):\n/// Params of single vector data storage\n#[derive(\n    Debug, Hash, Deserialize, Serialize, JsonSchema, Validate, Anonymize, Clone, PartialEq, Eq,\n)]\n#[serde(rename_all = \"snake_case\")]\n#[anonymize(false)]\npub struct VectorParams {\n    /// Size of a vectors used\n    #[validate(custom(function = \"validate_nonzerou64_range_min_1_max_65536\"))]\n    pub size: NonZeroU64,\n    /// Type of distance function used for measuring distance between vectors\n    pub distance: Distance,\n    #[serde(default, skip_serializing_if = \"is_hnsw_diff_empty\")]\n    #[validate(nested)]\n    pub hnsw_config: Option<HnswConfigDiff>,\n    #[serde(default, alias = \"quantization\", skip_serializing_if = \"Option::is_none\")]\n    #[validate(nested)]\n    pub quantization_config: Option<QuantizationConfig>,\n    /// If true, vectors are served from disk, improving RAM usage at the cost of latency\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub on_disk: Option<bool>,\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub datatype: Option<Datatype>,\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub multivector_config: Option<MultiVectorConfig>,\n}\n-- NO `memory` field, NO Memory enum, NO deny_unknown_fields --\nlib/storage/src/content_manager/collection_meta_ops.rs L106-114:\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct CreateCollection {\n    #[serde(default)]\n    #[validate(nested)]\n    pub vectors: VectorsConfig,\nlib/storage/src/content_manager/toc/create_collection.rs L113-129 (only on_disk defaults are filled; no memory handling exists):\n        let vectors_defaults = collection_defaults_config.and_then(|i| i.vectors.as_ref());\n        if let Some(vectors_defaults) = vectors_defaults {\n            match &mut vectors {\n                VectorsConfig::Single(s) => {\n                    if let Some(on_disk_default) = vectors_defaults.on_disk {\n                        s.on_disk.get_or_insert(on_disk_default);\n                    } } ... } }",
+      "call_chain_traced": "WRITE: PUT /collections/{name} JSON body -> CreateCollection (collection_meta_ops.rs:109, vectors: VectorsConfig, serde default, no deny_unknown_fields) -> VectorsConfig::Single(VectorParams) (types.rs:1470) -> VectorParams (types.rs:1338) declares only size/distance/hnsw_config/quantization_config/on_disk/datatype/multivector_config — the unknown JSON key 'memory' is silently dropped by serde for ANY value ('hot','pinned','cached') -> toc/create_collection.rs:20 proceeds; default-fill logic touches only on_disk -> 200 {result:true,status:ok}. READBACK: GET /collections/{name} -> CollectionInfo.config CollectionConfig (types.rs:166) -> params: CollectionParams -> vectors: VectorsConfig -> same VectorParams serialization (skip_serializing_if on optional fields) -> vectors JSON contains only {size,distance,...} — config.params.vectors.memory can NEVER appear. One mechanism explains all three observed behaviors (hot-200, pinned-200, cached-200-with-None-readback). Same-family contrast (code-level, not a live probe): the adjacent declared field on the very same struct, on_disk, IS persisted and echoed, which localizes the drop to the absent field rather than to whole-vectors-config leniency.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "The contract-required validation cannot exist in v1.18.0 because the validated field itself does not exist: zero hits for the memory field/enum or the doc string across REST models (lib/api/src/rest), collection ops, generated gRPC definitions (lib/api/src/grpc/qdrant.rs), and the openapi yaml tree; the only 'pinned' hit (disk_cache/controller.rs is_pinned) is an unrelated block-eviction trait method and was read. No code comment, docstring, or maintainer citation declares this leniency intentional, so by_design_in_source is not available (bare serde-default leniency is unannotated). Cross-face comparative probe (gRPC/SDK) unprobed: REST-only sandbox -> face_unavailable, recorded honestly; within-log value comparison (hot/pinned/cached here; cold/cached/pinned in sibling semantic_collections_create_007) is present with original lines."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (clean 200s throughout, deterministic serde path, /healthz never invoked as failing)",
+        "concurrency (strictly sequential legs, fresh collection per leg)",
+        "cache delay (structural absence: readback serialization can never emit the field — not a timing effect)",
+        "request-parameter typo (script source body {vectors:{size,distance,memory:X}} matches the logged legs exactly)"
+      ],
+      "surviving": "doc/code divergence for 1.18.x: the constraint's [SPEC] text (and the script's R8 spec-grid cross-check) say the versioned v-1-18-x api-reference documents a memory enum {cold,cached,pinned}, while the v1.18.0 source implements no such parameter at all (docs describing a feature the binary never had, or the constraint over-specified for this version). My direct verification of the nested doc schema was blocked (Fern render collapse; /openapi.json returns a selector page; contract source_verified=false), so whether the versioned page truly documents memory for 1.18.x is unconfirmed. This surviving explanation is the auditor's decision point: if the doc does document memory for 1.18.x, the silent drop of a documented enum parameter (accepting out-of-enum 'hot' and dense-unsupported 'pinned' with flat 200s, and never echoing even the legal 'cached') is a genuine spec violation; if the doc does not, the constraint is ungrounded for this version. The source-side fact (parameter entirely absent, silently ignored, no by-design annotation) holds either way."
+    }
+  }
+}

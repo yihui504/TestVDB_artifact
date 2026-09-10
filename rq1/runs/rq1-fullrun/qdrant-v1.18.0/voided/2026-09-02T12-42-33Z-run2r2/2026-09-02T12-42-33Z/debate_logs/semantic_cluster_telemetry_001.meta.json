@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_telemetry_001",
+  "endpoint": "cluster+telemetry",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract",
+  "oracle": {
+    "statement": "GET /cluster/telemetry answers 200 with envelope status:string, time:number, result:object and result.cluster.enabled boolean + result.cluster.number_of_peers int|null + result.cluster.peers object + result.collections object (violation = Type4_StateLogicViolation; 5xx with /healthz alive = Type3_RuntimeFailure); on a 4xx refusal branch: clean repeatable 4xx, /healthz still 200, GET /telemetry still 200 with result.cluster.enabled=false, else Type4_StateLogicViolation (assertion qdrant_behavioral_cluster_telemetry_001)",
+    "source": "docstring"
+  }
+}

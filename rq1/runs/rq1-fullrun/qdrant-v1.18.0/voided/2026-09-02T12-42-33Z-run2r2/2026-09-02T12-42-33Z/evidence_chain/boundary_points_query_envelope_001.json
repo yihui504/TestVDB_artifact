@@ -1,0 +1,77 @@
+{
+  "defect_id": "boundary_points_query_envelope_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: domain_blocked — WebFetch refuses api.qdrant.tech (domain-verification restriction) and web_reader returns upstream 500 (network error); recorded PARTIAL, not FAIL. Version: source_url version segment v-1-18-x matches target 1.18.0; the in-repo documentation content source docs/redoc/v1.18.x/openapi.json (local mirror of what api.qdrant.tech/v-1-18-x serves) carries info.version v1.18.x — matched. Content: the official v1.18.x OpenAPI Filter schema declares should/must/must_not as anyOf[Condition(single object), array[Condition], null], i.e. the probe's single-object clause form is DOCUMENTED-VALID, contradicting the claim's premise that it is an invalid query owed a 400; the path's documented responses are only default/4XX(error)/200 — the assertion's explicit '400'/'404' codes are the contract miner's distillation, not verbatim path entries. Endpoint precision: endpoint_registry contains points+query with the exact matching source_url and doc_quote. Aggregate DOC_MISMATCH because the documentation content (from its authoritative local source) contradicts the claim's premise even though the endpoint/version links hold.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "leg V400a should=<object> -> status=200 | raw: {\"result\":{\"points\":[{\"id\":1,\"version\":1,\"score\":0.0057622097},{\"id\":2,\"version\":1,\"score\":0.011524419},{\"id\":3,\"version\":1,\"score\":0.01728663}]},\"status\":\"ok\",\"time\":0.000384977} | VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — leg [V400a should=<object>]: a Filter clause array position is occupied by a non-array value (behavioral contract: invalid query returns 400), yet the request was ACCEPTED with 200 (3 points)",
+      "secondary_observations": [
+        "leg V200 valid -> status=200 | leg V200 OK: envelope result.points, 6 ScoredPoints, shape fields conform (positive control passes)",
+        "leg Vnull filter=null -> status=200 | leg Vnull OK: filter=null equivalent to no-filter (documented by-design)",
+        "legs V400b (must_not='city' string), V400c (must=123 int), V400d (min_should.conditions='city' string) and V404 were never executed — script early-returns at the first violating leg",
+        "comparative rest sibling boundary_points_count_filter_type_003: F5 filter={\"must\": {...}} (object for conditions array) -> status=200 (same coercion on the must clause of points+count)",
+        "comparative rest sibling boundary_points_delete_invalid_filter_004: T2 must_not as OBJECT -> status=200, blast radius DESTRUCTIVE: count moved 6 -> 0 (same coercion on the must_not clause of points+delete)",
+        "ambiguity note: on this seed data the returned id set {1,2,3} equals both 'berlin-filtered top-3' and 'unfiltered top-3', so the log alone cannot distinguish filter-applied from filter-dropped; the source (MaybeOneOrMany map branch -> vec![x]) resolves it to coerced-and-applied"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "the claim framed the request as client-side-illegal, but per the official v1.18.x OpenAPI the single-object clause form is schema-valid, so no client error existed to be returned; the 200 is the documented disposition"
+      },
+      "reproducibility": "single script on this endpoint; the same object-in-clause-position pattern is reproduced by 2 further scripts on sibling endpoints (boundary_points_count_filter_type_003 on points+count, boundary_points_delete_invalid_filter_004 on points+delete) via the shared MaybeOneOrMany mechanism — pattern family is multi-script, endpoint-strict reading is single-script",
+      "script_error": false,
+      "triggering_scripts": ["boundary_points_query_envelope_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_001",
+      "assertion_text_quoted": "returns 200 QueryResponse {result: [ScoredPoint], next_page_offset?}; 400 on an invalid query; 404 when the collection is missing",
+      "api_violates_assertion": false,
+      "note": "violates=false self-check resolved: the right constraint is cited (this is the endpoint's tri-partite behavioral promise under test), but the observed request is genuinely compliant — the official v1.18.x OpenAPI documents Filter.should as anyOf[Condition, array[Condition], null], so the single-object probe is a documented single-condition shorthand, not an invalid query; the 400 branch does not apply to it. The dispatch's constraint_id field was empty; the id was resolved from the attack string and the script header (constraint_ids: qdrant_behavioral_points_query_001) and located in structured_contract.json assertions[] (assertion_id field, category behavioral, evidence_tier explicit, level endpoint).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: assertions[] qdrant_behavioral_points_query_001 present (constraint_id field empty in dispatch; id pinned by attack string + script header) — asserts 200 valid / 400 invalid / 404 missing",
+        "doc: source_url api.qdrant.tech/v-1-18-x/.../query-points unreachable live (domain_blocked); local content mirror docs/redoc/v1.18.x/openapi.json confirms endpoint and 200/4XX faces, but its Filter.should anyOf[Condition, array, null] schema documents the probe's form as VALID",
+        "script: boundary_points_query_envelope_001 leg V400a sends {\"query\": {\"nearest\": V}, \"limit\": 3, \"filter\": {\"should\": {\"key\": \"city\", \"match\": {\"value\": \"berlin\"}}}} — a single FieldCondition object in the should slot",
+        "log: V400a -> 200 with 3 points (ids 1,2,3 = the 3 berlin-seeded points); verdict labeled DEFECT_FOUND Type1 on the premise that object-in-array-position must 400"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The contract's 400-promise presupposes the probe is an invalid query, but the documentation it cites (official v1.18.x OpenAPI) explicitly permits the single-object clause form (Filter.should anyOf[Condition, array[Condition], null] — generated from #[schemars(with = \"MaybeOneOrMany<Condition>\")]). The script's oracle premise and the log's DEFECT verdict therefore rest on a constraint domain the documentation does not confer; the observed 200 is consistent with documented behavior. No fabrication: the 200 observation itself is authentic and reproducible.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["min_should", "pub struct Filter", "MaybeOneOrMany", "query_points", "pub struct QueryRequest"],
+      "files_examined": [
+        "lib/segment/src/types.rs (Filter struct, lines 3778-3845)",
+        "lib/segment/src/common/utils.rs (MaybeOneOrMany, lines 80-132)",
+        "src/actix/api/query_api.rs (query_points handler, lines 30-80)",
+        "lib/api/src/rest/schema.rs (QueryRequest/QueryRequestInternal, lines 549-607)",
+        "docs/redoc/v1.18.x/openapi.json (Filter + QueryRequest + path schemas)"
+      ],
+      "source_excerpt": "lib/segment/src/types.rs:3793-3826 — #[serde(deny_unknown_fields, rename_all = \"snake_case\")] pub struct Filter { /// At least one of those conditions should match #[validate(nested)] #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")] #[schemars(with = \"MaybeOneOrMany<Condition>\")] pub should: Option<Vec<Condition>>, /// At least minimum amount of given conditions should match #[validate(nested)] #[serde(skip_serializing_if = \"Option::is_none\")] pub min_should: Option<MinShould>, /// All conditions must match #[validate(nested)] #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")] #[schemars(with = \"MaybeOneOrMany<Condition>\")] pub must: Option<Vec<Condition>>, /// All conditions must NOT match #[validate(nested)] #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")] #[schemars(with = \"MaybeOneOrMany<Condition>\")] pub must_not: Option<Vec<Condition>>, } | lib/segment/src/common/utils.rs:80-107 — /// Deserializer helper for `Option<Vec<T>>` that allows deserializing both single and an array of values. /// Use via `#[serde(with = \"MaybeOneOrMany\")]` and `#[schemars(with=\"MaybeOneOrMany<T>\")]` field attributes pub struct MaybeOneOrMany<T>(pub Option<Vec<T>>); impl<'de, T: Deserialize<'de>> MaybeOneOrMany<T> { pub fn deserialize<D>(deserializer: D) -> Result<Option<Vec<T>>, D::Error> where D: serde::Deserializer<'de> { use serde_untagged::UntaggedEnumVisitor; UntaggedEnumVisitor::new() .unit(|| Ok(None)) .seq(|x| x.deserialize().map(Some)) .map(|x| x.deserialize().map(|x| vec![x]).map(Some)) .deserialize(deserializer) } } | lib/segment/src/types.rs:3784-3788 — pub struct MinShould { #[validate(nested)] pub conditions: Vec<Condition>, pub min_count: usize, } (conditions NOT MaybeOneOrMany — same-family contrast) | lib/api/src/rest/schema.rs:564-566 — /// Filter conditions - return only those points that satisfy the specified conditions. #[validate(nested)] pub filter: Option<Filter>",
+      "call_chain_traced": "actix route src/actix/api/query_api.rs:30 #[post(\"/collections/{collection_name}/points/query\")] query_points(request: Json<QueryRequest>) -> lib/api/src/rest/schema.rs:596 QueryRequest{internal(flattened): QueryRequestInternal, shard_key} -> :566 filter: Option<Filter> -> lib/segment/src/types.rs:3794 Filter.should/must/must_not with #[serde(with=\"MaybeOneOrMany\")] -> lib/segment/src/common/utils.rs:94-107 deserialize: .map(|x| x.deserialize().map(|x| vec![x]).map(Some)) coerces the single JSON object into a one-element Condition vec (filter applied, not dropped). The paired #[schemars(with=\"MaybeOneOrMany<Condition>\")] generates the anyOf[Condition, Vec<Condition>, null] schema verifiably present in docs/redoc/v1.18.x/openapi.json — the same tolerance is published into the documentation the contract cites (prefetch at schema.rs:553 uses the same helper, confirming an API-wide pattern). MinShould.conditions is a bare Vec<Condition> (no helper), so a string/object there would be a genuine 400 — the never-executed V400d leg targets the one clause family member without the tolerance.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "explicit intent evidence: docstring 'allows deserializing both single and an array of values' + deliberate serde/schemars field attributes + the anyOf form published into the official v1.18.x OpenAPI (docs/redoc/v1.18.x/openapi.json, info.version v1.18.x). Clone history is squashed (single commit db3fca3) so no deeper blame was available; not needed given the docstring and published schema.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (positive control V200 passed, service responsive)", "concurrency (sequential single-script, own collection bpqV1<tag>)", "request-typo (script source read; probe body verbatim as designed)"],
+      "surviving": "by-design: the 200 acceptance is documented behavior — official v1.18.x OpenAPI declares Filter.should as anyOf[Condition(single), array[Condition], null] and the source implements it via MaybeOneOrMany with an explicit docstring; the probe is a schema-valid single-condition shorthand, not a validation gap"
+    }
+  }
+}

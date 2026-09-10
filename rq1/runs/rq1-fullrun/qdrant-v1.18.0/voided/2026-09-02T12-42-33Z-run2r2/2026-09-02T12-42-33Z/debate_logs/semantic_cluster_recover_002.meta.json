@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_recover_002",
+  "endpoint": "cluster+recover",
+  "param": null,
+  "expected_defect_type": "Type2_PoorDiagnostics",
+  "strategy": "diagnosis_quality",
+  "oracle": {
+    "statement": "POST /cluster/recover on the disabled face -> 4xx whose body is non-empty AND contains a capability term (cluster|distributed|recover|peer|raft|consensus|mode) => NO_DEFECT; 4xx with empty/generic body scoring 0 on face_named => Type2_PoorDiagnostics; 5xx with /healthz alive => Type3; 2xx => premise void, honest SCRIPT_ERROR (assertion qdrant_behavioral_cluster_recover_001)",
+    "source": "docstring"
+  }
+}

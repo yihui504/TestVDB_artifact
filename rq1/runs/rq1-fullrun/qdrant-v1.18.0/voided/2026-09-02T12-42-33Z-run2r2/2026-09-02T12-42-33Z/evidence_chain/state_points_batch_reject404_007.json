@@ -1,0 +1,97 @@
+{
+  "defect_id": "state_points_batch_reject404_007",
+  "endpoint": "points+batch (POST /collections/{collection_name}/points/batch)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS: both source_urls fetched live (WebFetch tool was domain-blocked in this environment; verified via the web-reader fallback) — api.qdrant.tech/v-1-18-x/api-reference/points/batch-update (and its .md variant) plus qdrant.tech/documentation/manage-data/points/. Version PARTIAL: api-reference is explicitly versioned v-1-18-x (PASS); the concept-doc manage-data/points has no version routing (no_version_in_url — normal for concept docs; contract already records 'current (site latest; no version archive)'). Content PARTIAL: the state constraint's prose is verbatim present — 'A batch update request consists of a list of operations. These are executed in order.' (Batch Update section) — and the api-reference documents the operations body and the 200 response with a per-operation result list (status acknowledged/completed/wait_timeout + operation_id); however BOTH pages are silent on mid-batch failure, atomicity, and rollback for points+batch (no statement either way), and the api-reference Response section lists only 200 (the behavioral co-anchor's '404 missing collection' face is not on the page's visible response list; it exists only in raw_knowledge expected_responses). Endpoint precision PASS: candidate endpoint matches raw_knowledge api_endpoints entry {path: points+batch, url: /collections/{collection_name}/points/batch} and the script registered exactly that path. SDK/REST confusion false: both anchors are grounded in the REST API reference itself.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[F-fail-last batch 3 ops] status=400 raw={\"status\":{\"error\":\"Wrong input: Not existing vector name error: no_such_vector\"},\"time\":0.009463842}  ||  [F-readback get [612]] status=200 raw={\"result\":[{\"id\":612,\"payload\":{\"n\":612,\"tag\":\"x\"}}],\"status\":\"ok\",\"time\":0.000198011}",
+      "secondary_observations": [
+        "[G-fail-first batch 2 ops] status=400 raw={\"status\":{\"error\":\"Wrong input: Not existing vector name error: no_such_vector\"},\"time\":0.004102722} (same poison op at position 1: rejected immediately)",
+        "[G-readback get [611, 613]] status=200 raw={\"result\":[{\"id\":611,\"payload\":{\"n\":611,\"tag\":\"x\"}}],\"status\":\"ok\",\"time\":0.000235731} (613 absent — nothing applied when the poison is first; proves the partial commit is position-dependent)",
+        "[CTL batch 2 ops] status=200 raw={\"result\":[{\"operation_id\":1,\"status\":\"completed\"},{\"operation_id\":2,\"status\":\"completed\"}],\"status\":\"ok\",\"time\":0.008020918} (positive control: the documented 200-with-per-op-results face works on the same collection in the same run)",
+        "[CTL] OK: poison-free batch fully committed",
+        "[disposition] fail-last=400 fail-first=400 (disposition of the same poison op is status-consistent across positions — the defect is purely state-logic, not status inconsistency)",
+        "comparative forensics: the in-log F-vs-G position comparison IS the same-value comparison (identical poison op, two positions, different state outcomes); the gRPC face of batch update was not exercised by this sandbox (single REST face) — face_unavailable, no cross-face line fabricated"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The request-side-decidable error (delete_vectors naming a vector that does not exist in a collection whose only vector is the unnamed default) was surfaced as HTTP 400 with a descriptive body — not 2xx-masked. The defect is temporal: the 400 is a MID-EXECUTION rejection emitted after the prefix operations of the same request had already been applied and durably committed (wait=true), so the client is told the request failed while server state changed."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_points_batch_reject404_007",
+        "state_points_batch_atomicity_006"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_points_batch_001 (primary, per script header; co-anchor qdrant_behavioral_points_batch_001)",
+      "assertion_text_quoted": "batch operations are applied sequentially in the order given; each operation reports its own result",
+      "api_violates_assertion": true,
+      "note": "Violates-declaration self-check: the claim's phenomenon is 'rejected request committed state', not 'illegal value silently accepted' — the request WAS rejected (400), so this is the Type4 state-consistency face, and violates=true means the constraint's composite promise broke on the rejection path: ops 1-2 were applied sequentially (order clause honored) but reported no result of their own (no per-op results in a 400 envelope — the accumulated results vector is discarded), and a whole-request rejection coexists with durably committed prefix state (612 visible with the full CTL-style payload). The doc prose behind the constraint contains the 'executed in order' wording verbatim but is silent on rollback/atomicity (recorded as content_consistency PARTIAL); the violated rejection-semantics reading is the framework's state-consistency principle (a rejected request must leave no state change), which the doc neither promises nor contradicts. The observed parameter (operations array of UpdateOperation) is squarely inside the quote's constraint domain, so no constraint re-citation is needed.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_points_batch_001 (structured_contract.json, state_constraint block) and qdrant_behavioral_points_batch_001 (behavioral block) both exist for endpoint points+batch; NOTE the candidates.jsonl dispatch row carried an EMPTY constraint_id — the linkage was reconstructed from the script header (debate_logs/state_points_batch_reject404_007.py line 6: 'constraint_ids: qdrant_state_points_batch_001, qdrant_behavioral_points_batch_001') and the co-dispatched sibling's log naming qdrant_state_points_batch_001 explicitly",
+        "doc: qdrant.tech/documentation/manage-data/points/ Batch Update section verified live — 'A batch update request consists of a list of operations. These are executed in order.'; api.qdrant.tech/v-1-18-x/api-reference/points/batch-update verified live — operations body (incl. DeleteVectorsOperation.vector: list of string required, 'Vector names') and 200 per-op result list; atomicity/rollback undocumented on both pages",
+        "script: debate_logs/state_points_batch_reject404_007.py — POST /collections/{coll}/points/batch with wait=true; F leg body {\"operations\":[upsert 612, set_payload 612 {tag:x}, delete_vectors {points:[611], vector:[\"no_such_vector\"]}]} — each op exactly per the documented UpdateOperation schema; oracle pre-declares 4xx-with-visible-prefix as Type4",
+        "log: output_state_points_batch_reject404_007.log lines 7-8 — HTTP 400 'Wrong input: Not existing vector name error: no_such_vector' followed by get [612] → 200 with payload {n:612, tag:x}; verdict lines 13-14 DEFECT_FOUND Type4 — the raw observations support the verdict (no contradiction)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "No chain break. One dispatch-level gap recorded honestly: the candidates.jsonl row for this defect_id has constraint_id=\"\" (mechanical extraction left it empty); the constraint itself exists in the contract and the script header declares both ids, so the chain is complete — the auditor may still want to flag the empty dispatch field as an extraction artifact. Naming note: the script id says 'reject404' after the run2r#1-R3 confirmed instance which observed this class with HTTP 404; in THIS run the same poison produced 400 via the Wrong-input path — the script oracle accepts any 4xx (400-499), so the claim tested is the generalization (rejected batch commits prefix), and the log's DEFECT line correctly says 400 (no drift).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Not existing vector name",
+        "update_from_batch (zero hits — batch is not routed through a per-collection batch op)",
+        "points/batch",
+        "update_batch|batch_update|UpdateBatch",
+        "async fn do_batch_update_points",
+        "vector_name_not_exists|VectorNameNotExists",
+        "for operation in|operations.iter|process_batch_operation (in lib/collection/src)",
+        "Wrong input",
+        "fail|error|reject|40[04]|500|atomic|partial (over tests/openapi/test_batch_update.py — zero hits: the project's own batch test never exercises a mid-batch failure)"
+      ],
+      "files_examined": [
+        "src/actix/api/update_api.rs (handler update_batch, lines 300-420)",
+        "src/common/update.rs (do_batch_update_points, lines 700-940)",
+        "lib/segment/src/common/operation_error.rs (OperationError::VectorNameNotExists, full file)",
+        "lib/collection/src/operations/types.rs (From<OperationError> for CollectionError, lines 1080-1135; VectorsConfigDiff name checks 1690-1755)",
+        "lib/segment/src/common/mod.rs (get_vector_config_or_error, lines 155-190)",
+        "lib/segment/src/segment/segment_ops.rs (apply-time name check context, lines 540-590)",
+        "lib/collection/src/operations/mod.rs (shard split, lines 40-170)",
+        "tests/openapi/test_batch_update.py (grep only — no failure/atomicity coverage)"
+      ],
+      "source_excerpt": "src/common/update.rs:752-895 (qdrant v1.18.0 clone, HEAD db3fca3) — do_batch_update_points:\n```rust\npub async fn do_batch_update_points(\n    toc_provider: impl CheckedTocProvider + Clone,\n    collection_name: String,\n    operations: Vec<UpdateOperation>,\n    ...\n) -> Result<(Vec<UpdateResult>, Option<InferenceUsage>), StorageError> {\n    // Check strict mode for all batch operations, *before applying* them\n    let mut toc = None;\n    for operation in &operations {\n        toc = toc_provider\n            .check_strict_mode(operation, &collection_name, params.timeout_as_secs(), &auth)\n            .await?\n            .into();\n    }\n    ...\n    let mut results = Vec::with_capacity(operations.len());\n    let mut inference_usage = InferenceUsage::default();\n\n    for operation in operations {\n        let current_update_result = match operation {\n            UpdateOperation::Upsert(operation) => {\n                let (result, usage) = do_upsert_points(\n                    toc_provider.clone(), collection_name.clone(), operation.upsert, /* ... */\n                )\n                .await?;                    // <-- error propagates: EARLY RETURN for the WHOLE batch\n                inference_usage.merge_opt(usage);\n                result\n            }\n            UpdateOperation::Delete(operation) => {\n                do_delete_points(/* ... */).await?\n            }\n            UpdateOperation::SetPayload(operation) => {\n                do_set_payload(/* ... */).await?\n            }\n            /* OverwritePayload / DeletePayload / ClearPayload / UpdateVectors arms: same .await? pattern */\n            UpdateOperation::DeleteVectors(operation) => {\n                do_delete_vectors(\n                    toc_provider.clone(), collection_name.clone(), operation.delete_vectors, /* ... */\n                )\n                .await?                    // <-- line 887: the poison op fails HERE (VectorNameNotExists)\n            }\n        };\n        results.push(current_update_result);   // only reached if THIS op succeeded\n    }\n    Ok((results, inference_usage.into_non_empty()))\n}\n```\nSupporting: lib/segment/src/common/operation_error.rs:27-28 `#[error(\"Not existing vector name error: {received_name}\")] VectorNameNotExists { received_name: VectorNameBuf }` (exact text seen in the 400 body); lib/collection/src/operations/types.rs:1110-1112 maps `OperationError::VectorNameNotExists { .. } => Self::BadInput` → StorageError 'Wrong input: {description}' (lib/storage/src/content_manager/errors.rs:15) → HTTP 400. There is no comment in the loop marking the partial-commit behavior intentional, no rollback/compensation code anywhere in the function, and the accumulated `results` vector is silently discarded on the early-return error path.",
+      "call_chain_traced": "REST POST /collections/{name}/points/batch → update_batch (src/actix/api/update_api.rs:328) → do_batch_update_points (src/common/update.rs:752) → sequential for-loop applying each op via do_upsert_points / do_set_payload / do_delete_vectors etc., EVERY arm using `.await?` → per-op toc update → shard WAL append + apply (durable at wait=true) → segment-layer vector-name validation fires only at APPLY time of that op (OperationError::VectorNameNotExists, defined lib/segment/src/common/operation_error.rs:27) → From<OperationError> for CollectionError::BadInput (lib/collection/src/operations/types.rs:1110) → StorageError::WrongInput 'Wrong input: ...' → actix HTTP 400. On the first failing op the whole function early-returns Err: (a) NO whole-batch pre-validation of operations before any application (the only up-front loop is the strict-mode check), (b) NO rollback or compensation of already-applied prefix ops, (c) NO partial-results reporting (results vec discarded). This exactly produces the observed position-dependent behavior: poison last → prefix committed + 400 (F leg); poison first → nothing applied + 400 (G leg).",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service healthy: CTL leg returned 200 with per-op results and exact readback on the same collection in the same run; no 5xx, no transport failure, no healthz abort in the log)",
+        "concurrency (strictly sequential single-client requests; collection name uniquely prefixed spbv7_<ts>_<pid>_col, no competing writers)",
+        "cache/async delay (all batch calls sent with wait=true; the G-leg readback on the same channel correctly shows 613 absent, proving the readback path reflects committed state rather than a stale view)",
+        "request-parameter typo (the F leg's first two ops are identical in shape to the CTL ops that succeeded; the third op is the intentionally invalid probe; the 400 error text names the exact injected value no_such_vector)"
+      ],
+      "surviving": null
+    }
+  }
+}

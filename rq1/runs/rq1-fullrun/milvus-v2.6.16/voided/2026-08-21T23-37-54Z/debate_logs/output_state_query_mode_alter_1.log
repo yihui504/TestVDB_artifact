@@ -1,0 +1,17 @@
+create: 200 {"code":0,"data":{}}
+A alter (no index): 200 {"code":0,"data":{}}
+A query_mode: large_topk
+B create index: 200 {"code":0,"data":{}}
+B alter (with index): 200 {"code":0,"data":{}}
+C drop index: 200 {"code":0,"data":{}}
+C alter (after drop): 200 {"code":0,"data":{}}
+D alter bogus: 200 {"code":65535,"message":"invalid query_mode value \"bogus\", valid values: [large_topk]"}
+D2 create fw: 200 {"code":0,"data":{}}
+D2 alter first: 200 {"code":0,"data":{}}
+D2 index AFTER large_topk: 200 {"code":0,"data":{}}
+E load: 200 {"code":700,"message":"index not found[collection=st_qm_alter_1]"}
+E alter after load: 200 {"code":0,"data":{}}
+E code: 0
+DEFECT: ('alter query_mode on indexed collection ACCEPTED (expected 702)', '{"code":0,"data":{}}')
+DEFECT: ('FORWARD BYPASS: index created on collection already in large_topk query_mode; 702 gate one-directional', '{"code":0,"data":{}}')
+VERDICT: DEFECT_FOUND

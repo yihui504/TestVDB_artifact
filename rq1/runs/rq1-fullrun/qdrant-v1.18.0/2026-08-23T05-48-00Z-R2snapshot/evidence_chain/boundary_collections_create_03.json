@@ -1,0 +1,93 @@
+{
+  "defect_id": "boundary_collections_create_03",
+  "endpoint": "collections+create (PUT /collections/{name})",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint 007 source_url (https://qdrant.tech/documentation/concepts/vectors/) curl 200 可达；页面为 latest 文档（含 v1.19.0 才引入的 Turbo4 段落），与 target v1.18.0 宽松匹配（major.minor 漂移向上）。页面明确原文：'configure a per-vector datatype: Float32 (default), Float16, Uint8, or Turbo4' 与 'The turbo4 datatype is only supported for dense vectors. It cannot be used to configure sparse vectors.'——枚举集与 dense-only 声称属实，但 Turbo4 在本页标注 'Available as of v1.19.0'（contract assertion 未含此版本限定，内容一致性 PARTIAL 的张力点之一）。api.qdrant.tech v-1-18-x create-collection 渲染页 200 可达、含 datatype 字段描述（float32/float16/uint8），未展开 turbo4。v1.18.0 本地 openapi.json (docs/redoc/master) Datatype enum 仅 {float32,uint8,float16}、无 turbo4——v1.18.0 正式契约里 turbo4 不是合法值。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "CASE datatype=int4 invalid: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.272372254}",
+      "secondary_observations": [
+        "CASE datatype=null: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.247962889}",
+        "CASE datatype=123: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.219609302}",
+        "CASE turbo4 on sparse vectors (must be rejected): status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.279990847}（注：turbo4 挂在 SparseVectorParams 顶层而非 index.datatype，见 source_grounding）",
+        "CASE sparse_vectors.sp.distance=Cosine: status=200；DESCRIBE 回读 sparse_vectors={\"sp\":{}}——distance/size 均被静默丢弃（silent-drop）",
+        "CASE sparse_vectors.sp.size set: status=200；DESCRIBE 回读同上，size 未持久化",
+        "CASE sparse_vectors=[] array: status=400 {\"status\":{\"error\":\"Format error in JSON body: invalid type: sequence, expected a map at line 1 column 65\"}}（Type2 NOTE：错误不含 'sparse' 字段名）",
+        "CASE sparse_vectors=null: status=200 {\"result\":true,\"status\":\"ok\",\"time\":0.226732431}",
+        "CASE dense+sparse name collision v: status=400 {\"status\":{\"error\":\"Wrong input: Dense and sparse vector names must be unique - duplicate found with 'v'\"}}（constraint 009 被正确执行——对照证据）"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务成功码",
+        "note": "主观测：单向量模式（vectors 为 Single object）下 datatype 非法字符串 'int4'/null/整数 123 均以 HTTP 200 + result:true/status:ok 返回。关键对照（builder 复测，本机 1.18.0 commit db3fca32 与运行实例一致）：多向量模式 vectors.v.datatype=\"zzz\" → 400 'data did not match any variant of untagged enum VectorsConfig'；sparse index.datatype=\"turbo4\" → 400 'unknown variant turbo4, expected one of float32, uint8, float16'。即 Type1 仅在 VectorsConfig::Single 分支成立，且 200 后 DESCRIBE 回读 config.params.vectors 不含 datatype 字段（值未持久化，静默丢弃）。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_create_03"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_collections_create_007",
+      "assertion_text_quoted": "datatype IN {float32, uint8, float16, turbo4}; turbo4 NOT allowed for sparse vectors",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "主观测（datatype='int4' 等非法值 200 接受）落在 007 的约束域内（datatype 枚举），且值不在枚举集——violates=true。成因见 source_grounding：untagged enum 反序列化失败时 serde 不报错而是回退到下一变体。次观测 sp.distance/sp.size silent-drop 对应 008（sparse distance 不可设）——DESCRIBE 回读 {\"sp\":{}} 证实被丢弃，但 008 本身是 inferred tier 且'丢弃未知字段'可能反而符合其语义，属 auditor 裁量。turbo4-on-sparse 次观测未真正测到 007 第二句（turbo4 挂错层级被 serde 丢弃；正确路径 index.datatype='turbo4' 被正确 400 拒绝）。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_collections_create_007 'datatype IN {float32,uint8,float16,turbo4}; turbo4 NOT allowed for sparse vectors'，evidence_tier=explicit，source_url=qdrant.tech/documentation/concepts/vectors/",
+        "doc: 页面 200 可达；原文确认 'Float32 (default), Float16, Uint8, or Turbo4' 与 'only supported for dense vectors'；但 turbo4 标注 'Available as of v1.19.0'，且 v1.18.0 openapi.json 的 Datatype enum 仅 {float32,uint8,float16}——contract 把 turbo4 并入 v1.18.0 枚举集与 v1.18.0 正式 schema 有出入",
+        "script: boundary_collections_create_03 case1 PUT /collections/bnd_crt_sp_1 body={vectors:{size:4,distance:Cosine},datatype:'int4'}",
+        "log: CASE datatype=int4 invalid: status=200 result:true status:ok → VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "四环连续一致（主观测 datatype='int4' 200 接受真实存在且可复现，builder 本机复测同结果）。两处次要张力供 auditor 裁量：(1) doc 环——assertion 枚举集含 turbo4 而 v1.18.0 openapi 不含（文档 latest 与 target 版本漂移），若按 v1.18.0 schema 口径则 'int4' 依旧是非法值、Type1 仍成立，不受影响；(2) 脚本的 turbo4-on-sparse case 把 turbo4 放在 SparseVectorParams 顶层而非 index.datatype 层，测到的是 serde 未知字段丢弃而非 007 第二句约束本身。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "pub enum Datatype",
+        "sparse_vectors",
+        "Dense and sparse vector names must be unique",
+        "pub datatype",
+        "enum VectorStorageDatatype",
+        "params_iter",
+        "deny_unknown_fields",
+        "unknown variant"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/types.rs (L1311-1320 Datatype enum; L1336-1375 VectorParams; L1394-1403 SparseVectorParams; L1412-1440 SparseIndexParams; L1468-1473 VectorsConfig untagged)",
+        "lib/storage/src/content_manager/collection_meta_ops.rs (L109-175 CreateCollection; L192-250 CreateCollectionOperation::new 名称校验)",
+        "src/actix/api/collections_api.rs (L112-135 create_collection handler)",
+        "lib/segment/src/types.rs (L1605-1612 VectorStorageDatatype; L1684-1700 VectorDataConfig.datatype)",
+        "docs/redoc/master/openapi.json (Datatype schema: enum [float32,uint8,float16]; VectorParams.datatype anyOf[ref,nullable]; SparseVectorParams 仅 index/modifier)"
+      ],
+      "source_excerpt": "// lib/collection/src/operations/types.rs:1468-1473\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Anonymize, Clone, PartialEq, Hash, Eq)]\n#[serde(rename_all = \"snake_case\", untagged)]\npub enum VectorsConfig {\n    Single(VectorParams),\n    Multi(BTreeMap<VectorNameBuf, VectorParams>),\n}\n\n// lib/collection/src/operations/types.rs:1311-1320\n#[derive(Default, Debug, Deserialize, Serialize, JsonSchema, Anonymize, Eq, PartialEq, Copy, Clone, Hash)]\n#[serde(rename_all = \"snake_case\")]\npub enum Datatype {\n    #[default]\n    Float32,\n    Uint8,\n    Float16,\n}\n\n// lib/collection/src/operations/types.rs:1361-1371 (VectorParams)\n#[serde(default, skip_serializing_if = \"Option::is_none\")]\n/// Defines which datatype should be used to represent vectors in the storage.\npub datatype: Option<Datatype>,\n\n// lib/collection/src/operations/types.rs:1394-1403 (SparseVectorParams — 只有 index 和 modifier 两个字段，无 distance/size/datatype)\npub struct SparseVectorParams {\n    pub index: Option<SparseIndexParams>,\n    pub modifier: Option<Modifier>,\n}",
+      "call_chain_traced": "PUT /collections → actix Json<CreateCollection> (collections_api.rs:115) → serde 反序列化。单向量模式（vectors 为 object）命中 VectorsConfig::Single(VectorParams)；当 body 含 datatype='int4'（不在 enum）时，Datatype 枚举反序列化失败——但 VectorsConfig 是 #[serde(untagged)]，serde 对 untagged enum 的语义是'某变体反序列化失败则尝试下一变体'，Single 失败后整个 VectorsConfig 匹配 Multi(BTreeMap)（任意 JSON object 都能匹配 map）……实测仍以 Single 语义建 collection？不——机制更直接：untagged Single 含 datatype 非法值时变体匹配失败回退到 Multi，Multi 把整个 {size,distance,datatype} 当作名为 'size'... 的向量 map 会因字段类型不匹配也失败；实测 200 说明 serde 实际静默跳过了非法 datatype（Option<Datatype> + 无 deny_unknown_fields 结构中 unknown variant 在 untagged 尝试路径下被吞），结果 datatype=None，DESCRIBE 回读不含 datatype 字段与之吻合（builder 复测：Single 模式 datatype='zzz'/123/null 全部 200 且不持久化；Multi 模式 vectors.v.datatype='zzz' 则报 400 untagged 错误——两条路径行为分叉）。对照组：turbo4 放在 sparse index.datatype（类型化 Option<Datatype> 字段、非 untagged 容器）→ 400 'unknown variant turbo4, expected one of float32, uint8, float16'，证明 v1.18.0 二进制确实不含 Turbo4 变体，枚举校验在类型化路径存在、在 untagged 回退路径被吞。sparse_vectors.sp.distance/size：SparseVectorParams 结构体只有 index/modifier 字段，serde 默认丢弃未知字段（全仓库 deny_unknown_fields 命中 0 处）→ 静默丢弃，DESCRIBE 回读 {\"sp\":{}} 吻合。constraint 009 路径：CreateCollectionOperation::new (collection_meta_ops.rs:228-243) 显式检查 dense/sparse 名称冲突 → 400，与 log 最后一条吻合。",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "判定 validation_absent 的理由：对主观测（Single 模式 datatype 非法值），v1.18.0 源码中不存在任何拒绝路径——untagged 容器吞掉枚举错误并以 HTTP 200 成功建 collection（值同时被静默丢弃，不持久化）。这不是显式 default 逻辑（对比 boundary_02 的 convert(None)=>OneBit 有明确代码意图），而是 serde untagged 的意外回退副作用：结构体既未实现期望的拒绝、也未实现有意的 default——运行结果是'非法输入被当成功接受'。silent-drop（sp.distance/size）部分属 serde 默认丢弃未知字段，偏 by-design；分类留给 auditor。"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env（builder 本机复测同一 v1.18.0 commit db3fca3 实例，'int4'/123/null 全部复现 200；对照路径 multi-mode 'zzz' 与 sparse index 'turbo4' 均正确 400，环境正常）",
+        "concurrency（单请求串行触发）",
+        "request_typo（字段名 datatype 正确，非法值为显式构造）",
+        "cache_delay（200 响应即时，DESCRIBE 即刻回读）"
+      ],
+      "surviving": "by-design 辩护面（auditor 裁量）：非法 datatype 虽被 200 接受，但值被静默丢弃、未持久化、collection 以合法默认（float32）建立——可辩护为'宽容反序列化 + 默认值'。但无任何错误提示或文档声明该宽容语义，用户无法得知配置被丢弃，仍构成静默失败面。"
+    }
+  }
+}

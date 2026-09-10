@@ -1,0 +1,527 @@
+{
+ "auditor": "chain-auditor",
+ "target": "milvus",
+ "version": "v2.3.22",
+ "self_check": "PASS",
+ "verdicts": [
+  {
+   "defect_id": "boundary_dim_mismatch_004",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "doc",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "REFUTED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED",
+     "note": "v1 search 静默空结果 vs insert/v2 显式拒"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "机械 A=REFUTED → final=NOT_DEFECT"
+   },
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": "contract_misread",
+   "rationale": "机械 A=REFUTED：milvus_range_search_001（必填校验）确实执行未违反；v1 search dim 匹配无契约断言（链自认 contract 环缺口），insert 1804/v2 1801 仅为对照锚不能定案。dim 不属 B 客观约束类（类型由 1801 对照证明同字段有校验）。"
+  },
+  {
+   "defect_id": "boundary_idtype_datatype_003",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "枚举闭集"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "机械 A=CONFIRMED → final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "机械 A=CONFIRMED：idType='int64' 不在契约枚举 [Int64,VarChar] 且 200+code:200 接受；B 枚举闭集同样成立。源码 switch 显式归一化 'int64' 属 by-design 容错（源码疑义存在），按 E2 规则不推翻 A 定案，建议主进程人工复核。"
+  },
+  {
+   "defect_id": "boundary_limit_offset_008",
+   "verdict": "NEEDS_MORE_EVIDENCE",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=CONFIRMED（id+quote_ok，新约束milvus_range_v2_query_limit_001）→ final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "R1 原判恢复（R2 重审作废）：implied=CONFLICT 约束引用错位",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_metric_enum_002",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "枚举闭集"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "机械 A=CONFIRMED → final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "机械 A=CONFIRMED：metricType='' 与 None 不在 7 值枚举内且 200+code:200 接受；空值回退 DefaultMetricType(handler_v2.go:1118) 为源码设计但契约断言未含 '缺省即合法' 例外，A 定案不被推翻。"
+  },
+  {
+   "defect_id": "boundary_nanninf_vector_015",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "doc",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "REFUTED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无",
+     "note": "null 元素不属数值下界/枚举/互斥/类型恒真——JSON null 到 float32 为解码语义而非类型混入；HTTP 语义条件①非法值可判定成立但②契约无 'invalid→reject' 断言，不触发"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "机械 A=REFUTED → final=NOT_DEFECT"
+   },
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": "contract_misread",
+   "rationale": "机械 A=REFUTED：milvus_range_search_001 必填断言未违反；链自认无元素级 null/NaN 契约断言（contract 环缺口），insert null 元素持久化虽是实质观测但契约无条文承载。B 不触发（null 属 Go 解码语义非类型违反）。"
+  },
+  {
+   "defect_id": "boundary_search_required_005",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "机械 A=CONFIRMED → final=DEFECT"
+   },
+   "chain_broken_at": "doc",
+   "root_cause_if_fp": null,
+   "rationale": "机械 A=CONFIRMED：契约 milvus_type_v1_search_001 '默认返回字符串、header 控制数字'，实测默认即 JSON 数字（http_param.go DefaultValue=true，v2.3.2 引入）。属契约文本未随版本默认值翻转更新的 Type2 漂移，A 定案成立。"
+  },
+  {
+   "defect_id": "boundary_stats_rowcount_016",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界",
+     "note": "LLM 兜底：rowCount 是计数类输出，insert N≥5 行而统计读 0，接受零计数违反计数下界≥实际写入，不需要契约背书"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "SUPPORTS_DEFECT",
+     "matched_pattern": "blindspot：rowCount 统计源与 query path 可见性分歧未被维护者认领为设计承诺（by_design_patterns 无 count/stats 条目；BDP 均为 loading/REST code 形态类）",
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE → B=CONFIRMED → DEFECT"
+   },
+   "chain_broken_at": "log",
+   "root_cause_if_fp": null,
+   "rationale": "A=NEUTRAL(quote_mismatch)进灰区；B 兜底 CONFIRMED：insert 5 行返回逐字 insertIds 且 flush/load/reload 后 rowCount 恒 0，接受零计数违反计数下界。datacoord healthy-segment 累加(meta.go:257)为机制而非辩护——认知模型无 count 类 by_design 锚点。三方独立复现。"
+  },
+  {
+   "defect_id": "boundary_v2_params_types_007",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "类型恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "机械 A=CONFIRMED → final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "机械 A=CONFIRMED：契约 params 为 map<string,float64> 仅数值，null 值以 200+code:200 通过且被静默丢弃；B 类型恒真（对照 string/bool/array 均 1801）。Go null→零值解码为源码语义但不推翻 A。"
+  },
+  {
+   "defect_id": "semantic_cosine_range_03",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "source",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "REFUTED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无",
+     "note": "COSINE 输出值域不属四类客观约束（无契约域断言、无类型/枚举违反）"
+    },
+    "behavioral": {
+     "verdict_C": "WEAK_REFUTED",
+     "note": "官方测试 test_search.py:4676 固化 distance∈[-1,1]——引擎行为被官方断言固化，但 metric_type.go 注释自称 distance 的命名矛盾真实存在"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "机械 A=REFUTED → final=NOT_DEFECT"
+   },
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": "approximate_by_design",
+   "rationale": "机械 A=REFUTED：COSINE 本身合法，无距离域断言被违反（contract 环缺口）。[-1,1] 输出被官方测试显式断言固化（by-design in source），fp 证据源=source；命名矛盾留作文档语义缺陷备查。"
+  },
+  {
+   "defect_id": "semantic_filter_expr_05",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "SUPPORTS_DEFECT",
+     "matched_pattern": "BDP-4 '[Bug]: HTTP V2 restful Return code:0' not_a_bug——但该锚点仅覆盖 'REST 全 200 包业务码' 形态，不覆盖用户输入错误被归类 65535 UnexpectedError 的信封语义错位，锚点不匹配维持 SUPPORTS_DEFECT 方向由 B 主导",
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE → 机械 B=CONFIRMED → DEFECT"
+   },
+   "chain_broken_at": "doc",
+   "root_cause_if_fp": null,
+   "rationale": "A=NEUTRAL(quote_mismatch)进灰区；机械 B=CONFIRMED：请求侧可判定的非法 filter（parser 明确报 cannot parse expression）被归为 65535 UnexpectedError 而非参数错误码族，违反错误信封语义（65535 用于用户输入错误=交底锚）。契约 1804-family 外推含混属 doc 层漂移，缺陷主张（错误码归类）存活。"
+  },
+  {
+   "defect_id": "semantic_load_state_07",
+   "verdict": "NEEDS_MORE_EVIDENCE",
+   "fp_evidence_source": "both",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无",
+     "note": "状态机语义非四类客观约束；无非法值接受观测"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": "BDP-1/BDP-2 loading failed锚点与create隐式load现象不同构",
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE → B=NEUTRAL/D=NO_SIGNAL/C=REFUTED（源码+官方测试固化by-design）→ NOT_DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": "approximate_by_design",
+   "rationale": "R1 原判恢复（R2 重审作废）：契约自冲突致 A=NEUTRAL",
+   "rework_order": null
+  },
+  {
+   "defect_id": "semantic_visibility_04",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界",
+     "note": "LLM 兜底：insert 3 行 search 证实存在、delete 生效后 get_stats rowCount 恒 0，接受零计数违反计数下界"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "SUPPORTS_DEFECT",
+     "matched_pattern": "blindspot：by_design_patterns 无 count/get_stats 条目，维护者未认领 rowCount==N 不成立的豁免",
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE → B=CONFIRMED → DEFECT"
+   },
+   "chain_broken_at": "log",
+   "root_cause_if_fp": null,
+   "rationale": "A=NEUTRAL(quote_mismatch)进灰区；B 兜底 CONFIRMED：grade A 逐字日志 insertCount=3（ids 1/2/3）+ search 证实 3 行存在 + 删 1 行后 rowCount=0（期望 2），零计数违反下界且复合操作排除状态窗口。datacoord 机制（meta.go:253-262）不构成认知锚点级 by_design 辩护。"
+  },
+  {
+   "defect_id": "vein_drop_idempotent_004",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE → 机械 B=CONFIRMED → DEFECT"
+   },
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": null,
+   "rationale": "A=NEUTRAL(quote_mismatch，断言 endpoint 为 v1 而实测 v2)进灰区；机械 B=CONFIRMED：同一不存在集合 drop=200 静默成功 vs load=code 100 正确报错——请求侧可判定的 not-found 在 drop 面被成功信封吞掉，违反信封语义。rootcoord 幂等注释(drop_collection_task.go:58-63)为 by-design 但聚合规则下 B 定案。"
+  },
+  {
+   "defect_id": "vein_dupcreate_msg_006",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "WEAK_REFUTED",
+     "note": "幂等创建为注释明文设计（create_collection_task.go:470-481）"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "机械 A=CONFIRMED → final=DEFECT"
+   },
+   "chain_broken_at": "log",
+   "root_cause_if_fp": null,
+   "rationale": "机械 A=CONFIRMED：契约明文 'duplicate name -> already-exists error'，identical dup v2=200 静默成功。幂等注释为源码设计但按 E2 规则不推翻 A；v1 报 65535 证明同服务器具备查重能力，diff-param 对照 B 面成立。派发 prompt 的 CreateIndex failed 子主张未取证（不采信）。"
+  },
+  {
+   "defect_id": "vein_query_limit0_002",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真",
+     "note": "另数值下界形态成立：limit=0 变全量 11 行读取"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE → 机械 B=CONFIRMED → DEFECT"
+   },
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": null,
+   "rationale": "A=NEUTRAL(quote_mismatch)进灰区；机械 B=CONFIRMED：limit=0 以 200+code:200 返回全量 11 行（非法 limit 变无限制读取），对照 search 同参数被拒。handler_v2.go:565 `Limit > 0` 静默丢弃非法值，源码零校验(validation_absent)，与 boundary_limit_offset_008 同根因互证。"
+  },
+  {
+   "defect_id": "vein_stats_rowcount_001",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界",
+     "note": "LLM 兜底：count(*)=10 且 query 返回 10 行而 rowCount=0，零计数违反下界；wait>10s+release/reload 排除滞后"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "SUPPORTS_DEFECT",
+     "matched_pattern": "blindspot：by_design_patterns 无 count/stats 条目",
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE → B=CONFIRMED → DEFECT"
+   },
+   "chain_broken_at": "log",
+   "root_cause_if_fp": null,
+   "rationale": "A=NEUTRAL(quote_mismatch)进灰区；B 兜底 CONFIRMED：三方对照一行汇总 count(*)=10/query_rows=10/rowCount=0，计数下界直接违反；本链摘要级 log 由 016/semantic_04 的 raw 逐字证据补强（多脚本稳定触发）。datacoord 机制无认知锚点背书。"
+  },
+  {
+   "defect_id": "vein_typo_filter_003",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE → 机械 B=CONFIRMED → DEFECT"
+   },
+   "chain_broken_at": "log",
+   "root_cause_if_fp": null,
+   "rationale": "A=NEUTRAL(quote_mismatch)进灰区；机械 B=CONFIRMED：未知字段 filter 以 200+code:200 空结果吞掉用户 typo，同参数类型错却 65535。与 semantic_filter_expr_05 的 bad_field 65535 表面冲突由表达式形态/plan 路径分歧解释（REST 层零字段校验源码确证），两链合一覆盖矛盾两面，Type2 主张存活。"
+  },
+  {
+   "defect_id": "vein_v1v2_autoid_005",
+   "verdict": "NEEDS_MORE_EVIDENCE",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无",
+     "note": "两面的 autoID 值各自合法（bool 默认值差异不属四类客观约束）"
+    },
+    "behavioral": {
+     "verdict_C": "WEAK_REFUTED",
+     "note": "契约明文记录该分歧，源码三处逐行坐实且无注释解释——设计一致性争点非优雅性"
+    },
+    "cognition": {
+     "verdict_D": "SUPPORTS_NOT_DEFECT",
+     "matched_pattern": "milvus_bc_v1_vs_v2_semantics：契约（维护者认知载体）明文记录 v1 autoID=true forced / v2 explicit schema autoID=false 为预期行为",
+     "developer_quote": "'v1: autoID=true forced; v2: explicit schema autoID=false'"
+    },
+    "aggregation_applied": "GREY_ZONE → D==SUPPORTS_NOT_DEFECT → NOT_DEFECT（降置信标注：观测确有使用者实害面，摘要级 log）"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "更正：D 命中 SUPPORTS_NOT_DEFECT（契约明文记录该分歧为预期行为）→ 按聚合表 final=NOT_DEFECT；但 D 材料为契约转述而非 issue 级 developer_quote，置信降级。观测（同 payload 双面 autoID 相反）真实存在但 '契约如实记录的 by-design 是否算 defect' 不属链审计可裁——建议主进程人工复核面间一致性主张。"
+  }
+ ],
+ "summary": {
+  "total": 21,
+  "defect": 12,
+  "not_defect": 3,
+  "needs_more_evidence": 3,
+  "fp_evidence_source_distribution": {
+   "doc": 3,
+   "source": 2,
+   "both": 1,
+   "behavior": 0
+  },
+  "root_cause_distribution": {
+   "contract_misread": 2,
+   "approximate_by_design": 3
+  },
+  "note": "VOIDED 2026-08-22: 见版本根 VOIDED.md"
+ },
+ "notes": "两条 NEEDS_MORE_EVIDENCE：boundary_limit_offset_008（A/B 冲突→rework 工单）、semantic_load_state_07（契约自冲突消解）。vein_v1v2_autoid_005 按聚合表 D=SUPPORTS_NOT_DEFECT 判 NOT_DEFECT 但带降置信与人工复核建议。rowCount 三链同根因各自独立判 DEFECT（B/D 兜底，A 均 quote_mismatch 灰区）。",
+ "total_chains": 18
+}

@@ -1,0 +1,30 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+leg positive u64-min+max+uuid -> status=200
+raw: {"result":[{"id":0},{"id":18446744073709551615},{"id":"c73bcdcc-2606-4b31-94a4-9d3b29a7d15e"}],"status":"ok","time":0.000330466}
+leg positive closure OK: u64 min(0) and max(2^64-1) and uuid all retrieved
+leg u64 MAX+1 (overflow) -> status=400
+raw: {"status":{"error":"Format error in JSON body: value 18446744073709552000 is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 31"},"time":0.0}
+leg u64 MAX+1 (overflow) OK: clean 4xx rejection
+leg negative -1 -> status=400
+raw: {"status":{"error":"Format error in JSON body: value -1 is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 13"},"time":0.0}
+leg negative -1 OK: clean 4xx rejection
+leg float 1.5 -> status=400
+raw: {"status":{"error":"Format error in JSON body: value 1.5 is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 14"},"time":0.0}
+leg float 1.5 OK: clean 4xx rejection
+leg bool true -> status=400
+raw: {"status":{"error":"Format error in JSON body: value true is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 15"},"time":0.0}
+leg bool true OK: clean 4xx rejection
+leg null entry -> status=400
+raw: {"status":{"error":"Format error in JSON body: value Unit is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 15"},"time":0.0}
+leg null entry OK: clean 4xx rejection
+leg not-a-uuid string -> status=400
+raw: {"status":{"error":"Format error in JSON body: value not-a-uuid is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 23"},"time":0.0}
+leg not-a-uuid string OK: clean 4xx rejection
+leg object {id:1} -> status=400
+raw: {"status":{"error":"Format error in JSON body: value {String(\"id\"): U64(1)} is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 20"},"time":0.0}
+leg object {id:1} OK: clean 4xx rejection
+leg nested array [1] -> status=400
+raw: {"status":{"error":"Format error in JSON body: value [U64(1)] is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 14"},"time":0.0}
+leg nested array [1] OK: clean 4xx rejection
+VERDICT: NO_DEFECT

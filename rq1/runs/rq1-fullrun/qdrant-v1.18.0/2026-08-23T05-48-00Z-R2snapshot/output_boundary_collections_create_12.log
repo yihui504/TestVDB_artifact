@@ -1,0 +1,9 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+CREATE strict_mode max_resident_memory_percent=50: status=200 body={"result":true,"status":"ok","time":0.252640205}
+DESCRIBE: status=200 body={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_construct":100,"full_scan_threshold":10000,"max_indexing_threads":0,"on_disk":false},"optimizer_config":{"deleted_threshold":0.2,"vacuum_min_vector_number":1000,"default_segment_number":0,"max_segment_size":null,"memmap_threshold":null,"indexing_threshold":10000,"flush_interval_sec":5,"max_optimization_threads":null,"prevent_unoptimized":null},"wal_config":{"wal_capacity_mb":32,"wal_segments_ahead":0,"wal_retain_closed":1},"quantization_config":null,"strict_mode_config":{"enabled":true,"max_resident_memory_percent":50}},"payload_schema":{},"update_queue":{"length":0}},"status":"ok","time":0.00054395
+PERSIST check: strict_mode_config present=True, max_resident_memory_percent present=True
+CASE PATCH max_resident_memory_percent=101 (max+1): status=422 body={"status":{"error":"Validation error in JSON body: [strict_mode_config.max_resident_memory_percent: value 101 invalid, must be from 1 to 100]"},"time":0.0}
+CASE PATCH max_resident_memory_percent=0 (min-1): status=422 body={"status":{"error":"Validation error in JSON body: [strict_mode_config.max_resident_memory_percent: value 0 invalid, must be from 1 to 100]"},"time":0.0}
+CASE PATCH max_resident_memory_percent=100 (max): status=200 body={"result":true,"status":"ok","time":0.013903013}
+VERDICT: NO_DEFECT

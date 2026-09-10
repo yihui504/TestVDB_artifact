@@ -1,0 +1,11 @@
+{
+ "defect_id": "boundary_collections_update_006",
+ "endpoint": "collections+update",
+ "param": "optimizers_config.vacuum_min_vector_number",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "on a live bcu006_* collection, PATCH optimizers_config.vacuum_min_vector_number=99, =0 and =-1 each return HTTP 400/422 (any 2xx = Type1_IllegalSuccess probe; 5xx with /healthz alive = Type3_RuntimeFailure); PATCH vacuum_min_vector_number=100 and =1000 each return HTTP 200 with envelope result true (4xx = Type1_IllegalRejection of a documented-legal value)",
+  "source": "docstring"
+ }
+}

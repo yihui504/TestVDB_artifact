@@ -1,0 +1,95 @@
+{
+  "defect_id": "semantic_collections_delete_005",
+  "endpoint": "collections+delete (DELETE /collections/{collection_name}; the ALIAS name was supplied in the collection_name path slot; query timeout=10)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No doc_preflight.json sidecar exists anywhere under results/qdrant (checked), and WebFetch was domain_blocked for both qdrant.tech and api.qdrant.tech ('Unable to verify if domain is safe to fetch'); both pages were then fetched successfully via the web_reader fallback, so reachability=PASS. Version: the api-reference URL is versioned v-1-18-x and its page shows the v1.18.x selector (exact match), but the anchor constraint's own source_url (concept page qdrant.tech/documentation/manage-data/collections/) has no version routing — no_version_in_url, PARTIAL per rule (legacy concept doc, normal). Content: the concept page contains verbatim the alias premise 'All queries to the collection can also be done identically, using an alias instead of the collection name.' (Collection Aliases section) and documents '## Delete Collection' with DELETE /collections/{collection_name}; however the bc contract's invisibility consequence ('disappears from listing and direct access returns 404') is NOT stated verbatim on the page (inferred from the api-reference one-liner 'Drops the specified collection and all associated data in it'), and the rendered v1.18.x api-reference page for delete-collection documents ONLY the 200 response (path param says just 'Name of the collection to delete', no alias mention; result documented as bare boolean) — the co-anchored assertion's 'non-existent collection returns 404' half is not visible on the rendered page. Endpoint precision: DELETE /collections/{collection_name} is registered in structured_contract.json api_endpoints as collections+delete (line 681) with the timeout query param, and the script's drop_collection path key resolved to exactly it (log line 3).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[DELETE by alias scd05e23ec9_alias] status=200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000074845} || [state: GET real scd05e23ec9_real] status=200 raw={\"result\":{\"status\":\"green\",\"optimizer_status\":\"ok\",\"indexed_vectors_count\":0,\"points_count\":0,\"segments_count\":8,\"config\":{\"params\":{\"vectors\":{\"size\":4,\"dista",
+      "secondary_observations": [
+        "[premise: read via alias scd05e23ec9_alias] status=200 raw={\"result\":{\"status\":\"green\",... (rest, same name slot, READ face: the alias DOES resolve on GET — hence 'identically via alias' holds for reads)",
+        "[aliases list] status=200 mapping(scd05e23ec9_alias)='scd05e23ec9_real' (observed BEFORE the delete, log line 9, AND AFTER it unchanged, log line 12 — the alias was not consumed/removed by the DELETE)",
+        "VERDICT: DEFECT_FOUND (Type4_StateLogicViolation: DELETE by alias returned 200 but the underlying collection 'scd05e23ec9_real' is still gettable (status 200) - half-delete through the alias seam (qdrant_bc_delete_invisibility_001: a successfully deleted collection disappears; GET must 404))",
+        "comparative rest, same endpoint+face, REAL name in the same slot (state_collections_delete_005.log): [L1 delete-by-name scdl5_1788396119_36796_ali1] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.020484098} -> [L1 describe-by-alias AFTER delete] status=404 (delete-by-name actually deletes; disposition difference result:true vs result:false between name forms)",
+        "comparative rest, never-created names in the same slot (boundary_collections_delete_002.log): [delete never-created bcd2695fb2never404] status=200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000088793} (identical 200+result:false disposition for any name absent from the collections map — DELETE-by-alias is dispositionally a delete-of-nonexistent)",
+        "comparative rest, second independent reproduction of the exact phenomenon (state_collections_delete_005.log L2 leg): [L2 delete-by-alias scdl5_1788396119_36796_ala2] status=200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.00013607} -> [L2 verify underlying scdl5_1788396119_36796_ali2] status=200 ... [L2 list] status=200 present=True",
+        "face_unavailable: grpc live comparative probe is not obtainable at evidence-builder data level (no gRPC delete-by-alias line exists in any output_*.log; live requests are outside this role's data access); source trace shows the grpc delete handler funnels into the same CollectionMetaOperations::DeleteCollection path as REST (both faces identical in source)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "From the server's perspective the supplied name (the alias) is absent from the collections map; that miss is reported as HTTP 200 with body flag result:false and status:\"ok\" rather than any 4xx — same disposition as DELETE on never-created names (boundary_collections_delete_002/003/004). Adjudicative nuance recorded for the auditor: the claim's 'returned 200' is HTTP-level true, but the body's own success flag result:false means the server did not claim a successful delete; whether 'half-delete' (Type4) or 'no-op 200 where the spec thin-page documents only 200' (Type1-family, co-anchor qdrant_behavioral_collections_delete_001's 404 half not visible on the rendered v1.18.x page) is the auditor's call."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_collections_delete_005",
+        "state_collections_delete_005 (L2 leg, independent reproduction of the same phenomenon)",
+        "same-endpoint same-disposition family: boundary_collections_delete_002, boundary_collections_delete_003, boundary_collections_delete_004"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_bc_delete_invisibility_001",
+      "assertion_text_quoted": "a successfully deleted collection disappears from listing and direct access returns 404",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "Anchor selection: candidates.jsonl constraint_id was empty (mechanical extraction gap); the script header (debate_logs/semantic_collections_delete_005.py line 6) declares 'qdrant_bc_delete_invisibility_001, qdrant_behavioral_collections_delete_001' and the log's VERDICT line names qdrant_bc_delete_invisibility_001 — used as primary, behavioral_collections_delete_001 as co-anchor (its expected_behavior text: 'DELETE on an existing collection returns HTTP 200; DELETE on a non-existent collection returns 404, not 200'). The quoted text is the verbatim description field of the qdrant_bc_delete_invisibility_001 entry (structured_contract.json line 8093); the entry's full expected_behavior ('after a 200 delete, the list no longer contains the name, details access returns 404 and exists reports result.exists=false') and scenario ('create -> DELETE /collections/{c} (wait) -> GET /collections -> GET /collections/{c} -> GET /collections/{c}/exists') are paraphrased here in the note, not concatenated into the quote. Violates-declaration self-check: the observation IS inside the constraint's domain — a 200 delete occurred and the quoted consequence (direct access returns 404) did not follow (GET real -> 200) — so violates=true at the constraint's letter; the counter-reading is the body's result:false flag (server's own not-deleted report), and the scenario's {c} was filled with the alias rather than the literal created name, which the concept doc's verbatim 'All queries to the collection can also be done identically, using an alias instead of the collection name.' places inside the documented domain of the endpoint. Both readings recorded; not the vague middle."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_bc_delete_invisibility_001 present in structured_contract.json behavioral_contracts (line 8092, source_url qdrant.tech/documentation/manage-data/collections/); dispatch constraint_id empty but script header declares both anchors",
+        "doc: concept page reachable via web_reader (WebFetch domain_blocked, recorded); 'All queries to the collection can also be done identically, using an alias instead of the collection name.' verbatim present; Delete Collection section present; the invisibility-after-200-delete consequence is inference, not page prose — link PARTIAL, not broken",
+        "script: debate_logs/semantic_collections_delete_005.py lines 219-221 send DELETE drop_collection with path_params name=<alias> and timeout=10; premise chain (create 200, alias create 200, GET-by-alias 200, registry mapping verified) all in log lines 6-9",
+        "log: output_semantic_collections_delete_005.log lines 10-12 show DELETE 200 {result:false} -> GET real 200 -> alias mapping unchanged; matches the claim's observation pair; body result:false recorded as adjudicative nuance"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "fn delete_collection",
+        "fn resolve_name",
+        "fn remove_collection",
+        "DeleteCollection",
+        "submit_collection_meta_op",
+        "delete-collection"
+      ],
+      "files_examined": [
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (delete_collection, lines 211-296; meta-op dispatch, lines 78-85)",
+        "lib/storage/src/content_manager/toc/mod.rs (resolve_name lines 407-420; get_collection_unchecked lines 369-381)",
+        "src/actix/api/collections_api.rs (REST DELETE handler, lines 160-178)",
+        "src/tonic/api/collections_api.rs (gRPC delete handler, lines 116-122)",
+        "lib/storage/src/content_manager/alias_mapping.rs (remove_collection, lines 82-93)",
+        "lib/storage/src/dispatcher.rs (submit_collection_meta_op signature, lines 63-78)",
+        "SESSION debate_logs/semantic_collections_delete_005.py (full oracle)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/toc/collection_meta_ops.rs:211-227 —\n    pub(super) async fn delete_collection(\n        &self,\n        collection_name: &str,\n    ) -> Result<bool, StorageError> {\n        let _collection_create_guard = self.collection_create_lock.lock().await;\n\n        self.alias_persistence\n            .write()\n            .await\n            .remove_collection(collection_name)?;\n\n        let to_delete;\n        let result;\n        let collection_path = self.get_collection_path(collection_name);\n        let safe_delete_path = self.storage_config.storage_path.join(\".deleted\");\n\n        let removed_opt = self.collections.write().await.remove(collection_name);\n        if let Some(removed) = removed_opt {\n            ...\n            result = true;\n        } else {\n            // we hold the collection_create lock to make sure no one is creating this collection\n            // otherwise we would delete its content now\n            if collection_path.exists() { ... } else { to_delete = None; }\n            result = false;   // lines 272-285 (else-branch)\n        }\n        ...\n        Ok(result)            // line 295 — Ok(false), NOT a StorageError\n\nContrast, read path resolves aliases — lib/storage/src/content_manager/toc/mod.rs:407-420 —\n    fn resolve_name(\n        collection_name: &str,\n        collections: &Collections,\n        aliases: &AliasPersistence,\n    ) -> Result<String, StorageError> {\n        let alias_collection_name = aliases.get(collection_name);\n        let resolved_name = match alias_collection_name {\n            None => collection_name.to_string(),\n            Some(resolved_alias) => resolved_alias,\n        };\n        collections.validate_collection_exists(&resolved_name)?;\n        Ok(resolved_name)\n    }\nand mod.rs:375-377 (inside get_collection_unchecked) calls Self::resolve_name(collection_name, &read_collection, &alias_persistence)? — which is why GET /collections/{alias} returns 200 in the log premise while DELETE /collections/{alias} does not resolve.\n\nlib/storage/src/content_manager/alias_mapping.rs:83-93 — remove_collection retains only aliases whose TARGET differs from the given name: self.alias_mapping.0.retain(|_, v| v != collection_name); — called with the ALIAS string, it removes nothing; the queried alias key survives (matches log line 12).",
+      "call_chain_traced": "REST: actix #[delete(\"/collections/{collection_name}\")] (src/actix/api/collections_api.rs:160-178) passes collection.collection_name.clone() RAW (no alias resolution) into CollectionMetaOperations::DeleteCollection -> Dispatcher::submit_collection_meta_op (lib/storage/src/dispatcher.rs:72, returns Result<bool, StorageError>) -> toc meta-op dispatch (collection_meta_ops.rs:78-81) -> delete_collection (line 211) which removes from the collections map BY RAW NAME without calling resolve_name; for an alias name remove() yields None -> result=false -> Ok(false) -> actix layer wraps as HTTP 200 {result:false,status:\"ok\"}. gRPC: tonic delete (src/tonic/api/collections_api.rs:116-122) funnels through perform_operation into the same CollectionMetaOperations::DeleteCollection path — both interface faces identical (no face divergence). No comment, docstring, or test anywhere in the delete path marks the non-resolution of aliases as intentional (grep over lib/ and tests/ for delete+alias intent markers found none; resolve_name exists and is applied on the read face only).",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (/healthz pre-probe 200, log line 5; all premise steps 200)",
+        "concurrency (single-threaded sequential script; no concurrent writers)",
+        "cache/settling delay (script sleeps 2.0s before the state check; collection create/delete are lock-protected synchronous meta ops on an in-memory map in source, no eventual-consistency seam)",
+        "request-parameter typo (the exact alias string was verified resolving via GET 200 and via the /aliases registry mapping immediately before the mutation, log lines 8-9)"
+      ],
+      "surviving": null
+    }
+  }
+}

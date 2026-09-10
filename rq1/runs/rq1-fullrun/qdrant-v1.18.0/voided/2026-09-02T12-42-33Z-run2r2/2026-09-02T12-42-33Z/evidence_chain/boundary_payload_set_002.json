@@ -1,0 +1,81 @@
+{
+  "defect_id": "boundary_payload_set_002",
+  "endpoint": "payload+set (POST /collections/{collection_name}/points/payload)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: PASS — constraint source_url https://qdrant.tech/documentation/manage-data/payload/ retrieved with full page content (WebFetch was domain_blocked by the sandbox network policy; the session's web reader tool fetched the page successfully, so the URL is live, not dead). Version: PARTIAL — concept page carries no version routing (doc_version 'current (site latest; no version archive)'); endpoint face aligned via versioned v-1-18-x api-reference in the registry. Content: PARTIAL — the geo literal-format promise IS documented on this exact page ('Coordinate should be described as an object containing two fields: `lon` - for longitude, and `lat` - for latitude', all examples numeric), but (a) 'of doubles' is example-inferred, never stated in prose, (b) the page never promises 4xx rejection of non-conforming literals at set-payload time, and (c) the SAME page explicitly declares 'Qdrant allows you to store any information that can be represented using JSON' and 'If the stored value type does not fit the filtering condition - it will be considered not satisfied' (filter-side disposition, documented). Endpoint: PASS — payload+set is in the endpoint_registry (api.qdrant.tech v-1-18-x points/set-payload, verified 2026-09-02, 'Points OR filter must identify the targets (both null is an error); returns 200 ok, 400, 404') and the constraint's own source_url page documents the Set payload REST schema for this exact route. REST+SDK examples co-exist on the page but the constraint is endpoint-level and the attack used REST — no confusion.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "face g1 geo string-lon (point 1) -> status=200 | raw: {\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.002904317} | face g1 geo string-lon 200-accepted, persisted byte-equal — running lazy typed-validation aggravators",
+      "secondary_observations": [
+        "[rest filter face] lazy filter channel on field 'loc' matched ids=[8] (well-formed control ids=[8]) — the malformed string-lon point 1 did NOT match geo_radius; disposition = exclusion (documented 'considered not satisfied'), not silent interpretation",
+        "[rest index face] typed index create (loc: geo) -> status=200: {\"result\":{\"operation_id\":4,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.53397067} — geo index successfully built over a field containing the malformed value; no rejection, no error",
+        "[comparative, sibling script boundary_payload_set_003, same endpoint payload+set, rest] 'face u1 non-uuid string (point 1) -> status=200 ... persisted byte-equal' then 'lazy match channel on field 'uid' matched ids=[1] (well-formed control ids=[7])' — uuid face: accepted AND silently interpreted by the match channel (Type4), whereas the geo face here: accepted but excluded by its filter channel — same ingestion acceptance, divergent downstream disposition between same-family typed literals",
+        "[comparative, grpc/sdk face] face_unavailable — the sandbox exposes the REST face only; no grpc/sdk same-value probe exists in this round"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Strictly: HTTP 200 with a plain success envelope {\"status\":\"ok\"} and NO error code at all — the request-side-decidable literal-format violation was fully accepted (stronger than business-code wrapping: the error is not surfaced on any channel)."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["boundary_payload_set_002", "boundary_payload_set_003"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_payload_set_001",
+      "assertion_text_quoted": "payload/filter literal formats: geo point = {lon, lat}; datetime = RFC 3339 string; uuid = uuid string; arrays are same-typed",
+      "api_violates_assertion": true,
+      "note": "E5 self-check: the observed value {\"lon\": \"4.9\", \"lat\": 52.37} is INSIDE the quote's constraint domain (a geo payload literal on payload+set) and non-compliant (lon is a string; the constraint description and the doc's all-numeric examples give lon/lat as numbers) — the value is not compliant, so violates=true is the honest reading. The competing doc-level free-JSON declaration ('store any information that can be represented using JSON') is recorded in doc_verification.content_consistency for the auditor to weigh as a by-design defense; it does not change the ingestion-face violation boolean. Note: the candidates.jsonl dispatch carried constraint_id=\"\" (empty); the constraint linkage is restored from the script header (constraint_ids: qdrant_type_payload_set_001) and the attack string, and the constraint exists in structured_contract.json (constraints.type_constraints[10]).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_payload_set_001 found in structured_contract.json (results/qdrant/v1.18.0, constraints.type_constraints[10], evidence_tier explicit, endpoint payload+set) — dispatch record had empty constraint_id; linkage via script header line 6 'constraint_ids: qdrant_type_payload_set_001' and attack string; intact",
+        "doc: constraint source_url https://qdrant.tech/documentation/manage-data/payload/ live and retrieved; geo={lon,lat} literal format documented on that page (Payload types section) — the FORMAT promise is the doc's own words, but the page adds free-JSON storage + filter-side 'not satisfied' semantics and promises NO ingestion-time 4xx; link holds for the promise, disposition expectation is the oracle's inference",
+        "script: debate_logs/boundary_payload_set_002.py face g1 sends POST /collections/{coll}/points/payload body {\"points\":[1],\"payload\":{\"loc\":{\"lon\":\"4.9\",\"lat\":52.37}}} with wait=true (lines 233, 283-287) — raw request is inside the constraint's endpoint and literal-format domain; intact",
+        "log: output_boundary_payload_set_002.log lines 5-7 show status=200 with completed operation envelope and script-verified byte-equal readback (readback equality is a precondition of the 'persisted byte-equal' print, script lines 302-320); verdict DEFECT_FOUND (Type1_IllegalSuccess) is backed by the quoted raw response; intact"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["struct GeoPoint", "set_payload", "geo_radius", "RawGeoPoint", "add_many_geo_points(", "check_match", "pub struct Payload", "PointsSelectorValidationError", "DateTimePayloadType::from_str"],
+      "files_examined": [
+        "lib/shard/src/operations/payload_ops.rs",
+        "lib/segment/src/types.rs",
+        "lib/shard/src/update.rs",
+        "lib/segment/src/index/field_index/geo_index/mod.rs",
+        "lib/segment/src/index/field_index/geo_index/mutable_geo_index.rs",
+        "lib/segment/src/payload_storage/condition_checker.rs",
+        "lib/segment/src/index/field_index/numeric_index/mod.rs"
+      ],
+      "source_excerpt": "lib/shard/src/operations/payload_ops.rs:63-78 + 129-159 (API ingestion struct — payload is free JSON; the ONLY try_from validation is points-or-filter presence):\n  /// This data structure is used in API interface and applied across multiple shards\n  #[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone)]\n  #[serde(try_from = \"SetPayloadShadow\")]\n  pub struct SetPayload {\n      pub payload: Payload,\n      /// Assigns payload to each point in this list\n      pub points: Option<Vec<PointIdType>>,\n      /// Assigns payload to each point that satisfy this filter condition\n      #[validate(nested)]\n      pub filter: Option<Filter>,\n      ...\n  struct SetPayloadShadow {\n      pub payload: Payload,\n      pub points: Option<Vec<PointIdType>>,\n      pub filter: Option<Filter>,\n      pub shard_key: Option<api::rest::ShardKeySelector>,\n      pub key: Option<JsonPath>,\n  }\n  impl TryFrom<SetPayloadShadow> for SetPayload {\n      type Error = PointsSelectorValidationError;\n      fn try_from(value: SetPayloadShadow) -> Result<Self, Self::Error> {\n          ... if points.is_some() || filter.is_some() { Ok(SetPayload{...}) } else { Err(PointsSelectorValidationError) }\n\nlib/segment/src/types.rs:2010-2012 (payload value type = arbitrary serde_json Map):\n  #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, JsonSchema, Hash)]\n  #[schemars(example = \"payload_example\")]\n  pub struct Payload(pub Map<String, Value>);\n\nlib/segment/src/index/field_index/geo_index/mod.rs:428-441 (typed geo INDEX build: non-f64 lon/lat silently skipped, Option-based, never errors — why index create returned 200):\n      fn get_value(value: &Value) -> Option<GeoPoint> {\n          match value {\n              Value::Object(obj) => {\n                  let lon_op = obj.get(\"lon\").and_then(|x| x.as_f64());\n                  let lat_op = obj.get(\"lat\").and_then(|x| x.as_f64());\n                  if let (Some(lon), Some(lat)) = (lon_op, lat_op) {\n                      return GeoPoint::new(lon, lat).ok();\n                  }\n                  None\n              }\n              _ => None,\n          }\n      }\n\nlib/segment/src/payload_storage/condition_checker.rs:262-277 (full-scan geo_radius FILTER face: string lon -> condition false, i.e. 'not satisfied' — why the lazy filter excluded point 1):\n  impl ValueChecker for GeoRadius {\n      fn check_match(&self, payload: &Value) -> bool {\n          match payload {\n              Value::Object(obj) => {\n                  let lon_op = obj.get(\"lon\").and_then(|x| x.as_f64());\n                  let lat_op = obj.get(\"lat\").and_then(|x| x.as_f64());\n                  if let (Some(lon), Some(lat)) = (lon_op, lat_op) {\n                      return self.check_point(&GeoPoint::new_unchecked(lon, lat));\n                  }\n                  false\n              }\n              _ => false,\n          }\n      }\n  }\n\nlib/segment/src/index/field_index/numeric_index/mod.rs:1055-1057 (same-family datetime indexer — identical soft-conversion pattern):\n      fn get_value(value: &Value) -> Option<DateTimePayloadType> {\n          DateTimePayloadType::from_str(value.as_str()?).ok()\n      }",
+      "call_chain_traced": "REST POST /collections/{name}/points/payload -> SetPayloadShadow -> TryFrom<SetPayloadShadow> for SetPayload (validates ONLY points-or-filter presence; none of the payload VALUE formats) -> lib/shard/src/update.rs:716 set_payload -> Segment::set_payload merge of Payload(Map<String,Value>) (lib/segment/src/types.rs:2012, arbitrary JSON, persisted byte-equal) — no geo/datetime/uuid literal validation exists anywhere on the ingestion path. Lazy typed channels convert via Option: GeoMapIndex::get_value (geo_index/mod.rs:428, as_f64()->None => value silently skipped from the index, index create 200) and ValueChecker for GeoRadius/GeoBoundingBox/GeoPolygon (condition_checker.rs:245-296, as_f64()->None => check returns false 'not satisfied'); datetime indexer identical (numeric_index/mod.rs:1055, from_str().ok()).",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "The contract-required validation (reject a payload geo literal whose lon/lat are not numeric doubles) is absent from the entire ingestion path — the API accepts and byte-persists {\"lon\":\"4.9\"} with 200. Per the v3.4 tightened rule this is NOT marked by_design_in_source: no code comment, docstring, or in-source maintainer declaration of intent exists on the ingestion path (greps for intentionally/by-design/we-don't-validate/arbitrary-JSON comments across payload_ops.rs, payload_storage/, geo_index/ returned zero hits). The by-design DEFENSE that does exist is documentation-level ('store any information that can be represented using JSON' + filter-side 'considered not satisfied') — recorded in doc_verification.content_consistency for the auditor to weigh; it lives in the doc layer, not the source.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — deterministic 200 success with completed operation envelope, server healthy throughout (no 5xx, no healthz check fired)",
+        "concurrency — single sequential wait=true mutation followed by poll-confirmed readback",
+        "request-typo — the malformed literal is exactly the intended probe; readback is byte-equal to what was sent"
+      ],
+      "surviving": "doc-level free-JSON semantics: the payload page itself licenses storing arbitrary JSON and defines non-conforming values' disposition only at the filter face — a semantic/by-design defense the auditor must weigh (it explains the behavior as intended, but is never stated as an ingestion-side validation promise); not an environment artifact"
+    }
+  }
+}

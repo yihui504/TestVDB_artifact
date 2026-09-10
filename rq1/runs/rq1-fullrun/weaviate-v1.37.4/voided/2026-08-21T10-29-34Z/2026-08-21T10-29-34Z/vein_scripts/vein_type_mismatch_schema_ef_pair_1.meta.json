@@ -1,0 +1,12 @@
+{
+  "defect_id": "vein_type_mismatch_schema_ef_pair_1",
+  "script": "vein_type_mismatch_schema_ef_pair_1",
+  "target": "weaviate",
+  "version": "v1.37.4",
+  "endpoint": "POST /v1/schema",
+  "param": "dynamicEfMax",
+  "condition_type": "type_mismatch",
+  "expected_defect_type": "Type1",
+  "strategy": "vein_type_mismatch",
+  "summary": "POST /v1/schema silently accepts string/bool for int-declared vectorIndexConfig params (dynamicEfMax, flatSearchCutoff), coercing to 0 with HTTP 200. Unsent dynamicEfMin defaults to 100 -> stored Min(100) > Max(0), violating inferred assertion weaviate_inferred_hnsw_ef_pairing_001. Control: float 12.7->422, string for replication factor->400, so gap is specific to vectorIndexConfig."
+}

@@ -1,0 +1,86 @@
+{
+  "defect_id": "semantic_aliases_update_002",
+  "endpoint": "aliases+update (POST /collections/aliases)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: WebFetch of https://api.qdrant.tech/v-1-18-x/api-reference/aliases/update-aliases blocked by network restrictions -> domain_blocked (PARTIAL, not FAIL); no doc_preflight.json sidecar exists in the contract directory; offline grounding instead from the versioned OpenAPI mirror shipped inside the exact-version source clone (docs/redoc/v1.18.x/openapi.json), which contains the endpoint POST /collections/aliases (operationId update_aliases); the contract's endpoint_registry additionally records source_status=reachable verified_at 2026-09-02T12:34:08Z. Version: URL is version-routed v-1-18-x, target=v1.18.0, clone git-describes to tag v1.18.0 -> PASS. Content: the v1.18.x OpenAPI schema description (openapi.json line 11093) states verbatim 'Operation for performing changes of collection aliases. Alias changes are atomic, meaning that no collection modifications can happen between alias operations.' - the contract description matches this spec text; PARTIAL because the contract assertion operationalizes 'atomic' as all-or-nothing ('no intermediate state is observable') while the doc sentence's literal second clause concerns interleaving ('no collection modifications can happen between alias operations'), an interpretation gap left for the auditor. Endpoint: aliases+update = POST /collections/aliases confirmed in endpoint_registry (structured_contract.json line 3879) and in the REST handler #[post(\"/collections/aliases\")] (src/actix/api/collections_api.rs line 180) -> PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "caseA [valid create, invalid create]: scoped map before=[('s2au2_1788363011_ax', 's2au2_1788363011_c1')] after=[('s2au2_1788363011_ax', 's2au2_1788363011_c1'), ('s2au2_1788363011_ay', 's2au2_1788363011_c1')]",
+      "secondary_observations": [
+        "caseA [valid create, invalid create]: status=404 raw={\"status\":{\"error\":\"Not found: Collection `s2au2_1788363011_no_such_collection` doesn't exist!\"},\"time\":0.014361128}",
+        "setup create s2au2_1788363011_ax->s2au2_1788363011_c1: status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.012315573}",
+        "rest face, multi-script reproduction 1 (output_boundary_aliases_update_008.log): negative1 [create valid, create missing-coll] -> status=404 ... VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — rejected batch [neg1] still CREATED alias bau8b8f4c71bn1 (non-atomic: first action applied although the batch failed)",
+        "rest face, multi-script reproduction 2 (output_state_aliases_update_001.log): DEFECT: mixed#1 valid-then-invalid: alias row(s) ['sau1_1788365147_35500_al3'] visible despite the batch being rejected — partial commit of a one-request alias batch — Type4_StateLogicViolation (qdrant_state_aliases_update_001 atomicity)",
+        "rest face, destructive variant (output_state_aliases_update_001.log): DEFECT: mixed#3 destructive rollback (valid delete + invalid create): destructive action leaked through the rejected batch — sau1_1788365147_35500_al1 should still map to sau1_1788365147_35500_colA, face says None — Type4_StateLogicViolation",
+        "rest face, order-flip comparative (output_state_aliases_update_001.log): mixed#2 invalid-then-valid (reversed): rollback clean (['sau1_1788365147_35500_al5', 'sau1_1788365147_35500_al6'] all absent) - when the invalid action comes FIRST nothing is applied, i.e. the residue is position-dependent (prefix-commit), consistent with a sequential apply loop",
+        "co-anchor face (qdrant_behavioral_aliases_update_001): the invalid action itself WAS rejected with the documented 404 'Not found: Collection ... doesn't exist!' - the rejection-code promise was kept; the violation is exclusively the residue of the co-located valid action",
+        "grpc face: face_unavailable - sandbox exposes REST only (scripts drive rt.request REST runtime); source-level both faces converge on the same non-transactional loop: tonic collections_api.rs and actix collections_api.rs both funnel CollectionMetaOperations::ChangeAliases into toc::update_aliases"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The mixed batch was correctly rejected with HTTP 404 + error body naming the missing collection; the defect is not the status semantics but the committed residue of the first action after the rejection."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["semantic_aliases_update_002", "boundary_aliases_update_008", "state_aliases_update_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_aliases_update_001",
+      "assertion_text_quoted": "alias operations in one request are applied atomically - no intermediate state is observable and no collection modification can interleave",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "Also quoted verbatim, the constraint description field: \"alias changes are ATOMIC: no collection modifications can happen between the alias operations of one request [SPEC description]\" - matches the v1.18.x OpenAPI text. Violates=true because a request the server itself rejected (404) left its first action durably applied (alias 'ay' present in the post-rejection listing): an observable intermediate/partial state, i.e. non-atomic application. The quoted constraint domain covers this batch exactly (same request, alias operations); no re-citation needed."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_aliases_update_001 present in structured_contract.json (line 6707; state_constraint, evidence_tier=explicit, endpoint aliases+update, source_url https://api.qdrant.tech/v-1-18-x/api-reference/aliases/update-aliases); co-anchor qdrant_behavioral_aliases_update_001 present (line 7595)",
+        "doc: source_url live fetch domain_blocked; offline grounded in docs/redoc/v1.18.x/openapi.json of the v1.18.0 clone (line 11093: 'Alias changes are atomic, meaning that no collection modifications can happen between alias operations.') - the contract description is faithful to the spec text; versioned URL matches target v1.18.0",
+        "script: debate_logs/semantic_aliases_update_002.py header cites constraint_ids qdrant_state_aliases_update_001 + qdrant_behavioral_aliases_update_001 and the same source_url; caseA raw request = POST update_aliases {actions:[{create_alias ay->c1 (valid)},{create_alias az->no_such_collection (invalid)}]} - exactly the mixed batch the oracle defines",
+        "log: output_semantic_aliases_update_002.log verdict line 'VERDICT: DEFECT_FOUND (Type4_StateLogicViolation)' matches claim_hint; raw pairs (404 rejection + scoped-map delta showing 'ay' created) substantiate the verdict; exit code 1"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior",
+      "note": "Minor mechanical gap, not a chain break: the candidates.jsonl dispatch record has constraint_id=\"\" (empty), but the anchor constraint is unambiguous via the attack string and the script header, and it exists in structured_contract.json. Interpretation gap for the auditor: the doc sentence's literal second clause (no interleaving modifications) IS upheld by the implementation via write locks; the violated promise is the all-or-nothing reading of 'Alias changes are atomic'."
+    },
+    "source_grounding": {
+      "grep_queries": ["do_update_aliases (0 hits - fn is named update_aliases)", "update_aliases (57 files -> read the 4 load-bearing ones)", "validate_collection_exists", "ChangeAliases", "atomic (case-insensitive, openapi/proto/types/actix)", "insert|remove|rename_alias in alias_mapping.rs"],
+      "files_examined": [
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (lines 82-85, 298-338)",
+        "lib/storage/src/content_manager/collections_ops.rs (lines 15-39)",
+        "lib/storage/src/content_manager/alias_mapping.rs (lines 30-114)",
+        "src/actix/api/collections_api.rs (lines 180-196)",
+        "docs/redoc/v1.18.x/openapi.json (line 11093, /collections/aliases post)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/toc/collection_meta_ops.rs:298-338 (qdrant v1.18.0, tag v1.18.0):\n\n    /// performs several alias changes in an atomic fashion\n    async fn update_aliases(\n        &self,\n        operation: ChangeAliasesOperation,\n    ) -> Result<bool, StorageError> {\n        // Lock all collections for alias changes\n        // Prevent search on partially switched collections\n        let collection_lock = self.collections.write().await;\n        let mut alias_lock = self.alias_persistence.write().await;\n        for action in operation.actions {\n            match action {\n                AliasOperations::CreateAlias(CreateAliasOperation {\n                    create_alias:\n                        CreateAlias {\n                            collection_name,\n                            alias_name,\n                        },\n                }) => {\n                    collection_lock.validate_collection_exists(&collection_name)?;\n                    collection_lock.validate_collection_not_exists(&alias_name)?;\n\n                    alias_lock.insert(alias_name, collection_name)?;\n                }\n                AliasOperations::DeleteAlias(DeleteAliasOperation {\n                    delete_alias: DeleteAlias { alias_name },\n                }) => {\n                    alias_lock.remove(&alias_name)?;\n                }\n                AliasOperations::RenameAlias(RenameAliasOperation {\n                    rename_alias:\n                        RenameAlias {\n                            old_alias_name,\n                            new_alias_name,\n                        },\n                }) => {\n                    alias_lock.rename_alias(&old_alias_name, new_alias_name)?;\n                }\n            };\n        }\n        Ok(true)\n    }\n\nSupporting: collections_ops.rs:25-32 validate_collection_exists -> StorageError::not_found(\"Collection `{collection_name}` doesn't exist!\") (exact text observed in the 404 response); alias_mapping.rs:66-70 AliasPersistence::insert persists to disk immediately on every action (self.alias_mapping.save(&self.data_path)?).",
+      "call_chain_traced": "REST POST /collections/aliases (src/actix/api/collections_api.rs:180-196 update_aliases) -> dispatcher.submit_collection_meta_op(CollectionMetaOperations::ChangeAliases) (lib/storage/src/dispatcher.rs) -> toc collection_meta_ops.rs:82-85 perform -> update_aliases (toc/collection_meta_ops.rs:299). Single sequential for-loop: per action validate-then-apply; '?' early-returns on the first failing action while actions already applied remain in alias_persistence AND on disk (each insert/remove saves immediately). Write locks held across the batch give interleaving isolation only; there is no rollback, no two-phase prepare, no test codifying partial commit (grep of tests/ for alias atomicity: zero hits; git log of the file shows no alias-atomicity intent commit).",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "note": "validation_absent refers to the atomicity (all-or-nothing) mechanism the constraint requires: no transactional rollback exists anywhere in the traced chain. The per-action existence validation IS present (validate_collection_exists produces the observed 404), so the rejection side behaved as documented. by_design_in_source is rejected: the only in-source comment on this function claims the OPPOSITE ('performs several alias changes in an atomic fashion'), and no explicit maintainer annotation of intentional non-transactionality exists. sufficiency_check: grep_hit_pursued (update_aliases hit 57 files; the 4 load-bearing ones read; claim keywords actions/create_alias/alias_name all pursued to handler code).",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (server healthy; deterministic 404 with code-path-exact error text across 3 scripts; exit path clean)",
+        "concurrency race (sequential requests, no concurrent writers; phenomenon is order-deterministic - valid-first leaves residue, invalid-first leaves clean map - exactly matching the sequential apply loop in source)",
+        "cache delay (residue read back via GET /aliases after rejection; AliasPersistence::insert saves to disk immediately, so the state is truly committed, not a stale view)",
+        "request-parameter typo (script builds both actions from the same PREFIX constants; the 404 names the intended no_such_collection and the created alias 'ay' is the intended valid action)",
+        "by-design (no explicit intent evidence in source; the function's own doc-comment claims 'atomic fashion')"
+      ],
+      "surviving": null
+    }
+  }
+}

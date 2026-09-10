@@ -1,0 +1,61 @@
+{
+  "target": "weaviate",
+  "version": "v1.37.4",
+  "session_dir": "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.3.0/results/weaviate/v1.37.4/2026-08-21T10-29-34Z",
+  "session_id": "weaviate-v1.37.4-2026-08-21T10-29-34Z",
+  "round": 2,
+  "top_endpoints": [
+    "POST /v1/schema (create class)",
+    "GET /v1/schema/{className} (read-back)",
+    "PUT /v1/schema/{className} (update path)"
+  ],
+  "richness_scores": {
+    "POST /v1/schema": 9.0,
+    "GET /v1/schema/{className}": 6.5,
+    "PUT /v1/schema/{className}": 5.5,
+    "POST /v1/schema/{className}/properties": 5.0
+  },
+  "candidates_count": 2,
+  "skipped_count": 0,
+  "by_design_excluded_count": 1,
+  "candidates": [
+    {
+      "id": "vein_range_filter_schema_sharding_zombie_1",
+      "endpoint": "POST /v1/schema",
+      "param": "shardingConfig.desiredCount",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "expected_defect_type": "Type2",
+      "http_status": 200,
+      "response_excerpt": "POST create (desiredCount=-3) Status: 200, raw: '' (EMPTY body, no echo, no error); GET schema immediately: 404; POST add-property: 422 'class is nil: not found'; controls: desiredCount=0 -> 422 'failed to read sharding state' (with residue class GET=200), desiredCount=1 -> 200 + echo + GET 200",
+      "by_design_match": false,
+      "inspired_by": "R1 replicationConfig.factor silent-normalize observability (by-design excluded; response discloses normalized 1) -> R2 asks which params do NOT disclose; desiredCount<0 returns 200+empty body and a phantom class invisible to schema API until first object write",
+      "script_path": "vein_scripts/vein_range_filter_schema_sharding_zombie_1.py",
+      "meta_path": "vein_scripts/vein_range_filter_schema_sharding_zombie_1.meta.json",
+      "self_run": "PASSED - VERDICT DEFECT_FOUND, real exit 1, cleanup OK"
+    },
+    {
+      "id": "vein_range_filter_schema_vi_ints_1",
+      "endpoint": "POST /v1/schema",
+      "param": "vectorIndexConfig.ef",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "expected_defect_type": "Type1",
+      "http_status": 200,
+      "response_excerpt": "accepted AND persisted with HTTP 200 (response echoes value, GET read-back confirms): ef=-5, ef=0, vectorCacheMaxObjects=-1, cleanupIntervalSeconds=-1, pq.centroids=-1; controls rejected 422 on the same config object: maxConnections=-1, efConstruction=-5",
+      "by_design_match": false,
+      "inspired_by": "R1 type_mismatch finding (EF-anchor params unvalidated) -> R2 numeric-boundary generalization shows gap is broader than EF params",
+      "script_path": "vein_scripts/vein_range_filter_schema_vi_ints_1.py",
+      "meta_path": "vein_scripts/vein_range_filter_schema_vi_ints_1.meta.json",
+      "self_run": "PASSED - VERDICT DEFECT_FOUND, real exit 1, cleanup OK"
+    }
+  ],
+  "controls_confirmed_by_design": [
+    "replicationConfig.factor=-1/0 -> 200, POST response ECHOES normalized factor:1, GET read-back=1: normalization disclosed at HTTP layer (not silent) -> consistent with R1 by-design (source Factor<1->1); observability contract satisfied",
+    "shardingConfig.desiredCount=0 -> 422 'failed to read sharding state: physical shards unavailable' (explicit rejection proves validation exists; negative values bypass it) - but 422 path leaves residue class (GET 200)",
+    "shardingConfig.desiredCount=1 and default -> 200 + full class echo + GET 200 (normal create path)",
+    "ef=0/ef=-5 runtime: 5-object nearVector search returns 5 hits (no search degradation at this scale; only invalid-value persistence observable)",
+    "desiredCount=1e9 -> POST read timeout >15s, no residue, DB healthy after (observed, not pursued per no-hang red line)"
+  ],
+  "main_defect_summary": "R2 deep-dive of R1 silent-normalize chain produced two defects on POST /v1/schema. (1) Type2 submit-persist break: shardingConfig.desiredCount<0 (and virtualPerPhysical<0) returns HTTP 200 with an EMPTY body — no class echo, no error, no disclosure — yet the class is a phantom: GET /v1/schema/{class}->404, absent from schema list, POST properties->422 'class is nil: not found', GraphQL absent, until the first object write registers it. Controls prove validation exists (desiredCount=0->422 with explicit error) and negatives bypass it, while the response discloses nothing. (2) Type1 validation asymmetry on vectorIndexConfig ints: ef=-5/0, vectorCacheMaxObjects=-1, cleanupIntervalSeconds=-1, pq.centroids=-1 are accepted and persisted with HTTP 200 (echoed and read-back confirmed) while maxConnections=-1 and efConstruction=-5 are rejected 422 on the same config object — extends R1's gap map beyond the EF-anchor params to the active search-time param ef. R2 also answered the R1 open question: replicationConfig.factor normalization IS disclosed in the POST response (echoes 1, GET=1), so that path stays by-design-excluded."
+}

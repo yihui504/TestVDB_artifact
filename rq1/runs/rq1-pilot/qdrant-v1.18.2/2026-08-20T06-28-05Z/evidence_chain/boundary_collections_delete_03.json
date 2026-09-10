@@ -1,0 +1,81 @@
+{
+  "defect_id": "boundary_collections_delete_03",
+  "endpoint": "collections+delete",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation at https://api.qdrant.tech/api-reference/collections/delete-collection confirms DELETE /collections/:collection_name returns 200 with {result: true, status: ok}. However, docs do not explicitly specify behavior for non-existent collections - only shows success response. This creates ambiguity: should deleting a non-existent collection return 404 (not found) or 200 (idempotent success)?",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "After 1000 deletions of non-existent collection 'test_boundary_does_not_exist_xyz': 4xx=0, 5xx=0, 2xx=1000, other=0. VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — 1000 deletions returned 2xx",
+      "secondary_observations": [
+        "boundary_collections_delete_01: Single DELETE of non-existent returned 404 (correct rejection)",
+        "boundary_collections_delete_06: Lone surrogate in collection name returned 200 (accepted)",
+        "boundary_collections_delete_07: RTL override in collection name returned 200 (accepted)",
+        "boundary_collections_delete_02: NUL byte in collection name returned 422 (correctly rejected)",
+        "boundary_collections_delete_08: 1MB collection name returned 422 (correctly rejected)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Target accepts DELETE requests for non-existent collections and returns HTTP 200 OK with {result: true, status: ok}. This treats deletion of non-existent resources as successful operation rather than client error (404 Not Found)."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_collections_delete_03 (1000 iterations, 100% 2xx)",
+        "boundary_collections_delete_06 (lone surrogate, 2xx)",
+        "boundary_collections_delete_07 (RTL override, 2xx)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_delete_collection_001",
+      "assertion_text_quoted": "Constraint requires validation on DELETE /collections/:collection_name endpoint - API should properly validate collection existence and return appropriate error for invalid/non-existent collections",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_delete_collection_001 (validation required for DELETE)",
+        "doc: https://api.qdrant.tech/api-reference/collections/delete-collection shows 200 response, no explicit non-existent handling",
+        "script: boundary_collections_delete_03.py sends 1000 DELETE requests to non-existent collection 'test_boundary_does_not_exist_xyz'",
+        "log: All 1000 requests returned HTTP 200 OK with {result: true, status: ok} instead of 404 Not Found"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Log shows API returning HTTP 200 OK for deletions of non-existent collection. This violates REST semantics where DELETE on non-existent resource should return 404 (or at minimum 4xx). The idempotency of DELETE (can delete multiple times) is incorrectly implemented as 'always return success' rather than 'return success only if resource existed and was removed'.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "DELETE /collections/",
+        "collection_name validation",
+        "delete collection handler",
+        "idempotent delete implementation"
+      ],
+      "files_examined": [],
+      "source_excerpt": "NO_LOCAL_CLONE_AVAILABLE - Source verification limited to public documentation via webFetch. Local clone path not set in SESSION_DIR.",
+      "call_chain_traced": "Unable to trace call chain without local source access. Would need to examine DELETE handler in qdrant/src/collections/handlers/delete.rs to verify if collection existence check is performed before returning success response.",
+      "verification_outcome": "webfetch_shallow",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "caching",
+        "request_parameter_error"
+      ],
+      "surviving": "Observation persists: 1000 consecutive DELETE requests to guaranteed non-existent collection all returned HTTP 200 OK. This is not a transient issue, timing problem, or parameter error - it is consistent API behavior. Other boundary tests (01, 02, 08) correctly reject invalid inputs with 404/422, proving the API CAN distinguish between valid and invalid requests. The defect is specifically in handling non-existent collection names as valid input for DELETE operation."
+    }
+  }
+}

@@ -1,0 +1,17 @@
+alias create: {"code":0,"data":{}}
+drop: {"code":65535,"message":"unable to drop the collection [stt_recr_05] because it has associated aliases [stt_recr_05_alias], please remove all aliases before dropping the collection"}
+DEFECT: collections+drop blocked by alias association -> generic 65535 UnexpectedError;
+  contract describes drop as atomic with no alias prerequisite; expected 1xxx specific code
+drop after alias removal: {"code":0,"data":{}}
+has after drop: {"code":0,"data":{"has":false}}
+describe after drop: code=100
+query via alias of dropped: {"code":100,"message":"can't find collection[database=default][collection=stt_recr_05_alias]"}
+recreate: {"code":0,"data":{}}
+stats after recreate: {"code":0,"data":{"rowCount":0}}
+alias alter -> CLS2: {"code":0,"data":{}}
+alias describe: {"code":0,"data":{"aliasName":"stt_recr_05_alias","collectionName":"stt_recr_05_b","dbName":"default"}}
+query via rebound alias: {"code":0,"cost":0,"data":[{"id":100}]}
+
+drop alias-bound target2: {"code":65535,"message":"unable to drop the collection [stt_recr_05_b] because it has associated aliases [stt_recr_05_alias], please remove all aliases before dropping the collection"}
+DEFECT(2nd): alias-bound drop -> generic 65535 (same defect class as phase A)
+VERDICT: DEFECT_FOUND

@@ -1,0 +1,78 @@
+{
+  "defect_id": "state_collections_create_002",
+  "endpoint": "PUT /collections/{name} (concurrent duplicate create)",
+  "defect_type": "Type3_RuntimeFailure (claimed by script; evidence shows environment failure, not target behavior)",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "FAIL",
+      "version_match": "PARTIAL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "候选 constraint_id 为空字符串——无契约断言可验证，内容一致性与可达性无从谈起（记 FAIL 于'无 source_url'条款）；端点 PUT /collections/{name} 属 Qdrant REST 基础端点，端点本身真实存在（源码 openapi/ 与 collections_ops.rs 均可印证）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "D",
+      "log_pattern": "REQUEST_ERROR: HTTPConnectionPool(host='localhost', port=6333): Max retries exceeded with url: /collections/st_cc_race_1787481767 (Caused by NewConnectionError(... [WinError 10061] 由于目标计算机积极拒绝，无法连接。)) — 全部 20 个线程 0 成功，VERDICT 行为 'DEFECT_FOUND (Type3_RuntimeFailure) ... [0 x 20]'",
+      "secondary_observations": [
+        "thread 0-19: 0 （20 个并发线程全部状态码 0，即无任何 HTTP 响应被接收）",
+        "log 末尾第 44 行再次出现同一 REQUEST_ERROR（收尾清理请求同样连接拒绝）",
+        "同族 output_state_collections_create_001/003/004/005/006 与 output_boundary_collections_create_09.log 均含相同 WinError 10061 连接拒绝，各自 VERDICT 为 SCRIPT_ERROR",
+        "exit_code_state_collections_create_002.txt = 1（脚本以失败码退出）"
+      ],
+      "claim_alignment": "drifted",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "无任何 HTTP 响应到达判定层——TCP 连接被操作系统层拒绝（WinError 10061），'5xx/connection errors' 中的 5xx 从未发生；状态码数组全 0 证明脚本自身也未观测到任何服务端响应。"
+      },
+      "reproducibility": "环境问题",
+      "script_error": true,
+      "triggering_scripts": ["state_collections_create_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "",
+      "api_violates_assertion": false,
+      "note": "candidates.jsonl 该条目 constraint_id 为空且 claim_hint 中的 '[0 x 20]' 状态码数组与 'produced 5xx' 的文字断言自相矛盾（0 = 无响应，非 5xx）；无契约断言被违反。violates=False 的理由：不存在可违反的约束，且观测到的现象不是 API 行为而是连接层失败。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:(空 constraint_id，无断言可锚定)",
+        "doc:(无可追溯 source_url)",
+        "script:PUT /collections/st_cc_race_1787481767 x20 并发（本地 6333 端口）",
+        "log:全部 WinError 10061 连接拒绝，状态码全 0，VERDICT 误标 DEFECT_FOUND"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "首环即断：constraint_id 为空，契约→文档→脚本→日志四环链无起点。次级断点在 log 环：脚本把'目标端口无进程监听'的连接拒绝误判为 Type3_RuntimeFailure 缺陷——判定模式与 raw 观测（连接从未建立）不符。第三断点：同 session 内 5 个同族 state_collections_create_* 脚本在相同端口得到相同连接拒绝并诚实标注 SCRIPT_ERROR，佐证本条为环境宕机（容器未运行）期间的误判。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "already exists (lib/storage/src)",
+        "AlreadyExists",
+        "fn create_collection",
+        "collection_exists / validate_collection_not_exists"
+      ],
+      "files_examined": [
+        "lib/storage/src/content_manager/collections_ops.rs (Checker trait, L11-33)",
+        "lib/storage/src/content_manager/errors.rs (StorageError::AlreadyExists, L18/L78)",
+        "lib/storage/src/content_manager/conversions.rs (AlreadyExists → tonic Code, L35)",
+        "lib/storage/src/content_manager/toc/create_collection.rs (L60-70 附近 alias 同名校验)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/collections_ops.rs:11-22:\n```rust\npub trait Checker {\n    fn collection_exists(&self, collection_name: &str) -> bool;\n\n    fn validate_collection_not_exists(&self, collection_name: &str) -> Result<(), StorageError> {\n        if self.collection_exists(collection_name) {\n            return Err(StorageError::already_exists(format!(\n                \"Collection `{collection_name}` already exists!\"\n            )));\n        }\n        Ok(())\n    }\n```",
+      "call_chain_traced": "create_collection (toc/create_collection.rs) → Checker::validate_collection_not_exists → StorageError::already_exists → REST 层映射为 409 AlreadyExists。即：目标在线时并发重复创建应返回明确的 409 业务错误，而非 5xx 或连接失败。",
+      "verification_outcome": "validation_present",
+      "note": "本候选观测不到任何服务端行为（连接未建立），源码搜证结论仅用于排除'目标真会 5xx'的可能：重复创建的并发路径在源码中存在显式校验。sufficiency_check: grep_hit_pursued（4 组关键词均有命中并已 Read 4 个文件）。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["concurrency_race (源码有显式 already-exists 校验)", "by_design (无服务端行为可谈)", "request_typo (URL 正常)"],
+      "surviving": "env: 目标 qdrant 容器在脚本执行期间未监听 6333 端口（WinError 10061 积极拒绝），属环境宕机；脚本判定逻辑把连接错误计入缺陷计数导致误报 DEFECT_FOUND。"
+    }
+  }
+}

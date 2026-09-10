@@ -1,0 +1,79 @@
+[vein_compound_and_collections_put_1] Testing compound_and on PUT /collections/{collection}
+DB URL: http://localhost:6333
+Collection: vein_compound_and_test_1
+
+[Test 1] Valid compound - m=16, ef_construct=100
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.240174257
+}
+  [PASS] Valid compound accepted
+
+[Test 2] Compound with m=0 (invalid) + ef_construct=100 (valid)
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.250619784
+}
+  [DEFECT_CANDIDATE] Compound with m=0 accepted
+
+[Test 3] Compound with m=0 (invalid) + ef_construct=0 (invalid)
+  Status: 422
+  Response: {
+  "status": {
+    "error": "Validation error in JSON body: [hnsw_config.ef_construct: value 0 invalid, must be 4 or larger]"
+  },
+  "time": 0.0
+}
+  [EXPECTED] Compound rejected with 422
+
+[Test 4] Compound with extreme values m=999999, ef_construct=999999
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.250673367
+}
+  [DEFECT_CANDIDATE] Compound with extreme values accepted
+
+[Test 5] Compound with m=16 (valid) + ef_construct=-1 (invalid)
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 92"
+  },
+  "time": 0.0
+}
+  [EXPECTED] Compound rejected with 400
+
+[Test 6] Triple compound - m=0 + ef_construct=100 + replication_factor=-1
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: invalid value: integer `-1`, expected u32 at line 1 column 119"
+  },
+  "time": 0.0
+}
+  [EXPECTED] Compound rejected with 400
+
+[Test 7] Compound - indexing_threshold=-1 (invalid) + valid m
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 121"
+  },
+  "time": 0.0
+}
+  [EXPECTED] Compound rejected with 400
+
+============================================================
+SUMMARY
+============================================================
+Findings:
+  - Compound (m=0 + ef_construct=100) accepted - should reject due to invalid m
+  - Compound (m=999999 + ef_construct=999999) accepted - extreme values
+
+VERDICT: DEFECT_FOUND

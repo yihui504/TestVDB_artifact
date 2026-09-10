@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_bd_match_empty_08",
+  "endpoint": "DELETE /batch/objects",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint source_url 为 go-func 定位（本地 clone 可达）；match/match.class/match.where 均 required=true；endpoint_registry 含 DELETE /batch/objects v1.38.2。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "empty object: 500 {\"error\":[{\"message\":\"validate: empty match clause\"}]}（主观测：{}/match:{}}/match:null/where:null 四退化变体全 500）",
+      "secondary_observations": [
+        "match empty obj: 500 {\"error\":[{\"message\":\"validate: empty match.class clause\"}]}",
+        "match null: 500 {\"error\":[{\"message\":\"validate: empty match clause\"}]}",
+        "where null: 500 {\"error\":[{\"message\":\"validate: empty match.where clause\"}]}",
+        "match as string: 400 {\"code\":400,\"message\":\"parsing body body from \\\"\\\" failed, because json: cannot unmarshal string into Go struct field BatchDelete.match of type models.BatchDeleteMatch\"} — 对照：类型错误正确 400",
+        "match as array: 400 {\"code\":400,\"message\":\"parsing body ... cannot unmarshal array into Go struct field BatchDelete.match of type models.BatchDeleteMatch\"} — 对照：正确 400",
+        "where empty object: 422 {\"error\":[{\"message\":\"validate: failed to parse where filter: unrecognized operator: \"}]} — 对照：where 解析错误正确 422",
+        "where bad operator: 422 {\"code\":606,\"message\":\"match.match.where.operator in body should be one of [And Or Equal Like NotEqual GreaterThanEqual LessThan LessThanEqual WithinGeoRange IsNull ContainsAny ContainsAll ...\"} — 对照：枚举校验正确 422"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "退化 body（空对象/null/缺字段）以 500 返回；同端点错类型→400、坏 operator→422，语义层级不一致的对照完备"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_bd_match_empty_08", "boundary_bd_match_where_01", "boundary_bd_match_class_02", "semantic_match_missing_01"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_type_batch_delete_match_001",
+      "assertion_text_quoted": "DELETE /batch/objects: match.class AND match.where present, else 4xx",
+      "api_violates_assertion": true,
+      "note": "四退化变体均在 match 缺失/退化域内，全 500 违反 'else 4xx'。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_type_batch_delete_match_001 (verified) — match 缺失/退化应 4xx",
+        "doc: api_endpoints match required=true (go-struct entities/models/batch_delete.go#L39-L40)",
+        "script: boundary_bd_match_empty_08.py 发送 {}/{match:{}}/{match:null}/where:null 等变体",
+        "log: 四 DEFECT-SIGNAL 5xx 行 + 三条 4xx 对照行"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["empty match clause", "empty match.class clause", "empty match.where clause"],
+      "files_examined": [
+        "usecases/objects/batch_delete.go (L110-150)",
+        "adapters/handlers/rest/handlers_batch_objects.go (L170-210)"
+      ],
+      "source_excerpt": "usecases/objects/batch_delete.go L122-L137 (validateBatchDelete):\n  if match == nil {\n    return nil, 0, errors.New(\"empty match clause\")          // {} 与 match:null、顶层无 match 均落此\n  }\n  if len(match.Class) == 0 {\n    return nil, 0, errors.New(\"empty match.class clause\")    // match:{} 与 where:null(仅where为nil)相关分支\n  }\n  if match.Where == nil {\n    return nil, 0, errors.New(\"empty match.where clause\")\n  }\n\nhandlers_batch_objects.go L194-L202: 三个裸 errors.New 均不匹配 ErrInvalidUserInput/ErrMultiTenancy/Forbidden → NewBatchObjectsDeleteInternalServerError (500)。",
+      "call_chain_traced": "handler → DeleteObjects → validateBatchDelete 三个裸 errors.New 分支 → handler else → 500。对照：JSON 反序列化失败在更早的 body 解析层被 400 拦截；where operator 校验经 ErrInvalidUserInput/结构体校验正确 422——证明 500 通道仅限这三个分支。",
+      "verification_outcome": "validation_present",
+      "note": "校验存在但错误类型未分类为 user input → 退化 body 全部落 500。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

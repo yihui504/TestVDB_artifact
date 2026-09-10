@@ -1,0 +1,89 @@
+{
+  "defect_id": "semantic_collections_create_003",
+  "endpoint": "collections+create (PUT /collections/{collection_name})",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PARTIAL/domain_blocked: both https://qdrant.tech/documentation/manage-data/vectors/ and https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection refused by the environment (no doc_preflight.json sidecar exists anywhere in the plugin cache, so live re-verification was attempted and blocked; per spec domain_blocked is PARTIAL, not FAIL). Version PARTIAL: cited concept doc is unversioned ('current (site latest; no version archive)' per contract), normal for concept docs; the versioned spec face was instead verified from the repo-shipped docs/redoc/v1.18.x/openapi.json (exact v1.18.x match). Content PASS: contract-time capture in raw_knowledge.json carries the assertion substance verbatim ('sparse vector distance is always Dot (not user-settable) [DOC vectors]'; create-collection parameter 'sparse_vectors ... object|null ... map of SparseVectorParams'), and the shipped v1.18.x OpenAPI types SparseVectorsConfig as {type: object, additionalProperties: $ref SparseVectorParams} with SparseVectorParams {type: object} - the accepted [] violates this schema. Endpoint PASS: endpoint_registry has collections+create PUT, source_status reachable, verified_at 2026-09-02T12:34:08Z; script used the matching PUT create_collection path.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[create scc03_1788388161_bad_value_list] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.276824087} (interpretive line: [value_list] map value [] (SparseVectorParams object required) was ACCEPTED with status 200)",
+      "secondary_observations": [
+        "[rest, same log, same position, other type] [create scc03_1788388161_bad_value_int] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: invalid type: integer `5`, expected struct SparseVectorParams at line 1 column 75\"},\"time\":0.0} - integer at the same map-value position rejected; the server's own error text declares 'expected struct SparseVectorParams'",
+        "[rest, same log, whole-field position] [create scc03_1788388161_bad_list] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: invalid type: sequence, expected a map at line 1 column 65\"},\"time\":0.0} - sequence rejected at the map level but accepted at the struct level",
+        "[rest, other script, same-family parameter] output_boundary_collections_create_002.log line 5: [sparse_vectors=[] (array for map-typed field)] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: invalid type: sequence, expected a map at line 1 column 65\"},\"time\":0.0} - multi-script agreement on rejecting [] at the field level, isolating the defect to the value position",
+        "[rest, same log, constraint's other half holds] [create scc03_1788388161_smuggle_distance] status=200 ... [distance smuggling] persisted sparse_vectors = {'text': {}} ... accepted with the smuggled field dropped (readback shows no user distance) - not-user-settable promise HOLDS; only the map-of-name-to-SparseVectorParams typing half is violated",
+        "[rest, same log, legal control] [create scc03_1788388161_ok_control] status=200 ... [sparse control] persisted sparse_vectors = {'text': {}} - the legal object form works, so acceptance of [] is selective type-coercion, not blanket acceptance",
+        "[grpc/sdk] face_unavailable - this sandbox exercised only the REST face; no gRPC/SDK request with the same value was sent"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Actually stronger than the enum label: the request-side-decidable type error (JSON array where the spec's SparseVectorParams object is required) returned HTTP 200 with a full success envelope {result:true, status:ok} - no error signal at all. Sibling type violations at the same position correctly returned HTTP 400."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["semantic_collections_create_003"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_collections_create_002",
+      "assertion_text_quoted": "sparse vector distance IS Dot (not user-settable); sparse_vectors configuration is a map of vector-name to SparseVectorParams",
+      "api_violates_assertion": true,
+      "note_on_violation": "Violates-declaration self-check: the observed parameter (a sparse_vectors map value) is inside the quoted constraint's domain, and [] is not a SparseVectorParams object - the server's own sibling 400 ('expected struct SparseVectorParams') and the shipped v1.18.x OpenAPI (SparseVectorParams type: object) both define the required shape, so the 200 acceptance is a genuine violation, not a domain mismatch. Scope: the assertion's first half (distance IS Dot, not user-settable) was probed and HELD (smuggled distance dropped on readback); the violation is confined to the second half (map-value typing). Note: candidates.jsonl carried constraint_id=\"\" (mechanical extraction gap); the id was resolved from the script header (constraint_ids: qdrant_type_collections_create_002) and log line 21, and the constraint exists in structured_contract.json type_constraints.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_collections_create_002 present in structured_contract.json (type_constraints; assertion 'sparse vector distance IS Dot (not user-settable); sparse_vectors configuration is a map of vector-name to SparseVectorParams'; evidence_tier explicit; source_status degraded)",
+        "doc: source_url https://qdrant.tech/documentation/manage-data/vectors/ live-fetch domain_blocked; substance verified via contract-time capture raw_knowledge.json ('sparse vector distance is always Dot (not user-settable) [DOC vectors]'; parameter sparse_vectors 'object|null ... map of SparseVectorParams') and repo-shipped docs/redoc/v1.18.x/openapi.json (SparseVectorsConfig additionalProperties -> SparseVectorParams {type: object})",
+        "script: debate_logs/semantic_collections_create_003.py lines 258-272 build the four wrong-type bodies, incl. ('value_list', {\"text\": []}, 'map value [] (SparseVectorParams object required)'), sent as PUT create_collection {\"vectors\": DENSE, \"sparse_vectors\": sv}; oracle declares 'any 2xx = Type1_IllegalSuccess'",
+        "log: output_semantic_collections_create_003.log lines 19-21 record status=200 result:true for bad_value_list and VERDICT: DEFECT_FOUND (Type1_IllegalSuccess); the raw response shows real acceptance, not a masked 4xx"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "struct SparseVectorParams",
+        "SparseVectorParams (files_with_matches, whole tree)",
+        "pub struct SparseVectorsConfig",
+        "sparse_vectors (lib/storage/src/content_manager + lib/collection/src/config.rs)",
+        "Format error (actix error mapping)",
+        "validate_vector_name (create-path validation)"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/types.rs (1370-1444: SparseVectorParams + SparseIndexParams; 1729-1755: SparseVectorsConfig + Validate impl)",
+        "lib/storage/src/content_manager/collection_meta_ops.rs (109-190: CreateCollection; 192-244: CreateCollectionOperation::new name-only validation)",
+        "lib/collection/src/config.rs (139, 361-362: collection config holds BTreeMap<VectorNameBuf, SparseVectorParams>; keys-only iteration)",
+        "src/actix/mod.rs (225-269: validation_error_handler maps serde_json failures to 400 'Format error in JSON body')",
+        "docs/redoc/v1.18.x/openapi.json (SparseVectorParams/SparseVectorsConfig schemas; PUT /collections/{collection_name} requestBody)"
+      ],
+      "source_excerpt": "lib/collection/src/operations/types.rs:1389-1403 — Params of single sparse vector data storage:\n#[derive(Debug, Hash, Deserialize, Serialize, JsonSchema, Validate, Anonymize, Clone, PartialEq, Eq)]\n#[serde(rename_all = \"snake_case\")]\npub struct SparseVectorParams {\n    /// Custom params for index. If none - values from collection configuration are used.\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub index: Option<SparseIndexParams>,\n    /// Configures addition value modifications for sparse vectors.\n    /// Default: none\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub modifier: Option<Modifier>,\n}\n// Plain derived Deserialize: serde's struct visitor accepts BOTH map and positional-seq input; with every field #[serde(default)], an empty JSON array [] deserializes to the all-None default struct. No deny_unknown_fields, no custom Deserialize, no check that input was a JSON object.\n\nlib/collection/src/operations/types.rs:1732-1733 + 1751-1755:\npub struct SparseVectorsConfig(pub BTreeMap<VectorNameBuf, SparseVectorParams>);\nimpl Validate for SparseVectorsConfig {\n    fn validate(&self) -> Result<(), ValidationErrors> {\n        common::validation::validate_iter(self.0.values())   // value-range checks (SparseIndexParams) only; no container-type check\n    }\n}\n\nlib/storage/src/content_manager/collection_meta_ops.rs:167-172 (CreateCollection field):\n    /// Sparse vector data config.\n    #[validate(nested)]\n    pub sparse_vectors: Option<BTreeMap<VectorNameBuf, SparseVectorParams>>,\n\nlib/storage/src/content_manager/collection_meta_ops.rs:197-202 + 218-226 (CreateCollectionOperation::new — the ONLY create-path imperative validation):\n        // Apply the same vector-name validation that the\n        // `PUT /collections/{name}/vectors/{vector_name}` endpoint enforces\n        // (length 0..=200, no filesystem-unsafe characters), so both creation\n        // paths reject the same set of bad names. The `Validate` derive on\n        // `CreateCollection` only walks `BTreeMap` *values*, never keys, so this\n        // has to run imperatively here.\n        ...\n        if let Some(sparse_config) = &create_collection.sparse_vectors {\n            for vector_name in sparse_config.keys() {\n                common::validation::validate_vector_name(vector_name).map_err(|err| { ... })?;\n            }\n        }\n// Names only. The comment shows maintainers actively reasoned about validation at this exact spot and still did not consider the value-container (JSON object vs array) question.\n\nsrc/actix/mod.rs:249-261 (REST layer):\n        actix_web_validator::Error::JsonPayloadError(\n            actix_web::error::JsonPayloadError::Deserialize(err),\n        ) => { format!(\"Format error in {name}: {err}\",) }\n        ...\n        actix_web_validator::Error::Validate(_) => HttpResponse::UnprocessableEntity(),\n        _ => HttpResponse::BadRequest(),\n// Deserialization failures -> 400 (the sibling rejections); once serde ACCEPTS [] (struct-from-seq), no later layer rejects it -> 200 result:true.",
+      "call_chain_traced": "PUT /collections/{name} JSON -> actix payload validation (src/actix/mod.rs:227; serde_json failures surfaced as 400 'Format error in JSON body: ...') -> serde_json into CreateCollection (collection_meta_ops.rs:109; sparse_vectors Option<BTreeMap<VectorNameBuf, SparseVectorParams>>) -> derived Deserialize of each map value (types.rs:1394) accepts map OR positional seq; [] -> all-fields-#[serde(default)] default struct -> CreateCollectionOperation::new (collection_meta_ops.rs:192) validates vector NAMES only -> nested Validate (types.rs:1751) checks SparseIndexParams ranges only -> collection created, 200 {result:true}. Constant definition (types.rs:1394) through handlers contains no object-form requirement at any layer.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "No code on the create path rejects a non-object JSON value at the sparse_vectors map-value position; the only related validations are name-based (validate_vector_name) and value-range-based (nested Validate). by_design_in_source is NOT available: the struct and its validation sites carry no comment/docstring declaring intentional acceptance of sequence-form values, and the repo's own shipped v1.18.x OpenAPI declares SparseVectorParams {type: object}, contradicting the acceptance — the leniency is inherited serde derive behavior, unannotated.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (pre-probe /healthz status=200; control create 200; sibling probes on the identical path answered deterministically 400)",
+        "concurrency (single sequential PUT; no parallel writers or races)",
+        "cache/read-staleness (the violation is the create response itself, 200 result:true; no delayed readback involved)",
+        "request typo (script line 262 constructs sparse_vectors={\"text\": []} deliberately; log line 21 records the intent)"
+      ],
+      "surviving": "serde derived struct-from-seq deserialization leniency: an empty JSON array at a struct-typed map value coerces to the all-default SparseVectorParams and is accepted with 200 - a mechanism, not a documented design decision; the server's own sibling rejections ('expected struct SparseVectorParams' / 'expected a map') and the shipped v1.18.x OpenAPI (SparseVectorParams type: object) both contradict the acceptance, so the contract-relevant inconsistency survives"
+    }
+  }
+}

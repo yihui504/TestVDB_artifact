@@ -1,0 +1,35 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[SETUP] Creating collection with known test data...
+
+[CONTROL 1] Baseline - query with NO filter
+  No filter baseline: 1 points
+
+[TEST 1] has_id with empty list []
+  has_id=[]: status=200, count=1
+  DEFECT_CANDIDATE: Empty has_id should return 0, got 1
+
+[TEST 2] has_id with single existing ID [100]
+  has_id=[100]: status=200, count=1
+  OK: Exactly 1 point matched
+
+[TEST 3] has_id with multiple existing IDs [100, 200, 300]
+  has_id=[100,200,300]: status=200, count=1
+  UNEXPECTED: Expected 3, got 1
+
+[TEST 4] has_id with duplicates [100, 100, 100]
+  has_id=[100,100,100]: status=200, count=1
+  OK: Duplicates deduplicated, 1 point matched
+
+[TEST 5] has_id with mix of existing and non-existent [100, 999, 200]
+  has_id=[100,999,200]: status=200, count=1
+  UNEXPECTED: Expected 2, got 1
+
+[TEST 6] has_id with ONLY non-existent IDs [999, 998, 997]
+  has_id=[999,998,997]: status=200, count=1
+  DEFECT_CANDIDATE: Non-existent IDs should return 0, got 1
+
+============================================================
+ANALYSIS COMPLETE
+============================================================
+VERDICT: DEFECT_FOUND

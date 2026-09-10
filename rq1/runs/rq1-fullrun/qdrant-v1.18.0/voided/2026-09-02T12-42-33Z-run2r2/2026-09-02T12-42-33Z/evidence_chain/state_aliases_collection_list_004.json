@@ -1,0 +1,89 @@
+{
+  "defect_id": "state_aliases_collection_list_004",
+  "endpoint": "aliases+collection+list",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists anywhere under results/qdrant/v1.18.0, and live WebFetch of https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases was blocked by the environment ('Unable to verify if domain api.qdrant.tech is safe to fetch') -> domain_blocked, recorded PARTIAL (not FAIL); structured_contract.json itself records source_status 'reachable' for this URL at extraction time. Version: URL slug v-1-18-x and contract doc_version '1.18.x (versioned v-1-18-x api-reference)' match target v1.18.0 major.minor -> PASS. Content: offline raw_knowledge.json extraction of the same v-1-18-x pages (lines 3012-3041) records List Collection Aliases behavioral constraint '200 list of {alias, collection_name}; 404 unknown collection' and List All Aliases (GET /aliases) '200 list of {alias, collection_name} across all collections' — the doc corpus contains the listing semantics the assertions rely on, and the global endpoint is documented as a union across ALL collections (the script's own-aliases-only global expectation contradicts it) -> PASS. Endpoint: endpoint_registry entry aliases+collection+list (method GET, path /collections/{collection_name}/aliases, collection_name required path param) exactly matches the route the script exercised via its contract-derived REST fallback -> PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "D",
+      "log_pattern": "DEFECT: S1: global listing={'salc_up_dup_1788354862': 'salc_up_a_1788354862', 'sem_gdc1_al_1929a5ad': 'sem_gdc1_81ce0571'} expected={'salc_up_dup_1788354862': 'salc_up_a_1788354862'} (cross-face drift, Type4_StateLogicViolation)",
+      "secondary_observations": [
+        "[face:global] status=200 raw={\"result\":{\"aliases\":[{\"alias_name\":\"salc_up_dup_1788354862\",\"collection_name\":\"salc_up_a_1788354862\"},{\"alias_name\":\"sem_gdc1_al_1929a5ad\",\"collection_name\":\"sem_gdc1_81ce0571\"}]},\"status\":\"ok\",\"time\":0.000014054} (raw line behind DEFECT S1/S2/S5)",
+        "[face:global] status=200 raw={\"result\":{\"aliases\":[{\"alias_name\":\"sem_gdc1_al_1929a5ad\",\"collection_name\":\"sem_gdc1_81ce0571\"}]},\"status\":\"ok\",\"time\":0.000010993} (raw line behind DEFECT S4: after delete_dup the global listing held ONLY the foreign alias, none of this script's)",
+        "DEFECT: S4: global listing={'sem_gdc1_al_1929a5ad': 'sem_gdc1_81ce0571'} expected={} (cross-face drift, Type4_StateLogicViolation)",
+        "[op:recreate_dup_A] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.013532471} + [face:salc_up_a_1788354862] status=200 raw={\"result\":{\"aliases\":[{\"alias_name\":\"salc_up_dup_1788354862\",\"collection_name\":\"salc_up_a_1788354862\"}]},\"status\":\"ok\"} — idempotent same-alias re-insert kept a single row, no duplicate rows (S2 oracle pass)",
+        "[op:rebind_dup_B] status=200 raw={\"result\":true,\"status\":\"ok\"} + [face:salc_up_a_1788354862] status=200 raw={\"result\":{\"aliases\":[]}} + [face:salc_up_b_1788354862] status=200 raw={\"result\":{\"aliases\":[{\"alias_name\":\"salc_up_dup_1788354862\",\"collection_name\":\"salc_up_b_1788354862\"}]}} — rebind left NO residue on previous target face, single row on new face (S3 oracle pass)",
+        "[op:delete_dup] status=200 raw={\"result\":true,\"status\":\"ok\"} + [face:salc_up_a_1788354862]/[face:salc_up_b_1788354862] both aliases:[] (S4 per-collection faces pass)",
+        "All 22 HTTP interactions in the log returned status=200 with \"status\":\"ok\"; no 4xx/5xx anywhere; per-collection faces (the unit under test) never produced a duplicate row, a row with collection_name != the queried collection, or a membership mismatch in any of the 5 phases"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No request-side-decidable error case exists in this run: every request was valid and returned HTTP 200 with status ok. The DEFECT lines are expectation mismatches between the script's self-referential global-face expectation and the actual (documented) content of GET /aliases — not a client error surfaced as 2xx."
+      },
+      "reproducibility": "environment problem",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_aliases_collection_list_004",
+        "state_aliases_collection_list_002",
+        "state_aliases_collection_list_003"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_aliases_collection_list_001",
+      "assertion_text_quoted": "returns 200 with a list of {alias, collection_name}; 404 for an unknown collection",
+      "api_violates_assertion": false,
+      "note": "The dispatch record's constraint_id field is empty (\"\"); the script header, the meta.json oracle and the attack string all cite qdrant_behavioral_aliases_collection_list_001, which exists in structured_contract.json. violates=False is grounded as follows: every observation in the log concerns the positive branch of the quoted assertion — per-collection listings of two EXISTING collections (salc_up_a/salc_up_b), which returned HTTP 200 with exactly the bound alias rows in all 5 phases (no duplicates, no wrong collection_name, no residue). The negative branch (unknown collection -> 404) was never exercised. The flagged DEFECT lines concern a DIFFERENT face than the quoted assertion governs: the global GET /aliases face, whose own documented semantics is 'across all collections' — the extra row sem_gdc1_al_1929a5ad belongs to a pre-existing foreign collection, so the per-collection listing behavior asserted by the constraint was never violated (the observed mismatching face lies outside the quoted constraint's domain; the constraint citation is the one the script itself declares).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_aliases_collection_list_001 exists in structured_contract.json (assertion quoted above) but the dispatch row attaches an EMPTY constraint_id to this candidate",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases (per-collection 200 list / 404 unknown) + /aliases/get-collections-aliases (global list 'across all collections'); offline raw_knowledge corpus v-1-18-x; live fetch domain_blocked",
+        "script: state_aliases_collection_list_004.py — upsert-idempotence attack S1-S5 (create dup, re-create same alias, rebind to B, delete, recreate) checking per-collection faces A/B plus the global face",
+        "log: output_state_aliases_collection_list_004.log — VERDICT DEFECT_FOUND from 5 DEFECT lines (S1-S5), every one a global-face mismatch against expected={own aliases only}"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "The DEFECT verdicts do not follow from the raw evidence: all 22 raw responses (5 alias ops + per-collection face reads + global reads) are mutually consistent and match the source implementation and the doc corpus exactly. The only difference between each 'listing' and each 'expected' dict is the row sem_gdc1_al_1929a5ad -> sem_gdc1_81ce0571, an alias on a collection this script never created or touched: it is already present in state_aliases_collection_list_002's earlier run of the same session (timestamps ...859 vs ...862) and no script in this session creates it, proving it is leftover state in a shared/persistent qdrant instance. GET /aliases is documented and implemented as a union across ALL collections, so the global listing was correct; the script's expectation (global == this script's aliases only) has no grounding in the cited constraint (which governs only the per-collection face) nor in the doc. Additionally the contract link is weak: the dispatch constraint_id is empty. The per-collection unit under the constraint passed in every phase.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "fn (collection_aliases|get_collection_aliases|list_aliases)|async fn.*aliases (src/actix/api)",
+        "fn do_list_aliases|fn do_list_collection_aliases",
+        "pub async fn (collection_aliases|list_aliases)",
+        "struct AliasPersistence|impl AliasPersistence"
+      ],
+      "files_examined": [
+        "lib/storage/src/content_manager/alias_mapping.rs",
+        "lib/storage/src/content_manager/toc/mod.rs",
+        "src/common/collections.rs",
+        "src/actix/api/collections_api.rs"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/alias_mapping.rs:15-16: #[derive(...)] pub struct AliasMapping(HashMap<Alias, CollectionId>)  -- single GLOBAL alias->collection map, one row per alias name instance-wide; :66-70 pub fn insert(&mut self, alias: String, collection_name: String) -> Result<(), StorageError> { self.alias_mapping.0.insert(alias, collection_name); self.alias_mapping.save(&self.data_path)?; Ok(()) } (plain HashMap overwrite => create_alias is an upsert); :114-122 pub fn collection_aliases(&self, collection_name: &str) -> Vec<String> { let mut result = vec![]; for (alias, target_collection) in self.alias_mapping.0.iter() { if collection_name == target_collection { result.push(alias.clone()); } } result } -- per-collection face = rows whose target equals the queried collection (can never show a foreign row, a duplicate, or a row with a different collection_name). lib/storage/src/content_manager/toc/mod.rs:452-469: /// List of all aliases across all collections; pub async fn list_aliases(&self, access: &Access) -> Result<Vec<AliasDescription>, StorageError> { let all_collections = self.all_collections(access).await; let mut aliases: Vec<AliasDescription> = Default::default(); for collection_pass in &all_collections { for alias in self.collection_aliases(collection_pass, access).await? { aliases.push(AliasDescription { alias_name: alias.clone(), collection_name: collection_pass.to_string() }); } } Ok(aliases) } -- GET /aliases iterates EVERY existing collection, i.e. a union across all collections; a leftover alias on any other existing collection (sem_gdc1_81ce0571) necessarily appears. src/common/collections.rs:167-188 do_list_collection_aliases maps the per-collection alias set into CollectionsAliasesResponse { aliases } with collection_name = the queried collection.",
+      "call_chain_traced": "actix GET /collections/{collection_name}/aliases (collections_api.rs:94-109) -> do_list_collection_aliases (common/collections.rs:167-188) -> toc.collection_aliases (toc/mod.rs:434-450) -> alias_persistence.collection_aliases filter by target==queried collection (alias_mapping.rs:114-122). actix GET /aliases (collections_api.rs:48-57) -> do_list_aliases (common/collections.rs:190-196) -> toc.list_aliases (toc/mod.rs:453-469) -> per-collection alias reads over all_collections. Alias writes POST /collections/aliases -> update_aliases -> alias_mapping.insert/remove (plain HashMap ops, alias_mapping.rs:66-93): duplicate create_alias overwrites the same row (idempotent), rebind overwrites the single row of the same alias name (no residue possible on the old target because membership is one global row per alias), delete removes the row. Every observed raw response in the log is exactly what this code produces; there is no code path under which the claimed 'cross-face drift' (global listing showing a legitimately-existing foreign alias) could be a server-side anomaly.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "by-design"
+      ],
+      "surviving": null
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_recover_004",
+  "endpoint": "cluster+recover",
+  "param": null,
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "count_consistency",
+  "oracle": {
+    "statement": "during the recover churn loop (5 calls) with concurrent reader threads polling GET /cluster, exact count and describe: every 200 count response reports count == 8 (>=2 drift readings = Type4_StateLogicViolation, 1 = observation), every describe response is 200 (>=2 404 readings = Type4), >=2 5xx readings across faces = Type3_RuntimeFailure only after /healthz returns 200; after churn joins (quiesced): /healthz 200 within 20s grace (never-200 = Type3), describe 200 (404 = Type4), exact count == 8 (drift = Type4), GET /cluster 200 (5xx = Type3 only after liveness)",
+    "source": "docstring"
+  }
+}

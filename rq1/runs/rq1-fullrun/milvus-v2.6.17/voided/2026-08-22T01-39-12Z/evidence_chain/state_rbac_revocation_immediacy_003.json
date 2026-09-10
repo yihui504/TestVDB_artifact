@@ -1,0 +1,70 @@
+{
+  "defect_id": "state_rbac_revocation_immediacy_003",
+  "endpoint": "roles+grant_privilege",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "RBAC grant/revoke 语义（权限应可授予/撤销）为通用功能契约；milvus.io RBAC 页未在本轮单独抓取（limitations.md 已达，RBAC 专项页留 auditor 补核）；契约库无 grant_privilege 专属 constraint——本链 grounding 依赖源码三文件闭环 + 跨端点对照（vein_001 并行链互证）",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "roles+grant_privilege: 65535 {\"code\":65535,\"message\":\"fail to get authorization from the md, authorization:[token]\"}（root:Milvus 凭据，roles+create 刚刚 code:0 成功）",
+      "secondary_observations": [
+        "roles+create: 0 {\"code\":0,\"data\":{}}（角色创建成功）",
+        "roles+describe: 0 {\"code\":0,\"data\":[]}（僵尸角色：存在但零权限且永远无法经 REST 授予）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码（65535 以 HTTP 200 返回）", "note": "服务端内部上下文缺失被包装为 2xx 业务错误"},
+      "reproducibility": "多脚本稳定触发（vein_rbac_grant_cross_endpoint_001 同日同部署同模式：3 端点 code:0 vs 2 端点 65535）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/state_rbac_revocation_immediacy_003.py", "vein_scripts/vein_rbac_grant_cross_endpoint_001.py"],
+      "evidence_source": "behavior",
+      "note": "defect_type 标 Type3（RuntimeFailure：合法 root 操作功能性失败）；'revocation immediacy' 原始命题未真正测试到（grant 本身即失败，无 revoke 可言）——claim 与脚本实际观测的对齐度：脚本与派发描述一致（恒 65535），但语义上是 grant 全瘫而非撤销即时性"
+    },
+    "contract_grounding": {
+      "constraint_id": "(no direct constraint — nearest: RBAC functional contract)",
+      "assertion_text_quoted": "(契约库 45 constraints 无 grant_privilege 条目；断言按端点功能语义: roles+grant_privilege with root credentials => code==0)",
+      "api_violates_assertion": true,
+      "note": "violates=true 依据行为语义（root 合法授权操作功能性失败并留下不可用僵尸角色）+源码三文件闭环；但契约库内无对应 constraint_id——chain 断在 contract 环（见 chain_trace），判定材料为 source+behavior 两环",
+      "evidence_source": "behavior"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 缺失（无 grant_privilege constraint —— 断链）",
+        "doc: RBAC 功能语义（未单独核页）",
+        "script: state_rbac_revocation_immediacy_003.py create->grant->describe 序列",
+        "log: create 0 / grant 65535 / describe grants=[]"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "constraint_id 在 structured_contract.json 中不存在对应 RBAC grant 断言；链靠 source 三文件闭环 + vein_001 跨端点对照支撑",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["AuthorizationEnabled", "NewContextWithMetadata", "GetCurUserFromContext", "fail to get authorization from the md", "OperatePrivilege"],
+      "files_examined": [
+        "internal/distributed/proxy/service.go (L188-198 auth 中间件注册)",
+        "internal/proxy/util.go (L1452-1463 NewContextWithMetadata)",
+        "pkg/util/contextutil/context_util.go (L86-110 GetAuthInfoFromContext)",
+        "internal/proxy/impl.go (L5645-5680 OperatePrivilege)",
+        "internal/distributed/proxy/httpserver/handler_v2.go (L374-377 wrapperPost username 注入)"
+      ],
+      "source_excerpt": "三文件闭环：(1) service.go L188-196 `ginHandler.Use(func(c *gin.Context){ c.Set(httpserver.ContextUsername, \"\") }); if proxy.Params.CommonCfg.AuthorizationEnabled.GetAsBool() { ginHandler.Use(authenticate) }` —— auth 关闭时 username 恒空串；(2) util.go L1452 `func NewContextWithMetadata(ctx, username, dbName) { ... if username != \"\" { ...ctx = contextutil.AppendToIncomingContext(ctx, authKey, authValue) } }` —— 空用户名不注入 authorization metadata；(3) impl.go OperatePrivilege `curUser, err := GetCurUserFromContext(ctx); if err != nil { return merr.Status(err), nil }` —— 无条件要求 ctx 认证元数据，失败即 context_util.go:98 'fail to get authorization from the md'。对照组 OperateUserRole（impl.go:5415）不调用 GetCurUserFromContext，直接 mixCoord 转发——故 roles+create/users+grant_role 全 code:0。",
+      "call_chain_traced": "REST grant_privilege -> wrapperPost(username=\"\") -> NewContextWithMetadata 不注入 auth md -> proxy.OperatePrivilege -> GetCurUserFromContext -> GetAuthInfoFromContext 无 md -> 65535",
+      "verification_outcome": "validation_absent",
+      "note": "根因是部署配置（AuthorizationEnabled=false）与代码路径（OperatePrivilege 硬依赖 ctx auth md）的组合缺陷：HTTP 层明知 auth 关闭仍不注入，gRPC 内层却无条件要求——层级间契约缺失。'换开启 auth 的部署即可工作'是潜在 mundane 抗辩，但对照组端点在同部署工作正常，不一致性本身成立",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["concurrency", "request-typo（root 凭据与对照端点完全一致）"],
+      "surviving": "auth-disabled 部署形态依赖：观测绑定 AuthorizationEnabled=false 的默认 docker 部署；开启 auth 后行为待验（但跨端点不一致在同部署内已证）"
+    }
+  },
+  "evidence_weight": "strong（source 三文件逐行闭环 + 双脚本复现 + 跨端点对照；contract 环缺失为本链唯一短板）"
+}

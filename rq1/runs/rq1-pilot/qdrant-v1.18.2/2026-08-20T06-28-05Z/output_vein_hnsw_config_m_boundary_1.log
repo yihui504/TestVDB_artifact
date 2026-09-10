@@ -1,0 +1,42 @@
+======================================================================
+STRATEGY: vein_range_filter (boundary)
+TARGET: qdrant v1.18.2
+TEST: hnsw_config.m numeric boundary validation
+======================================================================
+
+=== Test 1: hnsw_config.m = 0 (INVALID - below min) ===
+Status: 200
+Response: {"result":true,"status":"ok","time":0.308208023}
+DEFECT_FOUND: hnsw_config.m=0 returns 200 OK (should be 400)
+
+=== Test 2: hnsw_config.m = 16 (VALID - Control) ===
+Status: 200
+Response: {"result":true,"status":"ok","time":0.247576482}
+CONTROL_PASS: Valid m=16 accepted
+
+=== Test 3: hnsw_config.m = -1 (INVALID - negative) ===
+Status: 400
+Response: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 70"},"time":0.0}
+CONTROL_PASS: Negative value correctly rejected
+
+======================================================================
+VERDICT: DEFECT_FOUND
+======================================================================
+DEFECT_FOUND: hnsw_config.m accepts 0 without validation
+Defect Type: Type1_IllegalSuccess
+Severity: P1_High
+Expected: 400 Bad Request for m=0 (below minimum [2, 100])
+Actual: 200 OK, creates collection with invalid m=0
+
+Contract Reference: qdrant_range_create_collection_001
+Constraint: hnsw_config.m >= 2 AND hnsw_config.m <= 100
+
+Control Groups:
+  - Valid m=16 accepted (PASS)
+  - Invalid m=-1 rejected (PASS)
+
+Cleanup: Collection deleted
+
+Cleanup: Collection deleted
+
+Cleanup: Collection deleted

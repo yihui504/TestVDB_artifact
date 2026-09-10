@@ -1,0 +1,80 @@
+{
+  "defect_id": "boundary_schema_dynamicEf_inverted",
+  "endpoint": "POST /schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Network restriction prevented full doc verification (domain_blocked). raw_knowledge.md indicates OpenAPI spec backbone with degraded concept documentation. Parameter dynamicEfMin/dynamicEfMax exist in spec but constraint documentation unavailable for validation.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: dynamicEfMin=500, dynamicEfMax=100 (inverted: Min>Max) → http=200, code=0, class created successfully with values as-sent",
+      "secondary_observations": [
+        "c3: dynamicEfMax=-1 → http=200, accepted",
+        "c4: dynamicEfMax=0 → http=200, accepted",
+        "c5: dynamicEfMin=-1 → http=200, accepted",
+        "c6: dynamicEfMin=0 → http=200, accepted"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 with success response, no error code indicating rejection. Server accepts illegal values silently."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_dynamicEf_inverted",
+        "boundary_schema_dynamicEfMax_negative",
+        "boundary_schema_dynamicEfMax_zero",
+        "boundary_schema_dynamicEfMin_negative",
+        "boundary_schema_dynamicEfMin_zero"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "Constraint not defined in structured_contract.json (constraint_count=1, range_constraints=[]). Contract lacks semantic assertions for dynamicEf parameters.",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (constraint_id undefined - no constraint)",
+        "doc: (OpenAPI spec partial, network blocked)",
+        "script: POST /schema with dynamicEfMin=500 > dynamicEfMax=100",
+        "log: HTTP 200, class created with inverted values"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "No constraint defined in structured_contract.json for dynamicEfMin/dynamicEfMax. Contract lacks validation assertions, making formal grounding impossible. Doc verification incomplete due to network restrictions.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "dynamicEfMin|dynamicEfMax",
+        "validate.*hnsw|hnsw.*validate",
+        "ParseAndValidateConfig"
+      ],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go (lines 260-323: validate function)",
+        "entities/vectorindex/hnsw/config.go (lines 183-193: dynamicEf parsing)",
+        "entities/vectorindex/hnsw/config.go (lines 30-34: default constants)"
+      ],
+      "source_excerpt": "From entities/vectorindex/hnsw/config.go:\n\n// Line 183-193: Parameter parsing (no validation)\nif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"dynamicEfMax\", func(v int) {\n\tuc.DynamicEFMax = v\n}); err != nil {\n\treturn uc, err\n}\n\nif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"dynamicEfMin\", func(v int) {\n\tuc.DynamicEFMin = v\n}); err != nil {\n\treturn uc, err\n}\n\n// Line 260-323: validate() function - DOES NOT CHECK:\n// - dynamicEfMin < 0 (negative values accepted)\n// - dynamicEfMax < 0 (negative values accepted)\n// - dynamicEfMin == 0 (zero accepted)\n// - dynamicEfMax == 0 (zero accepted)\n// - dynamicEfMin > dynamicEfMax (inverted pairing accepted)\n\nfunc (u *UserConfig) validate() error {\n\tvar errMsgs []string\n\tif u.MaxConnections < MinmumMaxConnections {\n\t\terrMsgs = append(errMsgs, fmt.Sprintf(\n\t\t\t\"maxConnections must be a positive integer with a minimum of %d\",\n\t\t\tMinmumMaxConnections,\n\t\t))\n\t}\n\t// ... only maxConnections, efConstruction, filterStrategy checked\n\t// dynamicEfMin/Max NOT VALIDATED\n\treturn nil\n}",
+      "call_chain_traced": "ParseAndValidateConfig → OptionalIntFromMap assigns values → validate() skips validation → config persisted to class",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Source confirm validation_absent. Multiple scripts (5/5 variants) trigger acceptance. HTTP 200 with success confirms server accepts illegal values."
+    }
+  }
+}

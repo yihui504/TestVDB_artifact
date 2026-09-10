@@ -1,0 +1,18 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: sidl06bf4376
+[assertion quote] expected_behavior: 'index deletion (existing or not) returns HTTP 200; missing collection returns 404'
+[premise] sidl06bf4376_live: 2 points + keyword index on 'cat' echoed
+[DELETE index leg1 existing sidl06bf4376_live/cat] qp={'wait': 'true'} -> status=200 raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.281837524}
+[leg1] 200 result.status='completed' result.operation_id=5
+[DELETE index leg2 never-indexed sidl06bf4376_live/ghost_never_indexed] qp={'wait': 'true'} -> status=200 raw={"result":{"operation_id":7,"status":"completed"},"status":"ok","time":0.29623238}
+[leg2] 200 result.status='completed' result.operation_id=7
+[DELETE index leg3 already-deleted sidl06bf4376_live/cat] qp={'wait': 'true'} -> status=200 raw={"result":{"operation_id":9,"status":"completed"},"status":"ok","time":0.305326259}
+[leg3] 200 result.status='completed' result.operation_id=9
+[leg4 note] dotted-path create answered 200 (echo/legality of the create face is out of scope here; delete branch below is 'existing index' in that case)
+[DELETE index leg4 dotted-path sidl06bf4376_live/lvl.tag] qp={'wait': 'true'} -> status=200 raw={"result":{"operation_id":13,"status":"completed"},"status":"ok","time":0.293492397}
+[leg4] 200 result.status='completed' result.operation_id=13
+[DELETE index leg5 qp sidl06bf4376_live/ghost_never_indexed] qp={'wait': 'true', 'timeout': 30} -> status=200 raw={"result":{"operation_id":15,"status":"completed"},"status":"ok","time":0.297336376}
+[leg5] 200 result.status='completed' result.operation_id=15
+OK: every legal delete variant answered 200 with a result:object envelope - existing index, never-indexed field, already-deleted repeat, dotted-path field, and wait/timeout query params
+VERDICT: NO_DEFECT

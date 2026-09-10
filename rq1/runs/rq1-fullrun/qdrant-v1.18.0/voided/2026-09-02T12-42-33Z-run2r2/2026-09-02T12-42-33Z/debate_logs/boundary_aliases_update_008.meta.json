@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_update_008",
+ "endpoint": "aliases+update",
+ "param": null,
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "state_atomicity",
+ "oracle": {
+  "statement": "a batch containing ANY failing action is rejected AND leaves ZERO observable state change attributable to that batch in GET /aliases — the pre-existing alias survives untouched and the would-be-created aliases are absent; any partially-applied state (first action applied despite batch rejection, established alias vanished after a rejected delete+create) = Type4_StateLogicViolation directly contradicting \"alias changes are ATOMIC: no collection modifications can happen between the alias operations of one request\"; positive [create a1, create a2] batch returning 200 with both aliases present = required promise exercise; 5xx handled with healthz recheck (Type3 only if service degraded)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

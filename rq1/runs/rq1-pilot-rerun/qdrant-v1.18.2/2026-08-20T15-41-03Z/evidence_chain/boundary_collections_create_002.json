@@ -1,0 +1,64 @@
+{
+  "defect_id": "boundary_collections_create_002",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation at api.qdrant.tech not reachable (domain_blocked). OpenAPI v1.18.x schema defines ef_construct with minimum:4 (line 7906), not minimum:10 as constraint claims. Contract assertion ef_construct>=10 not enforced in schema.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: ef_construct=9 → HTTP 200, response={\"result\":true,\"status\":\"ok\",\"time\":0.264611037}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A (success: true)",
+        "note": "Illegal ef_construct=9 accepted with HTTP 200 and success=true, violating constraint requirement"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_create_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_002",
+      "assertion_text_quoted": "hnsw_config.ef_construct >= 10 AND hnsw_config.ef_construct <= 1000",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_002 (assertion: ef_construct >= 10 AND ef_construct <= 1000)",
+        "doc:OpenAPI v1.18.x schema defines ef_construct minimum:4 (contradicts contract)",
+        "script:PUT /collections/{name} with hnsw_config.ef_construct=9",
+        "log:HTTP 200 with {\"result\":true,\"status\":\"ok\"} (accepted illegal value)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "OpenAPI schema minimum:4 contradicts contract assertion ef_construct>=10; schema validation would not catch ef_construct=9 violation",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["ef_construct", "validate.*hnsw", "ef_construct.*range"],
+      "files_examined": [
+        "lib/segment/src/index/hnsw_index/config.rs",
+        "docs/redoc/v1.18.x/openapi.json"
+      ],
+      "source_excerpt": "File: docs/redoc/v1.18.x/openapi.json, Lines 7902-7907\n\"ef_construct\": {\n  \"description\": \"Number of neighbours to consider during the index building...\",\n  \"type\": \"integer\",\n  \"format\": \"uint\",\n  \"minimum\": 4\n}\n\nFile: lib/segment/src/index/hnsw_index/config.rs, Lines 11-18\n#[derive(Debug, Deserialize, Serialize, Copy, Clone, PartialEq, Eq)]\npub struct HnswGraphConfig {\n    pub m: usize,\n    pub m0: usize,\n    pub ef_construct: usize,\n    ...\n}",
+      "call_chain_traced": "OpenAPI schema defines minimum:4 for ef_construct. No explicit validation enforcing ef_construct>=10 found in API layer. HnswGraphConfig struct accepts ef_construct as usize (unsigned, min 0 effectively). Validation relies on OpenAPI schema which has wrong minimum.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "payload_mismatch"],
+      "surviving": "ef_construct=9 is definitively outside [10,1000] range per contract, yet accepted by API. No by-design logic found accepting ef_construct=9. OpenAPI schema minimum:4 is inconsistent with documented constraint ef_construct>=10."
+    }
+  }
+}

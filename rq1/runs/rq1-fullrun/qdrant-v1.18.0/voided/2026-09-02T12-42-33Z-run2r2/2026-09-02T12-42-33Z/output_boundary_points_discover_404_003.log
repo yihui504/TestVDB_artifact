@@ -1,0 +1,19 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+G guard valid body on live collection -> status=200
+raw: {"result":[{"id":3,"version":1,"score":1.8554914},{"id":2,"version":1,"score":1.8546512},{"id":5,"version":1,"score":-0.5}],"status":"ok","time":0.003094713}
+G: 200, result array len=3; ghost bpdw3no47c7f9f059 proven absent
+
+N1 full valid body on ghost collection -> status=404
+raw: {"status":{"error":"Not found: Collection `bpdw3no47c7f9f059` doesn't exist!"},"time":2.415e-6}
+N1 full valid body: 404 exactly as promised
+
+N2 target-only valid body on ghost collection -> status=404
+raw: {"status":{"error":"Not found: Collection `bpdw3no47c7f9f059` doesn't exist!"},"time":1.534e-6}
+N2 target-only valid body: 404 exactly as promised
+
+N3 invalid body on ghost collection -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"text\", expected a sequence at line 1 column 109"},"time":0.0}
+N3: 400 (400-vs-404 precedence on missing collection + invalid body — NOTE for the judge)
+VERDICT: NO_DEFECT

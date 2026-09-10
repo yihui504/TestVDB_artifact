@@ -1,0 +1,96 @@
+{
+  "defect_id": "semantic_points_query_params_bounds_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No doc_preflight.json sidecar exists in the contract dir. Reachability: WebFetch domain-blocked for qdrant.tech and api.qdrant.tech; the constraint's source_url https://qdrant.tech/documentation/search/search/ WAS fetched successfully via web reader (full page content obtained, so reachable, not domain_blocked-dead); api.qdrant.tech re-verification failed with network error, but endpoint_registry records it reachable+verified at 2026-09-02T12:34:08Z with a matching doc_quote. Version: concept page is current-only with no version routing in URL (normal for concept docs) -> PARTIAL. Content: the page prose documents hnsw_ef only as 'value that specifies ef parameter of the HNSW algorithm' with NO minimum-1 statement (the min-1 fact in raw_knowledge comes from the versioned OpenAPI param description 'hnsw_ef min 1; exact default false; indexed_only default false; acorn default disabled', so the constraint's source_url attribution is imprecise); the constraint names 'acorn_scale' but the v1.18.0 API field is 'acorn.max_selectivity' (current docs and v1.18.0 source both use max_selectivity, range [0.0,1.0] default 0.4 = ACORN_MAX_SELECTIVITY_DEFAULT); the claim's score expectation (exact self-match score must be 1.0) appears NOWHERE in the fetched page, in raw_knowledge.json, or in structured_contract.json (mechanical scan: 0 hits for '1/(1', 'similarity score', 'score must', 'score is', any Euclid-score formula). Endpoint: registry entry path=points+query method=POST with doc_quote 'Returns 200 QueryResponse {result: [ScoredPoint], next_page_offset?}...' matches the observed response envelope -> PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "B1 hnsw_ef=1 (min closure) -> status=200 | raw: {\"result\":{\"points\":[{\"id\":301,\"version\":1,\"score\":0.0},{\"id\":302,\"version\":1,\"score\":1.4142135},{\"id\":303,\"version\":1,\"score\":2.828427},{\"id\":304,\"version\":1,\"score\":3.0},{\"id\":305,\"version\":1,\"score\":4.1231055},{\"id\":306,\"version\":1,\"score\":5.3851647},{\"id\":307,\"version\":1,\"score\":6.0},...",
+      "secondary_observations": [
+        "[rest, same param below min, sibling script boundary_points_query_hnswef_001] leg E0 hnsw_ef=0 -> status=200 (raw identical to E1/E128: 3 points returned; the documented minimum-1 bound is not enforced by rejection)",
+        "[rest, same param in-range/above, sibling script boundary_points_query_hnswef_001] leg E1 hnsw_ef=1 -> status=200 and leg E128 hnsw_ef=128 -> status=200 with byte-identical scores [0.0057622097, 0.011524419, 0.01728663] on a 3-point collection (no observable behavioral difference across ef=0/1/128)",
+        "[rest, same endpoint+phenomenon, sibling script semantic_points_query_variant_domain_001] P1 nearest -> status=200 | raw: {\"result\":{\"points\":[{\"id\":101,\"version\":1,\"score\":0.0},{\"id\":104,\"version\":1,\"score\":1.7320508},{\"id\":109,\"version\":1,\"score\":2.236068}]} (Euclid distances sqrt(3), sqrt(5); self-match id=101 IS top-1 with score 0.0)",
+        "[rest, same endpoint+phenomenon, sibling script semantic_points_query_byid_lookup_001] L2 by-vector -> status=200 | raw: {\"result\":{\"points\":[{\"id\":301,\"version\":1,\"score\":0.0},{\"id\":302,\"version\":1,\"score\":1.0},{\"id\":303,\"version\":1,\"score\":2.0},...]} (same collection family; exact self-match top-1 score 0.0)",
+        "[rest, same endpoint+phenomenon, sibling script semantic_points_query_exact_pagination_001] C1 full exact limit=25 -> status=200 | raw scores [0.0, 1.0, 2.0, 3.0, ...] = integer-lattice Euclid distances; script expected 1/(1+distance)",
+        "[rest, same endpoint+phenomenon, sibling script semantic_points_query_minshould_001] F1 must city=berlin -> status=200 | raw: {\"result\":{\"points\":[{\"id\":601,\"version\":1,\"score\":0.0,\"payload\":{\"city\":\"berlin\"}},{\"id\":602,\"version\":1,\"score\":1.0,...}]} (self/query point top-1 with raw-distance score)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The B1 request (params.hnsw_ef=1) is a legal in-range request per the constraint (minimum 1); the 200 is a legitimate success response, not a client-error-masquerading-as-2xx case. The claimed violation concerns the response score value, not the status disposition."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_points_query_params_bounds_001",
+        "boundary_points_query_hnswef_001",
+        "semantic_points_query_variant_domain_001",
+        "semantic_points_query_byid_lookup_001",
+        "semantic_points_query_exact_pagination_001",
+        "semantic_points_query_minshould_001"
+      ],
+      "detail": "Full-forensics: the whole log was read (5 lines: one benign RequestsDependencyWarning, the single B1 leg, its raw body, and the verdict line; no other REQ/RESP pairs). The primary observation is exactly the claim's pointed-to phenomenon: hnsw_ef=1 accepted with 200, id=301 top-1 with score 0.0 instead of the expected 1.0. Ordering IS nearest-first (0.0, 1.4142135=sqrt(2), 2.828427=2*sqrt(2), 3.0, 4.1231055=sqrt(17), 5.3851647=sqrt(29), 6.0 - monotonically increasing Euclidean distances on an integer-lattice 2D seed), proving the collection metric was Euclid and the scores are raw distances. Script source not retained in the session (only boundary_scripts/ persists); the log is the authoritative execution record. Reproduction is phenomenon-level: the same endpoint+score pattern (raw Euclid distance as score, 0.0 for exact self-match) reproduces across 6 scripts; whether it constitutes a defect is a grounding question recorded below, not an execution question.",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_points_query_002",
+      "assertion_text_quoted": "SearchParams: hnsw_ef minimum 1; acorn_scale within [0.0, 1.0] (default 0.4)",
+      "api_violates_assertion": false,
+      "note": "Dispatch constraint_id field was empty; constraint resolved from the attack text and found at structured_contract.json constraints.range_constraints (endpoint points+query). Violates-declaration self-check, branch taken: the observed request value hnsw_ef=1 is GENUINELY COMPLIANT with the quoted assertion (1 is inside the minimum-1 domain), AND the claimed phenomenon (exact self-match score 0.0 instead of 1.0) is OUTSIDE the quote's constraint domain - the assertion speaks only of hnsw_ef/acorn bounds and says nothing about scores. No constraint or documentation artifact anywhere in the contract asserts score-value semantics for query results (mechanical scan of structured_contract.json: 0 hits for any score formula/similarity claim). The wrong constraint was cited for the claimed phenomenon; the hnsw_ef=1 request itself violates nothing. (The genuine min-bound violation - hnsw_ef=0 accepted with 200 - is covered by sibling candidate boundary_points_query_hnswef_001, quoted in secondary_observations.)",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_range_points_query_002 EXISTS in structured_contract.json constraints.range_constraints (assertion: 'SearchParams: hnsw_ef minimum 1; acorn_scale within [0.0, 1.0] (default 0.4)'); dispatch field constraint_id was empty but the attack text names it unambiguously - resolved",
+        "doc: https://qdrant.tech/documentation/search/search/ fetched in full; page documents hnsw_ef only as 'value that specifies ef parameter of the HNSW algorithm' (no minimum-1 prose - that fact lives in the versioned OpenAPI param description per raw_knowledge); NO score-semantics statement exists on the page or anywhere in the knowledge base; the script's expectation 'exact self-match must be ... score 1.0' is script-inferred, not doc-derived",
+        "script: sent a nearest query with params.hnsw_ef=1 (the legal minimum closure value) to POST /collections/{c}/points/query - a legal request under the constraint; the score expectation carried by the script has no anchor in the cited doc",
+        "log: 200 returned, id=301 top-1 with score 0.0 (raw Euclid distance; ascending nearest-first order) - the raw observation is real, reproducible across 6 scripts, and consistent with deterministic Euclid metric semantics (source-verified)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The chain breaks at the doc link for the CLAIMED expectation: the claim's premise 'exact self-match must be top-1 id 301 score 1.0' has no documentation anchor - the cited search docs page (fetched in full) contains no statement about score values or formulas for any distance metric (its only ordering statement is 'The result contains ordered by score list of found point ids', direction unspecified), raw_knowledge.json contains no score-semantics entry, and structured_contract.json contains no score-value assertion (0 mechanical hits). The tested value hnsw_ef=1 is inside the constraint's legal domain, so the constraint link itself is intact but unviolated. The observation (score=0.0 = raw Euclid distance for the self-match) is genuine behavior, fully explained by source-level metric post-processing, not by any documented promise being broken.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "hnsw_ef",
+        "acorn",
+        "acorn_scale",
+        "postprocess",
+        "fn euclid_similarity",
+        "fn similarity / 1.0 + (score-formula search)"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs (SearchParams L585-617, AcornSearchParams L553-583, Distance enum L307-327)",
+        "lib/segment/src/spaces/simple.rs (EuclidMetric L36-78, euclid_similarity L214-219)",
+        "lib/segment/src/index/hnsw_index/hnsw.rs (search_with_graph ef selection L1048-1058)",
+        "lib/collection/src/shards/local_shard/search.rs (REST query path score postprocessing L149-168)",
+        "lib/collection/src/operations/verification/mod.rs (strict-mode SearchParams check L331-349)"
+      ],
+      "source_excerpt": "lib/segment/src/types.rs:585-617 — pub struct SearchParams { ... #[serde(skip_serializing_if = \"Option::is_none\")] pub hnsw_ef: Option<usize>, ... } // NO #[validate(range(min=1))] and no minimum check anywhere on hnsw_ef; only AcornSearchParams.max_selectivity carries #[validate(range(min = 0.0, max = 1.0))] (L581) and pub const ACORN_MAX_SELECTIVITY_DEFAULT: f64 = 0.4 (L556) — the v1.18.0 field is 'max_selectivity', not the contract's 'acorn_scale'. || lib/segment/src/index/hnsw_index/hnsw.rs:1049-1051 — let ef = params.and_then(|params| params.hnsw_ef).unwrap_or(self.config.ef); // value consumed raw, no min clamp. || lib/collection/src/shards/local_shard/search.rs:155-166 — let processed_res = vector_res.into_iter().map(|mut scored_point| { match req.query { QueryEnum::Nearest(_) => { scored_point.score = distance.postprocess_score(scored_point.score); } ... || lib/segment/src/types.rs:320-327 — pub fn postprocess_score(&self, score: ScoreType) -> ScoreType { match self { ... Distance::Euclid => EuclidMetric::postprocess(score), ... } } || lib/segment/src/spaces/simple.rs:74-78 — impl MetricPostProcessing for EuclidMetric { fn postprocess(score: ScoreType) -> ScoreType { score.abs().sqrt() } } and L214-219 — pub fn euclid_similarity(v1, v2) -> ScoreType { -v1.iter().zip(v2).map(|(a, b)| (a - b).powi(2)).sum::<ScoreType>() } // internal score is negative squared distance; postprocess converts to plain distance.",
+      "call_chain_traced": "REST POST /points/query (nearest query) -> lib/collection/src/shards/local_shard/search.rs:155-158 QueryEnum::Nearest applies distance.postprocess_score -> lib/segment/src/types.rs:320-327 dispatches Distance::Euclid -> EuclidMetric::postprocess = score.abs().sqrt() (spaces/simple.rs:74-78) on the internal euclid_similarity = -sum((a-b)^2) (spaces/simple.rs:214-219). Net effect: the REST 'score' for a Euclid collection IS the plain Euclidean distance (0.0 = exact self-match; ascending order = nearest-first). No 1/(1+d) or similarity conversion exists anywhere in the codebase (grep for such formulas: 0 relevant hits). Separately, SearchParams.hnsw_ef has no minimum validation at any layer: the REST schema type (lib/segment/src/types.rs:594) carries no validate attribute, hnsw.rs:1049 consumes the value raw, and the only hnsw_ef check in the tree is the strict-mode UPPER bound check_limit_opt(self.hnsw_ef, strict_mode_config.search_max_hnsw_ef) (lib/collection/src/operations/verification/mod.rs:343-347), a tenant-limit feature disabled by default.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "validation_absent is scoped to the constraint's own asserted bound: the documented 'hnsw_ef minimum 1' is not enforced anywhere in the v1.18.0 server code (explains sibling E0 hnsw_ef=0 -> 200). For THIS candidate's request (hnsw_ef=1, in-range) that absence has no bearing: the request is legal and the observed score=0.0 is the deterministic, by-construction output of the Euclid postprocess chain quoted above - not an annotated by-design declaration (no intent comment exists in the metric code, so by_design_in_source is not claimed per v3.4 tightening), and not a state violation. No source code validates scores against any similarity expectation because no such expectation exists in the API contract.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "cache_delay"
+      ],
+      "surviving": "metric-semantics expectation mismatch fully explains the observation: the script expected similarity-style scores (self-match = 1.0; sibling exact_pagination expected 1/(1+d)) while the tested collection was created with distance=Euclid (response distances sqrt(2), 2*sqrt(2), sqrt(17), sqrt(29) prove the metric), for which qdrant v1.18.0 returns the raw Euclidean distance as score by construction (source-verified postprocess chain). This explanation is confirmed at the source level, is deterministic (pure function of metric+vectors, no state), and reproduces identically across 6 scripts and multiple collections."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_update_005",
+ "endpoint": "aliases+update",
+ "param": null,
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "malformed_input",
+ "oracle": {
+  "statement": "every malformed-stream probe (truncated JSON / trailing comma / single quotes / comment / bare NUL / escaped \\u0000 / lone surrogate \\ud800 / non-UTF8 bytes) is cleanly rejected with 4xx and a non-empty diagnostic body (parser never crashes); 5xx/panic/utf/serde keywords in body = Type3_RuntimeFailure (healthz rechecked); 200 silent-accept of a NUL/surrogate alias name = Type1_IllegalSuccess pending judge-doc verification of alias-name charset semantics; empty-body 4xx = Type2_PoorDiagnostics (constraint qdrant_behavioral_aliases_update_001 — endpoint robustness for its documented 200/404/500 faces)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

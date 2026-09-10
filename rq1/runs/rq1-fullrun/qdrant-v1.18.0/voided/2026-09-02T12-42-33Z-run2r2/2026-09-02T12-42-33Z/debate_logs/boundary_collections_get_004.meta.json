@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_collections_get_004",
+ "endpoint": "collections+get",
+ "param": "collection_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "strategy4_special_value",
+ "oracle": {
+  "statement": "PUT-create a name containing ue-umlaut/CJK/emoji: if create=2xx then GET describe on the identical percent-encoded name = 200 with result.config dict and GET on the one-character near-miss (swapped emoji) = 404 exactly; if create=4xx then GET on that name must be 4xx too (G9 face consistency), never 200; describe 200 on a create-rejected name = Type4_StateLogicViolation, near-miss 200 = Type1_IllegalSuccess, 5xx anywhere = Type3_RuntimeFailure",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

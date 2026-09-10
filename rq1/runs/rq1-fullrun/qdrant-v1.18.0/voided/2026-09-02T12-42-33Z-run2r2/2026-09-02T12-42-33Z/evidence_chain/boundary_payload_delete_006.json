@@ -1,0 +1,91 @@
+{
+  "defect_id": "boundary_payload_delete_006",
+  "endpoint": "payload+delete (POST /collections/{collection_name}/points/payload/delete)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "link_reachability: no doc_preflight.json sidecar exists; two direct WebFetch attempts to https://api.qdrant.tech/v-1-18-x/api-reference/points/delete-payload both failed with a network-policy block ('Unable to verify if domain api.qdrant.tech is safe to fetch') -> domain_blocked, recorded PARTIAL not FAIL. version_match: URL segment v-1-18-x and contract doc_version '1.18.x (versioned v-1-18-x api-reference)' match target 1.18.0 on major.minor. content_consistency: the assertion 'returns 200 ok; 400 on invalid input; 404 for a missing collection' is grounded in the contract-build-time doc capture (raw_knowledge.json endpoint payload+delete: keys type array[string] required=true; expected_responses {200 ok, 400 'bad request / validation error', 404 not found}; endpoint_registry doc_quote 'Deletes only the listed keys of the targeted points; 200 ok / 400 / 404.') — and the captured doc contains NO promise that error messages name the offending parameter, so the assertion text is consistent with the doc while the Type2 naming requirement has no doc anchor. endpoint_precision: payload+delete present in endpoint_registry (POST, same source_url, verified_at 2026-09-02T12:34:08Z).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "case keys='city' (string, spec types array[string]) -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: invalid type: string \\\"city\\\", expected a sequence at line 1 column 30\"},\"time\":0.0}",
+      "secondary_observations": [
+        "rest, same endpoint+same param, sibling script state_payload_delete_005 (opposite verdict on identical server behavior): [C1-ii keys as string] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: invalid type: string \\\"a\\\", expected a sequence at line 1 column 12\"},\"time\":0.0} -> judged 'OK: rejected with 400 (400 pinned)'; script final VERDICT: NO_DEFECT",
+        "rest, same endpoint, null element of the same type domain: [C1-iii keys null] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: invalid type: null, expected a sequence at line 1 column 13\"},\"time\":0.0} -> judged OK (400 pinned)",
+        "rest, same endpoint, missing-field branch names the field (disposition difference within one endpoint): [C1-i missing keys] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: missing field `keys` at line 1 column 15\"},\"time\":0.0} — serde names the parameter on missing-field errors but not on invalid-type errors",
+        "rest, same-family parameter (actions on aliases+update, also a required array), identical unnamed format: output_boundary_aliases_update_002.log raw: {\"status\":{\"error\":\"Format error in JSON body: invalid type: string \\\"create_alias\\\", expected a sequence at line 1 column 26\"},\"time\":0.0} (also null/map/integer variants in the same log; and 3 instances in output_semantic_aliases_update_006.log)",
+        "grpc: face_unavailable — no in-chain script probed the gRPC face of payload delete (all scripts are REST via requests library); no fabricated comparison",
+        "within-log gap (full-forensics note): the triggering script returned early on the first case, so its remaining 4 cases (keys=[123,456] / [null] / {\"city\":1} / explicit null) never executed in this log; the family behavior is nevertheless covered by the state_payload_delete_005 observations above"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "Request-side-decidable error (type-confused required body parameter) correctly returned as HTTP 400 with business envelope {\"status\":{\"error\":...},\"time\":0.0} — proper 4xx mapping, not the 2xx+business-code pattern."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_payload_delete_006",
+        "state_payload_delete_005"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_payload_delete_001",
+      "assertion_text_quoted": "returns 200 ok; 400 on invalid input; 404 for a missing collection",
+      "api_violates_assertion": false,
+      "note": "assertion_text_quoted is the verbatim description field of the assertion in structured_contract.json (assertion_id qdrant_behavioral_payload_delete_001); the same assertion object also carries expected_behavior: 'delete_payload with a keys list returns HTTP 200 on valid targets; missing collection returns 404'. violates-declaration self-check: the claim's phenomenon is NOT 'illegal value silently accepted' (no 200+success — the value was rejected); the observed parameter keys IS inside the assertion's endpoint-level domain and the disposition (400 on invalid input) is exactly what the assertion promises — genuine compliance, so api_violates_assertion=false. The Type2 requirement that the 400 body name the `keys` parameter exists only in the script's authored oracle (docstring line: 'returns 4xx with the keys parameter named in the error (silent or unnamed 4xx = Type2_PoorDiagnostics)'), in neither the contract assertion text nor the captured documentation. Dispatch note: candidates.jsonl constraint_id field was empty for this candidate; the id is taken from the attack string and the script header (constraint_ids: qdrant_behavioral_payload_delete_001), and the assertion was located in structured_contract.json assertions[] (evidence_tier: explicit, level: endpoint).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: assertions[] qdrant_behavioral_payload_delete_001 — 'returns 200 ok; 400 on invalid input; 404 for a missing collection' (endpoint payload+delete); dispatch constraint_id field empty, id recovered from attack string + script header",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/points/delete-payload — captured at contract build (raw_knowledge.json): keys array[string] required=true; 200 ok / 400 'bad request / validation error' / 404; direct fetch now domain_blocked (2 attempts); no error-message-content promise anywhere in the capture",
+        "script: boundary_payload_delete_006.py sent {\"points\": [1], \"keys\": \"city\"} to POST /collections/{coll}/points/payload/delete?wait=true (body violates only the keys typing; selector valid)",
+        "log: output_boundary_payload_delete_006.log — 'case keys='city' (string, spec types array[string]) -> status=400' + raw {\"status\":{\"error\":\"Format error in JSON body: invalid type: string \\\"city\\\", expected a sequence at line 1 column 30\"},\"time\":0.0}; VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "The log judged DEFECT_FOUND although the raw response shows the target already rejected the invalid input with the documented 400 — the constraint's '400 on invalid input' face was satisfied, not violated. The verdict rests on an extra-contractual oracle requirement (error must name the keys parameter) that appears in neither the contract assertion nor the captured doc text; sibling script state_payload_delete_005 observed the identical 400+unnamed-message on the same endpoint and parameter and judged NO_DEFECT under a status-pinning oracle. The contract->doc->script links themselves are intact and consistent.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Format error in JSON body",
+        "payload/delete",
+        "struct DeletePayload",
+        "JsonConfig|json_config|JsonExtractor",
+        "fn validation_error_handler",
+        "payload_delete|delete_payload",
+        "pub type PayloadKeyType",
+        "points/payload"
+      ],
+      "files_examined": [
+        "lib/shard/src/operations/payload_ops.rs (lines 80-160)",
+        "src/actix/mod.rs (lines 80-169 and 185-284)",
+        "src/actix/api/update_api.rs (lines 245-304, plus import line 3)",
+        "lib/segment/src/types.rs (line 51)"
+      ],
+      "source_excerpt": "[1] lib/shard/src/operations/payload_ops.rs:96-110 — the API-facing struct (keys is a required Vec):\n 96  /// This data structure is used in API interface and applied across multiple shards\n 97  #[cfg(feature = \"api\")]\n 98  #[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone)]\n 99  #[serde(try_from = \"DeletePayloadShadow\")]\n100  pub struct DeletePayload {\n101      /// List of payload keys to remove from payload\n102      pub keys: Vec<PayloadKeyType>,\n103      /// Deletes values from each point in this list\n104      pub points: Option<Vec<PointIdType>>,\n105      /// Deletes values from points that satisfy this filter condition\n106      #[validate(nested)]\n107      pub filter: Option<Filter>,\n108      #[serde(default, skip_serializing_if = \"Option::is_none\")]\n109      pub shard_key: Option<api::rest::ShardKeySelector>,\n110  }\n(lib/segment/src/types.rs:51 — pub type PayloadKeyType = JsonPath;)\n\n[2] src/actix/api/update_api.rs:260-268 — route and validating extractor:\n260  #[post(\"/collections/{collection_name}/points/payload/delete\")]\n261  async fn delete_payload(\n262      dispatcher: web::Data<Dispatcher>,\n263      collection: Path<CollectionPath>,\n264      operation: Json<DeletePayload>,        // line 3: use actix_web_validator::{Json, Path, Query};\n265      params: Query<UpdateParams>,\n...\n\n[3] src/actix/mod.rs:105-111 — app-level extractor config routing body errors to the handler:\n109            let validate_json_config = actix_web_validator::JsonConfig::default()\n110                .limit(settings.service.max_request_size_mb * 1024 * 1024)\n111                .error_handler(|err, rec| validation_error_handler(\"JSON body\", err, rec));\n\n[4] src/actix/mod.rs:227-269 — construction of the exact observed message and status:\n227  fn validation_error_handler(\n228      name: &str,\n229      err: actix_web_validator::Error,\n230      _req: &HttpRequest,\n231  ) -> error::Error {\n232      use actix_web_validator::error::DeserializeErrors;\n233      // Nicely describe deserialization and validation errors\n234      let msg = match &err {\n...\n249          actix_web_validator::Error::JsonPayloadError(\n250              actix_web::error::JsonPayloadError::Deserialize(err),\n251          ) => {\n252              format!(\"Format error in {name}: {err}\",)\n253          }\n254          err => err.to_string(),\n255      };\n256      // Build fitting response\n257      let response = match &err {\n258          actix_web_validator::Error::Validate(_) => HttpResponse::UnprocessableEntity(),\n259          _ => HttpResponse::BadRequest(),\n260      }\n261      .json(ApiResponse::<()> {\n262          result: None,\n263          status: ApiStatus::Error(msg),\n264          time: 0.0,\n265          usage: None,\n266      });\n267      error::InternalError::from_response(err, response).into()\n268  }",
+      "call_chain_traced": "POST /collections/{name}/points/payload/delete -> delete_payload handler (update_api.rs:260) with operation: actix_web_validator::Json<DeletePayload> -> DeletePayload.keys: Vec<PayloadKeyType=JsonPath> (payload_ops.rs:102, required Vec, #[serde(try_from=DeletePayloadShadow)]) -> keys:\"city\" fails serde deserialization with serde_json's standard invalid-type wording ('invalid type: string \"city\", expected a sequence at line 1 column 30' — value + expected type + position, no field name) -> JsonConfig error_handler validation_error_handler(\"JSON body\", ...) (mod.rs:109-111) -> format!(\"Format error in JSON body: {err}\") (mod.rs:252) -> HttpResponse::BadRequest() with {\"status\":{\"error\":msg},\"time\":0.0} (mod.rs:258-267) — byte-identical to the observed log line including time:0.0. Type validation is present and enforced at the API boundary; the omission of the parameter name is a property of serde_json's invalid-type messages passed through verbatim by the generic section-level wrapper (serde_json DOES name the field on missing-field errors, matching the sibling log's 'missing field `keys`'); no explicit maintainer comment declares the field-name omission intentional, so by_design_in_source is not claimed.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (deterministic clean 400, no transport failure, exit code 0)",
+        "concurrency (single sequential request against a script-private collection)",
+        "request-parameter typo (script echoed the exact body; response column 30 aligns with the end of the \"city\" value in {\"points\": [1], \"keys\": \"city\"})"
+      ],
+      "surviving": "oracle-relativity of the defect claim: the observation itself is real and stable (400 body omits the parameter name on the invalid-type branch), but its defect status is oracle-derived — the script's authored Type-2 rubric demands the parameter be named, the contract assertion and captured doc text do not, and the sibling script state_payload_delete_005 judged the identical server behavior NO_DEFECT. Not by-design-in-source (no explicit maintainer intent evidence for omitting the field name)."
+    }
+  }
+}

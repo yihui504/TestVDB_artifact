@@ -1,0 +1,77 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "boundary_payload_overwrite_006",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED", "note": "diagnostics are precise (expected type + offending value class + line 1 column 27 byte locator); no maintainer comment declares the field-name omission intentional, so not explicit by-design"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": "what_developers_prioritize hit ('Performance optimization over diagnostic completeness') = don't-care dimension, confidence-degradation annotation only, never decides", "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, mechanical: qdrant_behavioral_payload_overwrite_001) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanized layer; B/C/D recorded, cannot overturn)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "mundane_api_semantics",
+      "constraint_category": "other",
+      "category_no_fit_reason": "claimed error-message parameter-naming requirement has no contract unit: the cited behavioral unit covers status dispositions (200/400/404) only and was satisfied exactly (400 on invalid input)",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A mechanical: qdrant_behavioral_payload_overwrite_001 quote verified verbatim, api_violates_assertion=false - payload=[] was rejected with exactly the documented 'invalid input returns 400', the asserted face satisfied not violated - NOT_DEFECT mandated. The Type2 naming requirement exists only in the script's authored rubric oracle; doc_verification finds no error-message-content promise in page prose or registry quote, and source shows validation_present (actix validation_error_handler passes serde_json Display through a generic 'Format error in JSON body' wrapper; the in-chain contrast observation shows serde names the field only on missing-field errors, never on type-confusion). B=NEUTRAL (rejection case, no accepting observation; HTTP-semantics tautology condition 2 fails - no doc/contract claim about error form), C=WEAK_REFUTED, D=NO_SIGNAL; identical family to R28 boundary_payload_delete_006 (same unattributed serde type-error class, cross-cited in this chain's own secondary observation), judged consistently.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_payload_overwrite_008",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED", "note": "EXPLICIT by-design in source for the same-class phenomenon: '// overwrite operation doesn't support payload selector' (src/common/update.rs:652) plus tonic twin '// overwrite operation don't support indicate path of property' (update_common.rs:327-328)"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": "no payload-selector anchor in blindspot_indicators or by_design_patterns; prioritize hit ('Data consistency and persistence over API strictness') = don't-care dimension, annotation only", "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, mechanical: qdrant_state_payload_overwrite_001) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanized layer; the doc-vs-impl divergence below is recorded as doubt, it does not reopen the ruling)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "constraint_category": "other",
+      "category_no_fit_reason": "the violated promise (published request field key='Assigns payload to each point that satisfy this path of property' on the PUT overwrite face) was never extracted as a constraint unit; the cited state unit's whole-payload-replace letter was satisfied exactly",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A mechanical: qdrant_state_payload_overwrite_001 quote verified verbatim, api_violates_assertion=false - readback {\"new\": 2} equals the provided payload and previously stored keys (keep, nested) were removed, the quoted letter kept - NOT_DEFECT mandated; the key parameter is outside this quote's constraint domain. Genuine doc-vs-impl divergence stands as an unrebutted in-chain observation: the published SetPayload schema advertises key on the PUT face while both overwrite handlers (REST update.rs:639-654, gRPC update_common.rs:327-328) explicitly discard it, and the live comparative probe shows the same body honors key on POST set (sibling 'keep' survived) but ignores it on PUT; source doubt exists, so this is flagged for main-process manual review and constraint extraction (new-class review via other-attribution), not a strict defect. B=NEUTRAL (schema-valid request accepted 200; rule 5 needs a rejected family sibling, rule 6 needs a rejecting face - REST PUT and gRPC overwrite discard key uniformly), C=REFUTED (explicit in-source intent comments), D=NO_SIGNAL.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_payload_overwrite_006",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED", "note": "explicit by-design at three layers: enum doc comments ('Set payload value, overrides if it is already exists' vs 'Overwrite full payload with given keys'), dedicated storage primitives (point_payload.merge vs payload.insert), and doc prose 'set ... keeping others unchanged, while the overwrite method replaces the entire payload'"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": "no anchor for set/overwrite semantics fork (batch-atomicity anchor is a different phenomenon class)", "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, mechanical: qdrant_bc_payload_overwrite_replace_001) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanized layer; B/C/D recorded, cannot overturn)"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "other",
+      "category_no_fit_reason": "the script's exact-after-POST-set expectation is grounded in no contract unit (the cited bc pins exact {c} only after the PUT overwrite step, which passed in the same log)",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A mechanical: qdrant_bc_payload_overwrite_replace_001 quote verified verbatim, api_violates_assertion=false - D readback exactly {'c': 'three'} on both points with a/b/orig removed, the pinned replace-not-merge assertion PASSED in the same log. chain_broken_at=script (transcribed): the DEFECT derives solely from the script-authored B-step oracle requiring POST payload+set to erase the step-A {'orig':true} baseline - contradicted by the script's own E-step (merge expected and observed, marked OK), by documentation verbatim ('set payload ... keeping others unchanged'), and by source (set->merge vs overwrite->insert primitives). milvus_030-pattern oracle overreach adjudicated conclusive by the builder; no rework round needed.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 3,
+    "defect": 0,
+    "not_defect": 3,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 2, "source": 0, "both": 0, "behavior": 1},
+    "root_cause_distribution": {"mundane_api_semantics": 1, "approximate_by_design": 1, "script_error": 1},
+    "constraint_category_distribution": {"other": 3},
+    "candidate_class_distribution": {"strict_defect": 0, "exploratory_candidate": 0, "rejected": 3}
+  }
+}

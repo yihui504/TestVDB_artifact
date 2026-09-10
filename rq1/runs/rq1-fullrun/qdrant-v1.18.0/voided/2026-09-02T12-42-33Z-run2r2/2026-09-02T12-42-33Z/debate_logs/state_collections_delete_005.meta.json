@@ -1,0 +1,18 @@
+{
+ "defect_id": "state_collections_delete_005",
+ "endpoint": "collections+delete",
+ "param": "collection (path name vs alias name at delete time)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "delete_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_delete_001",
+  "qdrant_bc_delete_invisibility_001"
+ ],
+ "source_url": "https://qdrant.tech/documentation/manage-data/collections/",
+ "doc_version": "unknown",
+ "oracle": {
+  "statement": "after 200 delete-by-name -> describe-by-alias NOT 200 and C1 absent from list; delete-by-alias 2xx implies describe(C2)=404+absent, 4xx implies describe(C2)=200",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

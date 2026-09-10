@@ -1,0 +1,72 @@
+{
+  "defect_id": "vein_range_filter_schema_sharding_zombie_1",
+  "endpoint": "POST /v1/schema (create class) -> shardingConfig.desiredCount",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "无契约约束（constraint_id 为空，vein 自由探索）；weaviate.io 文档被网络层拦截（domain_blocked），无法核对 desiredCount 文档原文；POST /v1/schema 端点在源码 usecases/schema/parser.go 确认存在（parseShardingConfig 调用链），端点精确性 PASS",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "POST create (desiredCount=-3) Status: 200 / raw: '' (EMPTY body, no echo, no error) -> GET schema immediately: 404 body='' -> POST add-property immediately: 422 \"class is nil: not found\"; CONTROL desiredCount=0 -> 422 \"failed to read sharding state: invalid sharding state: physical shards unavailable\"; CONTROL desiredCount=1 -> 200 body_len=1395 GET=200",
+      "secondary_observations": [
+        "CONTROL desiredCount=0 residue GET=200 (class exists after 422?)",
+        "CONTROL desiredCount=1 -> 200 body_len=1395 GET=200"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "非法参数（desiredCount=-3）以 HTTP 200 + 空 body 返回，无任何业务错误码或类回显，客户端无法感知创建实际失败；对照 desiredCount=0 同参数族以 422 + 显式错误消息拒绝"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_range_filter_schema_sharding_zombie_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "(无契约断言 — candidates.jsonl constraint_id 为空，vein 自由探索。断言支撑来自行为对照：desiredCount=0 被 422 显式拒绝而 desiredCount=-3 被 200 静默接受，同一参数同一端点)",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (none — constraint_id 空，vein 自由探索，无契约断言可引)",
+        "doc: weaviate.io domain_blocked (网络拦截，无法核对文档原文)",
+        "script: vein_range_filter_schema_sharding_zombie_1.py — POST /v1/schema desiredCount=-3 主测 + 0/1 双对照 + GET/properties 读回",
+        "log: output_vein_range_filter_schema_sharding_zombie_1.log — 200 空 body + GET 404 + properties 422 'class is nil'；对照 0->422、1->200 正常"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "constraint_id 为空（未引用契约约束）且 doc 层 domain_blocked，链的判定支撑由 script->log->source 三环独立承担（源码 config 层无 desiredCount 范围校验 + 对照行为 0 拒/-3 收），不构成判定失效",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["desiredCount", "physical shards unavailable", "failed to read sharding state", "DesiredCount"],
+      "files_examined": [
+        "usecases/sharding/config/config.go",
+        "usecases/sharding/state.go",
+        "usecases/schema/parser.go",
+        "cluster/schema/reader.go",
+        "adapters/repos/db/index.go",
+        "adapters/repos/db/backup.go",
+        "adapters/repos/db/export.go"
+      ],
+      "source_excerpt": "usecases/sharding/config/config.go:53-70 func (c *Config) validate() error — 仅校验 Key=='_id'、Strategy=='hash'、Function=='murmur3'，无 DesiredCount 范围校验；ParseConfig (L85-146) 经 optionalIntFromMap 直接接受 desiredCount=-3。usecases/sharding/state.go:440 initPhysical: for i := 0; i < s.Config.DesiredCount; i++ — 负值使循环体不执行，Physical map 为空。cluster/schema/reader.go:105-107 checkShardingState: len(s.Physical)==0 -> \"invalid sharding state: physical shards unavailable\"。adapters/repos/db/index.go:503 \"failed to read sharding state: %w\"",
+      "call_chain_traced": "parser.parseShardingConfig (usecases/schema/parser.go:185) -> shardingConfig.ParseConfig(desiredCount=-3) 无范围校验通过 -> sharding.State.initPhysical for i:=0; i<-3 生成 0 物理 shard -> create index 阶段 checkShardingState 对 desiredCount=0 抛 'physical shards unavailable'（422 显式拒绝路径）；desiredCount=-3 时 POST 返回 200 空 body（create-index 阶段错误未回传/apply 半成功），类在 schema API 侧不可读（GET 404、properties 422 'class is nil'）直至首个对象写入才注册 —— 半持久化 phantom 状态",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request_typo"],
+      "surviving": null
+    }
+  }
+}

@@ -1,0 +1,32 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[TEST 1] GET /cluster - check cluster status
+  Response: status=200
+    Result keys: ['result', 'status', 'time']
+    Status: ok
+    Description: N/A
+
+[TEST 2] GET /cluster in standalone mode (single node)
+  Standalone cluster status: 200
+
+[TEST 3] POST /cluster/recover - cluster recovery
+  Cluster recover: status=500
+    Rejected with 500
+
+[TEST 4] POST /cluster/recover with missing required fields
+  Empty recover payload: status=500
+    OK: Rejected with 500
+
+[TEST 5] GET /cluster/telemetry
+  Cluster telemetry: status=500
+    Rejected with 500
+
+[TEST 6] DELETE /cluster/peer/delete
+  Delete peer: status=404
+    Rejected with 404
+      Expected in standalone mode
+
+============================================================
+VERDICT: DEFECT_FOUND
+Need to determine if cluster behaviors in standalone mode are defects or by-design
+============================================================

@@ -1,0 +1,41 @@
+{
+  "defect_id": "vein_compound_delete_filter_validation_1",
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "endpoint": "DELETE /collections/{collection}/points",
+  "condition_type": "compound_delete",
+  "strategy": "vein_compound_delete",
+  "finding": "Delete endpoint accepts invalid filter combinations without validation errors",
+  "defect_type": "Type1_IllegalSuccess",
+  "severity": "P1_High",
+  "expected_behavior": "HTTP 400 Bad Request for invalid filter selectors",
+  "actual_behavior": "HTTP 200 OK with operation_id - silent acceptance",
+  "endpoint_tested": "DELETE /collections/{collection}/points",
+  "test_cases": [
+    {
+      "test": "empty_filter",
+      "description": "Empty filter {} should return 400 (no condition specified)",
+      "finding": "DEFECT"
+    },
+    {
+      "test": "ambiguous_selector",
+      "description": "Both points AND filter specified should return 400 (ambiguous)",
+      "finding": "DEFECT"
+    },
+    {
+      "test": "valid_compound_filter",
+      "description": "Valid compound filter control group",
+      "finding": "PASS"
+    }
+  ],
+  "defect_count": 2,
+  "bug_shape": "qdrant-parameter-validation-numeric-boundary",
+  "threat_model_reference": "Hist 67 - Parameter Validation (88 historical instances)",
+  "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+  "novelty": "LIKELY_NOVEL",
+  "submission_probability": "High (0.85)",
+  "script_path": "vein_scripts/vein_compound_delete_filter_validation_1.py",
+  "generated_by": "attack-vein v2.5.2",
+  "generated_at": "2026-08-20T17:55:00Z",
+  "param": "filter"
+}

@@ -1,0 +1,15 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[create default] status=200 raw={"result":true,"status":"ok","time":0.314981067}
+[describe A_default] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload
+[leg A] V_c (default create readback) = 10000 (OptimizersConfig doc claim: 10000)
+[patch B unrelated diff] status=200 raw={"result":true,"status":"ok","time":0.017338883}
+[describe B_afterdiff] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload
+[leg B] V_b (after unrelated diff PATCH) = 10000 (OptimizersConfigDiff doc claim: 20000)
+[create explicit it=30000] status=200 raw={"result":true,"status":"ok","time":0.285532587}
+[describe C_before] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload
+[patch C unrelated diff] status=200 raw={"result":true,"status":"ok","time":0.015695526}
+[describe C_after] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload
+[leg C] V_cx (explicit 30000 after unrelated diff PATCH) = 30000
+DEFECT: leg B: OptimizersConfigDiff-side claim 'Default value is 20000' VIOLATED — after an optimizers diff PATCH omitting indexing_threshold the readback materializes 10000 (impl self-consistent at the OptimizersConfig default) — doc-stale on the update-page diff schema — Type4_StateLogicViolation
+VERDICT: DEFECT_FOUND

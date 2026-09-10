@@ -1,0 +1,37 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "r14",
+  "verdicts": [
+    {
+      "defect_id": "state_collections_get_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "SUPPORTS_DEFECT",
+                       "matched_pattern": "blindspot: Concurrent shard worker restart safety (concurrent operations against transitioning shard state handled unsafely — behavior-class isomorphic to lifecycle-churn vs replica-set read)",
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical id+quote_ok) → implied_verdict=DEFECT → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit qdrant_behavioral_collections_get_001 is a behavioral endpoint assertion (200-with-config / 404-for-missing disposition promise) broken by an out-of-contract lifecycle-window 500; no type/range/state/resource_bound/doc_consistency unit expresses a disposition promise.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED mechanically: qdrant_behavioral_collections_get_001 exists in structured_contract.json assertions, assertion_text_quoted is verbatim its description, api_violates_assertion=true → implied_verdict=DEFECT → final=DEFECT. Chain log_pattern quotes 48 x HTTP 500 'Service internal error: 0 of 0 read operations failed' on the describe face during create/drop churn (grade B; healthz 200; 205 well-formed 200s and 1097 404s alongside; settled post-delete readout is the clean 404 branch), exactly matching the candidate's Strategy-7 lifecycle-concurrency claim. Source_grounding traces the empty replica-set operations stream (execute_read_operation.rs:282-296 break on None; 335-351 formats the vacuous '0 of 0' message into service_error) with no retry/fallback/mapping to 404 and no intent evidence, so C=CONFIRMED; D's concurrent-shard-safety blindspot corroborates (weight LOW, not decisive).",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 1, "defect": 1, "not_defect": 0, "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {},
+    "constraint_category_distribution": {"other": 1},
+    "candidate_class_distribution": {"strict_defect": 1, "exploratory_candidate": 0, "rejected": 0}
+  }
+}

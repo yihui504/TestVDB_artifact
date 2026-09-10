@@ -1,0 +1,41 @@
+[Test 1] wait=false with empty vector
+  Response status: 200
+  Response body: {"result":{"operation_id":1,"status":"acknowledged"},"status":"ok","time":0.000325364}
+  Point stored (should be false): False
+
+[Test 2] wait=true with empty vector
+  Response status: 200
+  Response body: {"result":{"operation_id":2,"status":"acknowledged"},"status":"ok","time":0.000370882}
+  Point stored (should be false): False
+
+[Test 3] wait=false with dimension mismatch (3D in 4D collection)
+  Response status: 200
+  Response body: {"result":{"operation_id":3,"status":"acknowledged"},"status":"ok","time":0.000350522}
+  Point stored (should be false): False
+
+[Test 4] Control: wait=false with valid data
+  Response status: 200
+  Point stored (should be true): True
+
+============================================================
+VERDICT: DEFECT_FOUND
+============================================================
+Total findings: 3
+
+Defect Summary:
+- wait parameter bypasses input validation
+- Invalid data acknowledged but not stored (silent failure)
+- Violates async operation contract
+- Affects: empty vectors, dimension mismatches
+
+Expected Behavior:
+- Input validation should occur BEFORE acknowledgment
+- Invalid input should return 400 Bad Request regardless of wait
+- wait=false only applies to timing, not validation
+
+Actual Behavior:
+- wait=false: acknowledges invalid input, silent failure
+- wait=true: sometimes acknowledges invalid input, silent failure
+
+Severity: High (Type1_IllegalSuccess)
+Affects data integrity and async operation contract

@@ -1,0 +1,63 @@
+{
+  "defect_id": "boundary_collections_create_010",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Constraint qdrant_type_create_collection_002 (vectors.distance IN [Cosine, Euclidean, Dot, Manhattan]) verified - but script tested collection_name NUL byte, not distance values. Domain api.qdrant.tech blocked, preventing doc verification of collection_name constraints. Chain breaks at contract-doc mismatch: claim (NUL in name) doesn't match constraint (distance enum).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Status: 200, Body: {\"result\":true,\"status\":\"ok\",\"time\":0.34918077}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + success response",
+        "note": "Server returned HTTP 200 with status='ok', silently accepting the malformed input (NUL byte in collection name)"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_create_010"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_create_collection_002",
+      "assertion_text_quoted": "vectors.distance IN [Cosine, Euclidean, Dot, Manhattan]",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "Constraint references distance values, but script tested collection_name NUL byte. Chain broken: claim (NUL byte) doesn't match constraint (distance enum). Cannot assert violation of this constraint."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_type_create_collection_002 (vectors.distance enum)",
+        "doc:https://api.qdrant.tech/api-reference/collections/create-collection (distance values)",
+        "script:boundary_collections_create_010 (NUL byte in collection_name)",
+        "log:HTTP 200 + success (silent accept)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "Constraint mismatch: contract restricts vectors.distance values [Cosine, Euclidean, Dot, Manhattan], but script tested collection_name containing NUL byte (\\x00). The claim 'NUL byte silently accepted' cannot be grounded to this constraint. Need separate constraint for collection_name validation (if one exists).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [],
+      "files_examined": [],
+      "source_excerpt": "",
+      "call_chain_traced": "Source clone not available at expected path",
+      "verification_outcome": "webfetch_shallow",
+      "evidence_source": "source",
+      "note": "TESTVDB_SRC_DIR not available, cannot perform source code verification. Domain blocked WebFetch prevents shallow doc verification."
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "by_design"],
+      "surviving": "Type1_IllegalSuccess - NUL byte in collection_name accepted with HTTP 200. No documentation explicitly permits NUL bytes in collection names (checked raw_knowledge.md - only shows collection_name as 'string, required' without character restrictions). Silent acceptance of malformed input is a defect unless explicitly documented as by-design behavior."
+    }
+  }
+}

@@ -1,0 +1,28 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+Testing: ../test...
+  Status: 404
+  ✓ Correctly rejected
+
+Testing: ../../etc/passwd...
+  Status: 404
+  ✓ Correctly rejected
+
+Testing: ..\windows\system32...
+  Status: 200
+
+Testing: test/../../../etc...
+  Status: 404
+  ✓ Correctly rejected
+
+Testing: test%2f%2e%2e%2fpasswd...
+  Status: 422
+  ✓ Correctly rejected
+
+Testing: test%5c%2e%2e%5cboot.ini...
+  Status: 200
+
+VERDICT: DEFECT_FOUND — 2 path traversal issues:
+  - ..\windows\system32: 200 OK (possible path traversal)
+  - test%5c%2e%2e%5cboot.ini: 200 OK (possible path traversal)

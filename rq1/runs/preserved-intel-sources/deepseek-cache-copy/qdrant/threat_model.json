@@ -1,0 +1,628 @@
+{
+  "_meta": {
+    "target": "qdrant",
+    "version": "v1.18.2",
+    "generated_at": "2026-07-06T10:55:02.784747+00:00",
+    "source_data": {
+      "total_issues_analyzed": 200,
+      "bug_shapes_count": 24,
+      "by_design_count": 1,
+      "contract_source_verified": "45/45 (100%, 全 source_verified=true, 0 幻觉)"
+    }
+  },
+  "attack_surface": [
+    {
+      "entity": "data_access",
+      "priority": "High",
+      "hist_defects": 5
+    },
+    {
+      "entity": "business_logic",
+      "priority": "High",
+      "hist_defects": 4
+    },
+    {
+      "entity": "storage_engine",
+      "priority": "High",
+      "hist_defects": 4
+    },
+    {
+      "entity": "configuration",
+      "priority": "High",
+      "hist_defects": 4
+    },
+    {
+      "entity": "api_gateway",
+      "priority": "High",
+      "hist_defects": 4
+    },
+    {
+      "entity": "unknown",
+      "priority": "High",
+      "hist_defects": 3
+    }
+  ],
+  "defect_criteria": {
+    "confirmed_defect_patterns": [
+      {
+        "pattern_id": "parameter_validation_business_logic_Type3_RuntimeFailure",
+        "pattern": "Parameter Validation in Business Logic",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "parameter_validation",
+        "affected_layer": "business_logic",
+        "description": "Issues related to parameter_validation affecting business_logic",
+        "symptom_pattern": "Batch upsert broken? (nodejs client)",
+        "severity_default": "High",
+        "reference_issues": [
+          5986,
+          6758,
+          7079,
+          7132,
+          7309,
+          7425,
+          7967,
+          9373
+        ],
+        "attack_strategy_hints": [
+          "Test parameter_validation scenarios in business_logic",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 8
+      },
+      {
+        "pattern_id": "parameter_validation_storage_engine_Type3_RuntimeFailure",
+        "pattern": "Parameter Validation in Storage Engine",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "parameter_validation",
+        "affected_layer": "storage_engine",
+        "description": "Issues related to parameter_validation affecting storage_engine",
+        "symptom_pattern": "3-node cluster with replication doesn't handle downtime of single node",
+        "severity_default": "High",
+        "reference_issues": [
+          5215,
+          5463,
+          5762,
+          5821,
+          6423,
+          6556,
+          6949
+        ],
+        "attack_strategy_hints": [
+          "Test parameter_validation scenarios in storage_engine",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 7
+      },
+      {
+        "pattern_id": "parameter_validation_data_access_Type3_RuntimeFailure",
+        "pattern": "Parameter Validation in Data Access",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "parameter_validation",
+        "affected_layer": "data_access",
+        "description": "Issues related to parameter_validation affecting data_access",
+        "symptom_pattern": "Error when loading large amounts of points with on_disk=True",
+        "severity_default": "High",
+        "reference_issues": [
+          5084,
+          6541,
+          7366,
+          7610,
+          7677,
+          8346
+        ],
+        "attack_strategy_hints": [
+          "Test parameter_validation scenarios in data_access",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 6
+      },
+      {
+        "pattern_id": "error_handling_storage_engine_Type3_RuntimeFailure",
+        "pattern": "Error Handling in Storage Engine",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "error_handling",
+        "affected_layer": "storage_engine",
+        "description": "Issues related to error_handling affecting storage_engine",
+        "symptom_pattern": "Windows CI stopped working",
+        "severity_default": "Medium",
+        "reference_issues": [
+          4419,
+          6669,
+          8057
+        ],
+        "attack_strategy_hints": [
+          "Test error_handling scenarios in storage_engine",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 3
+      },
+      {
+        "pattern_id": "concurrency_race_unknown_Type3_RuntimeFailure",
+        "pattern": "Concurrency Race in Unknown",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "concurrency_race",
+        "affected_layer": "unknown",
+        "description": "Issues related to concurrency_race affecting unknown",
+        "symptom_pattern": "web ui not found ",
+        "severity_default": "Medium",
+        "reference_issues": [
+          5245,
+          6691,
+          7645
+        ],
+        "attack_strategy_hints": [
+          "Test concurrency_race scenarios in unknown",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 3
+      },
+      {
+        "pattern_id": "api_contract_configuration_Type3_RuntimeFailure",
+        "pattern": "Api Contract in Configuration",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "api_contract",
+        "affected_layer": "configuration",
+        "description": "Issues related to api_contract affecting configuration",
+        "symptom_pattern": "Discrepancy between indexed_vectors_count and points_count affecting query speed",
+        "severity_default": "Medium",
+        "reference_issues": [
+          4522,
+          4991
+        ],
+        "attack_strategy_hints": [
+          "Test api_contract scenarios in configuration",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 2
+      },
+      {
+        "pattern_id": "type_coercion_api_gateway_Type3_RuntimeFailure",
+        "pattern": "Type Coercion in Api Gateway",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "type_coercion",
+        "affected_layer": "api_gateway",
+        "description": "Issues related to type_coercion affecting api_gateway",
+        "symptom_pattern": "Creating a collection returns Collection data already exists at ./storage/collections/...",
+        "severity_default": "Medium",
+        "reference_issues": [
+          4564,
+          7622
+        ],
+        "attack_strategy_hints": [
+          "Test type_coercion scenarios in api_gateway",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 2
+      },
+      {
+        "pattern_id": "parameter_validation_configuration_Type3_RuntimeFailure",
+        "pattern": "Parameter Validation in Configuration",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "parameter_validation",
+        "affected_layer": "configuration",
+        "description": "Issues related to parameter_validation affecting configuration",
+        "symptom_pattern": "S3 snapshots storage feature: missing endpoint_url parameter in documentation, credentials not picke",
+        "severity_default": "Medium",
+        "reference_issues": [
+          4701,
+          5874
+        ],
+        "attack_strategy_hints": [
+          "Test parameter_validation scenarios in configuration",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 2
+      },
+      {
+        "pattern_id": "error_handling_data_access_Type3_RuntimeFailure",
+        "pattern": "Error Handling in Data Access",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "error_handling",
+        "affected_layer": "data_access",
+        "description": "Issues related to error_handling affecting data_access",
+        "symptom_pattern": "Pod Failure with Qdrant v1.11.3",
+        "severity_default": "Medium",
+        "reference_issues": [
+          5260,
+          6025
+        ],
+        "attack_strategy_hints": [
+          "Test error_handling scenarios in data_access",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 2
+      },
+      {
+        "pattern_id": "parameter_validation_api_gateway_Type3_RuntimeFailure",
+        "pattern": "Parameter Validation in Api Gateway",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "parameter_validation",
+        "affected_layer": "api_gateway",
+        "description": "Issues related to parameter_validation affecting api_gateway",
+        "symptom_pattern": "[1.12.4-1.12.5]Internal Server Error",
+        "severity_default": "Medium",
+        "reference_issues": [
+          5705,
+          6515
+        ],
+        "attack_strategy_hints": [
+          "Test parameter_validation scenarios in api_gateway",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 2
+      },
+      {
+        "pattern_id": "concurrency_race_data_access_Type4_StateViolation",
+        "pattern": "Concurrency Race in Data Access",
+        "classification": "Type4_StateViolation",
+        "root_cause_category": "concurrency_race",
+        "affected_layer": "data_access",
+        "description": "Issues related to concurrency_race affecting data_access",
+        "symptom_pattern": "Qdrant 0.0 vectors OutputTooSmall error in qdrant + Windows Docker",
+        "severity_default": "Medium",
+        "reference_issues": [
+          7644,
+          7646
+        ],
+        "attack_strategy_hints": [
+          "Test concurrency_race scenarios in data_access",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 2
+      },
+      {
+        "pattern_id": "concurrency_race_configuration_Type3_RuntimeFailure",
+        "pattern": "Concurrency Race in Configuration",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "concurrency_race",
+        "affected_layer": "configuration",
+        "description": "Issues related to concurrency_race affecting configuration",
+        "symptom_pattern": "The latest v1.11.4 tag on master branch fails to compile the 'memory' lib",
+        "severity_default": "Medium",
+        "reference_issues": [
+          5109
+        ],
+        "attack_strategy_hints": [
+          "Test concurrency_race scenarios in configuration",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "api_contract_data_access_Type3_RuntimeFailure",
+        "pattern": "Api Contract in Data Access",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "api_contract",
+        "affected_layer": "data_access",
+        "description": "Issues related to api_contract affecting data_access",
+        "symptom_pattern": "Failed to populate memmap",
+        "severity_default": "Medium",
+        "reference_issues": [
+          5114
+        ],
+        "attack_strategy_hints": [
+          "Test api_contract scenarios in data_access",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "performance_regression_business_logic_Type3_RuntimeFailure",
+        "pattern": "Performance Regression in Business Logic",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "performance_regression",
+        "affected_layer": "business_logic",
+        "description": "Issues related to performance_regression affecting business_logic",
+        "symptom_pattern": "Vectors mysteriously gone in recent version 1.11.4",
+        "severity_default": "Medium",
+        "reference_issues": [
+          5134
+        ],
+        "attack_strategy_hints": [
+          "Test performance_regression scenarios in business_logic",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "type_coercion_storage_engine_Type3_RuntimeFailure",
+        "pattern": "Type Coercion in Storage Engine",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "type_coercion",
+        "affected_layer": "storage_engine",
+        "description": "Issues related to type_coercion affecting storage_engine",
+        "symptom_pattern": "Qdrant Error: Panic occurred, OutputTooSmall. FIX: Most likely a disk issue, try to use another disk",
+        "severity_default": "Medium",
+        "reference_issues": [
+          6334
+        ],
+        "attack_strategy_hints": [
+          "Test type_coercion scenarios in storage_engine",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "unknown_business_logic_Type3_RuntimeFailure",
+        "pattern": "Unknown in Business Logic",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "unknown",
+        "affected_layer": "business_logic",
+        "description": "Issues related to unknown affecting business_logic",
+        "symptom_pattern": "Incorrect score with hybrid search",
+        "severity_default": "Medium",
+        "reference_issues": [
+          6421
+        ],
+        "attack_strategy_hints": [
+          "Test unknown scenarios in business_logic",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "error_handling_unknown_Type3_RuntimeFailure",
+        "pattern": "Error Handling in Unknown",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "error_handling",
+        "affected_layer": "unknown",
+        "description": "Issues related to error_handling affecting unknown",
+        "symptom_pattern": "Deadlock while dropping payload index",
+        "severity_default": "Medium",
+        "reference_issues": [
+          6573
+        ],
+        "attack_strategy_hints": [
+          "Test error_handling scenarios in unknown",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "unknown_unknown_Type3_RuntimeFailure",
+        "pattern": "Unknown in Unknown",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "unknown",
+        "affected_layer": "unknown",
+        "description": "Issues related to unknown affecting unknown",
+        "symptom_pattern": "how to support full-text search with chinese in 1.15.1",
+        "severity_default": "Medium",
+        "reference_issues": [
+          6970
+        ],
+        "attack_strategy_hints": [
+          "Test unknown scenarios in unknown",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "performance_regression_api_gateway_Type3_RuntimeFailure",
+        "pattern": "Performance Regression in Api Gateway",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "performance_regression",
+        "affected_layer": "api_gateway",
+        "description": "Issues related to performance_regression affecting api_gateway",
+        "symptom_pattern": "QDrant startup takes too long, with ~100k vectors in 1 collection,  Seeking a solution !",
+        "severity_default": "Medium",
+        "reference_issues": [
+          7190
+        ],
+        "attack_strategy_hints": [
+          "Test performance_regression scenarios in api_gateway",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "type_coercion_data_access_Type3_RuntimeFailure",
+        "pattern": "Type Coercion in Data Access",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "type_coercion",
+        "affected_layer": "data_access",
+        "description": "Issues related to type_coercion affecting data_access",
+        "symptom_pattern": "Panic error on startup after migrating to 1.16.0 from v1.15.0",
+        "severity_default": "Medium",
+        "reference_issues": [
+          7559
+        ],
+        "attack_strategy_hints": [
+          "Test type_coercion scenarios in data_access",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "type_coercion_business_logic_Type3_RuntimeFailure",
+        "pattern": "Type Coercion in Business Logic",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "type_coercion",
+        "affected_layer": "business_logic",
+        "description": "Issues related to type_coercion affecting business_logic",
+        "symptom_pattern": "Internal error after upgrading to 1.16.1 from 1.16.0",
+        "severity_default": "Medium",
+        "reference_issues": [
+          7632
+        ],
+        "attack_strategy_hints": [
+          "Test type_coercion scenarios in business_logic",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "error_handling_api_gateway_Type3_RuntimeFailure",
+        "pattern": "Error Handling in Api Gateway",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "error_handling",
+        "affected_layer": "api_gateway",
+        "description": "Issues related to error_handling affecting api_gateway",
+        "symptom_pattern": "Resource leak shard snapshot temp files not cleaned up on persistence failure",
+        "severity_default": "Medium",
+        "reference_issues": [
+          8357
+        ],
+        "attack_strategy_hints": [
+          "Test error_handling scenarios in api_gateway",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "error_handling_configuration_Type3_RuntimeFailure",
+        "pattern": "Error Handling in Configuration",
+        "classification": "Type3_RuntimeFailure",
+        "root_cause_category": "error_handling",
+        "affected_layer": "configuration",
+        "description": "Issues related to error_handling affecting configuration",
+        "symptom_pattern": "Using unaligned buffer for reading from cold storage in cache when O_DIRECT is enabled lead to crash",
+        "severity_default": "Medium",
+        "reference_issues": [
+          8632
+        ],
+        "attack_strategy_hints": [
+          "Test error_handling scenarios in configuration",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      },
+      {
+        "pattern_id": "parameter_validation_storage_engine_Type2_PoorDiagnostics",
+        "pattern": "Parameter Validation in Storage Engine",
+        "classification": "Type2_PoorDiagnostics",
+        "root_cause_category": "parameter_validation",
+        "affected_layer": "storage_engine",
+        "description": "Issues related to parameter_validation affecting storage_engine",
+        "symptom_pattern": "Bug: Empty vector `[]` upsert with `wait=false` can trigger server panic (zero-length assertion fail",
+        "severity_default": "Medium",
+        "reference_issues": [
+          9045
+        ],
+        "attack_strategy_hints": [
+          "Test parameter_validation scenarios in storage_engine",
+          "Verify boundary conditions and edge cases",
+          "Monitor for inconsistent state or crashes"
+        ],
+        "confidence": 0.7,
+        "source_issues_count": 1
+      }
+    ],
+    "by_design_behaviors": [
+      {
+        "pattern_id": "BDP-5101",
+        "pattern": "Data inconsistent after migration",
+        "endpoint": "unknown",
+        "developer_quote": "Vector search is approximate by design. Results not entirely matching may be expected if not using exact search. This is especially true if spreading data across separate collections with different co",
+        "source_issues": [
+          5101
+        ]
+      }
+    ],
+    "wontfix_patterns": [
+      {
+        "pattern_id": "RP-BY_DESIGN",
+        "pattern": "",
+        "source_issues": []
+      }
+    ]
+  },
+  "trust_boundaries": [
+    {
+      "boundary": "REST API (port 6333)",
+      "trust": "untrusted",
+      "note": "客户端输入边界"
+    },
+    {
+      "boundary": "gRPC (port 6334)",
+      "trust": "untrusted"
+    },
+    {
+      "boundary": "collection scope",
+      "trust": "isolated",
+      "note": "collection 间隔离"
+    }
+  ],
+  "cognitive_blindspots": [
+    {
+      "blindspot": "concurrent operations",
+      "evidence": "concurrency race shapes + 3 issues"
+    },
+    {
+      "blindspot": "validation completeness (parameter validation 21 issues)",
+      "evidence": "top root_cause_category"
+    },
+    {
+      "blindspot": "error quality",
+      "evidence": "error handling shapes"
+    }
+  ],
+  "attack_priority_map": [
+    {
+      "priority": "P0",
+      "surface": "parameter validation (21 issues)",
+      "focus": "pagination off-by-one, filter edge case, payload type coercion, numeric boundary"
+    },
+    {
+      "priority": "P1",
+      "surface": "storage engine (7 issues)",
+      "focus": "segment corruption, index inconsistency"
+    },
+    {
+      "priority": "P2",
+      "surface": "concurrency race (3 issues)",
+      "focus": "concurrent upsert/search, optimistic locking"
+    }
+  ],
+  "judge_enhancements": {
+    "strict_reject_patterns": [
+      "Data inconsistent after migration"
+    ],
+    "severity_calibration": "P3 for validation gap (code=0 silent accept), P2 for consistency violation, P1 for data loss"
+  }
+}

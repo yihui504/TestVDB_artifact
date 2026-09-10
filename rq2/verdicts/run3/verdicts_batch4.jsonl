@@ -1,0 +1,14 @@
+{"defect_id": "milvus_043", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "日志显示 strictGroupSize=true 且 groupSize=2 时返回 15 条=5 组×每组 3 条（cat 0-4 各 3 条），gRPC 复现一致，strict 模式下每组条数未被严格控制在声明的组大小，违反该参数的严格分组语义"}
+{"defect_id": "qdrant_001", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "空向量在 wait=true 下被 400 正确拒绝、无 wait 下返回 acknowledged 且 points_count 保持 0（坏点从未落库），全程无 crash 证据，服务健康，属异步写确认语义而非契约违背"}
+{"defect_id": "qdrant_002", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "包内契约仅声明 hnsw_ef 仅在 exact=false 时适用，并无 hnsw_ef>=1 的范围断言，ef=0 返回 200 不构成对任何所列契约条目的违反"}
+{"defect_id": "qdrant_003", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "score_threshold=2.0 返回空集（无分数≥2.0 的点）、-0.5 返回 score 1.0 的点，均为正确的阈值过滤语义，符合 behavioral_008 的 200+结果行为"}
+{"defect_id": "qdrant_004", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "同 payload 在 wait=true 被 400 拒绝、无 wait 返回 acknowledged 且 points_count=0 未落库，系统状态一致无违例，仅凭异步确认响应不足以判定契约违背"}
+{"defect_id": "qdrant_005", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "shard_number=0 得 422 must be 1 or larger、-1 得 400 expected u32，两个非法值均被 4XX 拒绝，行为完全符合 shard_number>=1 契约断言"}
+{"defect_id": "qdrant_006", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "filter must color=red 精确返回 4 条红点 ids 10/2/8/4，无 payload 的点 3/6 被正确排除，missing_payload_ids 为空，过滤语义与契约一致"}
+{"defect_id": "qdrant_007", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "batch 含坏维度点时整批 400 且 count 前后均为 3（全有或全无），既符合包内关键词契约段'原子执行'，也不违反 state_batch_update_007 的可能部分应用条款"}
+{"defect_id": "qdrant_008", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "25 条 cat_a 点在 limit=100 下被完整返回且 next_page_offset=null，无漏检无截断，符合 behavioral_009 的分页语义"}
+{"defect_id": "qdrant_009", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "vectors:{} 建集合被接受、首次向量操作报 Not existing vector name error，与包内 qdrant_state_create_collection_001 明文声明（vector errors surface on first vector operation）逐字吻合"}
+{"defect_id": "qdrant_010", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "未配置 vectors 的集合被接受且首次向量操作报错，正是包内 qdrant_state_create_collection_001 明文允许的 payload-only 用法，行为符合契约"}
+{"defect_id": "qdrant_011", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "filter should=null 被宽松接受并返回全部点，包内无任何关于 filter 结构校验的断言，behavioral_011（200 with result points）未被违反"}
+{"defect_id": "qdrant_012", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "must_not 以对象而非数组形式传入被接受且过滤语义正确（排除 tag=x 返回 y），包内无 filter 类型约束，无断言被违反"}
+{"defect_id": "qdrant_013", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "query=null 返回 200 及全部点，包内契约对 query=null 语义无任何断言，证据不足以支持违反契约的判断"}

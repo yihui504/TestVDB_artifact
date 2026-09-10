@@ -1,0 +1,17 @@
+create: 200 {"code":0,"data":{}}
+insert 10: 200 {"code":0,"cost":0,"data":{"insertCount":10,"insertIds":[0,1,2,3,4,5,6,7,8,9]}}
+load: 200 {"code":0,"data":{}}
+qcount: 10
+upsert id5 v=0.9: 200 {"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[5]}}
+upsert id5 v=0.5: 200 {"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[5]}}
+qcount after 2 upserts: 10
+id5 vector after upserts: [0.5, 0.5, 0.5, 0.5]
+upsert new id: 200 {"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[1000]}}
+qcount after upsert new: 11
+delete: 200 {"code":0,"data":{"deleteCount":3}}
+deleted rows still visible: 0 {"code":0,"cost":0,"data":[]}
+
+re-insert deleted ids: 200 {"code":0,"cost":0,"data":{"insertCount":3,"insertIds":[0,1,2]}}
+qcount after re-insert: 11
+delete nonexistent: 200 {"code":0,"data":{"deleteCount":2}}
+VERDICT: NO_DEFECT

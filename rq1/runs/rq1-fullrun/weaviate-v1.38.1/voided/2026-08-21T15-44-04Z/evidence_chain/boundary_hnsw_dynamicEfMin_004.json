@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_hnsw_dynamicEfMin_004",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint weaviate_range_create_collection_001 'dynamicEfMin <= dynamicEfMax (paired constraint from go source)' 的 source_url 指向 entities/vectorindex/hnsw/config.go，本地 clone 已核对：该配对约束在 validate() 中确实不存在——契约自身标注 inferred，与源码事实一致（约束描述的是应有行为，源码缺失即缺陷面）",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[swap] vic={... 'dynamicEfMin': 200, 'dynamicEfMax': 100} -> create=200 persisted(min=200,max=100) / DEFECT[swap] Type1_IllegalSuccess: persisted verbatim 200/100 (no validation)",
+      "secondary_observations": [
+        "[ctrl] vic={... 'dynamicEfMin': 50, 'dynamicEfMax': 100} -> create=200 persisted(min=50,max=100)",
+        "[minneg] vic={... 'dynamicEfMin': -10, 'dynamicEfMax': 100} -> create=200 persisted(min=-10,max=100)",
+        "[maxneg] vic={... 'dynamicEfMin': 10, 'dynamicEfMax': -5} -> create=200 persisted(min=10,max=-5)",
+        "[bothzero] vic={... 'dynamicEfMin': 0, 'dynamicEfMax': 0} -> create=200 persisted(min=0,max=0)",
+        "[mc_ctrl] vic={'maxConnections': 32, 'EF': 64} -> create=200 persisted(min=100,max=500)",
+        "[mc_neg] vic={'maxConnections': -1, 'EF': 64} -> create=422 persisted(min=None,max=None) err=...invalid hnsw conf...（证明 validate() 通道存在且对 maxConnections 生效）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "非法配对/负值 verbatim 持久化返回 200；同一 validate() 对 maxConnections 却能 422——校验选择性缺失"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_hnsw_dynamicEfMin_004.py", "vein_scripts/vein_hnsw_dynamic_ef_cross_1.py (同参数族跨 Min/Max 配对)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_range_create_collection_001",
+      "assertion_text_quoted": "dynamicEfMin <= dynamicEfMax",
+      "api_violates_assertion": true,
+      "note": "观测 min=200/max=100 verbatim 持久化，直接违反配对约束；负值同时违反 type 约束 001/002 的语义（integer 但无正值约束），主观测落在配对约束域内",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_range_create_collection_001 'dynamicEfMin <= dynamicEfMax'",
+        "doc: source_url=entities/vectorindex/hnsw/config.go（本地 clone 核对）",
+        "script: boundary_hnsw_dynamicEfMin_004.py 6 组 vic 变体",
+        "log: swap/minneg/maxneg/bothzero 全 200 verbatim 持久化；mc_neg 对照 422"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["DynamicEfMin|dynamicEfMin", "func (u *UserConfig) validate() error"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\entities\\vectorindex\\hnsw\\config.go (全文 L24-329)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\entities\\vectorindex\\common\\config.go (OptionalIntFromMap)"
+      ],
+      "source_excerpt": "entities/vectorindex/hnsw/config.go L189-193:\n\tif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"dynamicEfMin\", func(v int) {\n\t\tuc.DynamicEFMin = v\n\t}); err != nil { return uc, err }\n\nL260-285 validate(): 仅校验 MaxConnections(L262-274)、EFConstruction(L276-281)、FilterStrategy(L283-285)——DynamicEFMin/DynamicEFMax/EF/FlatSearchCutoff 均无任何校验。L30-31: DefaultDynamicEFMIN=100, DefaultDynamicEFMax=500",
+      "call_chain_traced": "POST /schema → vectorindex.ParseAndValidateConfig → hnsw.ParseAndValidateConfig L140 → OptionalIntFromMap dynamicEfMin/dynamicEfMax L189/L183 赋值 → validate() L260（无该二字段检查）→ verbatim 持久化",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（ctrl 组 min=50/max=100 正常持久化）", "by-design 无注释/常量表明允许逆序；且 maxConnections 有校验说明非有意豁免"],
+      "surviving": null
+    }
+  }
+}

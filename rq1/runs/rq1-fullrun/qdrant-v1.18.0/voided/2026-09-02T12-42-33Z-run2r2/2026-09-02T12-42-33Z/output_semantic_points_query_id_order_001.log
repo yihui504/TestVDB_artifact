@@ -1,0 +1,17 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+F1 no query limit=15 -> status=200
+raw: {"result":{"points":[{"id":501,"version":0,"score":1.0},{"id":502,"version":0,"score":1.0},{"id":503,"version":0,"score":1.0},{"id":504,"version":0,"score":1.0},{"id":505,"version":0,"score":1.0},{"id":506,"version":0,"score":1.0},{"id":507,"version":0,"score":1.0},{"id":508,"version":0,"score":1.0}
+F1 OK: ids strictly ascending despite shuffled upsert order
+F2 rerun of F1 -> status=200
+raw: {"result":{"points":[{"id":501,"version":0,"score":1.0},{"id":502,"version":0,"score":1.0},{"id":503,"version":0,"score":1.0},{"id":504,"version":0,"score":1.0},{"id":505,"version":0,"score":1.0},{"id":506,"version":0,"score":1.0},{"id":507,"version":0,"score":1.0},{"id":508,"version":0,"score":1.0}
+F2 OK: deterministic on rerun
+F3 no query limit=5 -> status=200
+raw: {"result":{"points":[{"id":501,"version":0,"score":1.0},{"id":502,"version":0,"score":1.0},{"id":503,"version":0,"score":1.0},{"id":504,"version":0,"score":1.0},{"id":505,"version":0,"score":1.0}]},"status":"ok","time":0.000400259}
+F3 OK: limit slices the id order
+F4 no query + filter city=A -> status=200
+raw: {"result":{"points":[{"id":501,"version":0,"score":1.0},{"id":502,"version":0,"score":1.0},{"id":503,"version":0,"score":1.0},{"id":504,"version":0,"score":1.0},{"id":505,"version":0,"score":1.0},{"id":506,"version":0,"score":1.0},{"id":507,"version":0,"score":1.0},{"id":508,"version":0,"score":1.0}
+F4 OK: filtered id-order is the ascending A-subset
+F5 query omitted with prefetch -> status=400
+raw: {"status":{"error":"Bad request: A query is needed to merge the prefetches. Can't have prefetches without defining a query."},"time":0.000018535}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — F5 query omitted with prefetch: documented query-omission request rejected with 400: {"status":{"error":"Bad request: A query is needed to merge the prefetches. Can't have prefetches without defining a query."},"time":0.000018535}

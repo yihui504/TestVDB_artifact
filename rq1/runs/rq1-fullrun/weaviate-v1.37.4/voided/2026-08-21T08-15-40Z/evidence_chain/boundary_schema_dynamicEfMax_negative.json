@@ -1,0 +1,78 @@
+{
+  "defect_id": "boundary_schema_dynamicEfMax_negative",
+  "endpoint": "POST /schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Network restriction blocked doc verification. OpenAPI spec exists but constraint documentation unavailable. Parameter dynamicEfMax defined but validation requirements not documented.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: dynamicEfMax=-1 → http=200, code=0, class created with value -1",
+      "secondary_observations": [
+        "c2: dynamicEfMax=0 → http=200, accepted",
+        "c4: dynamicEfMin=-1 → http=200, accepted",
+        "c5: dynamicEfMin=0 → http=200, accepted",
+        "c6: dynamicEfMin=500 > dynamicEfMax=100 → http=200, accepted"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 with success response. Server accepts negative value without error indication."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_dynamicEfMax_negative",
+        "boundary_schema_dynamicEfMax_zero",
+        "boundary_schema_dynamicEfMin_negative",
+        "boundary_schema_dynamicEfMin_zero",
+        "boundary_schema_dynamicEf_inverted"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint defined in structured_contract.json (range_constraints=[]). Contract lacks semantic assertions.",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (no constraint for dynamicEfMax)",
+        "doc: (OpenAPI partial, network blocked)",
+        "script: POST /schema with dynamicEfMax=-1",
+        "log: HTTP 200, negative value accepted"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "No constraint defined in structured_contract.json. Contract lacks validation assertions for dynamicEfMax.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "dynamicEfMax",
+        "validate.*hnsw"
+      ],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go (lines 183-186: dynamicEfMax parsing)",
+        "entities/vectorindex/hnsw/config.go (lines 260-323: validate function)"
+      ],
+      "source_excerpt": "From entities/vectorindex/hnsw/config.go:\n\n// Line 183-186: dynamicEfMax parsed without validation\nif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"dynamicEfMax\", func(v int) {\n\tuc.DynamicEFMax = v\n}); err != nil {\n\treturn uc, err\n}\n\n// validate() function DOES NOT check:\n// - u.DynamicEFMax < 0 (negative check missing)\n// - u.DynamicEFMax == 0 (zero check missing)\n// - u.DynamicEFMax < u.DynamicEFMin (ordering check missing)\n\nfunc (u *UserConfig) validate() error {\n\tvar errMsgs []string\n\t// ... only checks MaxConnections, EFConstruction, FilterStrategy\n\t// dynamicEfMax NOT VALIDATED\n}",
+      "call_chain_traced": "ParseAndValidateConfig → OptionalIntFromMap assigns v=-1 → validate() skips check → negative value persisted",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Source confirms validation_absent. 5/5 scripts accept illegal values. HTTP 200 confirms Type1."
+    }
+  }
+}

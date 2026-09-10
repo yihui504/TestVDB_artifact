@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_points_recommend_using_vector_002",
+  "endpoint": "points+recommend",
+  "param": "using",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "delete_consistency",
+  "oracle": {
+    "statement": "recommend using=body positive=[point without a body vector] returns HTTP 4xx — 200 = IllegalSuccess (fetched vectors must match the using-vector characteristics); after upserting the body vector onto that point the same request returns 200 (still 4xx = stale state, Type4); using=unknown_name returns 4xx (200 = IllegalSuccess); using=title control returns 200; count stays 5 across the flip upsert; 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "defect_id": "boundary_schema_replicationFactor_zero",
+  "endpoint": "POST /schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Network blocked doc verification. OpenAPI spec defines replicationConfig.factor but validation constraints undocumented. Single-node mode silently normalizes to 1.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: replicationFactor=0 → http=200, code=0, response shows 'factor':1 (normalized, not rejected)",
+      "secondary_observations": [
+        "c2: replicationFactor=-1 → http=200, response shows 'factor':1 (normalized)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 with success. Server silently normalizes 0 to 1. No warning or error indicating illegal input."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_replicationFactor_zero",
+        "boundary_schema_replicationFactor_negative"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint in structured_contract.json. Contract lacks validation assertions for replicationFactor.",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (no constraint)",
+        "doc: (partial, network blocked)",
+        "script: POST /schema with replicationFactor=0",
+        "log: HTTP 200, response shows factor:1 (silent normalization)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "No constraint defined. Contract lacks semantic assertions. Silent normalization (factor 1 returned without warning) indicates by-design behavior but undocumented.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["replication.*factor|Factor.*int", "validate"],
+      "files_examined": [
+        "entities/schema/collection.go (line 94: Factor int64 without validation)",
+        "entities/replication/config.go (MinimumFactor/MaximumFactor defined but not enforced)"
+      ],
+      "source_excerpt": "From entities/schema/collection.go:\n\ntype ReplicationConfig struct {\n\t// Factor represent replication factor\n\tFactor int64 `json:\"factor,omitempty\"`\n}\n\n// No validation: Factor accepts any int64 including 0 or negative.\n\n// entities/replication/config.go defines MinimumFactor/MaximumFactor for cluster-level usage limits but these are NOT enforced during schema POST validation.",
+      "call_chain_traced": "Schema POST → ReplicationConfig.Factor=0 assigned → no validation → persistence → single-node normalizes to 1 silently",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Source confirms validation_absent. Silent normalization to 1 indicates by-design single-node behavior. Type1: factor=0 is nonsensical (replication factor must be >=1)."
+    }
+  }
+}

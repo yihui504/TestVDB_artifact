@@ -1,0 +1,72 @@
+{
+  "defect_id": "boundary_points_search_004",
+  "endpoint": "points+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Constraint qdrant_range_search_points_002 exists in contract with assertion 'score_threshold >= 0 AND score_threshold <= 1'. Source URL reachable. Content explicitly documents score_threshold range [0, 1]. Endpoint matches contract registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: search request with score_threshold=-0.1 → http=200, Body={'result': [{'id': 1, 'version': 1, 'score': 0.99999994}], 'status': 'ok', 'time': 0.000494249}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 with status='ok' indicates successful acceptance of invalid score_threshold value"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_points_search_004.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_search_points_002",
+      "assertion_text_quoted": "score_threshold >= 0 AND score_threshold <= 1",
+      "api_violates_assertion": true,
+      "note": "API accepts score_threshold=-0.1 with HTTP 200, violating lower bound constraint",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_search_points_002",
+        "doc:https://api.qdrant.tech/api-reference/points/search-points (assertion: score_threshold ∈ [0, 1])",
+        "script:debate_logs/boundary_points_search_004.py (line 104: score_threshold=-0.1)",
+        "log:output_boundary_points_search_004.log (HTTP 200, status='ok')"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "score_threshold.*validate|validate.*score_threshold",
+        "QueryRequestInternal.*score",
+        "ScoreType.*range"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs",
+        "src/common/inference/query_requests_rest.rs",
+        "lib/collection/src/operations/universal_query/collection_query.rs"
+      ],
+      "source_excerpt": "From lib/api/src/rest/schema.rs:\n\n    /// Define a minimal score threshold for the result.\n    /// If defined, less similar results will not be returned.\n    /// Score of the returned result might be higher or smaller than the threshold depending on the\n    /// Distance function used. E.g. for cosine similarity only higher scores will be returned.\n    pub score_threshold: Option<ScoreType>,\n\nNote: No #[validate(...)] attribute present on score_threshold field. Field accepts any ScoreType (f32) value without range validation.\n\nFrom lib/collection/src/operations/universal_query/collection_query.rs:\n\n    pub score_threshold: Option<ScoreType>,\n\nNo range enforcement at internal request structure level either.",
+      "call_chain_traced": "REST schema (schema.rs) defines score_threshold as Option<ScoreType> without validation → No range check → Request accepted with score_threshold=-0.1 → HTTP 200 returned",
+      "verification_outcome": "validation_absent",
+      "note": "Source code shows score_threshold field has no validation attributes. Unlike limit which has validate(range(min = 1)), score_threshold has no range constraint enforcement. The constraint exists in documentation but not in request validation logic.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "缓存延迟"],
+      "surviving": "validation_absent"
+    }
+  }
+}

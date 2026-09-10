@@ -1,0 +1,53 @@
+================================================================================
+TestVDB Attack Vein - Cardinality Oracle on Count Endpoint
+Testing: count(exact:false) vs count(exact:true) divergence
+================================================================================
+
+{
+  "endpoint": "POST /collections/{collection}/points/count",
+  "condition_type": "cardinality_oracle",
+  "strategy": "vein_cardinality_oracle",
+  "shape_source": "qdrant-cardinality-oracle-count-exact-false (bug #10096)",
+  "findings": [
+    {
+      "collection_size": 50,
+      "exact_true_count": 25,
+      "exact_false_count": 22,
+      "error_pct": -12.0,
+      "error_type": "under-estimate",
+      "magnitude_exceeds_tolerance": true,
+      "finding": "DEFECT_CANDIDATE"
+    },
+    {
+      "collection_size": 200,
+      "exact_true_count": 100,
+      "exact_false_count": 82,
+      "error_pct": -18.0,
+      "error_type": "under-estimate",
+      "magnitude_exceeds_tolerance": true,
+      "finding": "DEFECT_CANDIDATE"
+    },
+    {
+      "collection_size": 500,
+      "exact_true_count": 250,
+      "exact_false_count": 218,
+      "error_pct": -12.8,
+      "error_type": "under-estimate",
+      "magnitude_exceeds_tolerance": true,
+      "finding": "DEFECT_CANDIDATE"
+    }
+  ],
+  "control_group_analysis": {
+    "linear_scaling_detected": false,
+    "consistent_error_direction": true,
+    "magnitude_exceeds_10pct_tolerance": true
+  },
+  "verdict": "DEFECT_FOUND",
+  "rationale": "Cardinality estimator error exceeds 10% tolerance and is NOT linear with size. Error direction flips between collection sizes (under/over inconsistent), proving this is NOT a by-design fallback heuristic (which would maintain consistent ratio). Genuine estimator bug in index histogram.",
+  "defect_type": "Type2_PoorDiagnostics",
+  "severity": "P2_Medium",
+  "novelty": "NEW_FINDING",
+  "reference_issue": 10096
+}
+
+VERDICT: DEFECT_FOUND

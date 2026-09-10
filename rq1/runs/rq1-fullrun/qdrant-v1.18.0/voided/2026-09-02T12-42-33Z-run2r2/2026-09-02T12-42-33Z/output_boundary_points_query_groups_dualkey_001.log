@@ -1,0 +1,30 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+setup payload index on 'grp': status=200 (best-effort, non-fatal)
+
+leg SN single-face pure-nearest -> status=200
+raw: {"result":{"points":[{"id":1,"version":1,"score":0.0057622097},{"id":2,"version":1,"score":0.011524419},{"id":3,"version":1,"score":0.01728663},{"id":4,"version":1,"score":1.1582053},{"id":5,"version":1,"score":1.1639675},{"id":6,"version":1,"score":1.1697297}]},"status":"ok","time":0.00029285}
+leg SN OK: fingerprint FN = [1, 2, 3, 4, 5, 6]
+
+leg SR single-face pure-recommend -> status=200
+raw: {"result":{"points":[{"id":4,"version":1,"score":0.0057622097},{"id":6,"version":1,"score":0.0057622097},{"id":1,"version":1,"score":1.1697297},{"id":2,"version":1,"score":1.1754918},{"id":3,"version":1,"score":1.1812541}]},"status":"ok","time":0.000998229}
+leg SR OK: fingerprint FR = [4, 6, 1, 2, 3] (differs from FN — discriminating)
+
+leg GFN groups-face pure-nearest -> status=200
+raw: {"result":{"groups":[{"hits":[{"id":1,"version":1,"score":0.0057622097},{"id":2,"version":1,"score":0.011524419},{"id":3,"version":1,"score":0.01728663}],"id":"a"},{"hits":[{"id":4,"version":1,"score":1.1582053},{"id":5,"version":1,"score":1.1639675},{"id":6,"version":1,"score":1.1697297}],"id":"b"}]},"status":"ok","time":0.000580752}
+leg GFN OK: grouped fingerprint GFN = [('a', [1, 2, 3]), ('b', [4, 5, 6])]
+
+leg GFR groups-face pure-recommend -> status=200
+raw: {"result":{"groups":[{"hits":[{"id":6,"version":1,"score":0.0057622097},{"id":4,"version":1,"score":0.0057622097}],"id":"b"},{"hits":[{"id":1,"version":1,"score":1.1697297},{"id":2,"version":1,"score":1.1754918},{"id":3,"version":1,"score":1.1812541}],"id":"a"}]},"status":"ok","time":0.000964891}
+leg GFR OK: grouped fingerprint GFR = [('b', [6, 4]), ('a', [1, 2, 3])] (groups-face winner detection: ON)
+
+leg SD single-face dual-key -> status=200
+raw: {"result":{"points":[{"id":1,"version":1,"score":0.0057622097},{"id":2,"version":1,"score":0.011524419},{"id":3,"version":1,"score":0.01728663},{"id":4,"version":1,"score":1.1582053},{"id":5,"version":1,"score":1.1639675},{"id":6,"version":1,"score":1.1697297}]},"status":"ok","time":0.000367663}
+leg SD OK: dual-key ACCEPTED, 'nearest' variant won (second key dropped)
+
+leg GD groups-face dual-key -> status=200
+raw: {"result":{"groups":[{"hits":[{"id":1,"version":1,"score":0.0057622097},{"id":2,"version":1,"score":0.011524419},{"id":3,"version":1,"score":0.01728663}],"id":"a"},{"hits":[{"id":4,"version":1,"score":1.1582053},{"id":5,"version":1,"score":1.1639675},{"id":6,"version":1,"score":1.1697297}],"id":"b"}]},"status":"ok","time":0.000528907}
+leg GD OK: dual-key ACCEPTED on the groups face (winner: nearest)
+
+cross-face disposition: single=('2xx', 'nearest') groups=('2xx', 'nearest')
+VERDICT: NO_DEFECT — dual-key tolerated on both faces with a consistent winner (R33/R40 family shape, read-face calibration; observed winner: single=nearest, groups=nearest)

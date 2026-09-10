@@ -1,0 +1,63 @@
+{
+  "defect_id": "vein_bm25_motm_negative_3",
+  "endpoint": "POST /graphql (bm25 searchOperator minimumOrTokensMatch)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "constraint_id='vein_numeric_boundary' 泛标签，契约无 MOTM 专项约束；契约 POST /graphql 端点已注册。语义约束来自源码 GraphQL schema 描述 'The minimum number of tokens that should match (only for OR operator)'（common_filters/bm25.go:50-53）——'minimum number' 蕴含非负整数域，负值 -5 语义无效。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "negative(-5)=[{'apple banana'}, {'banana cherry'}, {'apple cherry'}, {'apple'}, {'cherry'}]  # 与 unset(0) 完全相同，返回全部 5 条",
+      "secondary_observations": [
+        "unset(0)=[全部 5 条]",
+        "1=[全部 5 条]"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "GraphQL 200 + 数据结果；-5 静默接受且表现为无阈值（等价 unset），无错误无警告"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_bm25_motm_negative_3.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_numeric_boundary (泛标签；实际引用 common_filters/bm25.go:52 字段描述 + 数值参数非负惯例)",
+      "assertion_text_quoted": "adapters/handlers/graphql/local/common_filters/bm25.go:52: \"The minimum number of tokens that should match (only for OR operator)\" (graphql.InputObjectFieldConfig Type: graphql.Int)",
+      "api_violates_assertion": true,
+      "note": "-5 是'最少需匹配的 token 数'的语义非法值（计数下界为 0）；被静默接受且行为等价于未设阈值。violates=True：非法数值参数未被拒绝且静默改变查询语义（无阈值=返回全部）。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: POST /graphql 端点 + MOTM 字段语义（源码 GraphQL schema 描述）",
+        "doc: common_filters/bm25.go:49-54 graphql 字段定义（clone 内）",
+        "script: vein_bm25_motm_negative_3.py 对同一数据集分别用 unset/-5/1 查询 bm25 OR",
+        "log: -5 与 unset 结果逐条相同（全 5 条），1 也全 5 条（数据集每条至少命中 1 token，1 合法）"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["MinimumOrTokensMatch", "minimumOrTokensMatch", "ExtractBM25", "minimumOrTokensMatchByTokenization < minimumOrTokensMatch", "MinimumOrTokensMatch <= 0 / invalid"],
+      "files_examined": ["adapters/handlers/graphql/local/common_filters/bm25.go", "adapters/repos/db/inverted/bm25_searcher.go", "adapters/repos/db/lsmkv/search_segment.go", "entities/searchparams/retrieval.go"],
+      "source_excerpt": "adapters/handlers/graphql/local/common_filters/bm25.go:49-54（graphql 字段，无 MinValue 约束）+ :85-87（解析，无范围检查）:\n  \"minimumOrTokensMatch\": &graphql.InputObjectFieldConfig{\n      Description: \"The minimum number of tokens that should match (only for OR operator)\",\n      Type: graphql.Int,\n  }\n  ...\n  if operator[\"minimumOrTokensMatch\"] != nil {\n      args.MinimumOrTokensMatch = int(operator[\"minimumOrTokensMatch\".(int))\n  }   // 负值原样透传，无任何校验\n\nadapters/repos/db/inverted/bm25_searcher.go:363-386（消费点）:\n  minimumOrTokensMatch := math.MaxInt64\n  ...\n  minimumOrTokensMatchByTokenization := params.MinimumOrTokensMatch\n  if params.SearchOperator == common_filters.SearchOperatorAnd { minimumOrTokensMatchByTokenization = len(queryTerms) }\n  if minimumOrTokensMatchByTokenization < minimumOrTokensMatch { minimumOrTokensMatch = minimumOrTokensMatchByTokenization }\n  // 负值直接成为全局门槛\n\nadapters/repos/db/lsmkv/search_segment.go:146（门控）:\n  if topKHeap.ShouldEnqueue(float32(score), limit) && termsMatched >= minimumOrTokensMatch {\n      topKHeap.InsertAndPop(...)   // termsMatched >= -5 恒真 → 无阈值，全部入堆\n\n全树 grep 'MinimumOrTokensMatch <'/'invalid' 仅命中 searcher 的 min-比较逻辑，零校验代码。",
+      "call_chain_traced": "GraphQL bm25 → ExtractBM25 (common_filters/bm25.go:61, MOTM 无校验赋值 :86) → searchparams.KeywordRanking → inverted.BM25Searcher (bm25_searcher.go:363 负值成为门槛) → search_segment.go:146 termsMatched>=负值恒真 → 返回全部",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo", "by_design（无任何注释/默认逻辑声明负值合法；字段描述'number of tokens'蕴含非负）"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "medium-high（三层证据齐全；GraphQL 层与执行层双点证实无校验+恒真门控）"
+}

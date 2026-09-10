@@ -1,0 +1,95 @@
+{
+  "defect_id": "boundary_cluster_status_003",
+  "endpoint": "cluster+status (GET /cluster)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No doc_preflight.json sidecar exists in the contract directory (older-style contract; assertion entry itself carries source_status=reachable, source_verified=false), so self-verification was performed. Reachability: PASS — WebFetch was domain-blocked for api.qdrant.tech (network restriction), but the MCP web reader retrieved the live page (canonical URL matches, Fern-generated API reference). Version: PASS — page renders with v1.18.x version selector active, matching target v1.18.0. Content consistency: PASS for the cited constraint's own text — the page documents GET /cluster only ('Returns information about the cluster's current state and composition', 200 Retrieved, example body result.status=\"disabled\" identical to the observed control response); the page contains NO prose about undocumented verbs or error/diagnostic bodies, so the claim's verb-face diagnostics oracle has no support on the published page (this gap is recorded in chain_trace, not charged against the constraint's own 200-face claim). Endpoint precision: PASS — endpoint_registry[cluster+status] = method GET, url /cluster, source_url matches, doc_quote 'Returns 200 with cluster info (peer_id, raft_state, commit_index, peers); valid on single-node deployments too.'; the script hit BASE_URL/cluster exactly.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[verb POST /cluster] -> status=404 raw=",
+      "secondary_observations": [
+        "[verb PUT /cluster] -> status=404 raw= (output_boundary_cluster_status_003.log:7)",
+        "[verb DELETE /cluster] -> status=404 raw= (output_boundary_cluster_status_003.log:8)",
+        "[verb PATCH /cluster] -> status=404 raw= (output_boundary_cluster_status_003.log:9)",
+        "[control GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":1.984e-6} (output_boundary_cluster_status_003.log:5 — documented face holds, URL/service healthy)",
+        "cross-script reproduction [rest]: [L1 POST /cluster (empty body)] status=404 raw= (output_semantic_cluster_status_004.log:7 — same session, same deployment, independent script)",
+        "comparative-forensics [rest, same distributed route family, handler-level 5xx DOES carry diagnostics]: [recover] status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.024100829} (output_boundary_cluster_recover_001.log — sibling route POST /cluster/recover)",
+        "comparative-forensics [rest, handler-level 4xx DOES carry diagnostics]: [control existing] POST cluster op -> status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations\"},\"time\":0.0} (output_boundary_cluster_collection_update_001.log)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The request-side-decidable error (undocumented verb) IS returned as a 4xx (404) — no 2xx masking involved. The claim targets the EMPTY BODY of that 404 (no diagnostic payload), not status-class masking. Same-family handler-level errors (cluster/recover 500, collections cluster op 400) return non-empty JSON diagnostic bodies, so the empty-body 404 is a disposition difference within the same route family."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["boundary_cluster_status_003", "semantic_cluster_status_004"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_status_001",
+      "assertion_text_quoted": "returns 200 with cluster info; valid on single-node deployments",
+      "api_violates_assertion": false,
+      "note": "Verbatim substring of the description field of assertion qdrant_behavioral_cluster_status_001 in structured_contract.json (assertions[51]); the assertion's expected_behavior field additionally reads: HTTP 200 with ClusterStatus even on a single-node deployment. Violates-declaration self-check: the observed face (POST/PUT/DELETE/PATCH on /cluster refused with empty-body 404) is OUTSIDE the quoted assertion's constraint domain — the assertion blesses only the GET success face, and that face was observed HOLDING (control GET -> 200 with ClusterStatus, log line 5; single-node deployment). violates=false is therefore correct for THIS citation, but it is the wrong-constraint-cited situation: the Type2 oracle (4xx refusal must carry a non-empty diagnostic) is the script's own BS-02-derived rubric, present in neither the cited behavioral assertion nor the published doc page. The nearest in-source grounding for a 4xx-with-diagnostic expectation is qdrant's own OpenAPI template (openapi/openapi.lib.yml response() attaches 4XX: ErrorResponse JSON to every operation including /cluster get) — not the cited constraint.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_cluster_status_001 (structured_contract.json assertions[51]) exists; text blesses only the GET 200 face ('HTTP 200 with ClusterStatus even on a single-node deployment'); no verb-face clause, no error-diagnostic clause, no 404-body clause",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/distributed/cluster-status reachable (v1.18.x); documents only GET /cluster with 200 Retrieved; no undocumented-verb or error-body prose; repo-side openapi/openapi-cluster.ytt.yaml:4-11 declares /cluster get via response() template which DOES attach 4XX: ErrorResponse (openapi.lib.yml:1-13, schema openapi-main.ytt.yaml:868-883)",
+        "script: boundary_cluster_status_003.py derives /cluster from raw_knowledge api_endpoints[cluster+status].url; sends control GET (documented face) then POST/PUT/DELETE/PATCH with {} body — raw requests match the claim exactly",
+        "log: output_boundary_cluster_status_003.log:6 '[verb POST /cluster] -> status=404 raw='; reproduced independently in output_semantic_cluster_status_004.log:7; control GET 200 at log:5 proves URL correctness and service health"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The cited constraint does not contain the claimed promise. qdrant_behavioral_cluster_status_001 covers only the GET/200 success face, which was observed holding; the script's DEFECT_FOUND (Type2) rests on a self-derived oracle (4xx refusal must carry a non-empty diagnostic body, BS-02) that appears in neither the cited assertion nor the published documentation page. Without a constraint promising diagnostic content on undocumented-verb refusals, the doc and contract links cannot carry the claim. The strongest available grounding is qdrant's own OpenAPI 4XX: ErrorResponse declaration (repo-side), which the empty-body 404 does violate — but that is not the constraint cited by the candidate.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "cluster_status",
+        "default_service|MethodNotAllowed",
+        "(get|post|put|delete|patch|head)\\(\"/cluster",
+        "ErrorResponse:",
+        "pub fn cluster_status"
+      ],
+      "files_examined": [
+        "src/actix/api/cluster_api.rs",
+        "src/actix/mod.rs",
+        "src/actix/helpers.rs",
+        "openapi/openapi-cluster.ytt.yaml",
+        "openapi/openapi.lib.yml",
+        "openapi/openapi-main.ytt.yaml",
+        "lib/storage/src/dispatcher.rs",
+        "lib/storage/src/content_manager/consensus_manager.rs"
+      ],
+      "source_excerpt": "src/actix/api/cluster_api.rs:49-58 — #[get(\"/cluster\")] fn cluster_status(dispatcher: web::Data<Dispatcher>, ActixAuth(auth): ActixAuth) -> impl Future<Output = HttpResponse> { helpers::time(async move { auth.check_global_access(AccessRequirements::new(), \"cluster_status\")?; Ok(dispatcher.cluster_status()) }) } ; src/actix/api/cluster_api.rs:293-302 — pub fn config_cluster_api(cfg: &mut web::ServiceConfig) { cfg.service(cluster_status).service(remove_peer).service(recover_current_peer).service(get_cluster_telemetry).service(get_cluster_metadata_keys).service(get_cluster_metadata_key).service(update_cluster_metadata_key).service(delete_cluster_metadata_key); } — bare /cluster is registered GET-ONLY; the other six routes live on /cluster/* subpaths. src/actix/mod.rs:113-178 — App::new() builder registers services and middlewares (NormalizePath::trim, CORS, auth, JsonConfig limit) but NEVER calls .default_service(...): no custom unmatched-route handler exists anywhere (grep default_service|MethodNotAllowed across src/ = zero hits). src/actix/helpers.rs:91-117 — process_response_error_with_inference_usage builds every handler-level error as HttpResponse::build(http_code).json(ApiResponse { status: ApiStatus::Error(error.to_string()), ... }) — the source of all non-empty JSON error bodies; a router-level miss never reaches this code. openapi/openapi-cluster.ytt.yaml:4-11 — /cluster: get: ... responses: #@ response(reference(\"ClusterStatus\")) ; openapi/openapi.lib.yml:1-13 — def response(model): declares '4XX: description: error, content: application/json, schema: $ref: \"#/components/schemas/ErrorResponse\"' for every operation; openapi/openapi-main.ytt.yaml:868-883 — ErrorResponse: { time: float, status: { error: string 'Description of the occurred error.' }, result: nullable }. lib/storage/src/dispatcher.rs:264-269 — pub fn cluster_status(&self) -> ClusterStatus { match self.consensus_state.as_ref() { Some(state) => state.cluster_status(), None => ClusterStatus::Disabled } } — standalone deployments serialize {\"status\":\"disabled\"}, matching the observed GET control.",
+      "call_chain_traced": "GET face: actix #[get(\"/cluster\")] macro route (cluster_api.rs:49) -> helpers::time (helpers.rs:141) -> auth.check_global_access -> dispatcher.cluster_status() (dispatcher.rs:264) -> ClusterStatus::Disabled on standalone -> 200 {\"result\":{\"status\":\"disabled\"},...}. Undocumented-verb face: POST/PUT/DELETE/PATCH /cluster match NO registered route (only the eight /cluster* routes above exist; bare /cluster is GET-only) -> request never reaches any handler -> qdrant overrides nothing at the app level (no default_service) -> framework (actix-web 4.13.0 per Cargo.lock) default response, empirically 404 with empty body (5 observations across 2 scripts; actix-internals 404-vs-405 mechanics could not be source-verified because the actix-web crate is not vendored locally and github.com/docs.rs fetches were network-blocked — recorded as inference, behavior itself is log-verified). Diagnostic bodies exist only on handler-reached paths: helpers.rs:91-117 (StorageError -> JSON envelope) and validation_error_handler (mod.rs:227-269, JSON body incl. 'Format error in ...' strings seen in sibling logs) — both unreachable for router misses. OpenAPI face: repo's own spec template promises 4XX: ErrorResponse JSON for /cluster get, which the empty-body 404 does not carry.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "Outcome rationale: no qdrant code validates or enriches the undocumented-verb face of /cluster — no route, no default_service override, no diagnostic attached; the empty-body 404 is inherited un-customized framework behavior, and qdrant's own OpenAPI 4XX: ErrorResponse declaration is not honored on this face. by_design_in_source is NOT supportable: the source contains no explicit intent annotation (no comment/docstring/maintainer citation) for the empty-body refusal — this is unannotated framework-default inheritance, which per the v3.4 tightened rule must not be read as by-design. The neither-405-nor-diagnostic outcome vs the OpenAPI 4XX ErrorResponse declaration remains a genuine unhandled gap in qdrant's own declared contract surface (defect signal for the auditor).",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service healthy: /healthz 200 in sibling logs, control GET /cluster 200 in both triggering logs; deployment is standalone by design of the test session, and cluster-status GET is explicitly valid on single-node)",
+        "concurrency (all verb probes sequential, one request per verb, deterministic across two scripts)",
+        "script_error (exit code 0; clean REQ/RESP pairs; URL derived from raw_knowledge api_endpoints[].url and proven correct by the 200 control)",
+        "request_typo (same URL string served GET 200 in the same script run)"
+      ],
+      "surviving": [
+        "framework-default inheritance: the empty-body 404 is actix-web's stock router-miss response that qdrant did not customize — an omission rather than an explicit decision (no annotation in source)",
+        "contract-coverage gap: neither the cited behavioral assertion nor the published doc page promises any diagnostic content for undocumented-verb refusals, so the Type2 rubric is self-derived by the script (BS-02 heuristic), not contract-grounded"
+      ]
+    }
+  }
+}

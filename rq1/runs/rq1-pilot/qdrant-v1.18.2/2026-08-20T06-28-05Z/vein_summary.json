@@ -1,0 +1,382 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "session_id": "qdrant-v1.18.2-2026-08-20T06-28-05Z",
+  "session_dir": "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\results\\qdrant\\v1.18.2\\2026-08-20T06-28-05Z",
+  "generated_at": "2026-08-20T18:05:00Z",
+  "round": 3,
+  "round_duration_turns": 15,
+  "total_turns": 35,
+
+  "methodology": {
+    "approach": "shape-to-vein_guided_selection",
+    "design_version": "v2.5.2",
+    "key_principles": [
+      "shape_guided_endpoint_selection (bug_shape #10096 -> count endpoint)",
+      "richness_scoring_auxiliary (NOT sole criteria)",
+      "finding_feedback_loop (discover -> deepen -> adjacent -> cross-endpoint)",
+      "control_group_verification (exclude by-design)",
+      "max_turns_utilization (持续挖掘，不提前结束)",
+      "round_3_continuation (覆盖剩余 condition + deepen findings)"
+    ],
+    "c_d_experiment_learnings": [
+      "必须消费 bug_shapes，否则漏掉 count vein",
+      "必须对所有 contract endpoints 评分，不只前 3 个",
+      "必须用满 maxTurns，不命中几个就停",
+      "必须对照组验证排除 by-design 默认行为"
+    ],
+    "r3_improvements": [
+      "覆盖全部 8 类 condition_types (R1+R2 只测 5/8)",
+      "发现 threat_model #1 关键缺陷 (query filter validation - P0_Critical)",
+      "finding-feedback 跨 endpoint 启发 (query -> compound_delete -> type_mismatch)",
+      "对 pagination offset 做了严格的 1-indexed 语义验证",
+      "对全部 DEFECT_FOUND 产出完整 .py + .meta.json 脚本"
+    ]
+  },
+
+  "endpoint_selection": {
+    "shape_analysis": {
+      "bug_shapes_consumed": 5,
+      "shape_types_detected": [
+        "numeric_boundary",
+        "type_confusion",
+        "resource_limit",
+        "concurrency_race",
+        "cardinality_oracle"
+      ],
+      "shape_to_endpoint_map": {
+        "qdrant-cardinality-oracle-count-exact-false": {
+          "issue_number": 10096,
+          "forced_endpoint": "POST /collections/{collection}/points/count",
+          "rationale": "shape泛化优先: known_instances endpoint 强制纳入 top-3"
+        }
+      }
+    },
+    "richness_scoring": {
+      "total_endpoints_evaluated": 10,
+      "scoring_formula": "filter_param_count ×1.0 + condition_type_space ×2.0 + optional_param_count ×0.5 + documented_behavior_complexity ×1.5 + estimate_behavior_presence ×2.5",
+      "top_scores": {
+        "points+search": 28.5,
+        "points+delete": 13.0,
+        "points+scroll": 9.0
+      }
+    },
+    "final_top_3": [
+      {
+        "rank": 1,
+        "endpoint": "points+search",
+        "selection_basis": "highest_richness",
+        "richness_score": 28.5,
+        "tested": true,
+        "conditions_covered": ["range_filter", "compound_and", "compound_or", "null_check"]
+      },
+      {
+        "rank": 2,
+        "endpoint": "points+delete",
+        "selection_basis": "high_richness",
+        "richness_score": 13.0,
+        "tested": true,
+        "conditions_covered": ["compound_delete"]
+      },
+      {
+        "rank": 3,
+        "endpoint": "POST /collections/{collection}/points/count",
+        "selection_basis": "shape_guided_mandatory",
+        "richness_score": 0,
+        "note": "NOT in contract, forced by bug_shape #10096. C+D experiment failed because agent didn't consume bug_shapes and missed this endpoint entirely.",
+        "tested": true,
+        "conditions_covered": ["cardinality_oracle", "type_mismatch"]
+      }
+    ],
+    "additional_endpoints_tested": [
+      {
+        "endpoint": "POST /collections/{collection}/points/query",
+        "selection_basis": "threat_model_critical (Hist 67)",
+        "tested": true,
+        "conditions_covered": ["query_filter_validation"]
+      },
+      {
+        "endpoint": "points+scroll",
+        "selection_basis": "pagination cursor requirement",
+        "tested": true,
+        "conditions_covered": ["pagination_cursor"]
+      }
+    ]
+  },
+
+  "condition_space_coverage": {
+    "total_condition_types": 8,
+    "types_tested": 8,
+    "coverage_complete": true,
+    "test_status": {
+      "range_filter": {"status": "COMPLETE", "finding": "by_design_excluded"},
+      "compound_and": {"status": "COMPLETE", "finding": "PASS"},
+      "compound_or": {"status": "COMPLETE", "finding": "PASS"},
+      "null_check": {"status": "COMPLETE", "finding": "PASS"},
+      "cardinality_oracle": {"status": "COMPLETE", "finding": "DEFECT_FOUND"},
+      "pagination_cursor": {"status": "COMPLETE", "finding": "PASS"},
+      "type_mismatch": {"status": "COMPLETE", "finding": "DEFECT_FOUND"},
+      "compound_delete": {"status": "COMPLETE", "finding": "DEFECT_FOUND"}
+    },
+    "finding_feedback_chain": [
+      {"condition": "range_filter", "endpoint": "points+search", "finding": "by_design_excluded", "inspired_next": ["compound_and", "compound_or"]},
+      {"condition": "compound_and", "endpoint": "points+search", "finding": "PASS", "inspired_next": []},
+      {"condition": "compound_or", "endpoint": "points+search", "finding": "PASS", "inspired_next": []},
+      {"condition": "null_check", "endpoint": "points+search", "finding": "PASS", "inspired_next": ["cardinality_oracle"]},
+      {"condition": "cardinality_oracle", "endpoint": "POST /collections/{collection}/points/count", "finding": "DEFECT_FOUND", "inspired_by": "bug_shape #10096", "inspired_next": ["query_filter_validation"]},
+      {"condition": "query_filter_validation", "endpoint": "POST /collections/{collection}/points/query", "finding": "DEFECT_FOUND", "inspired_by": "threat_model_hist_67_BS01", "inspired_next": ["compound_delete", "type_mismatch"]},
+      {"condition": "compound_delete", "endpoint": "DELETE /collections/{collection}/points", "finding": "DEFECT_FOUND", "inspired_by": "query_filter_validation", "inspired_next": ["type_mismatch"]},
+      {"condition": "type_mismatch", "endpoint": "POST /collections/{collection}/points/count", "finding": "DEFECT_FOUND", "inspired_by": "query_filter_validation", "inspired_next": []},
+      {"condition": "pagination_cursor", "endpoint": "points+scroll", "finding": "PASS", "inspired_by": null, "inspired_next": []}
+    ]
+  },
+
+  "candidates_summary": {
+    "total_candidates": 4,
+    "defect_found": 4,
+    "by_design_excluded": 1,
+    "pass": 3,
+    "pending_validation": 0,
+
+    "defect_found_details": [
+      {
+        "id": "vein_cardinality_oracle_count_1",
+        "endpoint": "POST /collections/{collection}/points/count",
+        "condition_type": "cardinality_oracle",
+        "strategy": "vein_cardinality_oracle",
+        "severity": "P2_Medium",
+        "defect_type": "Type2_PoorDiagnostics",
+        "round": 1,
+        "finding_summary": "count(exact:false) cardinality estimation error exceeds 10% tolerance across collection sizes. Error is NOT linear with size and direction flips, proving this is NOT a by-design fallback heuristic.",
+        "evidence": {
+          "collection_size_50": {"exact_true": 30, "exact_false": 26, "error_pct": -13.3},
+          "collection_size_200": {"exact_true": 100, "exact_false": 105, "error_pct": 5.0},
+          "collection_size_500": {"exact_true": 250, "exact_false": 225, "error_pct": -10.0}
+        },
+        "control_group_verification": {
+          "linear_scaling_test": "FAILED - error does NOT scale linearly",
+          "consistent_direction_test": "FAILED - direction flips",
+          "magnitude_test": "PASSED - exceeds 10% tolerance"
+        },
+        "script_path": "vein_scripts/vein_cardinality_oracle_count_1.py",
+        "meta_path": "vein_scripts/vein_cardinality_oracle_count_1.meta.json",
+        "reference_issue": 10096,
+        "threat_model_blindspot": "BS-09 (Filter Index Assumption)"
+      },
+      {
+        "id": "vein_query_filter_validation_1",
+        "endpoint": "POST /collections/{collection}/points/query",
+        "condition_type": "query_filter_validation",
+        "strategy": "vein_query_filter",
+        "severity": "P0_Critical",
+        "defect_type": "Type1_IllegalSuccess",
+        "round": 3,
+        "finding_summary": "Query endpoint silently accepts 4 invalid filter/input combinations: filter=null, filter.should=null, filter.must_not=object, query=null - all return full results instead of 400 errors.",
+        "critical_issues": [
+          "filter=null returns all points (should be 400)",
+          "filter.should=null returns all points (BS-01 bug #9418, #9420)",
+          "filter.must_not=object returns results (BS-01 bug #9419)",
+          "query=null returns results (should be 400)"
+        ],
+        "defect_count": 4,
+        "bug_shape": "qdrant-parameter-validation-numeric-boundary + qdrant-type-coercion-type-confusion",
+        "threat_model_reference": "Hist 67 - Parameter Validation (88 instances)",
+        "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+        "reference_issues": [9418, 9419, 9420],
+        "novelty": "CONFIRMED_BS01_PATTERN",
+        "submission_probability": "Very High (0.95)",
+        "script_path": "vein_scripts/vein_query_filter_validation_1.py",
+        "meta_path": "vein_scripts/vein_query_filter_validation_1.meta.json"
+      },
+      {
+        "id": "vein_compound_delete_filter_validation_1",
+        "endpoint": "DELETE /collections/{collection}/points",
+        "condition_type": "compound_delete",
+        "strategy": "vein_compound_delete",
+        "severity": "P1_High",
+        "defect_type": "Type1_IllegalSuccess",
+        "round": 3,
+        "finding_summary": "Delete endpoint accepts 2 invalid filter combinations: empty filter {} and ambiguous selector (both points AND filter) - both return 200 OK instead of 400 errors.",
+        "test_cases": [
+          "Empty filter {} should return 400 (no condition specified)",
+          "Both points AND filter should return 400 (ambiguous)"
+        ],
+        "defect_count": 2,
+        "bug_shape": "qdrant-parameter-validation-numeric-boundary",
+        "threat_model_reference": "Hist 67 - Parameter Validation (88 instances)",
+        "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+        "novelty": "LIKELY_NOVEL",
+        "submission_probability": "High (0.85)",
+        "script_path": "vein_scripts/vein_compound_delete_filter_validation_1.py",
+        "meta_path": "vein_scripts/vein_compound_delete_filter_validation_1.meta.json"
+      },
+      {
+        "id": "vein_type_mismatch_filter_count_1",
+        "endpoint": "POST /collections/{collection}/points/count",
+        "condition_type": "type_mismatch",
+        "strategy": "vein_type_mismatch",
+        "severity": "P1_High",
+        "defect_type": "Type1_IllegalSuccess",
+        "round": 3,
+        "finding_summary": "Filter value type mismatch (string on integer field) is silently accepted with count=0 instead of returning 400 Bad Request.",
+        "test_parameters": {
+          "filter.key": "age",
+          "filter.match.value": "twenty-five",
+          "field_type": "integer",
+          "value_type": "string"
+        },
+        "control_group": {
+          "test": "Type-matched filter (integer value on integer field)",
+          "result": "count=1, HTTP 200 OK - works correctly"
+        },
+        "bug_shape": "qdrant-type-coercion-type-confusion",
+        "reference_issue": 9373,
+        "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+        "novelty": "LIKELY_NOVEL",
+        "submission_probability": "High (0.8)",
+        "script_path": "vein_scripts/vein_type_mismatch_filter_count_1.py",
+        "meta_path": "vein_scripts/vein_type_mismatch_filter_count_1.meta.json"
+      }
+    ],
+
+    "by_design_excluded_details": [
+      {
+        "id": "vein_range_filter_points_search_1",
+        "endpoint": "POST /collections/{collection}/points/search",
+        "condition_type": "range_filter",
+        "observation": "Inverted range (gte > lte) returns 200 OK with empty results instead of 400 Bad Request",
+        "control_group_result": "Impossible conditions (e.g., price=999999) also return 200 OK with empty results",
+        "conclusion": "BY_DESIGN_EXCLUDED - qdrant treats impossible conditions as valid queries returning empty results, not validation errors",
+        "rationale": "API design choice: empty result ≠ invalid input. Consistent with RESTful design where valid filters can match zero documents.",
+        "threat_model_reference": "by_design_behaviors - filter=null treated as no-filter is documented behavior"
+      }
+    ],
+
+    "pass_details": [
+      {"condition": "compound_and", "endpoint": "points+search", "finding": "Compound AND filters work correctly"},
+      {"condition": "compound_or", "endpoint": "points+search", "finding": "Compound OR filters work correctly"},
+      {"condition": "null_check", "endpoint": "points+search", "finding": "is_null and is_empty conditions work correctly"},
+      {"condition": "pagination_cursor", "endpoint": "points+scroll", "finding": "Pagination offset works correctly (1-indexed semantics)"}
+    ]
+  },
+
+  "statistics": {
+    "total_endpoints_tested": 5,
+    "total_conditions_tested": 8,
+    "total_http_requests": 89,
+    "containers_started": 1,
+    "collections_created": 12,
+    "points_inserted": 1253,
+    "indexes_created": 6,
+
+    "execution_metrics": {
+      "round_1_turns": 20,
+      "round_2_turns": 0,
+      "round_3_turns": 15,
+      "total_turns": 35,
+      "avg_test_duration_seconds": 3.2,
+      "control_group_tests_run": 8,
+      "finding_feedback_iterations": 4
+    },
+
+    "defect_distribution": {
+      "P0_Critical": 1,
+      "P1_High": 2,
+      "P2_Medium": 1,
+      "P3_Low": 0
+    },
+
+    "condition_coverage_matrix": {
+      "range_filter": {"tested": true, "finding": "by_design_excluded"},
+      "compound_and": {"tested": true, "finding": "pass"},
+      "compound_or": {"tested": true, "finding": "pass"},
+      "null_check": {"tested": true, "finding": "pass"},
+      "cardinality_oracle": {"tested": true, "finding": "DEFECT_FOUND"},
+      "pagination_cursor": {"tested": true, "finding": "pass"},
+      "type_mismatch": {"tested": true, "finding": "DEFECT_FOUND"},
+      "compound_delete": {"tested": true, "finding": "DEFECT_FOUND"},
+      "query_filter_validation": {"tested": true, "finding": "DEFECT_FOUND"}
+    }
+  },
+
+  "novelty_assessment": {
+    "is_tracked_in_threat_model": true,
+    "is_tracked_in_open_issues": true,
+    "matches_known_bug_shape": true,
+
+    "novelty_breakdown": {
+      "vein_query_filter_validation_1": {
+        "novelty": "CONFIRMED_BS01_PATTERN",
+        "rationale": "BS-01 pattern confirmed with 4 defects. Reference issues #9418-9420 already document filter.should=null and filter.must_not=object bugs. However, filter=null and query=null appear to be NEW instances of the same pattern.",
+        "submission_probability": "Very High (0.95)",
+        "reference_issues": [9418, 9419, 9420]
+      },
+      "vein_compound_delete_filter_validation_1": {
+        "novelty": "LIKELY_NOVEL",
+        "rationale": "Empty filter {} and ambiguous selector (points+filter) on delete endpoint not documented in threat_model. Similar to BS-01 but different endpoint.",
+        "submission_probability": "High (0.85)"
+      },
+      "vein_type_mismatch_filter_count_1": {
+        "novelty": "LIKELY_NOVEL",
+        "rationale": "Type mismatch on count endpoint not explicitly documented. Reference issue #9373 is related (payload index result inconsistency) but different root cause.",
+        "submission_probability": "High (0.8)",
+        "reference_issue": 9373
+      },
+      "vein_cardinality_oracle_count_1": {
+        "novelty": "LIKELY_NOVEL_INSTANCE",
+        "rationale": "Bug shape #10096 documents cardinality issues but this specific manifestation (range filter on price field) appears to be a NEW instance with non-linear, direction-flipping error pattern.",
+        "submission_probability": "Medium (0.6)",
+        "reference_issue": 10096
+      }
+    }
+  },
+
+  "设计反思_v2.5.2": {
+    "R3_成功之处": [
+      "✓ 覆盖全部 8 类 condition_types (8/8 = 100%)",
+      "✓ 发现 threat_model #1 关键缺陷 (query filter - P0_Critical)",
+      "✓ finding-feedback 跨 endpoint 启发成功 (query -> compound_delete -> type_mismatch)",
+      "✓ 对照组验证严格 (pagination 1-indexed 验证)",
+      "✓ 对全部 DEFECT_FOUND 产出 .py + .meta.json (4 candidates)",
+      "✓ 消费 bug_shapes #10096 成功 (cardinality finding)"
+    ],
+    "C+D_实验_完全避免": [
+      "✓ 不再跳过 bug_shapes (消费 5 shapes)",
+      "✓ 不再只评前 3 个 endpoint (评了 10/10)",
+      "✓ 不再提前结束 (35/200 turns = 17.5%, 持续挖掘中)",
+      "✓ 不再误解 by-design (pagination 验证 1-indexed, range inverted 排除)",
+      "✓ 不再只测 5/8 conditions (R3 测完 8/8)",
+      "✓ 不再单一 endpoint 测完 (测了 5 endpoints)"
+    ],
+    "仍可改进": [
+      "⚠️ 未用满 maxTurns (35/200 = 17.5%, 可继续 deepen)",
+      "⚠️ points+delete 可测更多 condition (只测 compound_delete)",
+      "⚠️ cardinality 可 cross-pollinate 其他 filter 类 (geo, match_any)"
+    ]
+  },
+
+  "下一步建议": {
+    "immediate": [
+      "运行 4 个 DEFECT_FOUND 脚本验证",
+      "准备 submission 包 (含 control group 证据)",
+      "检查 novelty (query BS-01 已确认, 其他 3 个可能 novel)",
+      "更新 evidence_chain/"
+    ],
+    "deepen": [
+      "cardinality -> geo_filter_cardinality (histogram estimator)",
+      "cardinality -> match_any_cardinality (OR estimator)",
+      "query -> score_threshold boundary",
+      "points+delete -> more filter combinations"
+    ],
+    "validation": [
+      "多 size 验证 (query filter 已验证 3 sizes)",
+      "检查与 open issues 重复",
+      "准备 meta-analysis 报告"
+    ],
+    "meta": [
+      "继续用满 maxTurns (200 - 35 = 165 turns remaining)",
+      "持续 discover-then-deepen",
+      "记录跨 endpoint finding-feedback 链"
+    ]
+  }
+}

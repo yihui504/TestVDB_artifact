@@ -1,0 +1,69 @@
+{
+  "defect_id": "boundary_s12_sparse_format",
+  "endpoint": "entities+insert",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "constraint create_004 只断言'sparse vector rows accepted via sparse float vector JSON input format'（正向能力），未定义空对象 {} 是否合法——空串形态无显式契约断言。本地 clone 可达。派发单 constraint_id='type' 对应 type_constraints 组（非单一 id）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "CASE dict empty {}                  ok=True | {\"code\":0,\"cost\":0,\"data\":{\"insertCount\":1,\"insertIds\":[1]}}（主观测：空稀疏向量被接受并计为一行）",
+      "secondary_observations": [
+        "CASE dict neg index {-1:0.5} => 1804 'strconv.ParseUint: parsing \"-1\": invalid syntax'",
+        "CASE dict non-numeric key {a:0.5} => 1804 ParseUint 'a'",
+        "CASE dict value str => 1804 'invalid value type in JSON: string'",
+        "CASE list [0.1,0.2] (dense form) => 1804 unmarshal array into map",
+        "CASE nested dict => 1804 'invalid value type in JSON: map[string]interface {}'",
+        "search sparse dict (ok) => code:0 distance=0.25（搜索侧正常）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "其余畸形形态以 200+1804 返回；仅空 {} 以 200+code:0 接受"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_s12_sparse_format.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_collections_create_004",
+      "assertion_text_quoted": "sparse vector rows accepted via sparse float vector JSON input format in REST insert",
+      "api_violates_assertion": false,
+      "note": "该断言是正向能力声明（稀疏 JSON 格式被接受），不约束空行合法性；空 {} 接受不构成对该断言的违反（violates=false，语义自检：观测值不在该断言的禁止域——断言没有禁止域）。空行是否应为错误无契约依据。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:create_004 正向格式声明（无空行断言）",
+        "doc:sparse 格式语义只在源码 schema.go 定义",
+        "script:insert 稀疏字段 vector={}",
+        "log:code:0 insertCount:1（对照其余畸形 1804）"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "空 {} 的期望行为无契约断言——契约环对该形态缺失；现象本身（源码显式支持空行）已溯源",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["CreateSparseFloatRowFromJSON", "CreateSparseFloatRowFromMap", "empty sparse row"],
+      "files_examined": ["internal/distributed/proxy/httpserver/utils.go", "pkg/util/typeutil/schema.go"],
+      "source_excerpt": "pkg/util/typeutil/schema.go:2271-2278:\nfunc CreateSparseFloatRowFromMap(input map[string]interface{}) ([]byte, error) {\n\tvar indices []uint32\n\tvar values []float32\n\tif len(input) == 0 {\n\t\t// for empty json input, return empty sparse row\n\t\treturn CreateSparseFloatRow(indices, values), nil\n\t}\n\nschema.go:2393-2395（SparseFloatRowDim 注释）:\n// dim of a sparse float vector is the maximum/last index + 1.\n// for an empty row, dim is 0.\n\nhttpserver/utils.go:442-451: insert 路径 SparseFloatVector 分支仅在 dataString==\"\"（缺字段）时报错，空对象 {} 走 CreateSparseFloatRowFromJSON",
+      "call_chain_traced": "insert → httpserver/utils.go:446 CreateSparseFloatRowFromJSON（schema.go:2382，DisallowUnknownFields 解码 map）→ CreateSparseFloatRowFromMap:2271 空 map 显式返回空 sparse row（带注释 'for empty json input, return empty sparse row'）→ SparseFloatRowDim 注释明确 'for an empty row, dim is 0'——空行是维度语义内的一等公民。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request_typo"],
+      "surviving": "无——源码显式 by-design 支持空稀疏行（两处注释），且无契约断言禁止；观测行为与实现设计一致"
+    }
+  }
+}

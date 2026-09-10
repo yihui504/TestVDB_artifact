@@ -1,0 +1,28 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['payload_overwrite']
+[A ghost overwrite] status=404 raw={"status":{"error":"Not found: Collection `spo5_1788459784_28072_ghost` doesn't exist!"},"time":0.000014241}
+[A ghost overwrite] OK: 404 as pinned
+[B upsert] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.003902725}
+[C1 missing 'payload'] status=400 raw={"status":{"error":"Format error in JSON body: missing field `payload` at line 1 column 15"},"time":0.0}
+[C1 missing 'payload'] OK: rejected with 400 (required 'payload' absent from body)
+[C1 missing 'payload' state-check scroll] status=200 raw={"result":{"points":[{"id":1,"payload":{"a":1,"b":"two"}},{"id":2,"payload":{"a":1,"b":"two"}}],"next_page_offset":null},"status":"ok","time":0.000222301}
+[C2 payload as string] status=400 raw={"status":{"error":"Format error in JSON body: invalid type: string \"notobj\", expected a map at line 1 column 20"},"time":0.0}
+[C2 payload as string] OK: rejected with 400 ('payload' must be object, got string)
+[C2 payload as string state-check scroll] status=200 raw={"result":{"points":[{"id":1,"payload":{"a":1,"b":"two"}},{"id":2,"payload":{"a":1,"b":"two"}}],"next_page_offset":null},"status":"ok","time":0.000273397}
+[C3 payload null] status=400 raw={"status":{"error":"Format error in JSON body: invalid type: null, expected a map at line 1 column 16"},"time":0.0}
+[C3 payload null] OK: rejected with 400 ('payload' is required; null is not an object)
+[C3 payload null state-check scroll] status=200 raw={"result":{"points":[{"id":1,"payload":{"a":1,"b":"two"}},{"id":2,"payload":{"a":1,"b":"two"}}],"next_page_offset":null},"status":"ok","time":0.000322086}
+[C4 no selector] status=400 raw={"status":{"error":"Format error in JSON body: Either list of point ids or filter must be provided"},"time":0.0}
+[C4 no selector] OK: rejected with 400 (neither 'points' nor 'filter' identifies targets)
+[C4 no selector state-check scroll] status=200 raw={"result":{"points":[{"id":1,"payload":{"a":1,"b":"two"}},{"id":2,"payload":{"a":1,"b":"two"}}],"next_page_offset":null},"status":"ok","time":0.000329932}
+[D valid overwrite] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.003679954}
+[D] 200 envelope keys=['result', 'status', 'time'] result={'operation_id': 2, 'status': 'completed'} (informational — no pinned response_shape)
+[D readback scroll] status=200 raw={"result":{"points":[{"id":1,"payload":{"c":3}},{"id":2,"payload":{"c":3}}],"next_page_offset":null},"status":"ok","time":0.000356978}
+[D readback] OK: point 1 payload exactly {'c': 3}
+[D readback] OK: point 2 payload exactly {'c': 3}
+[E drop] status=200 raw={"result":true,"status":"ok","time":0.007415401}
+[E describe-after-drop] status=404 raw={"status":{"error":"Not found: Collection `spo5_1788459784_28072_col` doesn't exist!"},"time":0.000019664}
+[E post-delete overwrite] status=404 raw={"status":{"error":"Not found: Collection `spo5_1788459784_28072_col` doesn't exist!"},"time":7.639e-6}
+[E post-delete overwrite] OK: 404 as pinned
+VERDICT: NO_DEFECT

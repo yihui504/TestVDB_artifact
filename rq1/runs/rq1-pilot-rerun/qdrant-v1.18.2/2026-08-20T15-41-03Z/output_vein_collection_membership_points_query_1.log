@@ -1,0 +1,35 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[SETUP] Creating collection and inserting test data...
+  Create collection: 200
+  Insert points: 200
+
+[TEST 1] Filter with ID list (is_empty variant)
+  Is_empty filter: status=400
+
+[TEST 2] Filter with has_id condition
+  Has_id [1,5,10]: status=200
+    Result count: 1
+
+[TEST 3] Filter with has_id containing non-existent IDs
+  Has_id with non-existent [1,999,1000]: status=200
+    Result count: 1 (should be 1)
+    OK: Correctly filtered to only existing ID
+
+[TEST 4] Filter with has_id empty list
+  Has_id empty list: status=200
+    Result count: 1
+
+[TEST 5] Filter with has_id containing duplicate IDs
+  Has_id with duplicates [1,1,5,5,5]: status=200
+    Result count: 1
+
+[TEST 6] Filter with match_any (OR condition)
+  Match_any (should with 3 has_id): status=400
+
+[TEST 7] Filter with match_any and min_should > 1
+  Match_any with min_should=2: status=400
+
+============================================================
+VERDICT: NO_DEFECT
+============================================================

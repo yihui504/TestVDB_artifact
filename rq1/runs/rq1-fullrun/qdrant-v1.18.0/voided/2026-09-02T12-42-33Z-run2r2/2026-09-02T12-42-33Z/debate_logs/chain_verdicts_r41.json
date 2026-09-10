@@ -1,0 +1,209 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "boundary_points_query_groups_invalid_groupby_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "HTTP-semantics tautology"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "silent-failure-missing-ref",
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED -> DEFECT (mechanized)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "behavioral disposition promise",
+      "candidate_class": "strict_defect",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "no-values group_by 200[] vs pinned 400; no path validator",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_points_query_groups_resource_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "resource boundary"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED -> NOT_DEFECT binding; B resource doubt -> manual review"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "contract_misread",
+      "constraint_category": "range",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "3/3 OOM on spec-legal 1e6x1e6; unit minima-only; review",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_query_groups_behavior_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "HTTP-semantics tautology"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "silent-failure-missing-ref",
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED -> DEFECT (mechanized)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "behavioral disposition promise",
+      "candidate_class": "strict_defect",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "no-values group_by 200 vs pinned 400; no default-path check",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_query_groups_filter_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "WEAK_REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED -> NOT_DEFECT (mechanized)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "other",
+      "category_no_fit_reason": "behavioral disposition promise",
+      "candidate_class": "rejected",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "oracle 12xx unbuildable by seed; correct resp; src confirms",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_query_groups_semantics_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "WEAK_REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED -> NOT_DEFECT (mechanized)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "range",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "oracle id-formula != seed; response correct top-k per math",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "defect": 2,
+    "not_defect": 3,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {
+      "doc": 1,
+      "behavior": 2
+    },
+    "root_cause_distribution": {
+      "contract_misread": 1,
+      "script_error": 2
+    },
+    "constraint_category_distribution": {
+      "other": 3,
+      "range": 2
+    },
+    "candidate_class_distribution": {
+      "strict_defect": 2,
+      "rejected": 3
+    }
+  }
+}

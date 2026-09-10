@@ -1,0 +1,75 @@
+{
+  "defect_id": "state_collections_create_03",
+  "endpoint": "collections+create",
+  "defect_type": "Type3_RuntimeFailure",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "FAIL",
+      "version_match": "FAIL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "FAIL",
+      "sdk_rest_confusion": false,
+      "detail": "constraint_id is empty string - candidate has no contract grounding. structured_contract.json exists but constraint_id field is empty. Cannot verify documentation link without constraint_id. Domain api.qdrant.tech is blocked (domain_blocked: true).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Access errors (500s): 2, Access success (200/404): 58, VERDICT: DEFECT_FOUND (Type3_RuntimeFailure) - Got 2 internal errors (500) during lifecycle - should return 404/503",
+      "secondary_observations": [
+        "Lifecycle thread completed. Internal errors: 0 (counter-inconsistency in log)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 500",
+        "note": "Internal server errors (500) during lifecycle operations - claim expects 404/503 for client-side lifecycle issues"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_collections_create_03"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint_id provided - candidate is not grounded in structured_contract.json",
+      "api_violates_assertion": false,
+      "note": "Without constraint_id, cannot determine which assertion is violated. This suggests a probe framework issue - candidate generated without contract grounding.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (empty - no constraint_id)",
+        "doc: (blocked - api.qdrant.tech unreachable)",
+        "script: state_collections_create_03 (lifecycle concurrent access test)",
+        "log: Access errors (500s): 2, VERDICT: DEFECT_FOUND (Type3_RuntimeFailure)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "constraint_id is empty string - no contract grounding exists. Chain cannot be traced without constraint_id. This appears to be a framework issue where candidate was generated without proper contract linkage.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "500",
+        "internal error",
+        "lifecycle",
+        "concurrent",
+        "create_collection"
+      ],
+      "files_examined": [],
+      "source_excerpt": "Source clone not available at TESTVDB_SRC_DIR - no .srcdir file found in session. No source code evidence collected.",
+      "call_chain_traced": "none",
+      "verification_outcome": "not_found_in_source",
+      "sufficiency_check": "grep_zero_hits",
+      "note": "No source clone location provided. Cannot verify error handling in source code. Outcome based on lack of access to source.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": {
+        "explanation": "Type3 Runtime Failure: 2 HTTP 500 errors during concurrent lifecycle operations. Not excluded as environmental - pattern suggests internal error handling defect during create/delete concurrent access. Claim expects 404/503 for client errors, but got 500 (server error).",
+        "confidence": "medium"
+      }
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "defect_id": "state_points_search_05",
+  "endpoint": "points+delete",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Constraint qdrant_invariant_delete_invisibility_001 states 'after delete(points), search does not return those points'. OpenAPI documents wait parameter with 'Default is true' (openapi/openapi-snapshots.ytt.yaml:20, 63, 106), but source code (src/common/update.rs:40) uses #[serde(default)] with bool type defaulting to false, creating discrepancy. Documentation promises wait=true by default, implementation defaults to wait=false.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Create collection: status=200; Upsert 100 points: status=200; VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — 32 deleted points were visible during search",
+      "secondary_observations": [
+        "Test created collection and upserted 100 points successfully",
+        "Delete operation executed (likely with wait=false by default)",
+        "Subsequent search returned 32 of the deleted points",
+        "State inconsistency: deleted points remained visible"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A (state visibility violation)",
+        "note": "No HTTP error returned. Type4 violation: state invariant broken. Delete operation returned success but deleted points remained visible to concurrent search."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_points_search_05"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_invariant_delete_invisibility_001",
+      "assertion_text_quoted": "after delete(points), search does not return those points (structured_contract.json:738-740). Behavioral contract (qdrant_behavioral_delete_visibility_001) expects: 'search does not return deleted points, get point returns 404'.",
+      "api_violates_assertion": true,
+      "note": "API violates delete invisibility invariant: 32 deleted points were visible during search. State consistency contract broken when wait parameter not explicitly set to true.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_invariant_delete_invisibility_001 (after delete, search does not return deleted points)",
+        "doc:https://api.qdrant.tech/api-reference/points/delete-points (reachable, wait param documented)",
+        "doc:wait parameter default discrepancy (OpenAPI says 'Default is true', source defaults to false)",
+        "script:delete points (likely wait=false by default) → concurrent search",
+        "log:32 deleted points visible during search"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Link breaks at documentation-implementation mismatch: OpenAPI (openapi/openapi-snapshots.ytt.yaml) states 'wait parameter default is true', but UpdateParams (src/common/update.rs:40) uses #[serde(default)] which defaults bool to false. Users relying on documented default get wait=false behavior, causing race conditions where search reads stale data before deletion completes. Source confirms: wait: wait.unwrap_or(false) (line 54) for gRPC, and #[serde(default)] for REST both default to false, contradicting docs.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "wait.*default",
+        "UpdateParams",
+        "delete.*wait",
+        "unwrap_or.*false"
+      ],
+      "files_examined": [
+        "src/common/update.rs",
+        "openapi/openapi-snapshots.ytt.yaml"
+      ],
+      "source_excerpt": "File: src/common/update.rs (lines 36-60)\n\n#[serde_with::serde_as]\n#[derive(Copy, Clone, Debug, Deserialize, Serialize, Validate)]\npub struct UpdateParams {\n    #[serde(default)]  // (line 39) -- defaults bool to FALSE\n    pub wait: bool,\n    #[serde(default)]\n    pub ordering: WriteOrdering,\n    ...\n}\n\nimpl UpdateParams {\n    pub fn from_grpc(\n        wait: Option<bool>,\n        ...\n    ) -> tonic::Result<Self> {\n        let params = Self {\n            wait: wait.unwrap_or(false),  // (line 54) -- explicit FALSE default\n            ...\n        };\n        Ok(params)\n    }\n}\n\n// Compare to OpenAPI documentation:\n// File: openapi/openapi-snapshots.ytt.yaml (lines 20, 63, 106)\n// description: \"If true, wait for changes to actually happen. If false - let changes happen in background. Default is true.\"\n//                                                           ^^^^^^^^^^^^^^^^^^^^^^^^\n//                                                           CONTRADICTION: source defaults to false",
+      "call_chain_traced": "DELETE request → UpdateParams { wait: bool } with #[serde(default)] → bool defaults to FALSE → deletion queued asynchronously → concurrent SEARCH reads stale index → deleted points visible. No synchronization unless caller explicitly sets wait=true.",
+      "verification_outcome": "by_design_in_source",
+      "note": "Source confirms default is false. This is by-design async behavior, but documentation incorrectly states default is true. The defect is the documentation mismatch, not the async behavior itself. However, the invariant violation (32 visible deleted points) stems from this async default being inconsistent with documented promise of immediate visibility.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency_race"],
+      "surviving": "Documentation-implementation mismatch (wait default). Not environmental or race condition—this is documented as async-by-default behavior but docs promise sync-by-default. The 32 visible deleted points are expected when wait=false, not a race."
+    }
+  }
+}

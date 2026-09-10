@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_telemetry_002",
+  "endpoint": "cluster+telemetry",
+  "param": "timeout",
+  "expected_defect_type": "Type1_IllegalRejection",
+  "strategy": "illegal_rejection",
+  "oracle": {
+    "statement": "with control GET /cluster/telemetry = 200, every leg timeout=1/timeout=2/timeout=60 also returns HTTP 200 with the result envelope object (a 4xx on a documented-legal timeout = Type1_IllegalRejection, 5xx with /healthz alive = Type3_RuntimeFailure); with a 4xx control, every leg answers 4xx uniformly (a 2xx leg = Type1_IllegalSuccess on a face that refuses its documented control read) (constraint qdrant_range_cluster_telemetry_001)",
+    "source": "docstring"
+  }
+}

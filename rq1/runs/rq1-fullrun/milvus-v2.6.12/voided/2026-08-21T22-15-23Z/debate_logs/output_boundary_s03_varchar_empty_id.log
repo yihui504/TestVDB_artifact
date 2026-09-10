@@ -1,0 +1,8 @@
+SETUP insert unicode id ok=True | {"code":0,"cost":0,"data":{"insertCount":1,"insertIds":["id_中文_🎯"]}}
+CASE empty_str_id     status=200 ok=False | {"code":1100,"message":"invalid parameter, error: empty string id at index 0"}
+CASE space_id         status=200 ok=False | {"code":1100,"message":"some of the provided primary key IDs do not exist: missing IDs = [ ]: invalid parameter"}
+CASE nul_id           status=200 ok=False | {"code":1100,"message":"some of the provided primary key IDs do not exist: missing IDs = [a\u0000b]: invalid parameter"}
+CASE unicode_id       status=200 ok=True | {"code":0,"cost":0,"data":[{"distance":0,"id":"id_中文_🎯"}],"topks":[1]}
+
+CASE lone_surrogate status=200 ok=False | {"code":1100,"message":"some of the provided primary key IDs do not exist: missing IDs = [�]: invalid parameter"}
+VERDICT_NO_DEFECT

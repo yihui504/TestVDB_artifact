@@ -1,0 +1,29 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+seed baseline: exact count == 9 (3 red + 6 blue)
+
+G guard valid filtered discover must[grp=red] -> status=200
+raw: {"result":[{"id":3,"version":1,"score":1.8554914,"payload":{"grp":"red"}},{"id":2,"version":1,"score":1.8546512,"payload":{"grp":"red"}}],"status":"ok","time":0.00059003}
+G: 200, 2 result(s), all grp=red (guard baseline set)
+
+T1 must as STRING -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"red\", expected null, array or map at line 1 column 162"},"time":0.0}
+T1 must as STRING: 400 clean rejection; NOTE (strategy5): rejection text names no filter-family token — diagnostics gap recorded for the judge
+
+T2 must_not as OBJECT -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [discover_request.filter.must_not[0].__all__: Validation error: At least one field condition must be specified [{}]]"},"time":0.0}
+T2 must_not as OBJECT: 422 clean rejection; diagnostics name the filter construct
+
+T3 should as INT -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: integer `42`, expected null, array or map at line 1 column 161"},"time":0.0}
+T3 should as INT: 400 clean rejection; NOTE (strategy5): rejection text names no filter-family token — diagnostics gap recorded for the judge
+
+T4 match null -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [discover_request.filter.must[0].__all__: Validation error: At least one field condition must be specified [{}]]"},"time":0.0}
+T4 match null: 422 clean rejection; diagnostics name the filter construct
+
+T5 key missing -> status=400
+raw: {"status":{"error":"Format error in JSON body: Expected some form of condition, which can be a field condition (like {\"key\": ..., \"match\": ... }), or some other mentioned in the documentation: https://qdrant.tech/documentation/concepts/filtering/#filtering-conditions at line 1 column 186"},"time":0.0}
+T5 key missing: 400 clean rejection; diagnostics name the filter construct
+cross-face disposition note (G9): filter grammar family — count R34 rejected / delete R35 accepted-destructively / discover this round read-only member
+VERDICT: NO_DEFECT

@@ -1,0 +1,8 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] cluster_status = /cluster (raw_knowledge api_endpoints[cluster+status].url)
+[pre-probe] /healthz status=200 raw=healthz check passed
+[control GET /cluster] status=200 raw={"result":{"status":"disabled"},"status":"ok","time":2.962e-6}
+[shape] asserted fields present in result: []; all result keys: ['status']
+VERDICT: DEFECT_FOUND (Type4_StateLogicViolation)
+GET /cluster answered 200 but the result carries NONE of the fields asserted by constraint qdrant_type_cluster_status_001 (peer_id uint64 / raft_state enum {Leader,Follower,Candidate,PreCandidate,Terminated} / commit_index uint64 / peers map); observed result keys=['status']; full body={"result":{"status":"disabled"},"status":"ok","time":2.962e-6}. raw_knowledge expected_responses documents exactly one 200 shape for this face ('ClusterStatus' - no alternative shape anywhere in contract/raw_knowledge) and sibling assertion qdrant_behavioral_cluster_status_001 promises this face valid on single-node deployments, so the served shape matches zero asserted fields on exactly the promised deployment class. (Adjudication note: an undocumented standalone 'disabled' variant would be the by-design defense; no such variant exists in any spec source available to this round.)

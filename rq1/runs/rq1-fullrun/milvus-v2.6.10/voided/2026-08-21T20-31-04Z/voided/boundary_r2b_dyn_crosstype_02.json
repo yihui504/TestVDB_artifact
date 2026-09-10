@@ -1,0 +1,70 @@
+{
+  "defect_id": "boundary_r2b_dyn_crosstype_02",
+  "endpoint": "entities+insert / entities+upsert (dynamic field)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "contract 24 条中无动态字段类型一致性断言（回滚版明确移除了该域）；最近约束 milvus_type_entities_insert_001 仅断言 pk+vector dim。文档面不可达（domain_blocked 等价），以本地 clone 为准。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "insert f=10 (int) -> ok=True raw={\"code\":0,\"cost\":0,\"data\":{\"insertCount\":1,\"insertIds\":[1]}} || insert f='ten' (str) -> ok=True raw={\"code\":0,\"cost\":0,\"data\":{\"insertCount\":1,\"insertIds\":[2]}}",
+      "secondary_observations": [
+        "insert f=True (bool) -> ok=True code:0 (insertIds 3)",
+        "insert f=3.5 (float) -> ok=True code:0 (insertIds 4)",
+        "insert f=[1, 2] (list) -> ok=True code:0 (insertIds 5)",
+        "insert f={'n': 1} (dict) -> ok=True code:0 (insertIds 6)",
+        "upsert id=1 f='was-int' -> ok=True raw={\"code\":0,\"cost\":0,\"data\":{\"upsertCount\":1,\"upsertIds\":[1]}}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "同 key 跨类型全部 200+code:0，无任何拒绝或警告信号"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2b_dyn_crosstype_02.py", "相关族: boundary_r2_dyn_type_filter_08 / semantic_r2_dyntype_03 (R2 轮同域)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "GAP (nearest: milvus_type_entities_insert_001)",
+      "assertion_text_quoted": "nearest: \"each row has pk field AND vector field with dim == schema dim, else error\" —— 不覆盖动态字段类型；同 key 跨类型一致性无 contract（回滚版契约已移除动态类型一致性断言，本链即探测该 gap 域）",
+      "api_violates_assertion": true,
+      "note": "violates=True 判定理由：JSON 动态字段本质允许异构值，但 upsert 把同一 key 从 Int 改写为 String 属于隐式 schema drift 静默发生；契约无显式断言，判定基于读写一致性风险 + 与 #3 insert/upsert 强转行为的族一致性。若 auditor 采 by-design 立场（JSON 字段无类型承诺），violates 可降为 false——链内不预判，交 auditor。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_entities_insert_001 弱覆盖（gap）",
+        "doc: 契约无该域断言，官方 doc 未参与（domain_blocked）",
+        "script: boundary_r2b_dyn_crosstype_02.py 同 key f 依次 int/str/bool/float/list/dict insert + upsert Int->String",
+        "log: 全部 code:0，upsert 静默改写"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "contract->doc 环缺失（回滚版契约无动态类型断言，文档未核）——链在 doc 环以 gap 状态断开，script/log 环完整自洽",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["fillDynamicRow / reallyData[mapKey] (httpserver/utils.go)", "gjson.Type switch", "EnableDynamicField"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/utils.go (590-614 fillDynamicRow 动态填充)",
+        "internal/distributed/proxy/httpserver/request_v2.go (323-329 CollectionDataReq)"
+      ],
+      "source_excerpt": "internal/distributed/proxy/httpserver/utils.go:592-611:\nfor mapKey, mapValue := range data.Map() {\n    if !containsString(fieldNames, mapKey) {\n        if collSchema.EnableDynamicField {\n            if mapKey == common.MetaFieldName { return ...invalid field name... }\n            mapValueStr := mapValue.String()\n            switch mapValue.Type {\n            case gjson.True, gjson.False: reallyData[mapKey] = cast.ToBool(mapValueStr)\n            case gjson.String: reallyData[mapKey] = mapValueStr\n            case gjson.Number: ... cast.ToInt64/ToFloat64\n            case gjson.JSON: reallyData[mapKey] = mapValue.Value()\n            ...\n每行的动态 key 值按该行自身的 JSON 类型独立转换，无任何历史类型（前序行该 key 的类型）比对逻辑。",
+      "call_chain_traced": "REST insert -> httpserver/utils.go row-fill -> 动态 key 按行内 gjson.Type 即时转换 -> 无跨行/跨 upsert 类型一致性检查 -> code:0。upsert 复用同一 insert 数据面（handler_v2 upsert -> 同 fill 路径），故 Int->String 改写静默。",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency (顺序执行)", "cache"],
+      "surviving": "by-design 抗辩可能成立（JSON 动态字段无类型承诺）——链如实呈现，判定交 auditor"
+    }
+  },
+  "evidence_weight": "B（单脚本但 6 类型全 code:0 逐字证据；源码确认无类型一致性校验；契约 gap + by-design 抗辩未排除是降级因素）"
+}

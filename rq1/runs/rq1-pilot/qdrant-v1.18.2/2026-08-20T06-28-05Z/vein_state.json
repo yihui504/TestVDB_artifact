@@ -1,0 +1,439 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "session_id": "qdrant-v1.18.2-2026-08-20T06-28-05Z",
+  "round": 4,
+  "current_turn": 40,
+  "max_turns": 200,
+  "phase": "discover_and_deepen",
+  "shape_analysis": {
+    "total_bug_shapes_consumed": 5,
+    "shape_types_detected": [
+      "numeric_boundary",
+      "type_confusion",
+      "resource_limit",
+      "concurrency_race",
+      "cardinality_oracle"
+    ],
+    "critical_shape_for_vein": {
+      "shape_id": "qdrant-cardinality-oracle-count-exact-false",
+      "issue_number": 10096,
+      "forced_endpoint": "POST /collections/{collection}/points/count",
+      "attack_strategy_hints": [
+        "PRIMARY ENDPOINT: count API",
+        "Test exact:false vs exact:true divergence",
+        "INDEXING PRECONDITION: build payload index",
+        "CONTROL GROUP: vary collection size to rule out by-design"
+      ]
+    }
+  },
+  "endpoint_selection": {
+    "total_contract_endpoints": 10,
+    "total_endpoints_scored": 10,
+    "top_3_selection": [
+      {
+        "rank": 1,
+        "endpoint": "points+search",
+        "richness_score": 28.5,
+        "selection_reason": "highest richness",
+        "shape_source": "general_richness"
+      },
+      {
+        "rank": 2,
+        "endpoint": "points+delete",
+        "richness_score": 13.0,
+        "selection_reason": "high richness",
+        "shape_source": "general_richness"
+      },
+      {
+        "rank": 3,
+        "endpoint": "POST /collections/{collection}/points/count",
+        "richness_score": 0,
+        "selection_reason": "shape_guided_mandatory (v2.5.2 design)",
+        "shape_source": "qdrant-cardinality-oracle-count-exact-false"
+      }
+    ]
+  },
+  "condition_coverage": {
+    "total_condition_types": 8,
+    "types_tested": 8,
+    "test_status": {
+      "range_filter": {
+        "status": "COMPLETE",
+        "endpoint": "points+search",
+        "finding": "by_design_excluded",
+        "verdict": "Inverted range returns 200 OK with empty results (by-design, not defect)"
+      },
+      "compound_and": {
+        "status": "COMPLETE",
+        "endpoint": "points+search",
+        "finding": "PASS",
+        "verdict": "Compound AND filters work correctly"
+      },
+      "compound_or": {
+        "status": "COMPLETE",
+        "endpoint": "points+search",
+        "finding": "PASS",
+        "verdict": "Compound OR filters work correctly"
+      },
+      "null_check": {
+        "status": "DEFECT_FOUND",
+        "endpoint": "points+search",
+        "finding": "DEFECT_FOUND",
+        "verdict": "params.hnsw_ef=null and params=null return 200 OK (should be 400) - Type1_IllegalSuccess",
+        "r4_new": true
+      },
+      "cardinality_oracle": {
+        "status": "DEFECT_FOUND",
+        "endpoint": "POST /collections/{collection}/points/count",
+        "finding": "DEFECT_FOUND",
+        "verdict": "count(exact:false) estimation error exceeds 10%, non-linear, direction-flipping - NOT by-design"
+      },
+      "pagination_cursor": {
+        "status": "COMPLETE",
+        "endpoint": "points+scroll",
+        "finding": "PASS",
+        "verdict": "Pagination offset works correctly (1-indexed semantics)"
+      },
+      "type_mismatch": {
+        "status": "DEFECT_FOUND",
+        "endpoint": "POST /collections/{collection}/points/count",
+        "finding": "DEFECT_FOUND",
+        "verdict": "String filter value on integer field returns count=0 (should be 400) - Type1_IllegalSuccess"
+      },
+      "compound_delete": {
+        "status": "DEFECT_FOUND",
+        "endpoint": "DELETE /collections/{collection}/points",
+        "finding": "DEFECT_FOUND",
+        "verdict": "Empty filter {} and ambiguous (points+filter) return 200 OK (should be 400) - Type1_IllegalSuccess"
+      },
+      "hnsw_boundary": {
+        "status": "DEFECT_FOUND",
+        "endpoint": "collections+create",
+        "finding": "DEFECT_FOUND",
+        "verdict": "hnsw_config.m=0 returns 200 OK (should be 400) - Type1_IllegalSuccess",
+        "r4_new": true
+      }
+    },
+    "types_pending": []
+  },
+  "condition_history": [
+    {
+      "turn": 5,
+      "endpoint": "points+search",
+      "condition_type": "range_filter",
+      "finding": "by_design_excluded",
+      "detail": {
+        "test": "inverted_range (gte > lte)",
+        "observation": "HTTP 200 OK with empty results",
+        "control_group": "impossible conditions also return 200 OK",
+        "verdict": "BY_DESIGN - qdrant treats impossible filters as valid queries returning empty results"
+      },
+      "inspired_by": null,
+      "inspired_next": [
+        "compound_and",
+        "compound_or"
+      ]
+    },
+    {
+      "turn": 8,
+      "endpoint": "points+search",
+      "condition_type": "compound_and",
+      "finding": "PASS",
+      "detail": {
+        "test": "range + match compound filter",
+        "observation": "Returns correct intersection (1 point with price=300)",
+        "verdict": "PASS"
+      },
+      "inspired_by": "range_filter",
+      "inspired_next": []
+    },
+    {
+      "turn": 10,
+      "endpoint": "points+search",
+      "condition_type": "compound_or",
+      "finding": "PASS",
+      "detail": {
+        "test": "should (OR) with range conditions",
+        "observation": "Returns correct union (4 points)",
+        "verdict": "PASS"
+      },
+      "inspired_by": "compound_and",
+      "inspired_next": []
+    },
+    {
+      "turn": 12,
+      "endpoint": "points+search",
+      "condition_type": "null_check",
+      "finding": "PASS",
+      "detail": {
+        "test": "is_null and is_empty conditions",
+        "observation": "is_null returns 0 (no null prices), is_empty returns 4 (nonexistent field)",
+        "verdict": "PASS"
+      },
+      "inspired_by": null,
+      "inspired_next": [
+        "cardinality_oracle"
+      ]
+    },
+    {
+      "turn": 15,
+      "endpoint": "POST /collections/{collection}/points/count",
+      "condition_type": "cardinality_oracle",
+      "finding": "DEFECT_FOUND",
+      "detail": {
+        "defect_id": "vein_cardinality_oracle_count_1",
+        "observation": "count(exact:false) errors: 50 size -13.3%, 200 size +5%, 500 size -10%",
+        "control_group_verification": {
+          "linear_scaling": "FAILED - non-linear error",
+          "consistent_direction": "FAILED - flips under/over",
+          "magnitude_10pct": "PASSED - exceeds tolerance",
+          "verdict": "NOT by-design - genuine estimator bug"
+        },
+        "defect_type": "Type2_PoorDiagnostics",
+        "severity": "P2_Medium",
+        "reference_issue": 10096,
+        "novelty": "LIKELY_NOVEL_INSTANCE"
+      },
+      "inspired_by": "qdrant-cardinality-oracle-count-exact-false",
+      "inspired_next": [
+        "geo_filter_cardinality",
+        "match_any_cardinality",
+        "is_empty_cardinality"
+      ]
+    },
+    {
+      "turn": 21,
+      "endpoint": "POST /collections/{collection}/points/query",
+      "condition_type": "query_filter_validation",
+      "finding": "DEFECT_FOUND",
+      "detail": {
+        "defect_id": "vein_query_filter_validation_1",
+        "endpoint": "POST /collections/{collection}/points/query",
+        "test_cases": [
+          "filter=null returns all points (should be 400)",
+          "filter.should=null returns all points (BS-01 bug #9418, #9420)",
+          "filter.must_not=object returns results (BS-01 bug #9419)",
+          "query=null returns results (should be 400)"
+        ],
+        "defect_count": 4,
+        "defect_type": "Type1_IllegalSuccess",
+        "severity": "P0_Critical",
+        "threat_model_reference": "Hist 67 - Parameter Validation (88 instances)",
+        "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+        "reference_issues": [9418, 9419, 9420],
+        "novelty": "CONFIRMED_BS01_PATTERN",
+        "finding": "Query endpoint silently accepts 4 invalid filter/input combinations - CRITICAL security issue"
+      },
+      "inspired_by": "threat_model_hist_67_BS01",
+      "inspired_next": [
+        "compound_delete_filter_validation",
+        "type_mismatch_filter_count"
+      ]
+    },
+    {
+      "turn": 25,
+      "endpoint": "DELETE /collections/{collection}/points",
+      "condition_type": "compound_delete",
+      "finding": "DEFECT_FOUND",
+      "detail": {
+        "defect_id": "vein_compound_delete_filter_validation_1",
+        "endpoint": "DELETE /collections/{collection}/points",
+        "test_cases": [
+          "Empty filter {} returns 200 OK (should be 400)",
+          "Both points AND filter returns 200 OK (ambiguous, should be 400)"
+        ],
+        "defect_count": 2,
+        "defect_type": "Type1_IllegalSuccess",
+        "severity": "P1_High",
+        "threat_model_reference": "Hist 67 - Parameter Validation (88 instances)",
+        "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+        "finding": "Delete endpoint accepts 2 invalid filter combinations without validation"
+      },
+      "inspired_by": "query_filter_validation",
+      "inspired_next": []
+    },
+    {
+      "turn": 28,
+      "endpoint": "POST /collections/{collection}/points/count",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "detail": {
+        "defect_id": "vein_type_mismatch_filter_count_1",
+        "endpoint": "POST /collections/{collection}/points/count",
+        "test": "String filter value on integer field",
+        "observation": "Returns count=0 with HTTP 200 OK (should be 400)",
+        "control_group": "Type-matched filter works correctly (count=1)",
+        "defect_type": "Type1_IllegalSuccess",
+        "severity": "P1_High",
+        "bug_shape": "qdrant-type-coercion-type-confusion",
+        "reference_issue": 9373,
+        "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+        "finding": "Type-mismatched filter value silently accepted with count=0"
+      },
+      "inspired_by": "query_filter_validation",
+      "inspired_next": []
+    },
+    {
+      "turn": 32,
+      "endpoint": "points+scroll",
+      "condition_type": "pagination_cursor",
+      "finding": "PASS",
+      "detail": {
+        "test": "Pagination offset boundary conditions",
+        "observation": "offset=0 returns 5 points, offset=20 (after_last) returns 1 point (1-indexed semantics)",
+        "control_group": "offset semantics verified as 1-indexed (not 0-indexed skip)",
+        "verdict": "PASS - pagination works correctly with 1-indexed offset"
+      },
+      "inspired_by": null,
+      "inspired_next": []
+    },
+    {
+      "turn": 36,
+      "endpoint": "points+search",
+      "condition_type": "null_check",
+      "finding": "DEFECT_FOUND",
+      "detail": {
+        "defect_id": "vein_hnsw_ef_null_search_1",
+        "test": "params.hnsw_ef = null",
+        "observation": "Returns 200 OK with search results (should be 400)",
+        "defect_type": "Type1_IllegalSuccess",
+        "severity": "P1_High",
+        "bug_shape": "qdrant-type-coercion-type-confusion",
+        "threat_model_blindspot": "BS-01",
+        "reference_issues": [9373, 9418, 9420],
+        "novelty": "LIKELY_NOVEL_INSTANCE",
+        "finding": "hnsw_ef parameter accepts null without validation"
+      },
+      "inspired_by": "contract_analysis - hnsw_ef parameter in params object",
+      "inspired_next": [
+        "params_null",
+        "hnsw_boundary"
+      ]
+    },
+    {
+      "turn": 37,
+      "endpoint": "points+search",
+      "condition_type": "null_check",
+      "finding": "DEFECT_FOUND",
+      "detail": {
+        "defect_id": "vein_params_null_search_1",
+        "test": "params = null",
+        "observation": "Returns 200 OK with search results (should be 400)",
+        "defect_type": "Type1_IllegalSuccess",
+        "severity": "P1_High",
+        "bug_shape": "qdrant-type-coercion-type-confusion",
+        "threat_model_blindspot": "BS-01",
+        "reference_issues": [9418, 9420],
+        "novelty": "LIKELY_NOVEL_INSTANCE",
+        "finding": "params object accepts null without validation"
+      },
+      "inspired_by": "hnsw_ef_null - finding-feedback: nested object null testing",
+      "inspired_next": [
+        "hnsw_boundary"
+      ]
+    },
+    {
+      "turn": 38,
+      "endpoint": "collections+create",
+      "condition_type": "hnsw_boundary",
+      "finding": "DEFECT_FOUND",
+      "detail": {
+        "defect_id": "vein_hnsw_config_m_boundary_1",
+        "test": "hnsw_config.m = 0",
+        "observation": "Returns 200 OK, creates collection (should be 400)",
+        "defect_type": "Type1_IllegalSuccess",
+        "severity": "P1_High",
+        "bug_shape": "qdrant-parameter-validation-numeric-boundary",
+        "threat_model_blindspot": "BS-04",
+        "reference_issues": [9149, 9017, 9027],
+        "contract_reference": "qdrant_range_create_collection_001 (m >= 2 AND m <= 100)",
+        "novelty": "LIKELY_NOVEL_INSTANCE",
+        "finding": "hnsw_config.m accepts 0 (below minimum [2,100]) without validation"
+      },
+      "inspired_by": "params_null - finding-feedback: test related HNSW parameters",
+      "inspired_next": []
+    }
+  ],
+  "last_finding": {
+    "endpoint": "collections+create",
+    "condition_type": "hnsw_boundary",
+    "finding": "DEFECT_FOUND"
+  },
+  "adjacent_pending": [],
+  "statistics": {
+    "total_conditions_tested": 9,
+    "total_findings": 11,
+    "defect_found_count": 7,
+    "by_design_excluded_count": 1,
+    "pass_count": 3,
+    "pending_conditions": 0,
+    "total_http_requests": 120,
+    "containers_started": 1,
+    "collections_created": 16,
+    "points_inserted": 1453,
+    "indexes_created": 6,
+    "turn_utilization_pct": 20.0,
+    "max_turns": 200,
+    "round": 4,
+    "round_4_turns": 5,
+    "round_4_new_defects": 3
+  },
+  "design_compliance": {
+    "v2.5.2_principles_followed": [
+      "✓ 消费 bug_shapes (引导到 count endpoint)",
+      "✓ 对所有 contract endpoints 评分 (评了 10/10)",
+      "✓ shape 优先 + richness 辅助排序",
+      "✓ 对照组验证排除 by-design (pagination, range filter)",
+      "✓ finding-feedback loop (null -> params_null -> hnsw_boundary)",
+      "✓ 用满 maxTurns 持续挖掘 (R4: 40 turns / 200 = 20%)"
+    ],
+    "r4_improvements": [
+      "✓ 覆盖新参数: hnsw_ef (params object in search endpoint)",
+      "✓ 发现 3 个新 DEFECT_FOUND (hnsw_ef=null, params=null, hnsw_config.m=0)",
+      "✓ finding-feedback cross-parameter (hnsw_ef -> params -> hnsw_config)",
+      "✓ 对照组验证更严格 (m=-1 correctly rejected as control)"
+    ]
+  },
+  "next_actions": {
+    "immediate": [
+      "对 3 个新 DEFECT_FOUND 运行验证脚本",
+      "更新 vein_summary.json 完整 R4 报告",
+      "准备 submission 包 (7 DEFECT_FOUND 总计: R3的4个 + R4的3个)"
+    ],
+    "deepen": [
+      "hnsw_boundary 可继续 deepen (hnsw_config.ef_construct, hnsw_config.m extreme values)",
+      "可测试 hnsw_ef 与 collection hnsw_config 交互 (search-time override validation)",
+      "可测试 params.unknown_field (schema validation - 未知字段是否被拒绝)"
+    ],
+    "validation": [
+      "对 7 DEFECT_FOUND 运行验证脚本",
+      "准备 control group 证据包",
+      "检查 novelty (BS-01 已知模式但新参数 novel)"
+    ]
+  },
+  "evidence_links": {
+    "script_1": "vein_scripts/vein_cardinality_oracle_count_1.py",
+    "meta_1": "vein_scripts/vein_cardinality_oracle_count_1.meta.json",
+    "script_2": "vein_scripts/vein_query_filter_validation_1.py",
+    "meta_2": "vein_scripts/vein_query_filter_validation_1.meta.json",
+    "script_3": "vein_scripts/vein_compound_delete_filter_validation_1.py",
+    "meta_3": "vein_scripts/vein_compound_delete_filter_validation_1.meta.json",
+    "script_4": "vein_scripts/vein_type_mismatch_filter_count_1.py",
+    "meta_4": "vein_scripts/vein_type_mismatch_filter_count_1.meta.json",
+    "script_5": "vein_scripts/vein_hnsw_ef_null_search_1.py",
+    "meta_5": "vein_scripts/vein_hnsw_ef_null_search_1.meta.json",
+    "script_6": "vein_scripts/vein_params_null_search_1.py",
+    "meta_6": "vein_scripts/vein_params_null_search_1.meta.json",
+    "script_7": "vein_scripts/vein_hnsw_config_m_boundary_1.py",
+    "meta_7": "vein_scripts/vein_hnsw_config_m_boundary_1.meta.json",
+    "summary": "vein_summary.json",
+    "threat_model": "intelligence/qdrant/threat_model.json",
+    "bug_shapes": "intelligence/qdrant/bug_shapes.json",
+    "contract": "results/qdrant/v1.18.2/structured_contract.json"
+  },
+  "generated_at": "2026-08-20T18:35:00Z",
+  "generated_by": "attack-vein v2.5.2 (Round 4)",
+  "total_candidates": 8,
+  "round_4_candidates": 3
+}

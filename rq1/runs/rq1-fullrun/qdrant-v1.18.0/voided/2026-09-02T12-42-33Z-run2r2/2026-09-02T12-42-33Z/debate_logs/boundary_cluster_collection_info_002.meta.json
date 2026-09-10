@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_collection_info_002",
+  "endpoint": "cluster+collection+info",
+  "param": "collection_name",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "boundary",
+  "oracle": {
+    "statement": "positive control existing collection -> 200; each guaranteed-unknown collection name -> exactly 404 per assertion qdrant_behavioral_cluster_collection_info_001; 200 on unknown = Type1_IllegalSuccess (R1 200-on-unknown family mirror); 5xx = Type3_RuntimeFailure (healthz rechecked); non-404 4xx = NOTE for judge; 404 body carrying cluster-info fields = Type4_StateLogicViolation",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

@@ -1,0 +1,22 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] index keys present=['delete_index', 'create_index', 'describe_collection', 'count', 'drop_collection', 'create_collection']
+[setup upsert] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.004041053}
+[setup create index] status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.51626185}
+[describe after create] describe status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":6,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_constr
+[baseline count] count status=200 raw={"result":{"count":6},"status":"ok","time":0.000414878}
+[chain drop collection] status=200 raw={"result":true,"status":"ok","time":0.007419188}
+[describe after drop] describe status=404 raw={"status":{"error":"Not found: Collection `sidd9_1788448359_23764_col` doesn't exist!"},"time":8.546e-6}
+[chain missing delete 0] status=404 raw={"status":{"error":"Not found: Collection `sidd9_1788448359_23764_col` doesn't exist!"},"time":0.000022856}
+[chain missing delete 1] status=404 raw={"status":{"error":"Not found: Collection `sidd9_1788448359_23764_col` doesn't exist!"},"time":0.000022603}
+[chain missing delete 2] status=404 raw={"status":{"error":"Not found: Collection `sidd9_1788448359_23764_col` doesn't exist!"},"time":0.000032488}
+[chain recreate] status=200 raw={"result":true,"status":"ok","time":0.265955617}
+[chain recreated idempotent delete] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.319123899}
+[chain recreated create index] status=200 raw={"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.470402257}
+[describe recreated indexed] describe status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_constr
+[chain recreated real delete] status=200 raw={"result":{"operation_id":6,"status":"completed"},"status":"ok","time":0.28433481}
+[describe recreated post-delete] describe status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_constr
+[recreated count] count status=200 raw={"result":{"count":0},"status":"ok","time":0.000207482}
+broken dependency chain clean: dropped-collection deletes 404 stable x3 with describe 404 reconciliation; after recreation the same delete flips to idempotent 200, index round-trip echoes and clears correctly, count=0 - NO_DEFECT
+[cleanup] dropped sidd9_1788448359_23764_col
+VERDICT: NO_DEFECT

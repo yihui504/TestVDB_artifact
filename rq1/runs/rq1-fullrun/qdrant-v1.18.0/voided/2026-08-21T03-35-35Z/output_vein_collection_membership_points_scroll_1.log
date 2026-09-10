@@ -1,0 +1,39 @@
+[Test 1] has_id with existing IDs only
+  Response status: 200
+  Returned IDs: [1, 5, 10]
+  Expected: [1, 5, 10]
+  ✓ PASS: has_id returns correct existing IDs
+
+[Test 2] has_id with mixed existing/non-existing IDs
+  Response status: 200
+  Returned IDs: [1, 5, 10]
+  Expected: [1, 5, 10] (non-existent IDs ignored)
+  ✓ PASS: has_id silently ignores non-existent IDs
+
+[Test 3] has_id with all non-existing IDs
+  Response status: 200
+  Returned points count: 0
+  Expected: 0 (empty result)
+  ✓ PASS: has_id with all non-existing IDs returns empty result
+
+[Test 4] has_id with empty ID list
+  Response status: 200
+  Returned points count: 0
+  Expected: 0 (empty result)
+  ✓ PASS: empty has_id returns empty result
+
+[Test 5] has_id with duplicate IDs
+  Response status: 200
+  Returned IDs: [1, 5, 10]
+  Expected: [1, 5, 10] (duplicates removed)
+  ✓ PASS: has_id deduplicates IDs
+
+============================================================
+VERDICT: NO_DEFECT
+============================================================
+Collection membership (has_id) filter works correctly:
+- returns existing IDs
+- silently ignores non-existent IDs
+- returns empty for all non-existing IDs
+- returns empty for empty ID list
+- deduplicates IDs

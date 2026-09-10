@@ -1,0 +1,10 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[vectors={} (empty map)] create: 200
+  upsert=400 query=400 patch-rescue=400 upsert_err={'status': {'error': 'Wrong input: Not existing vector name error: '}, 'time': 0
+  -> unusable collection alive: created 200, all writes/reads rejected, no PATCH rescue (vectors={} (empty map))
+[vectors field missing] create: 200
+  upsert=400 query=400 patch-rescue=400 upsert_err={'status': {'error': 'Wrong input: Not existing vector name error: '}, 'time': 0
+  -> unusable collection alive: created 200, all writes/reads rejected, no PATCH rescue (vectors field missing)
+[control normal create] upsert=200 (expect 200)
+VERDICT: DEFECT_FOUND — PUT /collections/{name} accepts vectors={} and a missing vectors field (200), creating green collections that reject every upsert/query with 400 'Not existing vector name error: ' and cannot be repaired via PATCH (diff schema has no size field)

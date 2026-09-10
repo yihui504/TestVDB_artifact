@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_set_005",
+ "endpoint": "payload+set",
+ "param": "payload",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "each of the ten type-confused bodies (payload omitted/[]/'city'/42/null; points='1'/[-1]/[1.5]; filter='city=ams'/filter={'must':'x'}) sent via payload+set (wait=true query, existing collection) returns a 4xx (unnamed 4xx = NOTE only per R29); any 200 is a defect — readback payload state changed = Type4_StateLogicViolation (destructive execution), deep-equal baseline = Type1_IllegalSuccess (invalid value accepted); 5xx/transport = Type3_RuntimeFailure with /healthz re-check; all ten rejected leaves payloads deep-equal baseline at the final readback (constraint qdrant_behavioral_payload_set_001: invalid input returns 400)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

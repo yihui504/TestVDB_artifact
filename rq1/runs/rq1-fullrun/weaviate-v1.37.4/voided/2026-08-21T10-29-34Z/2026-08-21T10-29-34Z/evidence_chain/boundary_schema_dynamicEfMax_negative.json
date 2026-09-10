@@ -1,0 +1,81 @@
+{
+  "defect_id": "boundary_schema_dynamicEfMax_negative",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Assertion inferred; github URL blocked (PARTIAL). Local clone exact v1.37.4. Source has no ordering (Min<=Max) nor positivity validation for the EF pair.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: dynamicEfMin=100, dynamicEfMax=-1 -> http=200, body persists dynamicEfMax=-1 (status 200, VERDICT: DEFECT_FOUND)",
+      "secondary_observations": [
+        "Min=100 > Max=-1 inverts the pair AND Max is negative; both fold into the same no-validation root; no 4xx rejection"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200; dynamicEfMax=-1 persisted as success; invalid (negative, order-inverting) EF parameter returned as a 2xx instead of a 4xx client error"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_dynamicEfMax_negative",
+        "boundary_schema_dynamicEf_inverted",
+        "boundary_schema_dynamicEfMin_negative",
+        "boundary_schema_dynamicEfMin_zero",
+        "boundary_schema_dynamicEfMinOnly"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_inferred_hnsw_ef_pairing_001",
+      "assertion_text_quoted": "dynamicEfMin and dynamicEfMax represent paired EF parameters where Min <= Max",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "assertion_id": "weaviate_inferred_hnsw_ef_pairing_001"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:weaviate_inferred_hnsw_ef_pairing_001 -> doc:assertion inferred, source=config.go -> script:boundary_schema_dynamicEfMax_negative POST /v1/schema with dynamicEfMax=-1 -> log:http=200, body persists dynamicEfMin=100 dynamicEfMax=-1"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "Chain complete. dynamicEfMax=-1 yields Min(100) > Max(-1): clear ordering violation (100 <= -1 is false), and a negative Max. Accepted+persisted, no source guard.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "DynamicEFMax OptionalIntFromMap",
+        "validate() dynamicEf checks",
+        "DynamicEFMin|DynamicEFMax runtime storage"
+      ],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go",
+        "entities/vectorindex/dynamic/config.go",
+        "adapters/repos/db/vector/hnsw/config_update.go",
+        "adapters/repos/db/vector/hnsw/index.go"
+      ],
+      "source_excerpt": "config.go:183-187 OptionalIntFromMap(\"dynamicEfMax\", func(v int){uc.DynamicEFMax=v}) verbatim assignment; config.go:260-323 validate() absent any check on DynamicEFMax sign or Min<=Max; config_update.go:104-105 stores efMax=DynamicEFMax directly; index.go efMax=int64(uc.DynamicEFMax).",
+      "call_chain_traced": "POST /schema -> ParseAndValidateConfig assigns dynamicEfMax=-1 -> validate() (no EF checks) -> persisted; efMax=-1 consumed at runtime.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "by-design"
+      ],
+      "surviving": "No code rejects negative or order-inverting dynamicEfMax; accepted verbatim and persisted deterministically (HTTP 200).",
+      "note": "value -1 both violates ordering (100>-1) and positivity; setting api_violates_assertion=true on the ordering ground."
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "defect_id": "semantic_r2b_nprobe_diag_05",
+  "endpoint": "entities+search (searchParams)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约有 search 参数域约束（milvus_range_entities_search_001 limit 域 1..16384 with 明确错误消息模板）但无 searchParams 键校验/诊断约束（gap）。对比可见 milvus 对 limit 越界有显式报错文案，对 searchParams 未知键无——同端点诊断粒度不一致。文档不可达，clone 为准。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "unknown key 'nprobes': ok=True raw={\"code\":0,\"cost\":0,\"data\":[{\"distance\":0,\"id\":0},{\"distance\":0.040000003,\"id\":1},{\"distance\":0.16000001,\"id\":2}],\"topks\":[3]}",
+      "secondary_observations": [
+        "nprobe='': ok=True raw={\"code\":0,...同上 topks:[3]}（空串值也静默通过）",
+        "VERDICT: searchParams error quality 0/6"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "此处无任何错误信号：未知键/空串值均 200+code:0 正常返回结果——Type2 诊断缺失（静默降级）而非 Type1"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/semantic_r2b_nprobe_diag_05.py", "vein_scripts/vein_searchparams_silent_default_3.py (R1 同域)", "boundary_searchparams_passthrough_016.py (R1)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "GAP (nearest: milvus_range_entities_search_001)",
+      "assertion_text_quoted": "nearest: \"1 <= limit + offset <= 16384 else error 'it should be in range [1, 16384], but got %d'\" —— 证明 milvus 对 search 其他参数有显式错误消息约定；searchParams 键域无对应约束（gap）",
+      "api_violates_assertion": true,
+      "note": "violates=True 理由：所引约束证明该端点存在'参数越界必须显式报错'的质量基线；nprobes（拼写错）与 nprobe='' 完全无错误信号违反同等诊断基线（弱违反，Type2 定位）。严格说观测参数（searchParams 键）不在 limit 约束域内——本 violates 判定基于端点级诊断一致性外推，auditor 可复核降级。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_range_entities_search_001（端点参数报错基线，弱覆盖 gap）",
+        "doc: clone 中 utils.go:2076 generateSearchParams 无键白名单（见 source）",
+        "script: semantic_r2b_nprobe_diag_05.py 传 nprobes 拼写错 + nprobe 空串",
+        "log: 两观测均 code:0 正常结果，0 错误信号"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["generateSearchParams", "nprobe (proxy/core/knowhere)", "WrapErrParameterInvalidMsg searchParams"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/utils.go (2076-2121 generateSearchParams)",
+        "internal/core/src/segcore/SegcoreConfig.cpp (85-92 nprobe 消费)",
+        "internal/core/src/segcore/IndexConfigGenerator.cpp (70)"
+      ],
+      "source_excerpt": "internal/distributed/proxy/httpserver/utils.go:2076-2117:\nfunc generateSearchParams(reqSearchParams map[string]interface{}) ([]*commonpb.KeyValuePair, error) {\n    var searchParams []*commonpb.KeyValuePair\n    var params interface{}\n    if val, ok := reqSearchParams[Params]; ok { params = val }\n    paramsMap := make(map[string]interface{})\n    if params != nil { if paramsMap, ok = params.(map[string]interface{}); !ok { return nil, merr.WrapErrParameterInvalidMsg(\"searchParams.params must be a dict\") } }\n    ... 仅做 params 内同名键歧义检查 ...\n    bs, _ := json.Marshal(paramsMap)\n    searchParams = append(searchParams, &commonpb.KeyValuePair{Key: Params, Value: string(bs)})\n键值原样 json.Marshal 透传——无已知键白名单、无值类型/域校验。'nprobes' 作为未知键随 JSON 下传，knowhere 侧忽略未识别键（IndexConfigGenerator 只在 interim 场景取 nprobe），故拼写错误静默降级到默认 nprobe。",
+      "call_chain_traced": "REST search -> handler_v2.go:1485 generateSearchParams -> KeyValuePair 透传 -> proxy task -> segcore/knowhere（knowhere 为 submodule，clone 中 thirdparty/knowhere 仅 CMake 外壳，消费逻辑不在树内；segcore 侧 SegcoreConfig.cpp:89 Assert(key==\"nprobe\") 仅针对 yaml 配置非用户请求）。全链无用户 searchParams 键校验点。",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (结果正常返回非失败)", "typo-in-script (nprobes 是故意的攻击输入)"],
+      "surviving": "by-design 抗辩：透传式 searchParams 设计允许索引特定参数自由传递，未知键忽略是 knowhere 通行行为——诊断缺失 vs 设计自由度的张力交 auditor"
+    }
+  },
+  "evidence_weight": "B（多脚本域复现（R1 vein/boundary + R2b）；源码透传链无校验点直证；Type2 本身为主观质量判定，contract gap + by-design 抗辩未排除）"
+}

@@ -1,0 +1,110 @@
+[vein_compound_and_points_delete_1] Testing compound_and on POST /collections/{c}/points/delete
+DB URL: http://localhost:6333
+Collection: vein_compound_and_delete_test_1
+
+[Test 1] Valid compound - score >= 30 AND category = A
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 2,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 0.000234985
+}
+  [PASS] Valid compound filter accepted
+
+[Test 2] Compound with invalid range - score >= 100 AND score <= 50
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 3,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 9.6931e-05
+}
+  [DEFECT_CANDIDATE] Compound with invalid range (gte > lte) accepted
+
+[Test 3] Compound with three conditions - must AND must AND must_not
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 4,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 0.000303761
+}
+  [PASS] Triple compound filter accepted
+
+[Test 4] Compound - valid condition AND invalid range
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 5,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 0.000120962
+}
+  [DEFECT_CANDIDATE] Compound with mixed valid/invalid conditions accepted
+
+[Test 5] Compound - is_null AND range
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 6,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 0.000411787
+}
+  [ACCEPTED] is_null compound accepted
+
+[Test 6] Compound - empty must array
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 7,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 0.000133362
+}
+  [DEFECT_CANDIDATE] Empty must array with must_not accepted
+
+[Test 7] Compound - contradictory conditions (score >= 100 AND score <= 50)
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 8,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 0.000207707
+}
+  [DEFECT_CANDIDATE] Contradictory compound accepted (always false)
+
+[Test 8] Nested compound - compound inside must
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 9,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 9.3748e-05
+}
+  [PASS] Nested compound accepted
+
+============================================================
+SUMMARY
+============================================================
+Findings:
+  - Compound filter with gte=100, lte=50 accepted - should validate bounds
+  - Compound with valid category + invalid score range accepted - should validate
+  - Compound with empty must[] + must_not accepted - unclear semantics
+  - Contradictory compound (score>=100 AND score<=50) accepted - should validate
+
+VERDICT: DEFECT_FOUND

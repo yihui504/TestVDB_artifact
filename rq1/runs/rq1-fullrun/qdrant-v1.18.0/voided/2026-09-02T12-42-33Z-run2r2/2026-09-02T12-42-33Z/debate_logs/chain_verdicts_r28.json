@@ -1,0 +1,59 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "R28",
+  "verdicts": [
+    {
+      "defect_id": "boundary_payload_delete_003",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED", "note": "uniform family posture (sibling payload/set payload={} also 200 no-op, probe D) with no by-design comment in the validation seam (only an unrelated TODO on error-code naming)"},
+        "cognition": {"verdict_D": "SUPPORTS_NOT_DEFECT",
+                       "matched_pattern": "lenient degenerate-form request-body acceptance defended as by-design (blindspot_indicators: lenient filter parsing; behavior-class isomorphism, cross-parameter-family)",
+                       "developer_quote": "This is fine and expected... it would be a breaking change"},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, mechanical: qdrant_state_payload_delete_001) → implied_verdict=NOT_DEFECT → final=NOT_DEFECT (mechanized layer; B/C/D recorded, cannot overturn)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": "contract_misread",
+      "constraint_category": "other",
+      "category_no_fit_reason": "claimed required-array emptiness norm exists in no contract unit: doc marks keys Required presence-only with no minItems and the cited state unit covers removal selectivity only (satisfied vacuously)",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A mechanical: qdrant_state_payload_delete_001 quote verified verbatim, api_violates_assertion=false — keys=[] no-op satisfies 'unlisted keys persist' vacuously (readback deep-equal baseline) → NOT_DEFECT mandated. Doc face marks keys Required presence-only with no minItems and points/filter Optional (no anyOf), so the page licenses the observed request; source confirms DeletePayloadShadow validates only selector presence and the schemars-generated OpenAPI carries no minItems, i.e. no norm exists anywhere (fp corroborated by source, primary refutation is doc). B=NEUTRAL (well-typed empty list; family disposition uniform — payload/set payload={} identical 200 no-op, so rules 5/6 do not fire), C=WEAK_REFUTED (no explicit by-design comment), D=SUPPORTS_NOT_DEFECT (lenient degenerate-form acceptance anchor, behavior-class match; 'API backward compatibility over strict validation' culture-consistent). Builder's chain_broken_at=doc flags the script oracle as unanchored — an unanchored claim, not an evidence contradiction, so the mechanical ruling stands without rework.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_payload_delete_006",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED", "note": "diagnostics are precise (offending value + expected type + line:col); no maintainer comment declares the field-name omission intentional, so not explicit by-design"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": "what_developers_prioritize hit ('Performance optimization over diagnostic completeness') — don't-care dimension, confidence-degradation annotation only, never decides",
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, mechanical: qdrant_behavioral_payload_delete_001) → implied_verdict=NOT_DEFECT → final=NOT_DEFECT (mechanized layer; B/C/D recorded, cannot overturn)"
+      },
+      "chain_broken_at": "log",
+      "root_cause_if_fp": "mundane_api_semantics",
+      "constraint_category": "other",
+      "category_no_fit_reason": "claimed error-message naming requirement has no contract unit: the cited behavioral unit covers status dispositions (200/400/404) and was satisfied exactly; no doc_consistency unit governs message content",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A mechanical: qdrant_behavioral_payload_delete_001 quote verified verbatim, api_violates_assertion=false — keys='city' was rejected with exactly the documented '400 on invalid input', the asserted face satisfied not violated → NOT_DEFECT mandated. The Type2 naming requirement exists only in the script's authored oracle; the captured doc contains no error-message-content promise, and source shows validation_present (actix validation_error_handler passing serde_json's standard invalid-type text through a generic 'Format error in JSON body' wrapper — serde names the field only on missing-field errors, matching sibling observations). B=NEUTRAL (type domain enforced, no accepting observation; message content is no objective constraint class), C=WEAK_REFUTED, D=NO_SIGNAL; sibling state_payload_delete_005 judged the byte-equivalent 400 NO_DEFECT, so builder's chain_broken_at=log (verdict contradicts its own raw log evidence) resolves conservatively in line with the mechanical ruling.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 2, "defect": 0, "not_defect": 2, "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 2, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {"contract_misread": 1, "mundane_api_semantics": 1},
+    "constraint_category_distribution": {"other": 2},
+    "candidate_class_distribution": {"strict_defect": 0, "exploratory_candidate": 0, "rejected": 2}
+  }
+}

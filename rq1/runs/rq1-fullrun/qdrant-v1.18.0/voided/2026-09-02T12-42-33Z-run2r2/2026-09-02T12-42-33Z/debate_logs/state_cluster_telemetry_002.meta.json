@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_telemetry_002",
+  "endpoint": "cluster+telemetry",
+  "param": null,
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "concurrent",
+  "oracle": {
+    "statement": "during a bounded race window (readers hammering no-param GET /cluster/telemetry while writers commit unique wait=true upserts) every telemetry read is 200 with result an object whose fingerprint (result key set, cluster.enabled, cluster.number_of_peers) equals the baseline (>=2 deviations = Type4_StateLogicViolation); no reader 5xx while /healthz is 200 (>=2 = Type3_RuntimeFailure); no writer 5xx (>=2 = Type3 after liveness); after the race exact count == 4 + accepted unique wait=true inserts (mismatch = Type4_StateLogicViolation); post-race control probe exactly 200 with baseline fingerprint (non-200 = Type3 after liveness; fingerprint mismatch = Type4)",
+    "source": "docstring"
+  }
+}

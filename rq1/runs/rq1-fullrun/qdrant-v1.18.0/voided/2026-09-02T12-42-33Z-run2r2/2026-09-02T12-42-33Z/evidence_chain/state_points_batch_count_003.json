@@ -1,0 +1,88 @@
+{
+  "defect_id": "state_points_batch_count_003",
+  "endpoint": "points+batch",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists in the contract dir (results/qdrant/v1.18.0/ has only structured_contract.json/raw_knowledge.json/doc_coverage_report.json, none carrying per-URL verdicts); WebFetch was network-restricted so both source URLs were re-verified via web reader - https://qdrant.tech/documentation/manage-data/points/ and https://api.qdrant.tech/v-1-18-x/api-reference/points/batch-update both fetched OK (qdrant.tech itself was NOT domain_blocked; only the WebFetch tool path was). Version: concept page (state constraint's source_url) has no version routing (site latest, normal for concept docs; contract records doc_version 'current') -> PARTIAL; api-reference page is explicitly versioned v-1.18.x (visible in page header) matching target v1.18.0. Content: concept page Batch Update section says verbatim 'A batch update request consists of a list of operations. These are executed in order.' and lists batchable ops including upsert and delete_points, and its example uses the exact {\"delete\": {\"points\": [1]}} op form the script sent; Idempotence section says 'points with the same id will be overwritten when re-uploaded'; Counting section documents exact=true. These directly support both cited constraints - and equally predict the observed count 3 (not 2) for M2. api-reference page documents POST /collections/:collection_name/points/batch, operations list Required, wait query ('If true, wait for changes to actually happen'), 200 response result: list of per-op {status, operation_id}. Endpoint: endpoint_registry['points+batch'] = POST /collections/{collection_name}/points/batch with doc_quote 'Operations are executed in order; returns 200 with per-operation results; 404 for a missing collection' - matches the script's registered path rt.PATHS['batch_update'] verbatim; readback faces points+count and points+get also registered.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "[M2 count] status=200 raw={\"result\":{\"count\":3},\"status\":\"ok\",\"time\":0.000127066} -> DEFECT: (M2) duplicate-id upsert + delete: exact count 3 != 2 — Type4_StateLogicViolation (script expected 2; M2 batch was: op1 upsert points [{id:20,payload:{\"try\":1}},{id:20,payload:{\"try\":2}}] in one points list, op2 delete points [12], wait=true, from pre-state {3,10,12} count=3)",
+      "secondary_observations": [
+        "[M2 batch 2 ops] status=200 raw={\"result\":[{\"operation_id\":6,\"status\":\"completed\"},{\"operation_id\":7,\"status\":\"completed\"}],\"status\":\"ok\"} — exactly 2 result entries for 2 operations (qdrant_behavioral_points_batch_001 compliant)",
+        "[M2 get 4 ids] status=200 raw={\"result\":[{\"id\":3,\"payload\":{\"gen\":2}},{\"id\":10,\"payload\":{\"n\":10}},{\"id\":20,\"payload\":{\"try\":2}}]} — visible set == script's own want_ids {3,10,20} (check PASSED); id 20 payload == {\"try\":2} = LAST list entry won (check PASSED); note want_ids itself has 3 elements, contradicting the same oracle's expected count 2",
+        "[M1 count] status=200 raw={\"result\":{\"count\":3}} — net-zero mixed batch kept count 3 (check PASSED); [M1 get 6 ids] visible set {3,10,12}, id 3 payload {\"gen\":2} from the LATER in-batch re-upsert (order semantics confirmed working, M1 fully PASSED)",
+        "cross-script same-semantic control (output_state_points_batch_idempotence_004.log): [R2 batch 2 ops] same id 77 upserted twice (two ops) -> [R2 count] status=200 raw={\"result\":{\"count\":3}} from pre-count 2 and [R2 get 1 ids] id 77 payload {\"try\":2} — duplicate-id upsert nets exactly +1 point with last-write-wins, and that script's correct oracle (==3) yielded VERDICT: NO_DEFECT on this same qdrant v1.18.0 instance",
+        "reproducibility scan: 'exact count .* !=' appears in only one other log (output_state_points_batch_concurrent_010.log) but as a different phenomenon ('(P2) exact count 50 != 51 after concurrent identical batches on one id' — concurrency-triggered, different trigger and mechanism), not the same pattern as this sequential single-client oracle mismatch"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No client-error-shaped request; all requests well-formed per doc (op form {\"delete\":{\"points\":[12]}} matches the doc's own batch example) and all returned HTTP 200 with per-op results; the mismatch is between the oracle constant 2 and the observed 3."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_points_batch_count_003"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_points_batch_001",
+      "assertion_text_quoted": "batch operations are applied sequentially in the order given; each operation reports its own result",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check: the observed end-state IS the constraint-compliant outcome — sequential in-order application of [upsert {20 x2}, delete 12] over pre-state {3,10,12} yields exactly the observed count 3 and visible set {3,10,20} with id 20 = {\"try\":2} (duplicate ids collapse to one point per the documented Idempotence semantics, so the upsert nets +1 and the delete nets -1: 3+1-1=3). The constraint is correctly cited (it governs in-batch ordering and per-op results); the observed value is genuinely compliant. The co-cited qdrant_behavioral_points_batch_001 ('batch update returns HTTP 200 with one result entry per operation; missing collection returns 404') is also satisfied: M2 returned 200 with exactly 2 per-op result entries; M1 returned 200 with exactly 4. The related state invariant qdrant_inv_count_consistency_001 ('upserting N points with wait=true then counting with exact=true returns count=N') likewise predicts 3, not 2: exactly 1 new point (id 20) was upserted and 1 deleted. The script's expected value 2 is arithmetically underivable from any cited constraint and contradicts the script's own docstring line '+1-1=0 relative net' and its own want_ids set of 3 elements.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_points_batch_001 exists in structured_contract.json constraints/state_constraints[3] (endpoint points+batch, assertion 'batch operations are applied sequentially in the order given; each operation reports its own result', source_url qdrant.tech/documentation/manage-data/points/); co-cited qdrant_behavioral_points_batch_001 exists in assertions[] — link present (candidates.jsonl constraint_id empty but script header supplies both ids)",
+        "doc: concept page reachable and states verbatim 'A batch update request consists of a list of operations. These are executed in order.' + Idempotence 'points with the same id will be overwritten when re-uploaded' + Counting exact=true — prose supports the assertion AND predicts count 3 for the M2 ops — link intact",
+        "script: state_points_batch_count_003.py registers POST /collections/{collection_name}/points/batch and sends M2 = [{\"upsert\":{\"points\":[{id:20,try:1},{id:20,try:2}]}},{\"delete\":{\"points\":[12]}}] with wait=true (request form matches doc example verbatim) — BUT the oracle constant at line 294-296 demands cnt == 2, contradicting the constraint-derived value 3, the script's own docstring '+1-1=0 relative net' (lines 19-20), its own inline comment arithmetic (line 282-283: 'upsert ... -> +1 (try:2 wins); delete 12 -> -1 => count 2' — 3+1-1=3, not 2), and its own want_ids {3,10,20} (3 elements, line 300) — BROKEN LINK",
+        "log: DEFECT line faithfully reports the script's oracle comparison ('exact count 3 != 2'); the raw responses beneath it ([M2 batch 2 ops] 200 with 2 per-op entries, [M2 count] count=3, [M2 get 4 ids] {3,10,20} with try:2) show an API state fully consistent with in-order sequential application — the verdict pattern is fully explained by the script-link oracle error, not by any API misbehavior"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The script's expected-count oracle for phase M2 is arithmetically wrong: from pre-state {3,10,12} (count 3), upserting one NEW id twice within a single op's points list (duplicate ids documented to collapse via overwrite semantics) nets +1 and deleting id 12 nets -1, so the constraint-correct count is 3 — which is exactly what the API returned, together with the exactly-correct visible set {3,10,20} and last-write-wins payload {\"try\":2} (both of the script's OTHER M2 checks passed against correct oracles). The script's own docstring line '+1-1=0 relative net' agrees with 3; only the coded constant (cnt != 2) and one inline comment say 2. The DEFECT_FOUND verdict is therefore an artifact of the oracle constant, not evidence of a Type4 state-logic violation in the target.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "points/batch",
+        "fn batch_update|async fn update_batch|batch_update\\(",
+        "fn do_batch_update_points",
+        "duplicat|dedup",
+        "PointInsertOps::",
+        "fn upsert_points|UpsertPoints\\(insert_info\\)|match insert_info"
+      ],
+      "files_examined": [
+        "src/actix/api/update_api.rs (lines 300-372)",
+        "src/common/update.rs (lines 680-919)",
+        "lib/shard/src/update.rs (lines 150-259)",
+        "lib/collection/src/collection/point_ops.rs (lines 330-517)"
+      ],
+      "source_excerpt": "// src/actix/api/update_api.rs:327-336,349-359 — REST route for points+batch\n#[post(\"/collections/{collection_name}/points/batch\")]\nasync fn update_batch(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    operations: Json<UpdateOperations>,\n    params: Query<UpdateParams>,\n    ...\n) -> impl Responder {\n    let operations = operations.into_inner();\n    ...\n    let result_with_usage = do_batch_update_points(\n        StrictModeCheckedTocProvider::new(&dispatcher),\n        collection.into_inner().collection_name,\n        operations.operations,\n        ...\n    ).await;\n\n// src/common/update.rs:780-792,889-895 — operations applied sequentially IN ORDER, one result per operation\n    let mut results = Vec::with_capacity(operations.len());\n    let mut inference_usage = InferenceUsage::default();\n\n    for operation in operations {\n        let current_update_result = match operation {\n            UpdateOperation::Upsert(operation) => {\n                let (result, usage) = do_upsert_points(\n                    toc_provider.clone(),\n                    collection_name.clone(),\n                    operation.upsert,\n                    ...\n                ).await?;\n                inference_usage.merge_opt(usage);\n                result\n            }\n            UpdateOperation::Delete(operation) => {\n                do_delete_points(\n                    toc_provider.clone(),\n                    collection_name.clone(),\n                    operation.delete,\n                    ...\n                ).await?\n            }\n            /* SetPayload / OverwritePayload / DeletePayload / ClearPayload / UpdateVectors / DeleteVectors arms ... */\n        };\n\n        results.push(current_update_result);   // line 891 — one UpdateResult per operation\n    }\n\n    Ok((results, inference_usage.into_non_empty()))   // line 894\n\n// lib/shard/src/update.rs:181-196 — duplicate ids inside ONE upsert op collapse to ONE point, LAST entry wins\npub fn upsert_points<'a, T>(\n    segments: &SegmentHolder,\n    op_num: SeqNumberType,\n    points: T,\n    hw_counter: &HardwareCounterCell,\n) -> OperationResult<usize>\nwhere\n    T: IntoIterator<Item = &'a PointStructPersisted>,\n{\n    let points_map: AHashMap<PointIdType, _> = points.into_iter().map(|p| (p.id, p)).collect();  // line 190 — HashMap keyed by id: a later duplicate entry REPLACES the earlier one during collect\n    let ids: Vec<PointIdType> = points_map.keys().copied().collect();\n\n    let mut res = 0;\n\n    for ids_chunk in ids.chunks(UPDATE_OP_CHUNK_SIZE) {\n        // Update points in writable segments; insert not-found ids into smallest appendable segment\n        ...\n    }\n    Ok(res)\n}\n\n// lib/collection/src/collection/point_ops.rs:407-441 — exact count = sum over shards of stored points\npub async fn count(&self, request: CountRequestInternal, ...) -> CollectionResult<CountResult> {\n    ...\n    let mut count = 0;\n    while let Some(response) = requests.try_next().await? {\n        count += response.count;\n    }\n    Ok(CountResult { count })\n}",
+      "call_chain_traced": "POST /collections/{collection_name}/points/batch -> src/actix/api/update_api.rs update_batch (line 327) -> src/common/update.rs do_batch_update_points (line 752): strict-mode pre-check pass, then a sequential 'for operation in operations' loop (line 783) dispatching each op in request order to do_upsert_points/do_delete_points/... and pushing one UpdateResult per op (line 891) -> upsert reaches lib/shard/src/update.rs upsert_points (line 181), where the points list is folded into an AHashMap<PointIdType, _> keyed by id (line 190): duplicate ids within ONE upsert op collapse to a single map entry with the LAST entry's payload (HashMap insert-overwrite), then each id is updated-or-inserted once (lines 195-252) -> delete removes ids -> readback: count (lib/collection/src/collection/point_ops.rs:407) sums stored points across shards; retrieve (line 443) dedups by id via covered_point_ids HashMap (lines 500-514). No re-validation layer reverses any of this. Source semantics therefore dictate: M2 [upsert {20 try:1},{20 try:2}; delete 12] over {3,10,12} => exactly one new point id 20 carrying {\"try\":2}, id 12 gone => final count 3, visible {3,10,20} — precisely what the log observed.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (all requests 200 on live v1.18.0; no 5xx/transport noise; single-client run)",
+        "concurrency (operations sequential with wait=true; count and batch-get readback faces AGREE with each other and with the ops: count 3 == len({3,10,20}))",
+        "cache_delay (wait=true used on both batch ops; readback immediately reflects both the upsert and the delete — no stale-read window)",
+        "request_typo (M2 request form matches the doc's own batch example key-for-key: {\"upsert\":{\"points\":[...]}},{\"delete\":{\"points\":[12]}})"
+      ],
+      "surviving": null
+    }
+  }
+}

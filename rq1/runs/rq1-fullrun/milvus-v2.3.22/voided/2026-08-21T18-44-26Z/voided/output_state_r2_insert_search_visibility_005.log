@@ -1,0 +1,9 @@
+create: 200 {"code":200,"data":{}}
+batch0: insert_code=200 | search_code=200 hits=10 | query_code=200 qhits=1 | rowCount=0 (expected_total=10)
+batch1: insert_code=200 | search_code=200 hits=10 | query_code=200 qhits=0 | rowCount=0 (expected_total=20)
+batch2: insert_code=200 | search_code=200 hits=10 | query_code=200 qhits=0 | rowCount=0 (expected_total=30)
+batch3: insert_code=200 | search_code=200 hits=10 | query_code=200 qhits=0 | rowCount=0 (expected_total=40)
+batch4: insert_code=200 | search_code=200 hits=10 | query_code=200 qhits=0 | rowCount=0 (expected_total=50)
+final (after 6s): search hits=50 rowCount=0 expected=50
+SUSPECT: ('final', 'post-bounded-window inconsistency', 50, 0, 50)
+VERDICT: DEFECT_FOUND

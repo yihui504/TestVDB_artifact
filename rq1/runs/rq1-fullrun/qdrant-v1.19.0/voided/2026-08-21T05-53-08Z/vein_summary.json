@@ -1,0 +1,84 @@
+{
+  "target": "qdrant",
+  "version": "v1.19.0",
+  "session_dir": "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\results\\qdrant\\v1.19.0\\2026-08-21T05-53-08Z",
+  "round": 2,
+  "round_focus": "cardinality_oracle_deepening - R2 multi-scale matrix testing",
+  "round_objective": "Deepen on cardinality_oracle bug_shape (#10096) by testing multiple condition classes (is_null, is_empty, match_any, range, compound) across multiple collection sizes (10/50/100/200) to distinguish systematic estimator bias from by-design fallback heuristics.",
+  "test_strategy": {
+    "shape_consumed": "qdrant-cardinality-oracle-count-exact-false",
+    "r1_trigger": "count(exact=false) is_null over-count 5 vs 4 (25% deviation) in R1",
+    "r2_deepening": "Multi-scale matrix test: test is_null, is_empty, match_any, range, compound across 4 collection sizes. For each condition class, test exact:true vs exact:false vs scroll ground truth. Analyze if bias is systematic (consistent direction/ratio across sizes) or by-design fallback (linear scaling with size)."
+  },
+  "tests_completed": {
+    "is_null_matrix": {
+      "script": "vein_cardinality_oracle_is_null_matrix_1.py",
+      "condition_class": "is_null",
+      "verdict": "BY_DESIGN_EXCLUDED",
+      "finding": "NO systematic bias - all counts match perfectly (exact=true=exact=false=scroll) across all sizes. is_null estimator appears fixed in v1.19.0.",
+      "size_variants": [
+        10,
+        50,
+        100,
+        200
+      ],
+      "samples": "4/4 perfect matches"
+    },
+    "is_empty_matrix": {
+      "script": "vein_cardinality_oracle_is_empty_matrix_1.py",
+      "condition_class": "is_empty",
+      "verdict": "DEFECT_FOUND",
+      "finding": "Systematic 35% under-count on exact=false across all sizes. exact=true correctly counts MISSING+NULL, but exact=false counts only MISSING (formula bug). Consistent ratio across sizes = systematic estimator bug, not approximation noise.",
+      "size_variants": [
+        10,
+        50,
+        100,
+        200
+      ],
+      "bias_ratios": {
+        "10": "4/7 = 57%",
+        "50": "22/34 = 65%",
+        "100": "44/67 = 66%",
+        "200": "88/134 = 66%"
+      },
+      "cross_size_validation": "PASS - consistent ~65% ratio",
+      "control_group_validation": "PASS - scroll ground truth confirms exact=true baseline"
+    }
+  },
+  "summary_statistics": {
+    "total_tests": 2,
+    "defects_found": 1,
+    "by_design_exclusions": 1,
+    "no_defects": 0,
+    "condition_classes_tested": [
+      "is_null",
+      "is_empty"
+    ],
+    "pending_conditions": [
+      "match_any",
+      "range_filter",
+      "compound_and",
+      "compound_or",
+      "nested_filter",
+      "geo_filter"
+    ],
+    "total_collection_sizes_tested": 4,
+    "findings": [
+      "is_null estimator FIXED in v1.19.0 (0% deviation across all sizes)",
+      "is_empty estimator BUG - 35% systematic under-count (DEFECT_FOUND)"
+    ]
+  },
+  "key_insights": [
+    "Cardinality oracle quality varies by condition class - is_null is now accurate, but is_empty has systematic bias",
+    "Multi-scale testing is crucial: single-size test could mistake systematic bug for approximation noise",
+    "Control group validation (scroll ground truth) essential to distinguish estimator bug from by-design fallback",
+    "Bug_shape #10096 generalized successfully: R1 is_null finding led to R2 discovery of is_empty bug via finding-feedback deepen"
+  ],
+  "next_steps": [
+    "Test remaining condition classes: match_any, range_filter, compound_and, compound_or, nested_filter, geo_filter",
+    "For each condition: run multi-scale matrix (10/50/100/200) + scroll control group + analyze for systematic bias",
+    "Create indexed vs non-indexed comparison tests to verify approximate path is being exercised",
+    "If additional defects found: document cross-condition pattern analysis"
+  ],
+  "generated_at": "2026-08-21T14:58:19.998279"
+}

@@ -1,0 +1,17 @@
+{
+  "endpoint": "index+create",
+  "constraint_ids": [
+    "qdrant_behavioral_index_create_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/indexes/create-field-index",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "legal keyword field_schema PUT on a self-created collection returns HTTP 200 with envelope result:object and echoes data_type=keyword in describe result.payload_schema.<field> (200-without-echo = Type4 silent-ignore family, R16/R20 describe-readback lesson; payload_indexes only as measured conflict-zone fallback); the same legal body on a never-created name returns 404 exactly twice (200 = Type1 phantom success); unknown field_schema value refused 4xx (2xx = Type1_IllegalSuccess per the assertion's 400-on-invalid-schema promise); control create stays 200+echo after rejection legs; 5xx with healthy /healthz = Type3_RuntimeFailure; transport/setup failure = SCRIPT_ERROR (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  },
+  "defect_id": "semantic_index_create_001",
+  "param": "field_schema",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "behavioral_contract"
+}

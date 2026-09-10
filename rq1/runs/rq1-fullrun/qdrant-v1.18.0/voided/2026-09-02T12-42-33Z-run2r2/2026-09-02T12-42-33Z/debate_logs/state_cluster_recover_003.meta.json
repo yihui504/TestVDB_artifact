@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_recover_003",
+  "endpoint": "cluster+recover",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "concurrent",
+  "oracle": {
+    "statement": "with WRITERS (TESTVDB_CONCURRENT_THREADS default 20, capped 10) threads each doing 4 sequential wait=true single-point upserts of globally unique ids plus one mid-storm POST /cluster/recover: final exact count == 5 + total accepted 2xx upserts (less = acknowledged write lost = Type4_StateLogicViolation; more = ghost points = Type4_StateLogicViolation); writer 5xx events >=2 distinct = Type3_RuntimeFailure only after /healthz returns 200 (single = observation); final GET /collections/{c} -> 200 (404 = Type4); /healthz 200 within the 20s grace window (never-200 = Type3)",
+    "source": "docstring"
+  }
+}

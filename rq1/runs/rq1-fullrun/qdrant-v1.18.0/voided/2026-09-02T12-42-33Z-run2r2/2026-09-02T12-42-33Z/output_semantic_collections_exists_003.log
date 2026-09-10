@@ -1,0 +1,25 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] collection_exists = /collections/{collection_name}/exists (raw_knowledge api_endpoints[collections+exists].url)
+ownership prefix: sce03353353
+[relation R] exists(n)==True <=> describe(n)==200 <=> n in list; exists(n)==False <=> describe(n)==404 <=> n not in list (status asymmetry by design; the VALUE may not disagree)
+[pre-probe] /healthz status=200 raw=healthz check passed
+[create sce03353353_live] status=200 raw={"result":true,"status":"ok","time":0.35460926}
+[P1 positive/exists] name='sce03353353_live' status=200 value=True raw={"result":{"exists":true},"status":"ok","time":5.961e-6}
+[P1 positive/describe] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shar
+[P1 positive/list] status=200 raw={"result":{"collections":[{"name":"bcc139b6a8bp2"},{"name":"bcc139bc7c6p2"},{"name":"scc024_1788393554_legal_1"},{"name":"scc024_1788393554_legal_8"},{"name":"scc2a_1788393513_35968_shmin"},{"name":"s
+[conform] P1 positive: three faces agree - exists=True, describe=200, listed=True
+[P2 negative/exists] name='sce03353353_never' status=200 value=False raw={"result":{"exists":false},"status":"ok","time":5.96e-6}
+[P2 negative/describe] status=404 raw={"status":{"error":"Not found: Collection `sce03353353_never` doesn't exist!"},"time":6.389e-6}
+[P2 negative/list] status=200 raw={"result":{"collections":[{"name":"bcc139b6a8bp2"},{"name":"bcc139bc7c6p2"},{"name":"scc024_1788393554_legal_1"},{"name":"scc024_1788393554_legal_8"},{"name":"scc2a_1788393513_35968_shmin"},{"name":"s
+[conform] P2 negative: three faces agree - exists=False, describe=404, listed=False
+[delete sce03353353_live] status=200 raw={"result":true,"status":"ok","time":0.006862116}
+[P3 post-delete/exists] name='sce03353353_live' status=200 value=False raw={"result":{"exists":false},"status":"ok","time":4.827e-6}
+[P3 post-delete/describe] status=404 raw={"status":{"error":"Not found: Collection `sce03353353_live` doesn't exist!"},"time":5.39e-6}
+[P3 post-delete/list] status=200 raw={"result":{"collections":[{"name":"bcc139b6a8bp2"},{"name":"bcc139bc7c6p2"},{"name":"scc024_1788393554_legal_1"},{"name":"scc024_1788393554_legal_8"},{"name":"scc2a_1788393513_35968_shmin"}]},"status"
+[conform] P3 post-delete: three faces agree - exists=False, describe=404, listed=False
+[P4 list] status=200 raw={"result":{"collections":[{"name":"bcc139b6a8bp2"},{"name":"bcc139bc7c6p2"},{"name":"scc024_1788393554_legal_1"},{"name":"scc024_1788393554_legal_8"},{"name":"scc2a_1788393513_35968_shmin"}]},"status"
+[P4] owned names still listed: []
+[conform] P4: no owned names remain listed after the delete
+OK: exists/describe/list faces agree on existence in both directions for live, never-created and just-deleted names (relation R holds)
+VERDICT: NO_DEFECT

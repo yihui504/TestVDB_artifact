@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_fieldops_pk_structural_005",
+  "endpoint": "entities+upsert",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraints 原文即断言 fieldOps 结构违规（op on pk field、field absent from schema 等）全部 1100 拒绝且零行修改；本链主证为契约+源码 tier，limitations.md 可达性已验证（同一会话抓取 200）",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "op on pk field -> code=0 raw={\"code\":0,\"cost\":0,\"data\":{\"upsertCount\":1,\"upsertIds\":[1]}}（fieldOps [{fieldName:\"id\", op:REPLACE}]，data={\"id\":99,\"id\":1}）",
+      "secondary_observations": [
+        "field absent from schema -> code=0 raw={\"code\":0,...,\"upsertCount\":1,\"upsertIds\":[1]}}（fieldName:\"ghost\" 不在 schema，作为动态字段接受）",
+        "row not in data -> code=1100 'fieldSchema(vec) has no corresponding fieldData pass in' — 但状态检查发现 title 已被改为 'x'（状态泄漏：拒绝后行被修改）",
+        "empty fieldName -> code=1100 'FieldPartialUpdateOp.field_name is required'（正确拒绝）",
+        "duplicate ops same field -> code=1100 'duplicate partial-update op for field \"title\"'（正确拒绝）",
+        "fieldOps no partialUpdate -> code=0（隐式提升，契约 by-design）",
+        "fieldOps empty array -> code=0（no-op）"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "主观测为非法结构被接受（2xx+code:0）；次观测 1100 也是 2xx 业务错误码形态"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_fieldops_pk_structural_005.py"],
+      "evidence_source": "behavior",
+      "claim_alignment_note": "派发三条子claim（pk op / absent field / state leak）全部在 log 中兑现；'partial' 因 'row not in data' 拒绝路径与状态泄漏的组合需要 auditor 复核因果（title 泄漏来自该次被拒请求还是前序已接受请求，log 时间序上泄漏检测紧跟该 1100 之后但此前有多次 code:0 的 title 写入）"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_state_entities_upsert_fieldops_001",
+      "assertion_text_quoted": "any(fieldOps structural violation) => code 1100, no rows modified; non-REPLACE op present => request implicitly promoted to partialUpdate=true",
+      "api_violates_assertion": true,
+      "note": "契约明言 op on primary-key field 与 field absent from schema 属结构违规应 1100；观测均 code:0 且行被修改，violates=true",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_state_entities_upsert_fieldops_001",
+        "doc: 契约 source_url=task_upsert_partial_op.go（源码 tier）+limitations.md 可达",
+        "script: boundary_fieldops_pk_structural_005.py 七结构用例",
+        "log: pk op code=0 / ghost field code=0 / 拒后 title 泄漏"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "无断链；但 'state leak' 子观测因果归属存疑（见 claim_alignment_note），供 auditor 判定",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["validateFieldPartialUpdateOps", "IsPrimaryKey", "REPLACE", "field_name is required"],
+      "files_examined": [
+        "internal/proxy/task_upsert_partial_op.go (全文 275 行)",
+        "internal/proxy/task_upsert.go (L1126 调用点)",
+        "internal/distributed/proxy/httpserver/request_v2.go (L329-374 FieldPartialUpdateOpReq/buildFieldPartialUpdateOps/parseFieldPartialUpdateOp)"
+      ],
+      "source_excerpt": "task_upsert_partial_op.go L132-148：`op := opMsg.GetOp(); if op == schemapb.FieldPartialUpdateOp_REPLACE { // An explicit REPLACE is legal but indistinguishable from no op at all. Accept silently — no further validation needed. continue } ... if _, isPK := pkFields[name]; isPK { return ... \"field %q is the primary key and cannot carry a partial-update op\" }; fieldSchema, err := findFieldSchemaByName(schema, name); if err != nil { return err }` —— 关键：PK 检查与 schema 存在性检查（findFieldSchemaByName L206-213）都位于 REPLACE 的 continue 之后，仅对 ARRAY_APPEND/ARRAY_REMOVE 生效。REST 场景 op:\"REPLACE\" 或缺省都映射 REPLACE（request_v2.go parseFieldPartialUpdateOp 默认返回 REPLACE），故 pk-field op 与 absent-field op 直接旁路全部结构校验。",
+      "call_chain_traced": "REST upsert -> buildFieldPartialUpdateOps（REPLACE 旁路）-> proxy Upsert -> task_upsert.go:1126 validateFieldPartialUpdateOps -> REPLACE continue 短路 -> 无 PK/无 schema 检查 -> 写入",
+      "verification_outcome": "by_design_in_source",
+      "note": "源码注释显式声明 REPLACE 'Accept silently — no further validation needed'（by-design 注释在源码中）；但契约将 op on pk / field absent 列为无条件结构违规。这是 contract 与 source 意图的分歧点：violates_assertion 对契约成立，源码抗辩为显式 by-design——留给 auditor 裁量。state leak：task_upsert.go queryPreExecute L237+ 的 retrieve-then-merge 流程中，被拒请求（1100 'no corresponding fieldData'）发生在 PreExecute 之后段，部分字段数据已在先前成功请求中写入，泄漏机制未在源码定位到单点",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "REPLACE 旁路为源码注释声明的 by-design 行为（抗辩材料，非排除）"
+    }
+  },
+  "evidence_weight": "strong（behavior 三子claim + source REPLACE-bypass 逐行定位；by-design 抗辩与契约分歧已如实标注）"
+}

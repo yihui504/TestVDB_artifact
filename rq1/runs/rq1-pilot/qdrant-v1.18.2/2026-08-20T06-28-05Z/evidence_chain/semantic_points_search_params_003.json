@@ -1,0 +1,70 @@
+{
+  "defect_id": "semantic_points_search_params_003",
+  "endpoint": "points+search",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation partially accessible: api.qdrant.tech domain blocked. structured_contract shows params as optional object with SearchParams structure (hnsw_ef, exact, quantization), but no explicit validation documented for null, empty, or malformed params object structures.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "INFO: Empty params accepted | INFO: Null params accepted | INFO: Unknown param 'unknown_param_xyz' silently accepted (may be ignored) | DEFECT_FOUND (Type1_IllegalSuccess) — Typo param 'hnsw_ef_typo' silently ignored | DEFECT_FOUND (Type1_IllegalSuccess) — Array params silently accepted (should be object) | DEFECT_FOUND (Type2_PoorDiagnostics) — Nested hnsw_ef error lacks details (score 1/3)",
+      "secondary_observations": ["Error quality for nested hnsw_ef: 1/3 — raw={\"status\":{\"error\":\"Format error in JSON body: invalid type: map, expected usize at line 1 column 705\"}}"],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 (partial)",
+        "note": "Empty/null params accepted with 200 OK + success. Typo 'hnsw_ef_typo' silently ignored (200 OK). Array params accepted (200 OK). Nested hnsw_ef rejected with error message but low quality (1/3)."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_points_search_params_003"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_search_points_001",
+      "assertion_text_quoted": "len(vector) = collection.vectors.size",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_type_search_points_001 (vector dimension matching only)",
+        "doc:api.qdrant.tech (params as optional object, structural validation unspecified)",
+        "script:semantic_points_search_params_003 (tests {}, null, typo, array, nested map)",
+        "log:empty/null/typo/array accepted (Type1), nested map rejected with poor error (Type2)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Chain broken at doc: No documented structural validation contract for params object. Contract only specifies vector dimension constraint, not params schema validation. API accepts {} (empty), null (missing), typo 'hnsw_ef_typo' (silently ignored), array (wrong type) - all returning 200 OK. Only nested map rejected, with poor error quality (1/3).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "pub params: Option<SearchParams>",
+        "impl Validate for SearchParams",
+        "serde.*flatten",
+        "unknown_param"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/types.rs",
+        "lib/segment/src/types.rs",
+        "lib/api/src/rest/schema.rs"
+      ],
+      "source_excerpt": "/// Additional search params\n#[validate(nested)]\npub params: Option<SearchParams>,\n\n...\n\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Copy, Clone, PartialEq, Default, Hash)]\n#[serde(rename_all = \"snake_case\")]\npub struct SearchParams {\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub hnsw_ef: Option<usize>,\n    #[serde(default)]\n    pub exact: bool,\n    #[validate(nested)]\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub quantization: Option<QuantizationSearchParams>,\n}\n\n...\n\n// No strict mode validation for unknown fields in params - serde ignores unknown properties by default",
+      "call_chain_traced": "SearchRequest.params: Option<SearchParams> (nested validate) → SearchParams struct (hnsw_ef, exact, quantization) → serde deserialization ignores unknown fields (no #[serde(deny_unknown_fields)]) → 'hnsw_ef_typo' dropped silently → empty/null/array accepted due to Option wrapper + lenient serde",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Three param validation failures: 1) Empty params {} accepted (should require valid structure or reject). 2) Typo 'hnsw_ef_typo' silently ignored (no strict validation). 3) Array params accepted (type validation missing). All indicate insufficient structural validation on params object."
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "endpoint": "collections+update",
+  "constraint_ids": [
+    "qdrant_range_collections_update_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "each documented HnswConfigDiff minimum (m=0, ef_construct=4, full_scan_threshold=10, payload_m=0) is accepted by PATCH with 200 result===true (4xx on a minimum-legal diff = Type1_IllegalRejection); each below-minimum value (ef_construct=3, full_scan_threshold=9, m=-1, payload_m=-1) is refused 4xx (any 2xx = Type1_IllegalSuccess) and no refusal message scores 0/3 on the Type-2 rubric (c1 param path named / c2 format-range / c3 actionable; 0/3 = Type2_PoorDiagnostics); per-leg scores printed; control describe stays 200; 5xx with healthy /healthz = Type3_RuntimeFailure; setup/transport failure = SCRIPT_ERROR (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  },
+  "defect_id": "semantic_collections_update_002",
+  "param": "hnsw_config",
+  "expected_defect_type": "Type2_PoorDiagnostics",
+  "strategy": "diagnosis_quality"
+}

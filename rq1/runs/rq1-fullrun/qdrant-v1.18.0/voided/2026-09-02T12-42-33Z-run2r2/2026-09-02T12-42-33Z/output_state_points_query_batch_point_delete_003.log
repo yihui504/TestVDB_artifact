@@ -1,0 +1,20 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['count', 'delete_points', 'get_point', 'healthz', 'query_batch', 'upsert_points']
+[seed] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.003517446}
+[P-seed count] status=200 raw={"result":{"count":4},"status":"ok","time":0.000210661}
+[P batch by-id [10, 11, 12, 13]] status=200 raw={"result":[{"points":[{"id":13,"version":1,"score":0.0},{"id":11,"version":1,"score":0.0},{"id":12,"version":1,"score":0.0}]},{"points":[{"id":13,"version":1,"score":0.0},{"id":10,"version":1,"score":0.0},{"id":12,"version":1,"score":0.0}]},{"points":[{"id":13,"version":1,"score":0.0},{"id":10,"version":1,"score":0.0},{"id":11,"version":1,"score":0.0}]},{"points":[{"id":12,"version":1,"score":0.0}
+[del delete [12, 13]] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.004608157}
+[del count] status=200 raw={"result":{"count":2},"status":"ok","time":0.000095012}
+[corroborate GET 12] status=404 raw={"status":{"error":"Not found: Point with id 12 does not exists!"},"time":0.000196393}
+[mixed batch by-id [10, 12, 11]] status=404 raw={"status":{"error":"Not found: No point with id 12 found"},"time":0.000188076}
+[mixed] whole-batch 404 rejection — accepted disposition (per-entry error granularity is not promised); recorded, no claim
+[pos2 batch by-id [10, 11]] status=200 raw={"result":[{"points":[{"id":11,"version":1,"score":0.0}]},{"points":[{"id":10,"version":1,"score":0.0}]}],"status":"ok","time":0.001160783}
+[final count] status=200 raw={"result":{"count":2},"status":"ok","time":0.000162772}
+DEFECT: (P) by-id search of live id 10 did not return it (got [13, 11, 12]) — Type4_StateLogicViolation
+DEFECT: (P) by-id search of live id 11 did not return it (got [13, 10, 12]) — Type4_StateLogicViolation
+DEFECT: (P) by-id search of live id 12 did not return it (got [13, 10, 11]) — Type4_StateLogicViolation
+DEFECT: (P) by-id search of live id 13 did not return it (got [12, 10, 11]) — Type4_StateLogicViolation
+DEFECT: (pos2) by-id search of survivor 10 did not return it (got [11]) — Type4_StateLogicViolation
+DEFECT: (pos2) by-id search of survivor 11 did not return it (got [10]) — Type4_StateLogicViolation
+VERDICT: DEFECT_FOUND

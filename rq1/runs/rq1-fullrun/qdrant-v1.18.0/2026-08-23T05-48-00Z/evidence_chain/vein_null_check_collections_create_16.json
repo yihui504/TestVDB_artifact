@@ -1,0 +1,96 @@
+{
+  "defect_id": "vein_null_check_collections_create_16",
+  "endpoint": "PUT /collections/{collection_name} (collections+create)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "type_note": "Primary observation = illegal success on create (semantically-unusable config accepted with 200); identical trigger judged Type1_IllegalSuccess by sibling boundary_collections_create_01. Script meta.json expected Type4; the downstream 'green-but-unusable collection' consequence is Type4-flavored. Final classification left to chain-auditor.",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS via web-reader MCP fallback (WebFetch itself blocked by domain policy for api.qdrant.tech; fallback fetched the full page, so domain_blocked is not asserted). Version PASS: page is /v-1-18-x/ (1.18.x) vs target 1.18.0. Content PARTIAL: doc documents `vectors` as 'object or map from strings to objects Optional' with single/multiple-mode examples and states NO non-empty requirement nor any minimum vector-config count — the doc does not assert that vectors={} or a missing vectors field must be rejected, so the must-reject premise is not grounded in explicit doc text; conversely sibling observation (vectors=null -> 400 'Format error in JSON body: data did not match any variant of untagged enum VectorsConfig') proves type-level validation exists for enum-invalid values. Endpoint PASS: PUT /collections/{collection_name} present in contract endpoint_registry as collections+create.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[vectors={} (empty map)] create: 200 / upsert=400 query=400 patch-rescue=400 upsert_err={'status': {'error': 'Wrong input: Not existing vector name error: '}, 'time': 0 (log lines 3-4); [vectors field missing] create: 200 (log line 6) with identical 400 triple (line 7)",
+      "secondary_observations": [
+        "[control normal create] upsert=200 (expect 200) (log line 9 — same server, sane config works end-to-end)",
+        "-> unusable collection alive: created 200, all writes/reads rejected, no PATCH rescue (vectors={} (empty map)) (log line 5)",
+        "sibling boundary_collections_create_01.log line 21: CASE vectors=null: status=400 body={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 17\"}}",
+        "sibling boundary_collections_create_01.log line 22: CASE vectors={} empty: status=200 body={\"result\":true,\"status\":\"ok\"}",
+        "sibling boundary_collections_create_01.log line 24: CASE vectors missing entirely: status=200 body={\"result\":true,\"status\":\"ok\"}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 200 full success (no error code at all — misconfig silently accepted, body {\"result\":true,\"status\":\"ok\"})",
+        "note": "The create-time client error (config with zero vector storages) is not surfaced at all: 2xx + success body, so no retry/repair signal reaches the client. The later upsert/query rejections are correctly 400 with a descriptive (though empty-name) error. Script final run exit code 0, no SCRIPT_ERROR; retry_count=2 in retry_feedback.json was a script-hygiene retry (cleanup_unwrapped class), not environment flakiness."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_null_check_collections_create_16", "boundary_collections_create_01"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "(dispatched empty; nearest = qdrant_type_collections_create_003)",
+      "assertion_text_quoted": "qdrant_type_collections_create_003: assertion 'vectors with invalid enum value => HTTP 400 Format error in JSON body'; description 'inferred: invalid vectors config value rejected as 400 JSON format error (runtime observed: data did not match any variant of untagged enum VectorsConfig on distance:Bogus)'; source_url https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection. Nearest schema-level ground: OpenAPI CreateCollection has no required array; VectorsConfig = oneOf[VectorParams(required size+distance), VectorsConfig1(object, additionalProperties VectorParams)] — an empty object validates as VectorsConfig1 with zero entries.",
+      "api_violates_assertion": false,
+      "note": "Violates=False on domain grounds, not on compliance grounds: the observed inputs (vectors={} empty map; vectors field missing) are NOT inside the constraint's domain (enum-invalid values like distance:Bogus or null — those ARE rejected with 400, verified). No constraint in structured_contract.json asserts a non-empty vectors requirement or minimum one vector config (checked type/range/state collections_create entries 001-011 and behavioral assertions 001-003); the REST doc explicitly marks the field Optional. So no doc-grounded assertion is violated — the defect case rests on inferred validation intent (null rejected vs empty/missing accepted asymmetry) and on operational semantics (green collection permanently unusable for vector data), which is chain-auditor's call.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: candidates.jsonl dispatch carried constraint_id=\"\" (vein free-exploration, no mechanical constraint); nearest post-hoc = qdrant_type_collections_create_003 (inferred tier), whose domain covers enum-invalid values only — no contract assertion covers empty-map/missing vectors",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection reachable via web-reader fallback; `vectors` documented as 'object or map from strings to objects Optional' — no non-empty requirement stated anywhere on the page",
+        "script: PUT /collections/vein_c16a body {\"vectors\":{}} and PUT /collections/vein_c16b body {\"shard_number\":1} (vectors field missing) + upsert/query/PATCH probes + control create with {\"vectors\":{\"size\":4,\"distance\":\"Cosine\"}} (vein_null_check_collections_create_16.py lines 32-66)",
+        "log: [vectors={} (empty map)] create: 200 then upsert=400 query=400 patch-rescue=400 'Wrong input: Not existing vector name error: '; [vectors field missing] create: 200 same triple; [control normal create] upsert=200 — independently corroborated by boundary_collections_create_01 lines 21-25"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "Broken at the contract link in the narrow sense: the dispatched candidate carries no constraint_id, and no constraint in structured_contract.json covers the observed input domain (empty vectors map / missing vectors field) — the doc even marks the field Optional, so the doc-contract layer cannot ground a must-reject premise. The script, log, and source links are intact and mutually consistent: observed behavior is fully explained by the source (serde default normalizes missing field to empty named-vector map; name-validation loop is vacuous on empty map; no non-emptiness check exists anywhere in the create chain).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Not existing vector name",
+        "enum VectorsConfig",
+        "fn create_collection (lib/storage/src)",
+        "VectorNameNotExists",
+        "DEFAULT_VECTOR_NAME",
+        "vector_name_not_exists\\(",
+        "payload.only collection|collection without vectors|without any vectors|vectors are optional",
+        "pub struct VectorParamsDiff"
+      ],
+      "files_examined": [
+        "lib/storage/src/content_manager/collection_meta_ops.rs",
+        "lib/storage/src/content_manager/toc/create_collection.rs",
+        "lib/collection/src/operations/types.rs",
+        "lib/segment/src/common/operation_error.rs",
+        "lib/segment/src/common/mod.rs",
+        "lib/segment/src/segment/entry.rs",
+        "lib/segment/src/data_types/vectors.rs",
+        "tests/openapi/test_optional_vectors.py",
+        ".sourcedeps/qdrant/v1.18.0/openapi.json (schema cross-check; repo openapi/*.ytt.yaml located as generation config)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/collection_meta_ops.rs:106-114 (CreateCollection.vectors is #[serde(default)] VectorsConfig — not Option):\n 106 /// Operation for creating new collection and (optionally) specify index params\n 107 #[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, PartialEq, Eq, Hash, Clone)]\n 108 #[serde(rename_all = \"snake_case\")]\n 109 pub struct CreateCollection {\n 110     /// Vector data config.\n 111     /// It is possible to provide one config for single vector mode and list of configs for multiple vectors mode.\n 112     #[serde(default)]\n 113     #[validate(nested)]\n 114     pub vectors: VectorsConfig,\n\nlib/collection/src/operations/types.rs:1468-1479 (Default == EMPTY multi map, so missing field is exactly equivalent to vectors={}):\n 1468 #[derive(Debug, Deserialize, Serialize, JsonSchema, Anonymize, Clone, PartialEq, Hash, Eq)]\n 1469 #[serde(rename_all = \"snake_case\", untagged)]\n 1470 pub enum VectorsConfig {\n 1471     Single(VectorParams),\n 1472     Multi(BTreeMap<VectorNameBuf, VectorParams>),\n 1473 }\n 1475 impl Default for VectorsConfig {\n 1476     fn default() -> Self {\n 1477         VectorsConfig::Multi(Default::default())\n 1478     }\n 1479 }\n\nlib/storage/src/content_manager/collection_meta_ops.rs:192-243 (THE validation that exists — iterates map KEYS only; an empty map iterates zero times, so it passes vacuously; there is NO check that the map is non-empty or that at least one dense/sparse config exists):\n 192 impl CreateCollectionOperation {\n 193     pub fn new(\n 194         collection_name: String,\n 195         create_collection: CreateCollection,\n 196     ) -> StorageResult<Self> {\n 197         // Apply the same vector-name validation that the\n 198         // `PUT /collections/{name}/vectors/{vector_name}` endpoint enforces\n 199         // (length 0..=200, no filesystem-unsafe characters), so both creation\n 200         // paths reject the same set of bad names. ...\n 207         if let collection::operations::types::VectorsConfig::Multi(multi) =\n 208             &create_collection.vectors\n 209         {\n 210             for vector_name in multi.keys() {\n 211                 common::validation::validate_vector_name(vector_name).map_err(|err| {\n 212                     StorageError::bad_input(format!(\n 213                         \"Invalid dense vector name `{vector_name}`: {err}\",\n 214                     ))\n 215                 })?;\n 216             }\n 217         }\n 218         if let Some(sparse_config) = &create_collection.sparse_vectors {\n 219             for vector_name in sparse_config.keys() { ... validate_vector_name ... }\n 226         }\n 228         // validate vector names are unique between dense and sparse vectors\n 229         if let Some(sparse_config) = &create_collection.sparse_vectors { ... uniqueness ... }\n 245         Ok(Self { collection_name, create_collection, distribution: None })\n\nlib/storage/src/content_manager/toc/create_collection.rs:31-46,132-134 (TableOfContent::create_collection destructures vectors and passes it into CollectionParams with no emptiness check):\n  31         let CreateCollection {\n  32             mut vectors, ...\n 132         let collection_params = CollectionParams {\n 133             vectors,          // VectorsConfig::Multi({}) flows through unchecked\n 134             sparse_vectors, ...\n\nlib/segment/src/data_types/vectors.rs:259 + lib/segment/src/common/operation_error.rs:27-28 (why the upsert error carries an EMPTY name):\n 259 pub const DEFAULT_VECTOR_NAME: &VectorName = \"\";\n  27 #[error(\"Not existing vector name error: {received_name}\")]\n  28 VectorNameNotExists { received_name: VectorNameBuf },   // received_name = \"\" -> 'Not existing vector name error: '\n\nlib/collection/src/operations/types.rs:1676-1688 + OpenAPI VectorParamsDiff (why PATCH cannot rescue — diff schema has no size/distance):\n 1676 pub struct VectorParamsDiff {\n 1680     pub hnsw_config: Option<HnswConfigDiff>,\n 1688     pub quantization_config: Option<QuantizationConfigDiff>,   // (+ on_disk, memory per OpenAPI; no size, no distance)",
+      "call_chain_traced": "actix PUT /collections/{name} -> CreateCollectionOperation::new (collection_meta_ops.rs:192; per-key name validation only, VACUOUS on empty map; no non-empty/minimum-one-config check) -> TableOfContent::create_collection (toc/create_collection.rs:20; no emptiness check; missing field already normalized by serde default at types.rs:1475 to Multi(empty)) -> CollectionParams{vectors: Multi({})} -> collection created, status green, zero vector storages -> subsequent upsert/query with unnamed dense vector resolves to DEFAULT_VECTOR_NAME=\"\" (vectors.rs:259) -> segment lookup fails -> OperationError::VectorNameNotExists{received_name:\"\"} (operation_error.rs:27-28, constructed via vector_name_not_exists() at operation_error.rs:117-121; write-path instances e.g. segment/entry.rs:716, common/mod.rs:169/182) -> mapped to 400 'Wrong input: Not existing vector name error: ' (types.rs:1110 BadInput). PATCH rescue impossible: UpdateCollection uses VectorsConfigDiff/VectorParamsDiff which have no size/distance fields (types.rs:1676-1688; OpenAPI VectorParamsDiff props = hnsw_config, quantization_config, on_disk, memory), so vector geometry can never be added after create.",
+      "verification_outcome": "validation_absent",
+      "outcome_note": "The claim's required validation (reject create with zero vector configs, or equivalently require non-empty vectors map when no sparse_vectors given) does not exist anywhere in the create chain. Name-level validation exists but iterates keys and is vacuous on {}. By-design defense investigated and NOT confirmed: tests/openapi/test_optional_vectors.py is about partial named vectors inside an existing multivec collection (fixture creates text+image vectors), not about vector-less collections; grep for 'payload-only'/'collection without vectors'/'vectors are optional' across the repo returned zero hits; no comment or test marks create-without-vectors as intended. Only mild external evidence for a by-design reading is the REST doc's 'Optional' marker on the vectors field (recorded under mundane_explanation.surviving).",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (control: normal create on same server -> upsert 200, log line 9)",
+        "request-typo (exact bodies recorded in script lines 33-34; sibling boundary_collections_create_01 reproduced independently with full response bodies)",
+        "concurrency (fully sequential requests)",
+        "cache-delay (deterministic immediate 400s, twice, plus sibling reproduction)",
+        "script-error (final run exit 0, VERDICT line present; retry_count=2 was cleanup-hygiene retry class 'cleanup_unwrapped')"
+      ],
+      "surviving": "by_design_missing_vectors_optional — official REST doc marks `vectors` Optional, so payload-only collections may be an intended use, which would make create-200 by-design for the missing-field case. However this reading does not explain the asymmetry (vectors=null -> 400 untagged-enum format error, while {} / missing -> 200) nor the empty-name error diagnostics, and no in-repo test/comment confirms intent. Weighing is chain-auditor's call."
+    }
+  }
+}

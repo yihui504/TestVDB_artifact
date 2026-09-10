@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_facet_003",
+ "endpoint": "facet",
+ "param": "limit (default-10 closure / min-1 boundary / count invariance across truncation / below-min rejection)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "constraint_ids": [
+  "qdrant_range_facet_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/points/facet",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "omitted limit -> 200 with exactly the top-10 multiset {v1:25..v10:16}; limit=1 -> 200 with the single hit v1:25; per-value counts identical between limit=5 and limit=25 readouts; limit 25/50 -> 200 with all 25 values; limit 0/-1 -> 400. Deviations = Type4 for count drift / Type1 for a below-min limit accepted as 200; 5xx with /healthz alive = Type3_RuntimeFailure",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

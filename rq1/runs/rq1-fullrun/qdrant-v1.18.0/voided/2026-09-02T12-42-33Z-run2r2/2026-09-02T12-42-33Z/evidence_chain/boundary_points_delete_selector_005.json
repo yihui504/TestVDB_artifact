@@ -1,0 +1,99 @@
+{
+  "defect_id": "boundary_points_delete_selector_005",
+  "endpoint": "points+delete (POST /collections/{collection_name}/points/delete)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: WebFetch was policy-blocked for api.qdrant.tech; fallback fetch via web reader succeeded — page title 'Delete points | Qdrant | API Reference', canonical URL confirms the page resolves (disclosed for the auditor). Version: URL segment /v-1-18-x/ plus page banner 'v1.18.x' — major.minor matches target v1.18.0. Content: the doc's own Request section documents an OR-selector grammar verbatim as 'PointIdsList object Required OR FilterSelector object Required' (the both-at-once case itself is NOT explicitly documented — the exactly-one semantics is grammar-implied, honest gap recorded); the assertion's 200/404/400 dispositions match the endpoint_registry doc_quote ('200 ok, 404 for a missing collection, 400 for an invalid filter') and raw_knowledge expected_responses (200 ok / 404 not found / 400 bad request+validation error) captured at contract build time (verified_at 2026-09-02T12:34:08Z). Endpoint: points+delete registered in endpoint_registry (method POST, same source_url); tested path /collections/{name}/points/delete is exact. This is the REST API reference and the REST face was tested — no SDK/REST confusion. No doc_preflight.json sidecar exists in the contract directory (checked), so live re-verification was performed as specified.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "S2 both selectors (points [2] AND filter grp=red) -> status=200 | raw: {\"result\":{\"operation_id\":3,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.002670554} | VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — S2: ambiguous selector (points AND filter simultaneously) accepted with status 200; resolution: ONE branch silently resolved the ambiguity (count 4 -> 3)",
+      "secondary_observations": [
+        "S1 selector-less body {} -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum PointsSelector\"},\"time\":0.0} — zero-branch control: the server DOES 400-reject when no selector variant matches, so selector-grammar validation exists but is first-match-wins",
+        "G guard valid ids-delete [1] -> status=200 | G: 200, count == 4 == 4 (guard baseline set) — endpoint live, deterministic baseline before the probe",
+        "[live-repro 2026-09-04, rest face points+delete, evidence-builder probe on a fresh throwaway collection] same body {\"points\":[2],\"filter\":{\"must\":[{\"key\":\"grp\",\"match\":{\"value\":\"red\"}}]}} -> 200 {\"result\": {\"operation_id\": 2, \"status\": \"completed\"}, \"status\": \"ok\"}; exact count 5 -> 4; scroll remaining ids [1,3,4,5] — winning branch identified: POINTS (id 2 deleted; id 3 grp=red SURVIVED, so the filter key was silently dropped, not applied)",
+        "[live-comparative rest payload+delete, same PointsSelector type embedded] {\"keys\":[\"city\"],\"points\":[4],\"filter\":{\"must\":[{\"key\":\"grp\",\"match\":{\"value\":\"b\"}}]}} -> 200 {\"result\": {\"operation_id\": 4, \"status\": \"completed\"}, \"status\": \"ok\"} — same ambiguity acceptance on the sibling face",
+        "[live-comparative rest payload+clear] {\"points\":[2],\"filter\":{\"must\":[{\"key\":\"grp\",\"match\":{\"value\":\"red\"}}]}} -> 404 {\"status\":{\"error\":\"Not found: No point with id 2 found\"}} — selector deserialization PASSED and resolved to the points branch (the 404 is downstream id-absence because id 2 was already deleted by the prior probe, not a grammar rejection)",
+        "[live-comparative rest payload+clear zero-branch control] {} -> 400 {\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum PointsSelector\"},\"time\":0.0} — zero-branch rejection shared across all faces that use the type",
+        "[family repro, sibling script boundary_points_delete_invalid_filter_004, same endpoint+constraint] T2 must_not as OBJECT -> status=200 ... blast radius: DESTRUCTIVE: count moved 6 -> 0",
+        "[family repro, sibling script state_points_delete_002, same endpoint+constraint] [m2-should-null] status=200 body={\"filter\": {\"should\": null}} ... [m2-should-null count] status=200 raw={\"result\":{\"count\":0}}; [m3-cond-without-match] status=200 body={\"filter\": {\"must\": [{\"key\": \"grp\"}]}}",
+        "[face_unavailable grpc/sdk] gRPC port 6334 unreachable in this sandbox and no grpc client installed (grpcurl absent); source inspection shows the gRPC face uses a protobuf oneof (lib/api/src/grpc/qdrant.rs:7743 PointsSelectorOneOf) which structurally permits at most ONE selector field at the wire level — the ambiguous request is inexpressible on that face, so no cross-face disposition could be recorded"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Stronger than the 2xx+business-error-code family: the request-side-decidable invalid (a body satisfying BOTH branches of the documented OR-selector grammar) returned a PLAIN 200 success envelope {\"result\":{\"operation_id\":3,\"status\":\"completed\"},\"status\":\"ok\"} with no error signal at all — and the ambiguous request was not merely accepted but EXECUTED destructively (one point deleted). The adjacent zero-branch boundary (S1) shows the server does emit a proper 400 with a diagnostic when zero variants match."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_points_delete_selector_005 (primary: the exact both-selector probe)",
+        "boundary_points_delete_invalid_filter_004 (family: invalid filter construct accepted 200 on same endpoint+constraint)",
+        "state_points_delete_002 (family: malformed filter clauses accepted 200 on same endpoint+constraint)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_delete_001",
+      "assertion_text_quoted": "returns 200 ok (UpdateResult) on success; 404 when the collection is missing; 400 on an invalid filter",
+      "api_violates_assertion": true,
+      "note": "Violates-declaration self-check: the observed phenomenon (200+success on an ambiguous request, per the self-check's 'illegal value silently accepted' shape) is grounded as follows — the filter in the S2 body is individually WELL-FORMED, so the assertion's literal '400 on an invalid filter' trigger is not met word-for-word; the violated promise is the endpoint's documented request grammar (Request section: 'PointIdsList object Required OR FilterSelector object Required' — an exactly-one selector) together with the endpoint's documented 400='bad request / validation error' disposition face (raw_knowledge expected_responses): a body matching both branches is a validation error per the API's own oneOf grammar, yet it received the 200-success envelope and was executed. The disposition chosen: NOT 'value genuinely compliant' — the request violates the documented selector grammar, and the server's own S1 zero-branch 400 proves that grammar is enforced on the adjacent boundary, making the S2 acceptance an inconsistency in the server's own validation rather than undocumented territory. The 200-success promise is thereby consumed by a non-valid request. Dispatch metadata note: candidates.jsonl constraint_id was the empty string; the constraint was recovered from the attack string and the script header (constraint_ids: qdrant_behavioral_points_delete_001), and the constraint exists in structured_contract.json assertions — recorded for the auditor.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_delete_001 present in structured_contract.json assertions (endpoint points+delete, evidence_tier explicit, level endpoint, source_url https://api.qdrant.tech/v-1-18-x/api-reference/points/delete-points, source_status reachable). Note: candidates.jsonl constraint_id field was empty ''; recovered from the attack string + script header constraint_ids — a dispatch-metadata gap, not a contract gap",
+        "doc: source_url fetched (WebFetch policy-blocked; web-reader fallback succeeded); Request section verbatim 'PointIdsList object Required OR FilterSelector object Required'; 200/404/400 dispositions present in registry doc_quote + raw_knowledge; the both-at-once disposition is grammar-implied, not explicitly worded — the one link where the doc prose is silent on the exact probed boundary",
+        "script: boundary_points_delete_selector_005.py line 110 S2_BODY = {\"points\": [2], \"filter\": {\"must\": [{\"key\": \"grp\", \"match\": {\"value\": \"red\"}}]}} — both selector keys in one body, matching the claim; branches deliberately target different ids (2=a, 3=red) so the count guard discriminates the winner; oracle pre-declared any-2xx on S2 = Type1_IllegalSuccess",
+        "log: output_boundary_points_delete_selector_005.log S2 -> status=200 with completed envelope and count 4->3 — verdict DEFECT_FOUND (Type1_IllegalSuccess) consistent with the raw response bytes; S1 control 400-consistent; whole log read (seed/G/S1/S2; S3 unreachable because the script returns on the S2 defect — noted)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "enum PointsSelector",
+        "pub struct PointIdsList",
+        "deny_unknown_fields",
+        "fn do_delete_points",
+        "delete_points (actix route/handler)",
+        "PointsSelectorOneOf"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/point_ops.rs (lines 1-130: PointsSelector untagged enum, Validate impl, FilterSelector)",
+        "lib/shard/src/operations/point_ops.rs (lines 35-54: PointIdsList struct and its derives)",
+        "lib/segment/src/types.rs (deny_unknown_fields occurrences incl. Filter at 3793-3794 and test_deny_unknown_fields at 4390)",
+        "src/actix/api/update_api.rs (lines 66-111: delete_points handler; 474-486: route registration)",
+        "src/common/update.rs (lines 412-447: do_delete_points)",
+        "lib/api/src/grpc/qdrant.rs (lines 7738-7756: PointsSelectorOneOf prost oneof for the gRPC face)"
+      ],
+      "source_excerpt": "// lib/collection/src/operations/point_ops.rs:19-35 — the shared REST selector type\n#[derive(Debug, Deserialize, Serialize, JsonSchema)]\n#[serde(untagged, rename_all = \"snake_case\")]\npub enum PointsSelector {\n    /// Select points by list of IDs\n    PointIdsSelector(PointIdsList),\n    /// Select points by filtering condition\n    FilterSelector(FilterSelector),\n}\n\nimpl Validate for PointsSelector {\n    fn validate(&self) -> Result<(), ValidationErrors> {\n        match self {\n            PointsSelector::PointIdsSelector(ids) => ids.validate(),\n            PointsSelector::FilterSelector(filter) => filter.validate(),\n        }\n    }\n}\n\n// lib/shard/src/operations/point_ops.rs:41-48 — FIRST variant: NO deny_unknown_fields\n#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, JsonSchema, Validate, Hash)]\n#[serde(rename_all = \"snake_case\")]\npub struct PointIdsList {\n    pub points: Vec<PointIdType>,\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub shard_key: Option<api::rest::ShardKeySelector>,\n}\n\n// lib/segment/src/types.rs:3793-3794 — the OTHER branch's Filter IS strict (same codebase, same selector family)\n#[serde(deny_unknown_fields, rename_all = \"snake_case\")]\npub struct Filter {\n\n// src/actix/api/update_api.rs:80-89 — REST boundary: raw JSON body deserialized directly into the untagged enum\n#[post(\"/collections/{collection_name}/points/delete\")]\nasync fn delete_points(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    operation: Json<PointsSelector>,\n    params: Query<UpdateParams>,\n    service_config: web::Data<ServiceConfig>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Responder {\n    let operation = operation.into_inner();\n\n// src/common/update.rs:425-432 — executes whichever variant won; no ambiguity/mutual-exclusion check\nlet (operation, shard_key) = match points {\n    PointsSelector::PointIdsSelector(PointIdsList { points, shard_key }) => {\n        (PointOperations::DeletePoints { ids: points }, shard_key)\n    }\n    PointsSelector::FilterSelector(FilterSelector { filter, shard_key }) => {\n        (PointOperations::DeletePointsByFilter(filter), shard_key)\n    }\n};\n\n// lib/api/src/grpc/qdrant.rs:7742-7748 — contrast: the gRPC face models the same choice as a protobuf oneof\n#[derive(Clone, PartialEq, ::prost::Oneof)]\npub enum PointsSelectorOneOf {\n    #[prost(message, tag = \"1\")]\n    Points(super::PointsIdsList),\n    #[prost(message, tag = \"2\")]\n    Filter(super::Filter),\n}",
+      "call_chain_traced": "src/actix/api/update_api.rs:84 Json<PointsSelector> (serde deserializes the raw body) -> #[serde(untagged)] enum tries variants IN ORDER: PointIdsSelector(PointIdsList) matches {\"points\":[2]} and SILENTLY IGNORES the sibling \"filter\" key because PointIdsList carries no deny_unknown_fields (lib/shard/src/operations/point_ops.rs:41-48) -> Validate impl (lib/collection/src/operations/point_ops.rs:28-35) only validates the CHOSEN variant's inner content, so it cannot see the dropped key -> do_delete_points (src/common/update.rs:412-447) matches the already-resolved variant and executes DeletePoints{ids} -> update() applies it. No mutual-exclusion/ambiguity validation exists anywhere on this path; the only grammar enforcement is the zero-branch rejection (no variant matches -> serde error surfaced as 400 'data did not match any variant of untagged enum PointsSelector'). Mechanically predicts the observed resolution: points branch wins, filter dropped — exactly what the live repro showed (id 2 deleted, id 3 grp=red survived). Asymmetry note: the second branch's inner Filter DOES use deny_unknown_fields (lib/segment/src/types.rs:3793), so strictness exists in the same type family but is absent exactly on the first variant that wins ties.",
+      "verification_outcome": "validation_absent",
+      "verification_note": "No validation enforcing the documented exactly-one (OR/oneOf) selector grammar on the REST path beyond the zero-branch rejection. NOT by_design_in_source: the enum and PointIdsList carry no intent comment (no 'intentionally'/'by design'/'we don't guarantee' marker anywhere on this path), and bare unannotated leniency is barred from the by_design reading; the codebase demonstrably applies deny_unknown_fields elsewhere in the same selector family (Filter, WithPayload, PayloadSelectorInclude/Exclude in lib/segment/src/types.rs, with a test_deny_unknown_fields at line 4390), so the absence on PointIdsList is an unannotated gap. The gRPC face is structurally immune (prost oneof permits at most one selector field), making this a REST-face-specific gap.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (guard G passed on the same instance in the same run; exit code 0; live re-repro on a fresh throwaway collection reproduced the identical 200 + points-branch resolution)",
+        "concurrency race (fully sequential requests; identical deterministic outcome in the original run and the live repro; count guard read with wait=true)",
+        "cache delay (wait=true on delete + immediate exact count; scroll confirmed remaining ids)",
+        "request-parameter typo (S2_BODY is a literal in the script and echoed in the log; the live probe sent the identical body and observed the identical disposition)"
+      ],
+      "surviving": [
+        "by_design defense remains arguable-but-undeclared: serde untagged first-match leniency is a common qdrant REST idiom, but no explicit maintainer intent marker exists in the source (per the v3.4 tightened bar this stays validation_absent; the auditor weighs the defense)"
+      ]
+    }
+  }
+}

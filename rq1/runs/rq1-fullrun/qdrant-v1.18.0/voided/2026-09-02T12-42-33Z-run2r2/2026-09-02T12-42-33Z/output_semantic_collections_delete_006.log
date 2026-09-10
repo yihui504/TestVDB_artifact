@@ -1,0 +1,26 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] drop_collection = /collections/{name} (raw_knowledge api_endpoints[collections+delete].url = /collections/{collection_name}; timeout is a QUERY param per the same entry - blocking params never go in the body)
+ownership prefix: scd06dcc241
+[pre-probe] /healthz status=200 raw=healthz check passed
+[create scd06dcc241_ctl] status=200 raw={"result":true,"status":"ok","time":0.236974201}
+[control DELETE ?timeout=5] status=200 raw={"result":true,"status":"ok","time":0.008984274}
+[state after control] GET scd06dcc241_ctl -> 404 raw={"status":{"error":"Not found: Collection `scd06dcc241_ctl` doesn't exist!"},"time":6.05e-6}
+[conform] control: 200 result=true and collection gone
+[create scd06dcc241_abc] status=200 raw={"result":true,"status":"ok","time":0.25575278}
+[attack DELETE ?timeout='abc'] status=400 raw={"status":{"error":"Deserialize error in query parameters: invalid digit found in string"},"time":0.0}
+[conform] attack timeout='abc': cleanly refused with 400
+[state after attack 'abc'] GET scd06dcc241_abc -> 200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"dista
+[conform] state integrity: 'scd06dcc241_abc' intact after the refusal
+[create scd06dcc241_zero] status=200 raw={"result":true,"status":"ok","time":0.263915521}
+[attack DELETE ?timeout=0] status=422 raw={"status":{"error":"Validation error in query parameters: [timeout: value 0 invalid, must be 1 or larger]"},"time":0.0}
+[conform] attack timeout=0: cleanly refused with 422
+[state after attack 0] GET scd06dcc241_zero -> 200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"dista
+[conform] state integrity: 'scd06dcc241_zero' intact after the refusal
+[create scd06dcc241_neg] status=200 raw={"result":true,"status":"ok","time":0.249074553}
+[attack DELETE ?timeout=-3] status=400 raw={"status":{"error":"Deserialize error in query parameters: invalid digit found in string"},"time":0.0}
+[conform] attack timeout=-3: cleanly refused with 400
+[state after attack -3] GET scd06dcc241_neg -> 200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"dista
+[conform] state integrity: 'scd06dcc241_neg' intact after the refusal
+OK: timeout query schema enforced (abc/0/-3 refused cleanly with the collection intact; documented-legal timeout=5 accepted 200 result=true)
+VERDICT: NO_DEFECT

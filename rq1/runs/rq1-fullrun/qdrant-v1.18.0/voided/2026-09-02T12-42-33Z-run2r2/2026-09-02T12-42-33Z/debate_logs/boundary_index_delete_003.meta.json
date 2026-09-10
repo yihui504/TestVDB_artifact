@@ -1,0 +1,14 @@
+{
+ "defect_id": "boundary_index_delete_003",
+ "endpoint": "index+delete",
+ "param": "collection_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "behavioral_disposition_faces",
+ "constraint_ids": [
+  "qdrant_behavioral_index_delete_001"
+ ],
+ "oracle": {
+  "statement": "three faces back-to-back: existing-index delete on live bidl3_* collection -> exactly 200 (non-200 = Type1 signal); non-existent-field delete on live collection -> exactly 200 (404 = face confusion, Type1 signal); delete on never-created ghost collection -> exactly 404 (200 = phantom success Type4_StateLogicViolation; 5xx/transport = Type3 with /healthz re-check); 404-leg diagnostics recorded measured-only",
+  "source": "docstring"
+ }
+}

@@ -1,0 +1,74 @@
+{
+  "defect_id": "state_tenant_visibility_003",
+  "endpoint": "GET /v1/objects/{className}/{id}",
+  "defect_type": "Type2",
+  "evidence_weight": "medium",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "domain_blocked",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": true,
+      "detail": "脚本头注释声称 'X-Weaviate-Tenant-Header is NOT honored on GET /objects' 并断言该 header 'documented'。raw_knowledge.md 全文无 X-Weaviate-Tenant-Header / tenant header 字样（grep 零命中）；docs.weaviate.io 网络受限无法核对。源码 embedded_spec 与 operations 参数绑定显示 objects GET 的 tenant 仅以 query param 形式声明（In: query）——header 支持的说法很可能源自 SDK（Python/JS client 在 REST 层注入 ?tenant=），构成 sdk_rest_confusion。422 错误消息 'class ... has multi-tenancy enabled, but request was without tenant' 与源码逐字一致，语义准确（请求确实未携带 query 参数），'误导'定性存疑。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "GET X-Weaviate-Tenant-Header: 422 {\"error\":[{\"message\":\"repo: object by id: search index stt003: determine shard: class StT003 has multi-tenancy enabled, ",
+      "secondary_observations": [
+        "GET ?tenant ACTIVE (expect 200): 200",
+        "set INACTIVE: 200 [{\"activityStatus\":\"COLD\",\"name\":\"t1\"}]",
+        "GET ?tenant INACTIVE: 422 ...tenant not active: '",
+        "GET ?tenant reactivated (expect 200): 200",
+        "GET after tenant recreate (expect 404): 404"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "header 未生效时返回 422（错误通道正确）；观测的是'header 被忽略'（对照 ?tenant= 生效），非错误码语义问题。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_tenant_visibility_003.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "none_matching",
+      "assertion_text_quoted": "structured_contract.json 无 tenant 传输方式约束；脚本头注释自述 'Probe facts (v1.38.0): object reads accept ?tenant=t1; X-Weaviate-Tenant-Header is NOT honored on GET /objects (422 \"without tenant\")'——即'文档说支持 header'是脚本先验声明，未经本 session 文档证据确认。",
+      "api_violates_assertion": false,
+      "note": "violates=false：contract/文档层不存在'必须支持 X-Weaviate-Tenant-Header'的明文断言（raw_knowledge 零提及），观测到的 422 是 query-param-only 设计的如实报错；header 支持声明疑似 SDK 文档混淆。生命周期部分（INACTIVE 422/reactivate 200/recreate 404）全部符合预期无违规。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 无对应 constraint——链环缺失",
+        "doc: 无文档证据支持 header 应被支持（domain_blocked，raw_knowledge 零命中）——链环缺失",
+        "script: state_tenant_visibility_003.py L53-58 发 X-Weaviate-Tenant-Header: t1 的 GET",
+        "log: 422 'request was without tenant'"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "断链在 doc 环：'文档说支持 tenant header' 这一前提在可达证据中不存在；behavior 环自洽但缺文档锚点。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["X-Weaviate-Tenant-Header", "Tenant-Header", "request was without tenant", "tenant not active", "determine shard: class"],
+      "files_examined": [
+        "adapters/handlers/rest/operations/objects/objects_class_get_parameters.go",
+        "adapters/handlers/rest/operations/objects/objects_class_delete_parameters.go",
+        "adapters/repos/db/multitenancy/validator.go",
+        "adapters/repos/db/index.go"
+      ],
+      "source_excerpt": "objects_class_get_parameters.go L64-72:\n\t/*The target node which should fulfill the request.\n\t  In: query\n\t*/\n\tNodeName *string\n\t/*Specifies the tenant in a request targeting a multi-tenant collection (class).\n\t  In: query\n\t*/\n\tTenant *string\n}\n// L83: qs := runtime.Values(r.URL.Query()) — tenant 仅从 URL query 绑定，无 header 读取路径。\n全库 grep 'X-Weaviate-Tenant-Header'/'Tenant-Header' 零命中（非测试代码）。",
+      "call_chain_traced": "go-swagger 参数绑定（query-only tenant）→ 无 header 分支 → tenant 为空 → multitenancy/validator.go L120-131 NewErrMultiTenancy('request was without tenant') → index.go L1744-1748 包装 'determine shard: %w' → 422",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "sdk_rest_confusion：header 传输方式可能仅存在于客户端 SDK 文档/惯例，REST 原生 API 从未声明支持"
+    }
+  }
+}

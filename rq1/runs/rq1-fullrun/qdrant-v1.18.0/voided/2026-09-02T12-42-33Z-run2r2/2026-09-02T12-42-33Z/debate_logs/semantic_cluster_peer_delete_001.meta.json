@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_peer_delete_001",
+  "endpoint": "cluster+peer+delete",
+  "param": "peer_id",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "behavioral_contract",
+  "oracle": {
+    "statement": "every non-live well-formed peer id (0, 1, random-large ghost, u64-max) -> HTTP 4xx on DELETE /cluster/peer/{peer_id}; any 2xx = Type1_IllegalSuccess (destructive op claims success on a non-existent peer), any 5xx with /healthz alive = Type3, status 0 = SCRIPT_ERROR after inline /healthz probe (assertion qdrant_behavioral_cluster_peer_delete_001 documents '4xx on an invalid peer id')",
+    "source": "docstring"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "defect_id": "semantic_collections_delete_005",
+  "endpoint": "collections+delete",
+  "param": "collection_name",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract",
+  "constraint_ids": [
+    "qdrant_bc_delete_invisibility_001",
+    "qdrant_behavioral_collections_delete_001"
+  ],
+  "oracle": {
+    "statement": "after create R + create alias A->R (200 result=true) + read-via-A confirmed 200: DELETE /collections/{A} must end self-consistently - outcome (a) 200: GET R -> 404 AND alias A absent from GET /aliases result.aliases[] (dangling alias = Type4; R still gettable = half-delete Type4); outcome (b) 404: R still gettable 200 AND A still registered (destructive 404 or registry side-effect = Type4); 2xx!=200 = measured conflict-zone but same state matrix; 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

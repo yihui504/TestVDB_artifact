@@ -1,0 +1,72 @@
+{
+  "defect_id": "boundary_r2_dyn_type_upsert_05",
+  "endpoint": "entities/upsert + entities/insert (dynamic field type consistency, 跨通道)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "同 04 号链锚 milvus_type_dynamic_field_consistency_001；endpoint registry 覆盖 entities/upsert 与 entities/insert（约束 endpoint 列两者）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "upsert string->int -> ok=True raw={\"code\":0,\"cost\":0,\"data\":{\"upsertCount\":1,\"upsertIds\":[2]}}",
+      "secondary_observations": [
+        "upsert establish string -> ok=True code:0 upsertIds:[1]（建立基线）",
+        "insert establish int -> ok=True code:0（建立基线，insert 通道）",
+        "upsert int->string -> ok=True raw={\"code\":0,...,\"upsertIds\":[3]}}（跨通道：insert 建 int，upsert 写 string）",
+        "upsert establish bool -> ok=True；upsert bool->int -> ok=True code:0 upsertIds:[5]"
+      ],
+      "claim_alignment": "aligned",
+      "claim_alignment_note": "claim 中的 string↔int/bool→int 覆盖于 log；array 互混组合未出现在该 log 的逐字行中（matrix_04 也只含 string→int），array 项按 partial 记。",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "不兼容类型 upsert/insert 全部 HTTP 200 + code:0"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_dyn_type_upsert_05.py", "debate_logs/boundary_r2_dyn_type_matrix_04.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_dynamic_field_consistency_001",
+      "assertion_text_quoted": "dynamic field type consistency: second insert with incompatible type for established dynamic field -> 1100",
+      "api_violates_assertion": true,
+      "note": "upsert 通道 string→int、bool→int，及 insert(int)→upsert(string) 跨通道混型均 code:0 而非 1100；约束 endpoint 域含 upsert，violates=True。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_dynamic_field_consistency_001 (verified tier)",
+        "doc: insert-update-delete.md Entity Schema Consistency",
+        "script: boundary_r2_dyn_type_upsert_05.py upsert 建型→混型 upsert + insert 建型→跨通道混型",
+        "log: upsert string->int / cross-channel int->string / bool->int 均 code:0"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["validatePartitionTag (task_upsert.go 校验存在性旁证)", "checkAndSetData", "anyToColumns", "EnableDynamicField"],
+      "files_examined": [
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go (checkAndSetData L590-621; anyToColumns L746-758, L947-957, L1202-1217)",
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go (insert/upsert 共用 L1234-1252)",
+        ".milvus-src-2610/internal/proxy/task_upsert.go (L192/L929 validatePartitionTag 存在——证明 proxy 侧 task 有校验钩子位但仅限分区名)"
+      ],
+      "source_excerpt": "upsert 与 insert 在 HTTP 层共用 checkAndSetData + anyToColumns（handler_v2.go L1236/L1247）。utils.go L598-609 对动态字段值按当笔 gjson 类型 cast（cast.ToBool/mapValueStr/cast.ToInt64），不查历史类型；L947-957+L1202-1217 将动态字段 marshal 进匿名 JSON 列（IsDynamic:true）。task_upsert.go 中可见的显式校验仅 validatePartitionTag（L192、L929），无动态字段类型一致性校验调用。",
+      "call_chain_traced": "REST upsert → handler_v2 → checkAndSetData（类型 cast，无历史对照）→ anyToColumns JSON 列 → proxy upsert task（仅分区名校验）→ code:0。约束声称的 1100 拒绝点在 upsert/跨通道路径均不存在。",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error", "env", "concurrency", "request_typo"],
+      "surviving": "同 04 号链：动态字段 JSON 承载模型的 by-design 抗辩线索（源码无显式声明，auditor 权衡）。"
+    }
+  },
+  "evidence_weight": "MODERATE_STRONG",
+  "evidence_weight_rationale": "verified 契约 + upsert/insert 跨通道三向混型 code:0 逐字 + 源码确认两通道共用零校验路径；array 互混项 log 未逐字取证、JSON 模型 by-design 抗辩同 04。"
+}

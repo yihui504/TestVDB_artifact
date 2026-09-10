@@ -1,0 +1,9 @@
+setup alter qm: 200 {"code":0,"data":{}}
+CTL limit=16384: 0
+CTL limit=16385: 200 {"code":65535,"message":"topk [16385] is invalid, it should be in range [1, 16384], but got 16385"}
+TRT limit=1000000: 200 {"code":0,"cost":0,"data":[{"distance":0,"id":0},{"distance":0,"id":1},{"distance":0,"id":2},{"distance":0,"id":3},{"distance":0,"id":4},{"distance":0,"id":5},{
+TRT limit=1000001: 200 {"code":65535,"message":"topk [1000001] is invalid, it should be in range [1, 1000000], but got 1000001"}
+TRT offset999999+limit1 (==cap): 200 {"code":0,"cost":0,"data":[]}
+TRT offset999999+limit2 (>cap): 200 {"code":65535,"message":"offset+topk [1000001] is invalid, it should be in range [1, 1000000], but got 1000001"}
+RESET alter query_mode='': 200 {"code":65535,"message":"invalid query_mode value \"\", valid values: [large_topk]"}
+VERDICT: NO_DEFECT

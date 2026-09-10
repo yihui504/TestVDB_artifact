@@ -1,0 +1,57 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "r34",
+  "verdicts": [
+    {
+      "defect_id": "boundary_points_count_filter_arith_002",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (mechanical id+quote_ok, api_violates_assertion=false) → implied_verdict=NOT_DEFECT → final=NOT_DEFECT (mechanized layer; B/C/D concur: no objective constraint class violated, source validation_present)"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Involved unit qdrant_behavioral_points_count_001 is a behavioral endpoint assertion (exact-count-with-filter promise) which none of type/range/state/resource_bound/doc_consistency express",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: constraint qdrant_behavioral_points_count_001 exists and assertion_text_quoted is the verbatim contract description; the observed count 4 IS the exact matching count for has_id [1,2,3,9] (seed ids 1..12, baseline==12 and F2 paris==4 in the same log prove id 9 exists), so the assertion is honored. Chain broke at script: the oracle expected 3 but id 9 is a seeded paris point, making 4 arithmetically correct — the log's Type4 verdict is the mis-derived oracle's product, not a target-side violation. Source validation_present corroborates (LocalShard::count exact branch → read_filtered → BTreeSet → has_id set membership must return 4); root cause script_error.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_points_count_filter_type_003",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "SUPPORTS_NOT_DEFECT", "matched_pattern": "Lenient filter parsing: null / single-object / array forms are all accepted by design for filter condition fields (source supports all three forms)", "developer_quote": "This is fine and expected... it would be a breaking change"},
+        "aggregation_applied": "verdict_A=REFUTED (mechanical id+quote_ok, api_violates_assertion=false) → implied_verdict=NOT_DEFECT → final=NOT_DEFECT (mechanized layer; C=REFUTED on explicit by_design_in_source and D=SUPPORTS_NOT_DEFECT concur; mechanical exploratory_signal was hint-only, not a B ruling)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": "mundane_api_semantics",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Involved unit qdrant_behavioral_points_count_001 is a behavioral endpoint assertion (exact-count promise); the contract carries no Filter.must clause-shape constraint, so no type/range/state/resource_bound/doc_consistency unit is involved",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: qdrant_behavioral_points_count_001 quote is verbatim and the observed count 8 is the exact matching count (8 berlin of 12; live re-fire C1 re-verified), so the exact-count assertion is honored. Chain broke at doc: the array-only-must premise is contradicted by the versioned v1.18.x OpenAPI (Filter.must anyOf [Condition, Condition[], nullable]) and by the server's own C5 grammar message 'expected null, array or map'. Source shows explicit by-design (MaybeOneOrMany docstring 'allows deserializing both single and an array of values' + maintained unit test + anyOf publication) and cognition's lenient-filter-parsing anchor concurs; the mechanical exploratory_signal (rule5 hint) does not survive condition iii because the mechanical A layer ruled REFUTED."
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "defect": 0,
+    "not_defect": 2,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 2, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {"script_error": 1, "mundane_api_semantics": 1},
+    "constraint_category_distribution": {"other": 2},
+    "candidate_class_distribution": {"strict_defect": 0, "exploratory_candidate": 0, "rejected": 2}
+  }
+}

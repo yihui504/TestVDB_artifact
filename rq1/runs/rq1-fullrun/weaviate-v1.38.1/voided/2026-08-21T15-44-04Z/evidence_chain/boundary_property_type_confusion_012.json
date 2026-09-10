@@ -1,0 +1,66 @@
+{
+  "defect_id": "boundary_property_type_confusion_012",
+  "endpoint": "POST /objects (int property n + id)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "候选 constraint_id='boundary' 是泛 attack 标签非真实约束 ID；契约中无 int-null 专项约束，仅有 POST /objects 端点注册（openapi backfill, doc_version v1.38.1）。OpenAPI schema.json 中 Object.id 描述为 required UUID 但未显式声明空串拒绝；properties 无类型-拒绝断言。行为依据靠 B/C 层补足。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c(int prop) n=None -> 200 (accepted) | [id ''] -> 200 returned_id=ab6ffccd-1b7e-4336-a44a-34fd697ed095",
+      "secondary_observations": [
+        "n='12' -> 422 {\"error\":[{\"message\":\"invalid object: invalid integer property 'n' on class 'BndTypeC': requires an ...",
+        "n=1.5 -> 422 invalid integer property 'n' ... the JSON num",
+        "n=True -> 422 requires an ...",
+        "n=[] -> 422 requires an ...",
+        "n={} -> 422 requires an ..."
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "非法输入(null int / 空 id)以 HTTP 200 直接成功创建，非错误码通道；对照组合法类型错误走 422"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_property_type_confusion_012.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "boundary (泛标签；实际引用 openapi-specs/schema.json Object.id required + int 属性类型)",
+      "assertion_text_quoted": "openapi-specs/schema.json: data_types.Object.id type=string required=true (UUID)；properties 按类 schema 定型",
+      "api_violates_assertion": true,
+      "note": "空串 id 非 UUID 却被 200 接受并静默换随机 UUID（对照契约 data_types Object.id required + uuid 语义）；null int 在其余 5 种非法类型均 422 的背景下独被接受。violates=True 依据两点：id 空串非合规 UUID、int 属性 null 是类型混用且无 skipMissing/nullable 声明。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: api_endpoints POST /objects + data_types.Object(id required, properties typed) [structured_contract.json]",
+        "doc: openapi-specs/schema.json Object.id UUID 语义（源码 clone 内 openapi 即契约来源）",
+        "script: debate_logs/boundary_property_type_confusion_012.py 发送 n=None 与 id='' 的 POST /objects",
+        "log: n=None -> 200 (accepted); id='' -> 200 returned_id=<随机UUID>"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["id == \"\" usecases/objects/add.go", "generateUUID", "uuid.Parse obj.ID"],
+      "files_examined": ["usecases/objects/add.go", "usecases/objects/validation/properties_validation.go"],
+      "source_excerpt": "usecases/objects/add.go:145-158 checkIDOrAssignNew:\n  if id == \"\" {\n      validatedID, err := generateUUID()\n      if err != nil { return \"\", NewErrInternal(\"could not generate id: %v\", err) }\n      return validatedID, err\n  }\n  // IDs are always returned lowercase ... validatedID := strfmt.UUID(strings.ToLower(id.String()))\n\nadd.go:206-211 validateUUID:\n  func (m *Manager) validateUUID(obj *models.Object) error {\n      _, err := uuid.Parse(obj.ID.String())\n      return err\n  }\n  // 空串在 checkIDOrAssignNew 中先被替换为新生成 UUID，validateUUID 之后 parse 的已是合法 UUID——空串路径 by-design 分配随机 id（静默、无告警）。int-null 接受源于 properties_validation.go 对 nil 值跳过类型检查（其余 '12'/1.5/true/[]/{} 均报 invalid integer property）。",
+      "call_chain_traced": "POST /objects → handlers_objects → Manager.addObject → checkIDOrAssignNew(id==''→generateUUID) → validateObjectAndNormalizeNames → validation.Object → properties_validation (nil 值跳过) → 落盘",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "by_design（空 id 生成随机 UUID 是文档化的 weaviate 行为——但'静默'无返回告警是否缺陷由 auditor 裁；int-null 接受与同批 422 的类型对照组自相矛盾，非平凡解释可覆盖）"
+    }
+  },
+  "evidence_weight": "medium-high"
+}

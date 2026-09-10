@@ -1,0 +1,73 @@
+{
+  "defect_id": "semantic_match_missing_01",
+  "endpoint": "DELETE /batch/objects",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint weaviate_type_batch_delete_match_001 为 verified 级（source_verified=true），source_url 'go-func: entities/models/batch_delete.go Validate()/validateMatch()' 本地 clone 可达并核验；契约 api_endpoints match/match.class/match.where required=true；endpoint_registry 含 DELETE /batch/objects v1.38.2。四层全 PASS（source_url 为源码引用，可达性以 clone 验证）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[match_missing_entirely] status=500 body={\"error\":[{\"message\":\"validate: empty match clause\"}]}（主观测：match 整体缺失）",
+      "secondary_observations": [
+        "[match_where_missing] status=500 body={\"error\":[{\"message\":\"validate: empty match.where clause\"}]}",
+        "[match_class_missing] status=500 body={\"error\":[{\"message\":\"validate: empty match.class clause\"}]}",
+        "[match_null] status=500 body={\"error\":[{\"message\":\"validate: empty match clause\"}]}",
+        "[match_empty] status=500 body={\"error\":[{\"message\":\"validate: empty match.class clause\"}]}",
+        "diagnosis_quality_score(match.where missing): 3/3 — 错误消息可定位字段",
+        "setup: 200 {\"class\":\"TSemMatch01\",...} — 前置类就绪"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "5 变体全部 500（应为 4xx）；无 2xx 通道"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["semantic_match_missing_01", "boundary_bd_match_where_01", "boundary_bd_match_class_02", "boundary_bd_match_empty_08", "boundary_bd_match_resources_09"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_type_batch_delete_match_001",
+      "assertion_text_quoted": "DELETE /batch/objects: match.class AND match.where present, else 4xx",
+      "api_violates_assertion": true,
+      "note": "本链直击 verified 级 constraint：match 缺失/null/缺 where/缺 class/空对象 5 变体全 500，constraint 两条分支（present 语义与 else 4xx）均被违反后者。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_type_batch_delete_match_001 (evidence_tier=verified, source_verified=true)",
+        "doc: api_endpoints DELETE /batch/objects match required=true (go-struct entities/models/batch_delete.go#L39-L40)",
+        "script: semantic_match_missing_01.py 五变体 POST/DELETE batch delete",
+        "log: 五行 status=500 原文"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["empty match clause", "empty match.class clause", "empty match.where clause", "NewBatchObjectsDeleteInternalServerError"],
+      "files_examined": [
+        "usecases/objects/batch_delete.go (L110-150)",
+        "adapters/handlers/rest/handlers_batch_objects.go (L170-210)"
+      ],
+      "source_excerpt": "usecases/objects/batch_delete.go L122-L137:\n  if match == nil {\n    return nil, 0, errors.New(\"empty match clause\")        // match_missing_entirely / match_null\n  }\n  if len(match.Class) == 0 {\n    return nil, 0, errors.New(\"empty match.class clause\")  // match_class_missing / match_empty({})\n  }\n  if match.Where == nil {\n    return nil, 0, errors.New(\"empty match.where clause\")  // match_where_missing\n  }\n\nhandlers_batch_objects.go L189-L202: 三个裸 error 均落入 else → NewBatchObjectsDeleteInternalServerError (500)；ErrInvalidUserInput 才映射 422。",
+      "call_chain_traced": "REST DELETE /batch/objects → batchObjectHandlers.BatchObjectsDelete → manager.DeleteObjects → validateBatchDelete 三个裸 errors.New 分支 → handler 类型匹配失败 → 500。与 5 变体响应一一对应：match:null 与顶层缺失同走 match==nil；{} 走 len(Class)==0。",
+      "verification_outcome": "validation_present",
+      "note": "校验逻辑齐备但错误类型未分类 → 全族 500；constraint description 明示 GT issue #12041。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

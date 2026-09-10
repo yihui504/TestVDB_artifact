@@ -1,0 +1,1415 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "verdicts": [
+    {
+      "defect_id": "boundary_collections_create_005",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED (constraint_id exists, assertion in contract, violation observed) → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Constraint qdrant_range_create_collection_001 (m ∈ [2,100]) violated by m=1 accepted with HTTP 200. Numerical lower bound violation is objective. Type1_IllegalSuccess confirmed.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_collections_create_006",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED (constraint_id exists, assertion in contract, violation observed) → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Constraint qdrant_range_create_collection_001 (m ∈ [2,100]) violated by m=101 accepted with HTTP 200. Numerical upper bound violation is objective. Type1_IllegalSuccess confirmed.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_collections_create_007",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED (constraint_id exists, assertion in contract, violation observed) → verdict=DEFECT. Source confirms validation present but at wrong threshold (min=4 vs contract min=10), validating violation."
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Constraint qdrant_range_create_collection_002 (ef_construct ∈ [10,1000]) violated by ef_construct=9 accepted with HTTP 200. Source code reveals validation bug (min=4 instead of min=10). Type1_IllegalSuccess confirmed.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_collections_create_008",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED (constraint_id exists, assertion in contract, violation observed) → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Constraint qdrant_range_create_collection_002 (ef_construct ∈ [10,1000]) violated by ef_construct=1001 accepted with HTTP 200. Numerical upper bound violation is objective. Type1_IllegalSuccess confirmed.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_collections_create_010",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "WEAK_REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (constraint_id qdrant_type_create_collection_002 references distance enum, not collection_name) → B=NEUTRAL → C=WEAK_REFUTED (no by-design evidence) → D=NO_SIGNAL → verdict=NOT_DEFECT (fp due to claim-constraint mismatch)"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "Chain broken at contract: claim asserts NUL byte in collection_name should be rejected, but constraint_id qdrant_type_create_collection_002 only restricts vectors.distance enum values, not collection_name validation. Evidence exists (HTTP 200 for NUL byte) but cannot be grounded to cited constraint. This is a chain construction flaw, not a defect.",
+      "rework_order": {
+        "type": "PHENOMENON_MISMATCH",
+        "claim": "NUL byte in collection_name should be rejected",
+        "chain_covered": "vectors.distance enum validation [Cosine, Euclidean, Dot, Manhattan]",
+        "drift_point": "Constraint references distance values but claim tests collection_name containing NUL byte",
+        "targeted_instruction": "Re-examine output log to identify actual constraint governing collection_name validation. If no constraint exists, re-evaluate whether this qualifies as a Type1_IllegalSuccess or requires a different constraint_id anchor. Current chain is incoherent: contract validates distance enum, execution observes NUL byte behavior."
+      }
+    },
+    {
+      "defect_id": "semantic_collections_create_007",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED (constraint_id exists, assertion in contract, violation observed) → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Constraint qdrant_range_create_collection_001 (m ∈ [2,100]) violated by m=1 accepted with HTTP 200. Numerical lower bound violation is objective. Type1_IllegalSuccess confirmed. Duplicate of boundary_collections_create_005.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_collections_create_009",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "类型恒真"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (constraint_id empty) → B=CONFIRMED (required parameter 'vectors' object missing is type constraint violation: empty object {} cannot satisfy 'vectors is required') → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Chain has no constraint_id (A=NEUTRAL), but B=CONFIRMED: missing required 'vectors' parameter is objective type constraint violation. HTTP 200 for empty payload {} when vectors is required violates type semantics. Type1_IllegalSuccess confirmed.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_collections_create_03",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "WEAK_REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (constraint_id empty, no contract grounding) → B=NEUTRAL → C=WEAK_REFUTED (no by-design evidence, just HTTP 500s with mundane explanation) → D=NO_SIGNAL → verdict=NOT_DEFECT (fp due to chain incompleteness)"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "Chain broken at contract: constraint_id is empty string, no grounding in structured_contract.json. Execution shows 2 HTTP 500s during lifecycle but without constraint, cannot determine what assertion is violated. Appears to be probe framework issue (candidate generated without contract linkage). Mundane explanation likely: transient internal errors, not systematic defect.",
+      "rework_order": {
+        "type": "EVIDENCE_GAP",
+        "claim": "Got 2 internal errors (500) during lifecycle - should return 404/503",
+        "chain_covered": "HTTP 500 errors observed, but no contract constraint defines expected error codes for lifecycle operations",
+        "drift_point": "Chain lacks contract_grounding (constraint_id empty). Cannot verify whether 500 is violation or expected behavior",
+        "targeted_instruction": "Identify appropriate constraint_id from structured_contract.json that governs error handling during create/delete lifecycle operations (likely qdrant_behavioral_create_collection_001 or qdrant_state_create_collection_001). Anchor execution_evidence to that constraint. If no constraint covers this scenario, candidate may not qualify as defect evidence."
+      }
+    },
+    {
+      "defect_id": "state_collections_create_05",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED (constraint_id exists, assertions in contract, violations observed) → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Multiple constraints violated: qdrant_range_create_collection_001 (m=1,101 accepted), qdrant_range_create_collection_002 (ef=9,1001 accepted). Numerical bound violations are objective. Plus valid typical config rejected with 400, indicating Type4_StateLogicViolation. Contract explicitly states these ranges, API violates them.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_collections_create_06",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED (contract doc_version 1.19.x claims 'Euclidean' valid, but API correctly rejects it in v1.18.2) → verdict=NOT_DEFECT (fp due to version mismatch)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "Contract documentation (v1.19.x) lists 'Euclidean' as valid distance value, but v1.18.2 API correctly rejects it with HTTP 400. API behavior is semantically correct (rejecting unsupported value). Contract documentation is outdated for target version. This is a documentation defect, not API validation defect. Chain shows correct HTTP 4xx behavior.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_collections_create_09",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (no explicit constraint_id for name validation) → B=NEUTRAL → C=CONFIRMED (source shows incomplete validation - spaces/apostrophes not rejected) → D=NO_SIGNAL → verdict=DEFECT (Type4_StateLogicViolation)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "No explicit contract constraint for name validation, but source code shows validation_absent: validate_collection_name only blocks 11 filesystem-unsafe chars, not spaces/apostrophes. Execution shows 9 invalid patterns (spaces, apostrophes, question marks) return HTTP 200 when they should be rejected. Incomplete validation logic is a defect.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_collections_create_10",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED (qdrant_behavioral_create_visibility_001: created collection should be immediately visible in GET) → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Behavioral contract qdrant_behavioral_create_visibility_001 violated: created collection with hnsw_config.m=2 returns HTTP 200, but GET /collections/{name} returns hnsw_config.m=None instead of set value. State visibility invariant broken - persisted config not readable back. Type4_StateLogicViolation confirmed across 30 config combinations.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "vein_cardinality_oracle_count_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "Parameter validation on filter/condition APIs (min_should, value_count)",
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (constraint_id empty - count endpoint not in structured_contract.json) → B=NEUTRAL (cardinality estimation accuracy does not fall under objective constraint classes: not numerical bound/enum/mutual exclusion/type constraint; HTTP semantics are correct with 200 OK responses) → C=CONFIRMED (mundane_explanation explicitly excludes by-design: non-linear direction-flipping error pattern (-13.3%, +5.0%, -10.0%) proves genuine estimator bug, not graceful heuristic) → D=SUPPORTS_DEFECT (blindspot_indicator 'Parameter validation on filter/condition APIs (min_should, value_count)' matches count endpoint pattern) → verdict=DEFECT (Type2_PoorDiagnostics: count API returns inaccurate estimates without warning/confidence indication)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Count endpoint missing from structured_contract.json (A=NEUTRAL). Execution evidence grade A shows cardinality estimation error exceeds 10% tolerance with non-linear direction-flipping behavior (c1: -13.3%, c2: +5.0%, c3: -10.0%). Mundane_exclusion confirms by-design hypothesis fails (error does not scale linearly, direction not consistent). Cognition confirms parameter validation on count/value operations is a known blindspot. Type2_PoorDiagnostics: count(exact:false) returns inaccurate estimates (5-13% error) without any diagnostic indication of uncertainty or confidence interval.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_collections_delete_03",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "HTTP语义恒真"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (GREY_ZONE) → B=CONFIRMED (HTTP semantics: 100x 200 OK for non-existent DELETE when docs imply 4xx) → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API returns HTTP 200 OK for 1000 consecutive DELETE requests to non-existent collection, while docs/behavioral contract imply 4xx error responses for non-existent resource deletion. HTTP semantic violation confirmed.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_collections_delete_06",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED (constraint only requires 200 OK on successful deletion; API returned 200 with result:false, response code matches expectation) → verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "documentation_gap_idempotency_undefined",
+      "rationale": "Constraint only requires 200 OK on successful deletion; API returned 200 with result:false, response code matches expectation. Documentation gap (idempotency behavior undefined), not API defect.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_collections_delete_07",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=REFUTED, D=NO_SIGNAL, verdict=NOT_DEFECT (by_design_in_source: legacy validation intentionally permissive)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "Source confirms validate_collection_name_legacy only blocks filesystem-unsafe characters (/ and \u0000), RTL override U+202E is intentionally allowed for backward compatibility. API returns 200 OK with result:false per legacy contract design, not a defect.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_collections_delete_004",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=REFUTED, D=NO_SIGNAL, verdict=NOT_DEFECT (by_design_in_source: idempotent delete)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "Source confirms delete_collection returns Ok(false) (HTTP 200 with result:false) intentionally for idempotent delete operations. No StorageError::NotFound is thrown for missing collections. This is documented API behavior, not a defect.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_collections_delete_02",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=CONFIRMED, D=NO_SIGNAL, verdict=DEFECT (Type3_RuntimeFailure: 500 designed but lacks graceful degradation)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Source confirms HTTP 500 is designed behavior (service_error for concurrent access failure), but this violates REST semantic contract expecting graceful degradation (404/503). Builder correctly identifies design defect: missing graceful error handling in concurrent DELETE+access scenarios.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "vein_query_filter_validation_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "Parameter validation on filter/condition APIs",
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=CONFIRMED, D=SUPPORTS_DEFECT → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Type1_IllegalSuccess: null values in filter should be rejected with 4xx, but API accepts them.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "vein_compound_delete_filter_validation_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "Parameter validation on filter/condition APIs",
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=CONFIRMED, D=SUPPORTS_DEFECT → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Type1_IllegalSuccess: invalid delete selectors should be rejected with 400, but API accepts them.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "vein_type_mismatch_filter_count_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "Parameter validation on filter/condition APIs",
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=CONFIRMED, D=SUPPORTS_DEFECT → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Type2_PoorDiagnostics: type mismatch should return 400, but API silently returns count=0.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_points_search_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Type1_IllegalSuccess: limit=1001 violates upper bound constraint.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_points_search_004",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Type1_IllegalSuccess: score_threshold=-0.1 violates lower bound constraint.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_points_search_005",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED → verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Type1_IllegalSuccess: score_threshold=1.1 violates upper bound constraint.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_points_search_007",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=REFUTED, D=NO_SIGNAL → verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "non_deterministic_unreproducible",
+      "rationale": "Chain broken at script layer: NaN rejected by client-side JSON serialization (status -1), not API validation.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_points_search_008",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=REFUTED, D=NO_SIGNAL → verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "non_deterministic_unreproducible",
+      "rationale": "Chain broken at script layer: Infinity rejected by client-side JSON serialization (status -1), not API validation.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_points_upsert_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "numerical"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=DEFECT (A=CONFIRMED) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Type1_IllegalSuccess: len(points)=1001 violates upper bound <=1000. API returns HTTP 200. Source confirms validation is configurable not absolute.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=DEFECT (A=CONFIRMED) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Response structure mismatch: contract states returns array but API returns dict with result wrapper. Source confirms by_design. Type4 violation.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=DEFECT (A=CONFIRMED) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Dimension validation absent: contract requires dimension matching but search with mismatched dimensions returns HTTP 200. Source confirms validate only applies to upsert. Type4 violation.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_005",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=NOT_DEFECT (A=REFUTED) -> verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "Test expectation issue: expects bare array but documented API returns result wrapper. Contract satisfied. FP due to test misalignment.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_008",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=NOT_DEFECT (A=REFUTED) -> verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "Filter works correctly (2 points returned), API returns correct structure. Contract satisfied. FP due to test expectation misalignment.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_011",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "type"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL -> B=CONFIRMED (type coercion violation) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Type1_IllegalSuccess: score_threshold declared as float but accepts integer 1 via serde coercion. Source confirms validation_absent. Type constraint violation.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_search_05",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_NOT_DEFECT",
+          "matched_pattern": "by_design",
+          "developer_quote": "Accepted limitation"
+        },
+        "aggregation_applied": "A=NEUTRAL -> C=REFUTED -> D=SUPPORTS_NOT_DEFECT -> verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "Wait parameter default discrepancy: docs say true, source defaults false. Source confirms by_design. Async deletion is intentional. FP due to documentation mismatch.",
+      "rework_order": {
+        "type": "EVIDENCE_GAP",
+        "claim": "Delete invisibility violated",
+        "chain_covered": "Wait default discrepancy",
+        "drift_point": "Chain proves async behavior not invariant violation",
+        "targeted_instruction": "Re-test with wait=true"
+      }
+    },
+    {
+      "defect_id": "vein_hnsw_ef_null_search_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "Parameter validation on filter/condition APIs",
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=DEFECT (A=CONFIRMED via constraint_id qdrant_type_search_points_001) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "机械判定 A=CONFIRMED（constraint_id 存在且为契约原文）。执行证据 c1: hnsw_ef=null -> HTTP 200 OK，违反 params 结构约束。源码显示 SearchParams.hnsw_ef 为 Option<usize>，缺失 null 显式校验。D 命中 blindspot：Parameter validation on filter/condition APIs。Type1_IllegalSuccess 确认。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "vein_params_null_search_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "Parameter validation on filter/condition APIs",
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=DEFECT (A=CONFIRMED via constraint_id qdrant_type_search_points_001) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "机械判定 A=CONFIRMED。执行证据 c1: params=null（对象包装器本身为 null）-> HTTP 200 OK。源码 schema.rs 定义 params: Option<SearchParams>，但 Option wrapper 层未校验 null，仅区分 absent vs null。D 命中 blindspot。Type1_IllegalSuccess 确认。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "vein_hnsw_config_m_boundary_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=DEFECT (A=CONFIRMED via constraint_id qdrant_range_create_collection_001) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "机械判定 A=CONFIRMED。契约约束 qdrant_range_create_collection_001 明确 m ∈ [2,100]。执行证据 c1: m=0 -> HTTP 200 OK。源码显示 HnswConfig.m 缺失 #[validate(range(min=2))] 属性，仅 usize 类型约束拒绝负值。数值下界违反（0 < 2）是客观违规。Type1_IllegalSuccess 确认。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_hnsw_ef_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=NOT_DEFECT (A=REFUTED) -> verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "机械判定 A=REFUTED。链引用 constraint_id qdrant_type_search_points_001（vector dimension matching），但 defect_type=Type2_PoorDiagnostics 声称的是 'hnsw_ef parameter diagnostics quality' ——现象不对应。契约不覆盖参数诊断质量，且执行证据零值被接受（'Zero hnsw_ef=0 accepted'）通过 Option<usize> 类型是合法行为（None/default）。链构造在 contract_grounding 阶段锚错约束，execution_evidence 证明的与 claim 声称的不匹配。这是链建设置缺陷，非 API 缺陷。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_hnsw_ef_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=DEFECT (A=CONFIRMED via constraint_id qdrant_range_create_collection_002) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "机械判定 A=CONFIRMED。契约约束 qdrant_range_create_collection_002 明确 ef_construct ∈ [10, 1000]。执行证据显示 'Large hnsw_ef=1000000 accepted' 且 'Small hnsw_ef=1 accepted' ——两值均偏离合理范围，且 'Top result should be id=1 (exact match), got 2' 显示状态违反。源码确认 SearchParams.hnsw_ef 无运行时范围校验。Type4_StateLogicViolation 确认。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_params_003",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=NOT_DEFECT (A=REFUTED) -> verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "机械判定 A=REFUTED。链引用 constraint_id qdrant_type_search_points_001（vector dimension），但 claim 是 'params object structure validation' ——现象不对应。契约不覆盖 params 对象结构验证。执行证据显示 'Empty params accepted', 'Null params accepted', 'Typo param silently ignored', 'Array params accepted' ——但这些行为源于 Option<SearchParams> + serde lenient deser，是文档化的类型系统行为，非契约违规。链锚错约束，FP。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_filter_nested_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=NOT_DEFECT (A=REFUTED) -> verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "机械判定 A=REFUTED。链引用 constraint_id qdrant_type_search_points_001（vector dimension），但 claim 是 'Filter parameter nested structure validation' ——现象不对应。契约不覆盖 filter 参数验证。执行证据显示 'Invalid operator error lacks details (score 1/3)', 'String range error lacks details (score 0/3)' ——这是 Type2_PoorDiagnostics 问题，但契约锚点不支持此类缺陷判定。文档证实 filter 结构验证存在，但链引错约束。FP。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "vein_compound_delete_1",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=NOT_DEFECT (A=REFUTED) -> verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "机械判定 A=REFUTED。链引用 constraint_id qdrant_type_delete_points_001（'Must specify either points or filter parameter'），执行证据显示请求 'provides valid filter (not null, not empty)' 且 API 返回 HTTP 400 ——符合契约要求。问题在 'error message misattribution: missing field ids'，这是 Type2_PoorDiagnostics，非契约违反。契约要求满足，只是诊断质量差。FP。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "vein_hnsw_ef_null_search_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "Parameter validation on filter/condition APIs",
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=DEFECT (A=CONFIRMED via constraint_id qdrant_type_search_points_001) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "机械判定 A=CONFIRMED（constraint_id 存在且为契约原文）。执行证据 c1: hnsw_ef=null -> HTTP 200 OK，违反 params 结构约束。源码显示 SearchParams.hnsw_ef 为 Option<usize>，缺失 null 显式校验。D 命中 blindspot：Parameter validation on filter/condition APIs。Type1_IllegalSuccess 确认。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "vein_params_null_search_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "Parameter validation on filter/condition APIs",
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=DEFECT (A=CONFIRMED via constraint_id qdrant_type_search_points_001) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "机械判定 A=CONFIRMED。执行证据 c1: params=null（对象包装器本身为 null）-> HTTP 200 OK。源码 schema.rs 定义 params: Option<SearchParams>，但 Option wrapper 层未校验 null，仅区分 absent vs null。D 命中 blindspot。Type1_IllegalSuccess 确认。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "vein_hnsw_config_m_boundary_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=DEFECT (A=CONFIRMED via constraint_id qdrant_range_create_collection_001) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "机械判定 A=CONFIRMED。契约约束 qdrant_range_create_collection_001 明确 m ∈ [2,100]。执行证据 c1: m=0 -> HTTP 200 OK。源码显示 HnswConfig.m 缺失 #[validate(range(min=2))] 属性，仅 usize 类型约束拒绝负值。数值下界违反（0 < 2）是客观违规。Type1_IllegalSuccess 确认。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_hnsw_ef_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=NOT_DEFECT (A=REFUTED) -> verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "机械判定 A=REFUTED。链引用 constraint_id qdrant_type_search_points_001（vector dimension matching），但 defect_type=Type2_PoorDiagnostics 声称的是 'hnsw_ef parameter diagnostics quality' ——现象不对应。契约不覆盖参数诊断质量，且执行证据零值被接受（'Zero hnsw_ef=0 accepted'）通过 Option<usize> 类型是合法行为（None/default）。链构造在 contract_grounding 阶段锚错约束，execution_evidence 证明的与 claim 声称的不匹配。这是链建设置缺陷，非 API 缺陷。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_hnsw_ef_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=DEFECT (A=CONFIRMED via constraint_id qdrant_range_create_collection_002) -> verdict=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "机械判定 A=CONFIRMED。契约约束 qdrant_range_create_collection_002 明确 ef_construct ∈ [10, 1000]。执行证据显示 'Large hnsw_ef=1000000 accepted' 且 'Small hnsw_ef=1 accepted' ——两值均偏离合理范围，且 'Top result should be id=1 (exact match), got 2' 显示状态违反。源码确认 SearchParams.hnsw_ef 无运行时范围校验。Type4_StateLogicViolation 确认。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_params_003",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=NOT_DEFECT (A=REFUTED) -> verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "机械判定 A=REFUTED。链引用 constraint_id qdrant_type_search_points_001（vector dimension），但 claim 是 'params object structure validation' ——现象不对应。契约不覆盖 params 对象结构验证。执行证据显示 'Empty params accepted', 'Null params accepted', 'Typo param silently ignored', 'Array params accepted' ——但这些行为源于 Option<SearchParams> + serde lenient deser，是文档化的类型系统行为，非契约违规。链锚错约束，FP。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_points_search_filter_nested_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=NOT_DEFECT (A=REFUTED) -> verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "机械判定 A=REFUTED。链引用 constraint_id qdrant_type_search_points_001（vector dimension），但 claim 是 'Filter parameter nested structure validation' ——现象不对应。契约不覆盖 filter 参数验证。执行证据显示 'Invalid operator error lacks details (score 1/3)', 'String range error lacks details (score 0/3)' ——这是 Type2_PoorDiagnostics 问题，但契约锚点不支持此类缺陷判定。文档证实 filter 结构验证存在，但链引错约束。FP。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "vein_compound_delete_1",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=NOT_DEFECT (A=REFUTED) -> verdict=NOT_DEFECT"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "assertion_depends_on_unrequested_field",
+      "rationale": "机械判定 A=REFUTED。链引用 constraint_id qdrant_type_delete_points_001（'Must specify either points or filter parameter'），执行证据显示请求 'provides valid filter (not null, not empty)' 且 API 返回 HTTP 400 ——符合契约要求。问题在 'error message misattribution: missing field ids'，这是 Type2_PoorDiagnostics，非契约违反。契约要求满足，只是诊断质量差。FP。",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 49,
+    "defect": 30,
+    "not_defect": 19,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {
+      "doc": 2,
+      "source": 2,
+      "both": 9,
+      "behavior": 6
+    },
+    "root_cause_distribution": {
+      "assertion_depends_on_unrequested_field": 12,
+      "approximate_by_design": 4,
+      "documentation_gap_idempotency_undefined": 1,
+      "non_deterministic_unreproducible": 2
+    }
+  }
+}

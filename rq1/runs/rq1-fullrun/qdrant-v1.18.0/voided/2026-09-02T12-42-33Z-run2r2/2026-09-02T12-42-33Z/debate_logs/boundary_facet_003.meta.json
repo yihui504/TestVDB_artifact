@@ -1,0 +1,11 @@
+{
+ "defect_id": "boundary_facet_003",
+ "endpoint": "facet",
+ "param": "key",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "strategy1_state_both_directions",
+ "oracle": {
+  "statement": "on a live bfa003_* collection (genre keyword-indexed x=4/y=4/z=4, mood unindexed, score float-indexed): facet key=genre -> HTTP 200 with result.hits exactly {x:4,y:4,z:4} (4xx = Type1_IllegalRejection); facet key=mood / key=score / key=ghost_key each return HTTP 400/422 per [DOC payload] 'without a suitable index the request fails with 400' — any 2xx-with-hits on those keys = Type1_IllegalSuccess candidate (raw printed); 5xx with /healthz alive = Type3",
+  "source": "docstring"
+ }
+}

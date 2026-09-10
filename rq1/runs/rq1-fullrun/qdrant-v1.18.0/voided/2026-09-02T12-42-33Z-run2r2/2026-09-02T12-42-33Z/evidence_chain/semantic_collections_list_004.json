@@ -1,0 +1,86 @@
+{
+  "defect_id": "semantic_collections_list_004",
+  "endpoint": "collections+list (GET /collections)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists anywhere under results/qdrant (Glob zero hits); fallback fetch of https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-collections succeeded — WebFetch itself was domain-blocked ('Unable to verify if domain api.qdrant.tech is safe to fetch') but the page was retrieved live via the session's alternate web reader, confirming the URL serves content. Version: URL segment v-1-18-x and page version selector 'v1.18.x' loosely match target v1.18.0 (major.minor 1.18). Content: the page documents ONLY 'List all collections' GET /collections ('Returns a list of all existing collections.', single response '200 Retrieved' with result.collections[{name}]) — this supports the script's premise that the listing face is GET-only (sidebar shows PUT create / DEL delete / PATCH update on other /collections/... faces, no POST on /collections); however the page has NO error-response section at all (no 404/405 prose, no diagnostics promise), so the claimed Type2 phenomenon (empty-body 404 on undocumented verb) is not the documentation's own words — it is anchored in the pipeline's Type-2 diagnostic-quality rubric, hence PARTIAL. Endpoint: endpoint_registry entry matches exactly (path 'collections+list', method GET, same source_url, doc_quote 'Returns 200 with an array of {name} CollectionDescription entries.', verified_at 2026-09-02T12:34:08Z); raw_knowledge api_endpoints[collections+list] confirms GET /collections with expected_responses containing only '200': 'list'.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[leg1 POST /collections] status=404 raw=  (log line 8, zero-byte body; line 9: \"[leg1] rejected with 404; diagnostic=None\"; verdict line 13: VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics: POST on the GET-only listing face was rejected with HTTP 404 but the body carries NO diagnostic text))",
+      "secondary_observations": [
+        "[leg2 GET /collections junk-params] status=200 raw={\"result\":{\"collections\":[{\"name\":\"bcc139b6a8bp2\"},{\"name\":\"bcc139bc7c6p2\"},{\"name\":\"scc024_1788393554_legal_1\"},{\"name\":\"scc024_1788393554_legal_8\"},{\"name\":\"scc2a_1788393513_35968_shmin\"}]},\"status\":\"ok\",\"time\":3.725e-6}  (same listing face, query-parameter face: junk query params silently ignored, array intact)",
+        "rest cross-endpoint same-pattern corroboration (output_boundary_cluster_status_003.log:6-9): \"[verb POST /cluster] -> status=404 raw=\" / \"[verb PUT /cluster] -> status=404 raw=\" / \"[verb DELETE /cluster] -> status=404 raw=\" / \"[verb PATCH /cluster] -> status=404 raw=\"  (undocumented verbs on a different GET-only face get the same empty-body 404)",
+        "rest contrast — app-level 404s DO carry diagnostics (output_semantic_collections_get_001.log:13): \"[conform] leg B never-created: 404 with non-empty error message\"  (same transport, same session: the empty body is specific to the router-level unmatched-method face, not to 404s in general)",
+        "baseline and post-probe GET /collections both status=200 with the same 5-collection array (log lines 6, 12) — listing face healthy before and after the probe"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "Request-side-decidable client error (wrong HTTP method on a GET-only route) is NOT masked as 2xx — it returns 404, but the semantically conventional status would be 405 Method Not Allowed, and the body is zero bytes so the client receives no diagnostic at all. The user cannot distinguish 'wrong method' from 'unknown path'."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_collections_list_004"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_collections_list_001",
+      "assertion_text_quoted": "returns 200 with an array of {name} CollectionDescription entries",
+      "api_violates_assertion": false,
+      "note": "Dispatch constraint_id is EMPTY. Per the violates-declaration self-check: the primary observation (POST /collections -> 404 empty body) lies outside the quoted assertion's constraint domain — that quote constrains only the GET-face 200 response, which was compliant in-log (baseline and post-probe GETs returned 200 with the name array exactly as promised). No constraint anywhere in structured_contract.json governs wrong-method disposition or diagnostic quality for collections+list (grep for '405', 'Method Not Allowed', 'diagnostic' -> 0 hits; the single 'wrong method' hit is an unrelated sharding-key doc_quote). The Type2 claim is anchored in the pipeline's Type-2 scoring rubric, not in any contract assertion — the wrong-constraint-cited/no-constraint-exists branch of the self-check; this is recorded as a chain break at 'contract' for the auditor.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:BROKEN — dispatch constraint_id is empty string; the only endpoint-local assertion qdrant_behavioral_collections_list_001 covers the GET positive face only; no constraint in the 87-assertion contract covers method-face disposition or 4xx diagnostic quality for collections+list",
+        "doc:https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-collections reachable (retrieved live), version v1.18.x matches target; documents GET /collections 'Returns a list of all existing collections.' 200 Retrieved result.collections[{name}]; no POST on /collections and no error-response section — GET-only premise consistent, claimed phenomenon undocumented",
+        "script:semantic_collections_list_004 derives the face from raw_knowledge api_endpoints[collections+list] (url /collections, method GET) and sends leg1 POST /collections — request raw line present in log",
+        "log:VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics) with primary raw line '[leg1 POST /collections] status=404 raw=' — observation is real and matches the claim; verdict pattern and raw response are self-consistent"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The doc, script and log links are present, mutually consistent, and the observed raw line supports the claim; but the contract link is missing: the dispatch bound no constraint_id, and no assertion in structured_contract.json promises anything about undocumented-verb handling or diagnostic bodies for collections+list. The claim's normative source is the pipeline-internal Type-2 rubric ('diagnosis_quality (S2, Type-2 focused)' per the dispatch attack text), not the extracted contract — so api_violates_assertion=false against the only quotable endpoint anchor while the behavioral observation itself stands.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "resource\\(\"/collections\"\\)|route\\(\"/collections\"|\"/collections\",",
+        "def_http_handlers|App::new\\(\\)|\\.service\\(",
+        "#\\[(get|post|put|patch|delete)\\(\"/collections\"\\]",
+        "default_service|MethodNotAllowed|METHOD_NOT_ALLOWED|StatusCode::NOT_FOUND",
+        "get\\(\"/collections\"\\)|async fn list_collections"
+      ],
+      "files_examined": [
+        "src/actix/api/collections_api.rs",
+        "src/actix/mod.rs",
+        "src/actix/helpers.rs",
+        "Cargo.lock",
+        "src/actix/web_ui.rs (grep hit, test-only NOT_FOUND assertion)"
+      ],
+      "source_excerpt": "src/actix/api/collections_api.rs:37-46 (clone at commit db3fca3, version 1.18.0, actix-web 4.13.0 per Cargo.lock):\n37  #[get(\"/collections\")]\n38  async fn get_collections(\n39      dispatcher: web::Data<Dispatcher>,\n40      ActixAuth(auth): ActixAuth,\n41  ) -> HttpResponse {\n42      // No request to verify\n43      let pass = new_unchecked_verification_pass();\n44      helpers::time(do_list_collections(dispatcher.toc(&auth, &pass), &auth)).await\n45  }\n\nsrc/actix/api/collections_api.rs:111-118 (the create face is a different path — PUT with a name segment, so no POST route exists on the bare /collections path):\n111  #[put(\"/collections/{collection_name}\")]\n112  async fn create_collection(\n113      dispatcher: web::Data<Dispatcher>,\n114      collection: Path<StrictCollectionPath>,\n115      operation: Json<CreateCollection>,\n...\n\nsrc/actix/mod.rs:113-121 and 149-150 (App builder — no .default_service() is ever registered):\n113  let mut app = App::new()\n114      .wrap(Compress::default())\n...\n121      .wrap(NormalizePath::trim())\n...\n149      .service(index)\n150      .configure(config_collections_api)\n...(lines 151-172 register the remaining configure() blocks; no default_service call anywhere in the builder, confirmed by tree-wide grep: 'default_service|MethodNotAllowed|METHOD_NOT_ALLOWED' -> 0 hits in src/ and lib/)\n\nsrc/actix/helpers.rs:242-247 (contrast — app-level errors DO get status mapping and a rendered body via ResponseError, which is why sibling logs see non-empty 404 bodies for unknown collections):\n242  impl ResponseError for HttpError {\n243      fn status_code(&self) -> http::StatusCode {\n244          match &self.0 {\n245              StorageError::BadInput { .. } => http::StatusCode::BAD_REQUEST,\n246              StorageError::NotFound { .. } => http::StatusCode::NOT_FOUND,",
+      "call_chain_traced": "GET /collections -> #[get(\"/collections\")] get_collections (collections_api.rs:37) registered into the actix App via .configure(config_collections_api) (src/actix/mod.rs:150). The exact path /collections carries exactly one route, guarded GET-only; create_collection lives on a different path pattern (#[put(\"/collections/{collection_name}\")] at collections_api.rs:111). App::new() (mod.rs:113-178) registers no .default_service() and no custom 404/405 handler, so POST /clusters matches no route and the response is produced by the actix-web 4.13.0 framework default — 404 with an empty body — entirely bypassing Qdrant's HttpError/ResponseError rendering layer (helpers.rs:242-261) that gives app-level errors their {\"status\":{\"error\":...}} bodies.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env/proxy body stripping — deployment is the direct docker container testvdb-qdrant-standalone (qdrant/qdrant:v1.18.0, port 6333, no front proxy per deployment_meta.json), and sibling logs through the same client/transport show non-empty 404 bodies (semantic_collections_get_001 lines 13/16)",
+        "request typo — the probe intentionally sends POST /collections, visible raw in log line 8",
+        "concurrency/cache/state — the routing decision is stateless; baseline and post-probe GET /collections both returned the identical 200 array"
+      ],
+      "surviving": "actix-web 4.13.0 framework default retained without any Qdrant-authored override: no route accepts the verb and no default_service renders a diagnostic, so the empty body is the direct mechanical consequence of the source as written. No explicit by-design annotation exists (no comment, no docstring, no maintainer citation near the App builder or the route), so by_design_in_source cannot be claimed — whether the framework-default explanation functions as a by-design defense is left to the chain-auditor."
+    }
+  }
+}

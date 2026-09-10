@@ -1,0 +1,75 @@
+{
+  "defect_id": "semantic_search_behavioral_contract_001",
+  "endpoint": "points+search",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Search API documented at https://api.qdrant.tech/api-reference/points/search-points. Behavioral contract: results should be sorted by score descending (closest point first).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "result: [{id:2,score:0.0}, {id:3,score:0.0}, {id:4,score:0.0}, {id:1,score:0.0}] - closest point (id=1) should be first, got id=2",
+      "secondary_observations": [
+        "All points have score=0.0 (equidistant from query)",
+        "Results not in distance-ascending order despite equal scores"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "HTTP 200 with results - API returns data but violates ordering invariant"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_search_behavioral_contract_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_search_points_001",
+      "assertion_text_quoted": "Search results MUST be ordered by score (distance) with closest/highest-scoring point first. This is core search API behavioral invariant.",
+      "api_violates_assertion": true,
+      "note": "When multiple points have equal scores (distance=0.0), API does not guarantee stable ordering. id=1 should appear first but returned at position 4.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: search results sorted by score, closest first",
+        "script: inserts 4 points with [0,0,0,0] vector, queries with [0,0,0,0]",
+        "expected: all distances=0.0, any stable order acceptable",
+        "log: returns [2,3,4,1] - id=1 not first",
+        "analysis: ordering stability not guaranteed for equal-score results"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "Chain complete - ordering violation for equal-score results indicates unstable sort or missing tie-breaker",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "sort.*score",
+        "order.*by.*score",
+        "search.*result.*sort"
+      ],
+      "files_examined": [
+        "lib/collection/src/shards/local_shard/search.rs",
+        "lib/segment/src/segment/search.rs"
+      ],
+      "source_excerpt": "lib/collection/src/operations/verification/search.rs:8-30: impl StrictModeVerification for SearchRequestInternal {\n    fn query_limit(&self) -> Option<usize> {\n        Some(self.limit)\n    }\n    fn indexed_filter_read(&self) -> Option<&Filter> {\n        self.filter.as_ref()\n    }",
+      "call_chain_traced": "Search execution flows through local_shard/search.rs which collects results. No explicit stable_sort or tie-breaker (e.g., by ID) found for equal-score cases.",
+      "verification_outcome": "validation_absent",
+      "note": "Source code lacks explicit stable ordering for ties. When scores are equal, result order depends on internal segment iteration order, violating the 'closest point first' behavioral contract expectation.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "unstable_sort"
+    }
+  }
+}

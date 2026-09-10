@@ -1,0 +1,89 @@
+{
+  "defect_id": "boundary_points_query_hnswef_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists anywhere in the plugin cache; WebFetch of the constraint's source_url https://qdrant.tech/documentation/search/search/ was domain-blocked by the environment, but the full page WAS retrieved via the secondary web reader on 2026-09-04 — the page's ONLY hnsw_ef prose is '- `hnsw_ef` - value that specifies `ef` parameter of the HNSW algorithm.' with NO minimum stated; the endpoint registry's source_url https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points is unreachable from this environment (both fetch tools) = domain_blocked, but the version-identical published artifact docs/redoc/v1.18.x/openapi.json exists in the source clone and was verified directly. Version: concept doc is unversioned by design ('current (site latest; no version archive)' in the contract) = PARTIAL (normal for concept docs); API reference is v-1-18-x matching target v1.18.0 exactly. Content: the tested half of the assertion ('hnsw_ef minimum 1') appears in NEITHER verifiable doc face — the live concept page contains no minimum statement for hnsw_ef, and the published OpenAPI v1.18.x declares SearchParams.hnsw_ef {type: integer, format: uint, minimum: 0, nullable: true} (same in v1.9.x..master), i.e. the machine contract explicitly permits 0; the other half (acorn max_selectivity [0.0,1.0] default 0.4) IS present verbatim ('0.0 means ACORN will never be used, 1.0 means it will always be used. The default value is 0.4') — so the specific premise the E0 leg attacks is unverifiable in the cited documentation (contract was itself stored with source_status='degraded', source_verified=false). Endpoint precision: points+query present in endpoint_registry with doc_quote '400 on an invalid query'; the script hit exactly POST /collections/{c}/points/query. Note: the constraint names 'acorn_scale' but the actual API field is acorn.max_selectivity (constraint naming does not match the API field name).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "leg E0 hnsw_ef=0 -> status=200 | raw: {\"result\":{\"points\":[{\"id\":1,\"version\":1,\"score\":0.0057622097},{\"id\":2,\"version\":1,\"score\":0.011524419},{\"id\":3,\"version\":1,\"score\":0.01728663}]},\"status\":\"ok\",\"time\":0.000689702}",
+      "secondary_observations": [
+        "[log same script, control legs] leg E1 hnsw_ef=1 -> status=200 ... leg E128 hnsw_ef=128 -> status=200 — identical scores across ef=1/128/0 (6 points x dim4 is below full_scan_threshold, so plain full-scan runs regardless of ef)",
+        "[builder live probe 2026-09-04, face=rest points+query] hnsw_ef=-1 -> HTTP 400: {\"status\":{\"error\":\"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 89\"}} (leg Eneg the script never reached — negative rejected at serde type level, not range level)",
+        "[builder live probe 2026-09-04, face=rest points+query] hnsw_ef='64' string -> HTTP 400: {\"status\":{\"error\":\"Format error in JSON body: invalid type: string \\\"64\\\", expected usize at line 1 column 91\"}} (leg Etype never reached)",
+        "[builder live probe 2026-09-04, face=rest points+query, same request object, same-family param] limit=0 -> HTTP 422: {\"status\":{\"error\":\"Validation error in JSON body: [internal.limit: value 0 invalid, must be 1 or larger]\"}} — the min-1 range IS validated for the sibling parameter limit",
+        "[builder live probe 2026-09-04, face=rest points+query, same constraint's second half] params.acorn.max_selectivity=1.5 -> HTTP 422: {\"status\":{\"error\":\"Validation error in JSON body: [internal.params.acorn.max_selectivity: value 1.5 invalid, must be from 0.0 to 1.0]\"}} — the constraint's acorn range half IS validated when the real field name is used",
+        "[builder live probe 2026-09-04, face=rest points+query] ?timeout=0 -> HTTP 400: {\"status\":{\"error\":\"Deserialize error in query parameters: invalid value: integer `0`, expected a nonzero u64\"}} — sibling min-1 param also enforced",
+        "[builder live probe 2026-09-04, face=rest points+search, OTHER REST FACE] POST /collections/{c}/points/search {\"vector\":[...],\"limit\":3,\"params\":{\"hnsw_ef\":0}} -> HTTP 200 clean success; hnsw_ef=128 control -> HTTP 200 — hnsw_ef=0 silently accepted on BOTH REST faces",
+        "[archived log output_state_collections_create_009.log line 5, face=rest collections+create, same-family HNSW knob] override={'ef_construct': 3} status=422 raw={\"status\":{\"error\":\"Validation error in JSON body: [hnsw_config.ef_construct: value 3 invalid, must be 4 or larger]\"}} — the same codebase enforces a minimum on the sibling HNSW parameter ef_construct",
+        "[archived log output_boundary_points_query_acorn_001.log lines 4-10, face=rest points+query] probeF flat {'acorn_scale': '0.4'} -> status=200 and probeN nested {'acorn': {'acorn_scale': '0.4'}} -> status=200 — NOTE: 'acorn_scale' is not a real API field (real field is acorn.max_selectivity), so these 200s are unknown-key silent-dropping, not range acceptance; that script judged NO_DEFECT",
+        "[archived log output_semantic_points_query_params_bounds_001.log] B1 hnsw_ef=1 (min closure) -> status=200 (valid value accepted; that candidate's claim concerns score semantics, not hnsw_ef domain)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Phenotypically it is a pure 200 success envelope (result.points populated, status ok) with NO error code at all — under the contract-as-written the out-of-range value was fully accepted; however per the published OpenAPI v1.18.x (minimum: 0) the request is not even request-side-decidable erroneous, so there is genuinely no error to surface. Recorded under the 2xx-acceptance category for the auditor's fifth criterion with this caveat."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["boundary_points_query_hnswef_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_points_query_002",
+      "assertion_text_quoted": "SearchParams: hnsw_ef minimum 1; acorn_scale within [0.0, 1.0] (default 0.4)",
+      "api_violates_assertion": true,
+      "note": "The observed parameter hnsw_ef is inside the quote's constraint domain (SearchParams) and the observed value 0 is below the quote's stated minimum 1, and the API accepted it with 200 on both REST faces — the assertion text as written is violated. The separate question of whether the assertion's premise is itself documented is recorded at chain_trace (chain_broken_at=doc), not here. (Dispatch's constraint_id field was mechanically empty; recovered from the attack string and the script header '# constraint_ids: qdrant_range_points_query_002'.)",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_range_points_query_002 present in structured_contract.json constraints.range_constraints[11] (endpoint points+query, type range_constraint, evidence_tier explicit, source_status 'degraded', source_verified false) — dispatch's constraint_id field was empty but recoverable from the attack string",
+        "doc: BREAK — cited source_url (concept page, live-fetched 2026-09-04) contains no hnsw_ef minimum statement at all; the published versioned machine contract (docs/redoc/v1.18.x/openapi.json, mirrored at api.qdrant.tech/v-1-18-x, unreachable from this environment) declares hnsw_ef minimum: 0, i.e. 0 is spec-legal per the only verifiable doc faces; the 'minimum 1' premise is unverifiable (acorn half of the assertion IS verbatim present)",
+        "script: boundary_points_query_hnswef_001.py (archived at debate_logs/) sends POST /collections/{c}/points/query with body {\"query\":{\"nearest\":[0.5,0.25,0.125,0.0625]},\"limit\":3,\"params\":{\"hnsw_ef\":0}} on a self-created 6-point dim4 Euclid collection with cleanup — request reconstructable from script source; log does not echo request bodies, only leg labels carrying the values",
+        "log: VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — leg [E0 hnsw_ef=0] accepted 200 with 3 points; raw response is a genuine clean success (no 4xx/5xx contradiction between verdict pattern and raw bytes); exit code 0"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The contract's premise 'hnsw_ef minimum 1' could not be located in either verifiable documentation face: (a) the live concept page (qdrant.tech/documentation/search/search/, fetched 2026-09-04) states no minimum for hnsw_ef; (b) the published OpenAPI for v1.18.x (and every version v1.9.x..master in the repo's redoc archive) declares minimum: 0 for hnsw_ef, explicitly licensing the value 0. The contract was stored with source_status='degraded'/source_verified=false at mining time. The acorn_scale half of the same assertion is verbatim-documented (max_selectivity 0.0-1.0 default 0.4) and — unlike hnsw_ef — IS enforced at runtime (live 422). Downstream effect: the API behavior (200 on hnsw_ef=0) is consistent with the published machine contract; it violates only an assertion whose documentation basis is unverifiable.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["hnsw_ef", "search_max_hnsw_ef", "ef_construct", "pub struct SearchParams", "validate(nested)"],
+      "files_examined": [
+        "lib/segment/src/types.rs (SearchParams 585-617; max_selectivity validator 580-582; HnswConfig.ef_construct validator 660-666)",
+        "lib/api/src/rest/schema.rs (QueryRequest/QueryRequestInternal 549-607)",
+        "lib/api/src/rest/validate.rs (REST Validate impl map, full file)",
+        "lib/segment/src/index/hnsw_index/hnsw.rs (search_with_graph 1040-1190)",
+        "lib/segment/src/index/hnsw_index/graph_layers.rs (search 530-561, search_with_vectors 563-596)",
+        "lib/collection/src/operations/verification/mod.rs (check_search_params 330-349)",
+        "lib/api/src/grpc/proto/points.proto (SearchParams message 503-514)",
+        "docs/redoc/v1.18.x/openapi.json (published SearchParams schema; also v1.9.x-v1.17.x and master for history)",
+        "tests/openapi/test_strictmode.py (test_strict_mode_max_ef_hnsw_validation 427-458)"
+      ],
+      "source_excerpt": "lib/segment/src/types.rs:585-617 —\n/// Additional parameters of the search\n#[derive(\n    Debug, Deserialize, Serialize, JsonSchema, Validate, Copy, Clone, PartialEq, Default, Hash,\n)]\n#[serde(rename_all = \"snake_case\")]\npub struct SearchParams {\n    /// Params relevant to HNSW index\n    /// Size of the beam in a beam-search. Larger the value - more accurate the result, more time required for search.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub hnsw_ef: Option<usize>,            // <-- NO #[validate(range(min = 1))]\n\n    /// Search without approximation. If set to true, search may run long but with exact results.\n    #[serde(default)]\n    pub exact: bool,\n\n    /// Quantization params\n    #[serde(default)]\n    #[validate(nested)]\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub quantization: Option<QuantizationSearchParams>,\n\n    /// If enabled, the engine will only perform search among indexed or small segments. [...]\n    #[serde(default)]\n    pub indexed_only: bool,\n\n    /// ACORN search params\n    #[serde(default)]\n    #[validate(nested)]\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub acorn: Option<AcornSearchParams>,\n}\n\n[contrast, same file 578-582] pub struct AcornSearchParams { ... #[serde(skip_serializing_if = \"Option::is_none\")]\n    #[validate(range(min = 0.0, max = 1.0))]\n    pub max_selectivity: Option<OrderedFloat<f64>>, }\n[contrast, same file 661-666] pub struct HnswConfig { ... #[validate(range(min = 4))]\n    pub ef_construct: usize, }\n\nlib/api/src/rest/schema.rs:549-601 —\n#[derive(Debug, Serialize, Deserialize, JsonSchema, Validate)]\npub struct QueryRequestInternal {\n    ...\n    /// Search params for when there is no prefetch\n    #[validate(nested)]\n    pub params: Option<SearchParams>,\n    ...\n    /// Max number of points to return. Default is 10.\n    #[validate(range(min = 1))]\n    pub limit: Option<usize>,\n    ...\n}\n#[derive(Debug, Serialize, Deserialize, JsonSchema, Validate)]\npub struct QueryRequest {\n    #[validate(nested)]\n    #[serde(flatten)]\n    pub internal: QueryRequestInternal,\n    pub shard_key: Option<ShardKeySelector>,\n}\n\nlib/segment/src/index/hnsw_index/hnsw.rs:1049-1051 —\n        let ef = params\n            .and_then(|params| params.hnsw_ef)\n            .unwrap_or(self.config.ef);\n\nlib/segment/src/index/hnsw_index/graph_layers.rs:551 —\n        let ef = max(ef, top);\n\nlib/collection/src/operations/verification/mod.rs:343-347 —\n        check_limit_opt(\n            self.hnsw_ef,\n            strict_mode_config.search_max_hnsw_ef,\n            \"hnsw_ef\",\n        )?;   // opt-in strict-mode UPPER bound only; no lower bound anywhere\n\nlib/api/src/grpc/proto/points.proto:506 —\n  optional uint64 hnsw_ef = 1;   // grpc face: uint64 domain, no min constraint\n\ndocs/redoc/v1.18.x/openapi.json components.schemas.SearchParams.properties.hnsw_ef —\n  {\"description\": \"Params relevant to HNSW index Size of the beam in a beam-search...\", \"type\": \"integer\", \"format\": \"uint\", \"minimum\": 0, \"nullable\": true}",
+      "call_chain_traced": "REST POST /collections/{c}/points/query -> QueryRequest { #[validate(nested)] internal: QueryRequestInternal } -> internal.params: Option<SearchParams> with #[validate(nested)] (this is the machinery that produced the live 422 'internal.limit: value 0 invalid, must be 1 or larger' and 'internal.params.acorn.max_selectivity: value 1.5 invalid, must be from 0.0 to 1.0') -> SearchParams.hnsw_ef: Option<usize> carries NO #[validate(range(min = 1))] attribute although the struct derives Validate and sibling fields in the same struct (acorn.max_selectivity) and the same request object (limit, and HnswConfig.ef_construct on the create face) do carry range validators -> serde accepts any usize-representable value (0 accepted; -1 and '64' rejected 400 at type level) -> collection search path -> hnsw.rs search_with_graph: ef = params.hnsw_ef (Some(0) used as-is, NOT replaced by default; only None falls back to config.ef) -> graph_layers.rs search: ef = max(ef, top) runtime clamp -> with 6 points x dim4 below the default full_scan_threshold_kb, the plain full-scan path executes regardless, so hnsw_ef is functionally inert in the observed scenario. The only hnsw_ef bound anywhere is the opt-in strict-mode config upper bound search_max_hnsw_ef (verification/mod.rs:343-347, test_strictmode.py:427-458). grpc face: proto uint64 + conversions map to usize — same absent lower bound. The published OpenAPI 'minimum: 0' is schemars' automatic mirror of Option<usize>, not a hand-written semantic promise; no comment/docstring in source declares an intent to allow 0.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — docker testvdb-qdrant-standalone healthy/up 15h at probe time; /healthz passed; live re-run on 2026-09-04 reproduced the exact 200-accept byte-for-byte identical scores on both REST faces",
+        "request-typo — request body reconstructable from archived script source (debate_logs/boundary_points_query_hnswef_001.py lines 203-206); leg labels in log carry the exact values; control legs E1/E128 behaved as documented",
+        "concurrency — strictly sequential single-client legs on a script-private collection",
+        "cache-delay — stateless read path; fresh collection created per run"
+      ],
+      "surviving": "Two surviving considerations, neither exculpatory for the contract-as-written but material for adjudication: (1) the assertion's premise 'hnsw_ef minimum 1' is unverifiable in every currently-reachable documentation face, and the published OpenAPI v1.18.x explicitly declares minimum: 0 — i.e. the observed acceptance is CONSISTENT with the machine-published contract, so the defect reduces to concept-doc-vs-implementation divergence only if the min-1 premise was ever documented; (2) functional inertness — in the observed scenario (sub-full-scan-threshold collection) and generally via the max(ef, top) clamp, hnsw_ef=0 does not corrupt results, so impact is request-validation hygiene, not search correctness. Runtime clamp + OpenAPI minimum:0 could support a by-design argument, but NO explicit design declaration (comment/docstring/maintainer statement) exists in source, so by_design_in_source is not claimable."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] remove_peer = /cluster/peer/{peer_id} (raw_knowledge api_endpoints[cluster+peer+delete].url)
+[pre-probe] /healthz status=200
+[GET /cluster] status=200 raw={"result":{"status":"disabled"},"status":"ok","time":2.251e-6}
+[GET /cluster] no live peer inventory exposed (disabled mode) - all battery ids are non-live
+[peer_id=0 (never a generated peer id)] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled."},"time":0.000043456}
+[peer_id=1 (lowest plausible id, not in inventory)] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled."},"time":4.752e-6}
+[peer_id=987654321987654321 (random-large ghost)] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled."},"time":4.755e-6}
+[peer_id=u64-max ghost] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled."},"time":6.183e-6}
+OBSERVATION (positive face): no valid removable peer exists on this deployment (single node, cluster status disabled) - every live peer would simultaneously be the destructive 'last peer' case, which is the state constraint's guarded face (semantic_cluster_peer_delete_005); the 200-on-valid face is therefore not judged here
+[summary] 4 clean 4xx refusals on invalid peer ids, 0 illegal successes
+VERDICT: NO_DEFECT

@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_telemetry_001",
+  "endpoint": "cluster+telemetry",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "count_consistency",
+  "oracle": {
+    "statement": "documented no-param GET /cluster/telemetry -> 200 with result object at every phase (create / upsert 8 wait=true / index create / delete 4 wait=true / verified drop); result fingerprint (key set, cluster.enabled, cluster.number_of_peers) equals the P0 baseline across all phases (drift = Type4_StateLogicViolation); details_level=10 returns 200 and when result.cluster materializes: enabled boolean, number_of_peers integer|null, peers map (violation = Type4); live collection surfaces in the details-10 collections name view while other names are visible (never = Type4); count controls 8 then 4 (drift = Type4); after quiesced drop + 10s window the collection name leaves the collections view (still present = stale state Type4); any 5xx = Type3 only after /healthz 200",
+    "source": "docstring"
+  }
+}

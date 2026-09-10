@@ -1,0 +1,15 @@
+{
+ "defect_id": "boundary_index_create_003",
+ "endpoint": "index+create",
+ "param": "field_schema.type",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "strategy2_type_confusion",
+ "constraint_ids": [
+  "qdrant_type_index_create_001",
+  "qdrant_behavioral_index_create_001"
+ ],
+ "oracle": {
+  "statement": "on the live bic003_* collection the legal control {type: keyword} returns 200 with control key in readback result.payload_schema; each of the six wrong-JSON-typed field_schema.type probes (5, 1.5, true, null, ['keyword'], {'type':'keyword'}) returns HTTP 400/422 with non-empty diagnostics (2xx + readback key present = Type1_IllegalSuccess; 2xx + key absent = silent-drop judge signal; 404 on live collection = SCRIPT_ERROR; 5xx/transport = Type3 with /healthz re-check; empty 4xx body = Type2_PoorDiagnostics)",
+  "source": "docstring"
+ }
+}

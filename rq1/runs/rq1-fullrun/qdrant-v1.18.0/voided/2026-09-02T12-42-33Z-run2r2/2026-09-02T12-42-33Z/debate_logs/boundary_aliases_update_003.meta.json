@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_update_003",
+ "endpoint": "aliases+update",
+ "param": "actions[].create_alias.alias_name",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "type",
+ "oracle": {
+  "statement": "positive control (valid create then delete) returns 200 with envelope result:boolean and observable state change in GET /aliases; every wrong-typed or missing required leaf field is rejected 4xx with non-empty diagnostic body; 200 on any wrong-typed/missing-leaf probe = Type1_IllegalSuccess (cross-checked that no coerced alias name polluted GET /aliases), 5xx = Type3_RuntimeFailure (healthz rechecked), empty-body 4xx = Type2_PoorDiagnostics (request_required_paths: actions[].create_alias.alias_name + collection_name, actions[].delete_alias.alias_name, actions[].rename_alias.{new,old}_alias_name)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

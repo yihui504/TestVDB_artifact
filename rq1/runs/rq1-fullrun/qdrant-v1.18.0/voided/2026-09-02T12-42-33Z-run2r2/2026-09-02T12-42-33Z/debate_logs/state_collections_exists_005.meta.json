@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_exists_005",
+ "endpoint": "collections+exists",
+ "param": "collection_name (exists channel integrity during same-name lifecycle churn)",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "concurrent",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_exists_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/collection-exists",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "during create->drop churn every exists answer is a well-formed 200 with boolean result.exists (404 = Type4 at count>=1; >=2 x 5xx/malformed with /healthz alive = Type3, single occurrence logged inconclusive); after final delete + describe control 404, settled exists = 200 + result.exists=false",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_collections_create_022",
+  "endpoint": "collections+create",
+  "param": "timeout",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "behavioral_contract",
+  "oracle": {
+    "statement": "create with ?timeout=0 is refused 4xx (anchor; 200 = Type1_IllegalSuccess); update-face PATCH ?timeout=0 and delete-face DELETE ?timeout=0 are ALSO refused 4xx - any sibling-face 200 = DEFECT_FOUND (Type1_IllegalSuccess, inconsistent disposition of the same parameter across interface faces per G9); the ?timeout=1 closure calls on both sibling faces return 2xx (refusal = Type1_IllegalRejection); 5xx with /healthz alive = Type3_RuntimeFailure - constraint qdrant_behavioral_collections_create_005",
+    "source": "docstring"
+  }
+}

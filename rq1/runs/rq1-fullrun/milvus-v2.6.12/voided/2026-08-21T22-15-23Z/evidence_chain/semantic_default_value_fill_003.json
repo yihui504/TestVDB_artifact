@@ -1,0 +1,67 @@
+{
+  "defect_id": "semantic_default_value_fill_003",
+  "endpoint": "collections+create / entities+insert",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "契约无 defaultValue 类型约束断言（33 constraints 检索无 defaultValue 相关）；派发单 constraint_id='count_consistency' 对应 invariant milvus_inv_count_consistency_001（行数一致性），与现象不同面。双端点均在 registry。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "create wrong-form: {\"code\":0,\"data\":{}} → insert omitting: {\"code\":1804,\"message\":\"fail to deal the insert data, error: unable to cast \\\"\\\" of type string to int32: invalid parameter[expected=Int32][actual=]\"}（主观测双形态：create 接受字符串形态 default_value='77'，但依赖默认值填充的 insert 报 1804 cast 错——默认值从未生效）",
+      "secondary_observations": [
+        "create: {\"code\":0,\"data\":{}}（正确数值形态 fixture）",
+        "insert: code:0 insertCount:2（显式提供字段值时正常）",
+        "query: {\"code\":0,...\"data\":[{\"pk\":1,\"score\":77,\"tag\":\"def\"},{\"pk\":2,\"score\":5,\"tag\":\"hi\"}]}（正确形态默认值生效对照：score:77）",
+        "upsert/after upsert: code:0 正常"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "缺陷面在 create（200+code:0 接受无法生效的默认值）；后果在 insert 侧以 200+1804 暴露，错误指向 insert 而非 create（误导性诊断面）"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/semantic_default_value_fill_003.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": null,
+      "assertion_text_quoted": "（无 defaultValue 契约断言。参照源码行为约定 utils.go:1755-1762 'cannot use \"%v\"(type: %T) as int default value'——create 侧本应拒绝字符串形态）",
+      "api_violates_assertion": false,
+      "note": "无契约断言可违（violates=false='无契约违反'）。但源码 convertDefaultValue 有明确类型拒绝路径：字符串 '77' 对 Int32 应触发 'cannot use ... as int default value' 错误——create 却返回 code:0，观测与源码预期路径矛盾，根源见 source_grounding（可能走了 fillFieldInfo 之外的宽松序列化路径）。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:defaultValue 类型无断言（环缺失）",
+        "doc:utils.go convertDefaultValue 类型拒绝语义",
+        "script:create defaultValue='77'（字符串）→ insert 省略该字段",
+        "log:create code:0；insert 1804 cast \"\" to int32（默认值未生效）"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "契约断言环缺失；行为链完整——insert 期错误信息 'unable to cast \"\" of type string' 表明默认值以字符串 \"\"（空串）形态驻留 schema，与 create 期被绕过的类型校验矛盾",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["convertDefaultValue", "DefaultValue", "Nullable"],
+      "files_examined": ["internal/distributed/proxy/httpserver/handler_v2.go", "internal/distributed/proxy/httpserver/utils.go"],
+      "source_excerpt": "internal/distributed/proxy/httpserver/utils.go:1741-1762:\nfunc convertDefaultValue(value interface{}, dataType schemapb.DataType) (*schemapb.ValueField, error) {\n\tif value == nil {\n\t\treturn nil, nil\n\t}\n\tswitch dataType {\n\t...\n\tcase schemapb.DataType_Int8, schemapb.DataType_Int16, schemapb.DataType_Int32:\n\t\t// all passed number is float64 type\n\t\tv, ok := value.(float64)\n\t\tif !ok {\n\t\t\treturn nil, merr.WrapErrParameterInvalidMsg(`cannot use \"\"%v\"(type: %T) as int default value`, value, value)\n\t\t}\n\nhandler_v2.go:1932-1937（create 调用点）:\n\t\t\tfieldSchema.DefaultValue, err = convertDefaultValue(field.DefaultValue, dataType)\n\t\t\tif err != nil { ... HTTPAbortReturn 1100 ... }\n\nutils.go:939（insert 侧）:\n\t\t\tif (field.Nullable || field.DefaultValue != nil) && !ok {\n\t\t\t\tcontinue  // 字段缺省时依赖 Nullable/DefaultValue\n\t\t\t}",
+      "call_chain_traced": "create: handler_v2.go:1932 convertDefaultValue 对字符串 '77' 对 Int32 应走 !ok 分支返回错误——但 log 显示 code:0。可能路径：请求 JSON 的 defaultValue 经 gjson 提取后为 string，dataType 推断分支或默认路径未进入 Int32 case（需 auditor 复核具体字段形态：脚本传的是 field 级 defaultValue 字符串形态，可能走了 httpserver 提取的 string 先行分支 utils.go:1810 'Wrong defaultValue type'（string->string 字段的路径）或 schema 里 DefaultValue 保存了空 ValueField）。insert: utils.go:939 字段缺省 continue 后，行数据无该列，proxy 侧 cast 时拿到 \"\"（string）→ 1804 'unable to cast \"\" of type string to int32'——错误信息直接证明驻留的默认值形态是空字符串。",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay"],
+      "surviving": "create 期类型校验被绕过（convertDefaultValue 存在校验但字符串 '77' 对 Int32 未被拒）+ 默认值以坏形态驻留 schema 导致 insert 期 1804——create/insert 两阶段形态断裂无平凡解释"
+    }
+  }
+}

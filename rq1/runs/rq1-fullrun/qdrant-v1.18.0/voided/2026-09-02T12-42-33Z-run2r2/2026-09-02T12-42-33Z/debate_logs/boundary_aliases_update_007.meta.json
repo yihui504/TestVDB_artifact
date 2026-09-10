@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_update_007",
+ "endpoint": "aliases+update",
+ "param": "actions",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "resource_limit",
+ "oracle": {
+  "statement": "bulk 1000-action create returns either 200 with ALL 1000 aliases listed in GET /aliases (count delta exactly +1000 — under-application = Type4_StateLogicViolation) or a 4xx wholesale rejection with ZERO of the 1000 applied (any partial subset = Type4 non-atomic per the ATOMIC spec description); 5xx/OOM/hang = Type3_RuntimeFailure (healthz rechecked; client timeout 180s); the matching 1000-action delete then leaves zero prefix-owned aliases (constraint qdrant_state_aliases_update_001 \"alias operations in one request are applied atomically\" + qdrant_behavioral_aliases_update_001 \"valid alias batch returns HTTP 200\")",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

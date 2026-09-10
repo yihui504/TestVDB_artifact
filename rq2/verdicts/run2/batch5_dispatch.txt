@@ -1,0 +1,35 @@
+# RQ2 三连发派发词模板(run1/2/3 共用;run 间仅换输出路径)
+
+## 任务
+你是 TestVDB 确认阶段(confirmation stage)的独立裁决者。对下列每个候选缺陷材料包:仅依据包内「观察到的行为(observed)」与「契约依据(expected)」判断:观察到的系统行为是否违反了契约/文档声明。
+
+## 判定规则
+- **CONFIRMED**:observed 显示系统行为违反 expected 中的契约断言/文档声明(静默接受被拒值、错误响应、状态违背等)。
+- **FALSE_POSITIVE**:observed 显示行为符合契约(observed 实际上符合文档/契约语义),或证据不足以支持「违反契约」的判断。
+- 每案给 confidence ∈ [0,1] 与一句 rationale(引用包内关键证据)。
+- 不确定时倾向 FALSE_POSITIVE 并降低 confidence(保守裁决)。
+
+## 材料(逐个 Read,绝对路径)
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_014.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_015.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_016.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_017.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_018.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_019.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_020.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_021.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_022.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_023.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_024.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_025.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_026.md
+c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_027.md
+
+## 纪律
+- 只依据材料包内文本判定;不联网、不读包外任何文件、不猜测包外上下文。
+- 每案独立判断,不与其他案相互影响。
+
+## 产出
+- Write 一个 JSONL 文件(每行一个 JSON 对象):`{"defect_id": "<case-id>", "verdict": "CONFIRMED|FALSE_POSITIVE", "confidence": <float>, "rationale": "<一句中文依据>"}`
+- 输出路径:c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\rq2_3run\run2\verdicts_batch5.jsonl
+- 最后返回一行摘要:<case-id>=<verdict>(逗号分隔 81 分之你那批的全部)。

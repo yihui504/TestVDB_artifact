@@ -1,0 +1,15 @@
+{
+ "defect_id": "semantic_collections_list_002",
+ "endpoint": "collections+list",
+ "param": null,
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "metamorphic",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_list_001"
+ ],
+ "oracle": {
+  "statement": "the listing is a faithful registry of create/drop ACKs, sampled immediately at each ACK: MR1 post-create prefix scope lists exactly {A,B,C}; MR2 post-drop of B lists exactly {A,C} with describe answering 404 for B and 200 for control A; MR3 post-recreate lists {A,B,C} with B exactly once - membership deviation, duplicate row from lifecycle churn, or list/describe disagreement = Type4_StateLogicViolation; 5xx with /healthz alive = Type3; transport failure with healthy /healthz or setup-premise failure = SCRIPT_ERROR",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

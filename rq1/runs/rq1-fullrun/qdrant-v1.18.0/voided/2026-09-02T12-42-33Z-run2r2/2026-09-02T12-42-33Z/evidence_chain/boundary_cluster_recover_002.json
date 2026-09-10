@@ -1,0 +1,107 @@
+{
+  "defect_id": "boundary_cluster_recover_002",
+  "endpoint": "cluster+recover (POST /cluster/recover)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: PASS — no doc_preflight.json sidecar exists; WebFetch to api.qdrant.tech was blocked by the environment twice (domain_blocked for that tool), but the page was fetched successfully via an alternate URL reader: title 'Recover cluster state | Qdrant | API Reference'. Version: PASS — URL segment v-1-18-x and page version selector both show v1.18.x, matching target v1.18.0. Content: PARTIAL — the tested face IS documented: the page documents POST /cluster/recover with the cURL example carrying no request body (only the api-key header), and '200 Successful' is the ONLY documented response (no error codes, no standalone-mode/distributed precondition anywhere; page prose: 'Attempts to restore or synchronize the node's current state with that of its peers.'); however the assertion's clause 'intended for use only when quorum is permanently lost' and the endpoint_registry doc_quote ('Removes cluster metadata and restarts as a single-node cluster from local data...') do NOT appear on the current v1.18.x page — they are older doc-generation wording. Endpoint precision: PASS — registry entry cluster+recover -> POST /cluster/recover with this exact source_url, and the page indeed documents that route.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[probe 'documented no-body control'] -> status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.000231952} (followed by [healthz attempt 1] status=200 raw=healthz check passed)",
+      "secondary_observations": [
+        "[discover GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.224e-6} — runtime proof the deployment is standalone (cluster disabled), i.e. the endpoint's documented 200 face was exercised on a deployment where the doc never says it cannot succeed",
+        "[probe 'string body'] -> status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.000162598} — face: rest, undocumented body form",
+        "[probe 'number body'] -> status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.000232769} — face: rest",
+        "[probe 'boolean body'] -> status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.00020676} — face: rest",
+        "[probe 'array body'] -> status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.000191488} — face: rest",
+        "[probe 'empty object'] -> status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.000251766} — face: rest",
+        "[probe 'peer_id string-where-int'] -> status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.000210194} — face: rest",
+        "[probe 'peer_id null'] -> status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.000245248} — face: rest",
+        "[probe 'wrong-typed op fields'] -> status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.000243612} — face: rest",
+        "[probe '50-level nested object'] -> status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.000151493} — face: rest; all 9 undocumented body forms produce a byte-identical 500 to the documented no-body control — the body is never parsed (source-confirmed: the actix handler has no body extractor)",
+        "face_unavailable for cross-face comparison: POST /cluster/recover exists only on the actix REST layer (src/actix/api/cluster_api.rs:60); no tonic/gRPC handler for request_snapshot exists and lib/api proto files contain no cluster-recover RPC (only shard-snapshot Recover) — the in-log body-form matrix above is the only available comparison set",
+        "sibling-script confirmation: output_boundary_cluster_recover_001.log:15 '[recover] status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.024100829}' (documented form, empty body); output_state_cluster_recover_002.log:8-12 shows three back-to-back identical 500s with healthz 200 between each"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "No 2xx masking: every disposition was an honest 5xx with an error body. Notable for the auditor's fifth criterion: the 9 request-side-decidable malformed bodies (string/number/boolean/array/nested objects) returned the same 500 'Service internal error' as the perfectly legal documented no-body control — the status code does not discriminate input validity at all because the handler never reads the body; a 4xx family response never occurs on this endpoint under any input."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_cluster_recover_001",
+        "boundary_cluster_recover_002",
+        "boundary_cluster_recover_003",
+        "boundary_cluster_recover_004",
+        "state_cluster_recover_001",
+        "state_cluster_recover_002",
+        "state_cluster_recover_003",
+        "state_cluster_recover_004"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_recover_001",
+      "assertion_text_quoted": "returns 200 ok; intended for use only when quorum is permanently lost",
+      "api_violates_assertion": true,
+      "note": "violates=true on the observed deployment: the request form is exactly the documented bodyless control, squarely inside the quote's domain, and the API returned 500 where the assertion promises 200 — this is not the ambiguous 'accepted-but-maybe-compliant' case. Caveat the auditor must weigh: the 200 promise was exercised on a standalone deployment (GET /cluster status:'disabled'); the doc documents no distributed-mode precondition, so the constraint text itself carries no such condition. The quoted text is the verbatim description field of assertion qdrant_behavioral_cluster_recover_001 in structured_contract.json (whose companion expected_behavior field reads: HTTP 200 on cluster recovery (dangerous operational op)).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_cluster_recover_001 present in structured_contract.json assertions[] (87 items) — endpoint cluster+recover, expected_behavior 'HTTP 200 on cluster recovery (dangerous operational op)', evidence_tier explicit, source_status reachable, source_verified false at contract time",
+        "doc: source_url https://api.qdrant.tech/v-1-18-x/api-reference/distributed/recover-current-peer reachable (alternate reader after WebFetch domain_blocked), v1.18.x matches target; documents bodyless POST /cluster/recover with '200 Successful' as the only response; no error codes and no standalone-mode precondition documented; assertion's 'quorum permanently lost' clause and registry doc_quote are older-doc wording not present on the current page (noted, does not break the tested 200 face)",
+        "script: boundary_cluster_recover_002 derived POST /cluster/recover from cluster+recover and fired 1 documented no-body control + 9 undocumented body forms, all rest face, ownership tag bcr2-2206a739",
+        "log: all 10 requests returned 500 {\"error\":\"Service internal error: Qdrant is running in standalone mode\"} with /healthz 200 after each; GET /cluster precondition probe shows status:'disabled'"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "running in standalone mode",
+        "request_snapshot",
+        "consensus_proposal_sender",
+        "TableOfContent::new(",
+        "#[post(\"/cluster/recover\")]",
+        "recover (case-insensitive, lib/api/**/*.proto)",
+        "service_error / ServiceError in errors.rs and helpers.rs status_code"
+      ],
+      "files_examined": [
+        "src/actix/api/cluster_api.rs",
+        "lib/storage/src/content_manager/toc/mod.rs",
+        "lib/storage/src/content_manager/errors.rs",
+        "src/main.rs",
+        "src/actix/helpers.rs",
+        "lib/storage/src/content_manager/mod.rs",
+        "lib/api/src/grpc/proto/* (grep-level: no cluster-recover RPC exists)"
+      ],
+      "source_excerpt": "src/actix/api/cluster_api.rs:60-73 (REST handler — NO body extractor, request body never read):\n#[post(\"/cluster/recover\")]\nfn recover_current_peer(\n    dispatcher: web::Data<Dispatcher>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Future<Output = HttpResponse> {\n    // Not a collection level request.\n    let pass = new_unchecked_verification_pass();\n\n    helpers::time(async move {\n        auth.check_global_access(AccessRequirements::new().manage(), \"recover_current_peer\")?;\n        dispatcher.toc(&auth, &pass).request_snapshot()?;\n        Ok(true)\n    })\n}\n\nlib/storage/src/content_manager/toc/mod.rs:546-551:\n    pub fn request_snapshot(&self) -> Result<(), StorageError> {\n        self.get_consensus_proposal_sender()?\n            .send(ConsensusOperations::request_snapshot())?;\n\n        Ok(())\n    }\n\nlib/storage/src/content_manager/toc/mod.rs:775-779 (the guard that fired):\n    fn get_consensus_proposal_sender(&self) -> Result<&OperationSender, StorageError> {\n        self.consensus_proposal_sender\n            .as_ref()\n            .ok_or_else(|| StorageError::service_error(\"Qdrant is running in standalone mode\"))\n    }\n\nsrc/main.rs:506-514 (root cause — standalone deployment gets None sender, with the only intent-comment found):\n    let (propose_sender, propose_receiver) = std::sync::mpsc::channel();\n\n    let propose_operation_sender = if settings.cluster.enabled {\n        // High-level channel which could be used to send User-space consensus operations\n        Some(OperationSender::new(propose_sender))\n    } else {\n        // We don't need sender for the single-node mode\n        None\n    };\n\nsrc/actix/helpers.rs:243-248 (error-to-status mapping):\n            StorageError::ServiceError { .. } => http::StatusCode::INTERNAL_SERVER_ERROR,\n\nlib/storage/src/content_manager/errors.rs:21-25 (message template matching the observed body):\n    #[error(\"Service internal error: {description}\")]\n    ServiceError {",
+      "call_chain_traced": "POST /cluster/recover -> recover_current_peer (src/actix/api/cluster_api.rs:60-73; handler signature has no body parameter, so all 9 body variants are invisible to it) -> auth.check_global_access(manage) passes -> toc.request_snapshot() (lib/storage/src/content_manager/toc/mod.rs:546-551) -> get_consensus_proposal_sender() (toc/mod.rs:775-779) -> consensus_proposal_sender is None on this deployment because main.rs:508-514 sets it to None when settings.cluster.enabled=false (comment: 'We don't need sender for the single-node mode') -> StorageError::service_error(\"Qdrant is running in standalone mode\") -> helpers.rs:247 maps ServiceError to 500 INTERNAL_SERVER_ERROR -> observed body 'Service internal error: Qdrant is running in standalone mode' (errors.rs:21 template). Fully deterministic; no gRPC/tonic face for this operation exists.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "verification_note": "A precondition guard EXISTS in source and fires deterministically: get_consensus_proposal_sender() rejects with a typed, descriptive service error when running standalone — this is not a missing check, not a panic, and not silent acceptance. It is NOT marked by_design_in_source because no comment or docstring declares the endpoint's 500-on-standalone disposition intentional; the only intent-comment found (main.rs:512 'We don't need sender for the single-node mode') documents the None-sender design at the construction site, one step removed from the endpoint disposition. Whether 'typed 500 ServiceError for an inapplicable deployment mode, on an endpoint whose docs document only 200 and no preconditions' is an acceptable design or a doc/behavior contract gap is left to the auditor.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env-crash (healthz returned 200 after every probe; the error is a typed deterministic StorageError, not a crash or OOM)",
+        "concurrency-race (identical 500 across 8 scripts, 10 body forms, and 3 back-to-back repeats in state_cluster_recover_002)",
+        "cache-delay (no cache semantics involved)",
+        "request-typo (the primary probe is byte-for-byte the doc's own bodyless cURL form)"
+      ],
+      "surviving": "deployment-mode precondition: the sandbox runs a single-node deployment (GET /cluster -> status:'disabled', i.e. settings.cluster.enabled=false). POST /cluster/recover is a consensus-only operation and the source guards it to fail with 'Qdrant is running in standalone mode'. The v1.18.x documentation documents neither this precondition nor any error response for the endpoint, so the assertion's 200 promise is unachievable on any standalone deployment while the doc gives no warning. This deployment-mode/undocumented-precondition defense survives mechanical exclusion and is the auditor's central by-design-vs-doc-gap question."
+    }
+  }
+}

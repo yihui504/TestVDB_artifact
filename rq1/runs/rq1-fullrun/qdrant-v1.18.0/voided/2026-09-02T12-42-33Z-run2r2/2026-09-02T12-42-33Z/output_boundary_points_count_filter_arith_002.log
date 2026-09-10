@@ -1,0 +1,27 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+baseline: omitted filter count == 12 (arithmetic anchor OK)
+
+F1 must [city=berlin] -> status=200
+raw: {"result":{"count":8},"status":"ok","time":0.00031803}
+F1 must [city=berlin]: count == 8 == expected 8
+
+F2 must [city=paris] -> status=200
+raw: {"result":{"count":4},"status":"ok","time":0.000204243}
+F2 must [city=paris]: count == 4 == expected 4
+
+F3 should [berlin, paris] (union) -> status=200
+raw: {"result":{"count":12},"status":"ok","time":0.000199365}
+F3 should [berlin, paris] (union): count == 12 == expected 12
+
+F4 must_not [berlin] -> status=200
+raw: {"result":{"count":4},"status":"ok","time":0.000160827}
+F4 must_not [berlin]: count == 4 == expected 4
+
+F5 must [berlin] + must_not [berlin] (contradiction) -> status=200
+raw: {"result":{"count":0},"status":"ok","time":0.000339778}
+F5 must [berlin] + must_not [berlin] (contradiction): count == 0 == expected 0
+
+F6 must [has_id [1,2,3,9]] -> status=200
+raw: {"result":{"count":4},"status":"ok","time":0.000382902}
+VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — F6 must [has_id [1,2,3,9]]: exact=true count expected 3 (arithmetic-derived from seed set), got 4: {"result":{"count":4},"status":"ok","time":0.000382902}

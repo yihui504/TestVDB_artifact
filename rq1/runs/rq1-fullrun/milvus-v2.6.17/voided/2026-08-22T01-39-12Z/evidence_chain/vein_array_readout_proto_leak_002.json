@@ -1,0 +1,65 @@
+{
+  "defect_id": "vein_array_readout_proto_leak_002",
+  "endpoint": "entities+get / entities+query",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "REST v2 响应契约（Array 字段应序列化为 JSON 数组）无单独文档页逐字断言（如实：未单独核 array 字段 readout 文档页）；契约库无 readout 序列化 constraint。判定材料为 behavior 同行同端点双形态对照 + 源码 marshal 路径",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "entities+get {\"code\":0,...,\"data\":[{\"id\":1,\"tags\":{\"Data\":{\"StringData\":{\"data\":[\"a\",\"b\"]}}},\"tags_dyn\":[\"x\",\"y\"]}]} —— 同一行同一响应内：声明字段 tags 泄漏 proto 包装对象，动态字段 tags_dyn 为纯 JSON 数组",
+      "secondary_observations": [
+        "query 端点同型：\"tags\":{\"Data\":{\"StringData\":{\"data\":[\"a\",\"b\"]}}} vs \"tags_dyn\":[\"x\",\"y\"]",
+        "insert 侧 code=0（写入正常，问题仅在读出序列化）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "code:0 成功响应，缺陷在 payload 结构（proto 内部对象直接 marshal）——Type2 响应契约违背"},
+      "reproducibility": "单脚本（get+query 双端点同型复现）",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_array_readout_proto_leak_002.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "(no direct constraint — readout serialization)",
+      "assertion_text_quoted": "(vein 命题: 同端点同行同类型数据（数组）应以一致 JSON 形态返回；{\"Data\":{\"StringData\":...}} 为 proto 内部结构泄漏)",
+      "api_violates_assertion": true,
+      "note": "violates=true 依据同行双形态不一致（声明 vs 动态）——内部一致性论据而非文档引文；无契约库条目，如实标注",
+      "evidence_source": "behavior"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 缺失（无 readout 序列化 constraint）",
+        "doc: 未核专项页（PARTIAL）",
+        "script: vein_array_readout_proto_leak_002.py 同行双字段对照",
+        "log: tags={'Data':{'StringData':...}} vs tags_dyn=['x','y']"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "契约库无 readout 序列化断言；链靠 behavior 对照 + 源码 marshal 路径支撑",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["GetArrayData().GetData()", "case schemapb.DataType_Array", "row[fieldDataList[j].GetFieldName()]"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/utils.go (L1623-1637 BuildQueryResp Array 分支；L1440+ 动态字段展平对照)"
+      ],
+      "source_excerpt": "utils.go BuildQueryResp L1630-1635：`case schemapb.DataType_Array: if len(fieldDataList[j].GetValidData()) != 0 && !fieldDataList[j].GetValidData()[i] { row[...] = nil; continue }; row[fieldDataList[j].GetFieldName()] = fieldDataList[j].GetScalars().GetArrayData().GetData()[i]` —— 声明 Array 字段直接把 schemapb.ScalarField（oneof 包装结构体）塞进 row，随后整体 json.Marshal 时输出其导出字段名 {\"Data\":{\"StringData\":{\"data\":[...]}}}。动态字段走 JSON 分支（L1637+ json.Unmarshal 到 map 再平铺），天然是纯 JSON 值——同端点两分支形态分裂即观测根因。",
+      "call_chain_traced": "proxy Query/Get 返回 FieldData -> BuildQueryResp Array 分支塞 proto 对象 -> gin json.Marshal -> {\"Data\":{...}} 泄漏",
+      "verification_outcome": "validation_absent",
+      "note": "缺一个 ArrayData[i] -> []interface{} 的展开步骤；对照分支（动态/JSON）有该展开",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request-typo（同一请求内两形态共存排除请求侧因素）"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "strong（同行双形态对照设计 + 源码 marshal 分支逐行定位；Type2 响应契约缺陷，contract/doc 环弱为该类固有）"
+}

@@ -1,0 +1,22 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['count', 'get_point', 'healthz', 'query_batch', 'upsert_points']
+[w1 upsert 500] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.006542471}
+[w1 count] status=200 raw={"result":{"count":1},"status":"ok","time":0.000153233}
+[w1 GET 500] status=200 raw={"result":{"id":500,"payload":{},"vector":[1.0,0.0,0.0,0.0]},"status":"ok","time":0.000320063}
+[w1-batch batch by-id 500] status=200 raw={"result":[{"points":[]},{"points":[{"id":500,"version":1,"score":0.70710677}]}],"status":"ok","time":0.000483983}
+[w2 upsert 500] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.003077747}
+[w2 count] status=200 raw={"result":{"count":1},"status":"ok","time":0.000120693}
+[w2 GET 500] status=200 raw={"result":{"id":500,"payload":{},"vector":[0.0,1.0,0.0,0.0]},"status":"ok","time":0.000231258}
+[w2-batch batch by-id 500] status=200 raw={"result":[{"points":[]},{"points":[{"id":500,"version":2,"score":0.70710677}]}],"status":"ok","time":0.000543207}
+[w3 upsert 500] status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.003342345}
+[w3 count] status=200 raw={"result":{"count":1},"status":"ok","time":0.000262449}
+[w3 GET 500] status=200 raw={"result":{"id":500,"payload":{},"vector":[0.0,1.0,0.0,0.0]},"status":"ok","time":0.000146646}
+[w3-batch batch by-id 500] status=200 raw={"result":[{"points":[]},{"points":[{"id":500,"version":3,"score":0.70710677}]}],"status":"ok","time":0.000553844}
+WARN: (w1-batch) batch by-id entry carries no readable vector — vector comparison skipped (response_shape does not promise the field; no defect claim)
+WARN: (w2-batch) batch by-id entry carries no readable vector — vector comparison skipped (response_shape does not promise the field; no defect claim)
+WARN: (w3-batch) batch by-id entry carries no readable vector — vector comparison skipped (response_shape does not promise the field; no defect claim)
+DEFECT: (w1-batch) by-id search of 500 returned ids [] (expected exactly [500]) — duplicated or missing point — Type4_StateLogicViolation
+DEFECT: (w2-batch) by-id search of 500 returned ids [] (expected exactly [500]) — duplicated or missing point — Type4_StateLogicViolation
+DEFECT: (w3-batch) by-id search of 500 returned ids [] (expected exactly [500]) — duplicated or missing point — Type4_StateLogicViolation
+VERDICT: DEFECT_FOUND

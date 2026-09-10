@@ -1,0 +1,65 @@
+{
+  "defect_id": "vein_lookup_from_points_query_1",
+  "endpoint": "points+query",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "lookup_from parameter should reference valid collection. API accepts: (1) Non-existent collection name, (2) null value, (3) Unknown fields in lookup_from object. All should be rejected with 4xx but are accepted with 200. Validation is absent for lookup_from schema.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c2: lookup_from='nonexistent_collection' → http=200 (should be 404/400); c4: lookup_from=null → http=200 (should be 400); c5: lookup_from with unknown field → http=200 (should be 400)",
+      "secondary_observations": ["c1: Valid lookup_from → http=200", "c3: Empty lookup_from {} → http=400 (correctly rejected)"],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx (invalid inputs accepted)",
+        "note": "Invalid lookup_from values (non-existent collection, null, unknown fields) accepted with 200 instead of 4xx. No validation on lookup_from parameter detected."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_lookup_from_points_query_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A - lookup_from validation not explicitly constrained in contract",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:N/A (lookup_from validation unconstrained)",
+        "doc:lookup_from documented as optional cross-collection lookup",
+        "script:Non-existent collection, null, unknown field tests",
+        "log:Invalid lookup_from values accepted with 200"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "No contract constraint violated. Issue is validation absence: lookup_from parameter accepts invalid values (non-existent collection, null, unknown fields) without 4xx rejection. Empty object {} correctly rejected with 400, but other invalid inputs slip through.",
+      "evidence_source": "behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["lookup_from", "LookupLocation", "validate.*lookup", "collection.*exist"],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs",
+        "lib/collection/src/operations/verification/mod.rs",
+        "lib/collection/src/operations/universal_query/collection_query.rs"
+      ],
+      "source_excerpt": "File: lib/api/src/rest/schema.rs, Lines 605-608\n\n/// Options for specifying which payload to include or not. Default is false.\npub with_payload: Option<WithPayloadInterface>,\n\n/// The location to use for IDs lookup, if not specified - use the current collection and the 'using' vector\n/// Note: the other collection vectors should have the same vector size as the 'using' vector in the current collection\n#[serde(default)]\npub lookup_from: Option<LookupLocation>,\n\nFile: lib/api/src/rest/schema.rs, Lines 798-806\n\n#[derive(Debug, Serialize, Deserialize, JsonSchema, Validate)]\npub struct LookupLocation {\n    #[validate(nested)]\n    pub collection: String,\n    #[validate(nested)]\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub using: Option<VectorNameBuf>,\n}\n\nObservation: LookupLocation struct has collection: String (no Option wrapper), but schema.rs defines lookup_from: Option<LookupLocation> at line 608 with #[serde(default)]. This allows null/None. Collection existence validation not found in LookupLocation or its parent QueryRequestInternal. No #[validate(custom)] rule checks if collection exists.",
+      "call_chain_traced": "REST schema defines lookup_from: Option<LookupLocation> with nested validation on LookupLocation fields. LookupLocation.collection is String (non-optional), but lookup_from itself can be None/null due to outer Option wrapper. Collection existence check would require custom validator or runtime check in query executor. No such validation found in schema.rs or collection query executor. Unknown fields handled by serde(deny_unknown_fields) but LookupLocation may not have this annotation.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "payload_mismatch"],
+      "surviving": "lookup_from parameter accepts invalid values: non-existent collection returns 200 (should 404), null accepted (should 400), unknown fields ignored (should 400). Validation absent in REST schema and query executor. No by-design logic allowing these cases."
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+ "defect_id": "boundary_index_create_001",
+ "endpoint": "index+create",
+ "param": "field_schema.type",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "strategy1_enum_domain_closure",
+ "constraint_ids": [
+  "qdrant_type_index_create_001"
+ ],
+ "oracle": {
+  "statement": "on a live bic001_* collection holding one point whose payload carries all 8 payload-type fields, each of the 8 in-domain members PUT to index+create returns HTTP 200 AND the collections+get readback result.payload_schema contains all 8 f_<member> keys (4xx on an in-domain member = Type1 disposition-conflict signal; 200 with readback key missing = Type4_StateLogicViolation; 5xx/transport = Type3 with /healthz re-check); bare-string field_schema='keyword' leg measured for judge",
+  "source": "docstring"
+ }
+}

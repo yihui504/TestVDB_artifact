@@ -1,0 +1,101 @@
+{
+  "defect_id": "semantic_collections_create_007",
+  "endpoint": "collections+create (PUT /collections/{collection_name})",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: source_url https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection verified reachable — the WebFetch tool itself was blocked by the environment ('Unable to verify if domain api.qdrant.tech is safe to fetch'), but the page was retrieved via the webReader MCP (full HTML render) and the versioned OpenAPI shard https://api.qdrant.tech/v-1-18-x/openapi/api-reference.json via curl (HTTP 200, 342464 bytes), so this is a verified PASS, not domain_blocked. version: URL routes the versioned v-1-18-x line; major.minor matches target 1.18.0; caveat recorded honestly — the served 1.18.x spec carries later-patch content (FeatureFlags note 'single_file_mmap_vector_storage ... Enabled by default in Qdrant 1.18.3+'), i.e. the shard is the latest patch of the minor line, slightly ahead of the 1.18.0 tag; PASS at the loose major.minor grade the contract itself declares ('1.18.x (versioned v-1-18-x api-reference)'). content: the deployed OpenAPI verbatim contains the assertion's substance — schemas.Memory enum ['cold','cached','pinned'] and VectorParams.memory -> VectorParamsMemory whose description reads verbatim 'Memory placement of the original vector storage. Overrides the deprecated `on_disk` flag if both are set. `pinned` is not supported for dense vector storage. Default: `cached` (`cold` if `on_disk` is set to true).' — the assertion text is a faithful (near-verbatim) rendering, not a paraphrase drift. endpoint: endpoint_registry entry 'collections+create' (PUT, same source_url, doc_quote about 200 CollectionOperationResponse / 400 on invalid enum) exists in structured_contract.json; the script's path derivation line 3 confirms PUT /collections/{name}; the OpenAPI shard's PUT /collections/{collection_name} requestBody CreateCollection.vectors resolves to the same VectorParams schema carrying the memory property. no SDK/REST confusion: both the probe and the spec are the REST face (the gRPC VectorParams in lib/api/src/grpc/qdrant.rs was checked and also lacks memory).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[pinned] vectors.memory='pinned' (memory 'pinned' on a DENSE vectors config (documented: pinned is not supported for dense vector storage)) was ACCEPTED with status 200; constraint qdrant_type_collections_create_006 (memory IN {cold, cached, pinned}; pinned not for dense storage); raw={\"result\":true,\"status\":\"ok\",\"time\":0.223804023}",
+      "secondary_observations": [
+        "[create scc07_1788388168_bad_pinned] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.223804023} (scc07 log line 12 — the collection was actually created, not just acknowledged)",
+        "[memory cold] persisted echo = '__absent__' (scc07 log line 8 — the in-enum member 'cold' was also not persisted)",
+        "[memory cached] persisted echo = '__absent__' (scc07 log line 11 — same for 'cached')",
+        "[describe scc07_1788388168_ok_cold] status=200 raw={\"result\":{...\"config\":{\"params\":{\"vectors\":{\"size\":4,\"distance\":\"Cosine\"},... (scc07 log lines 7/10 — readback vectors object carries no memory key for any probe)",
+        "bcc006 cross-script: [vectors.memory='pinned' (dense storage unsupported)] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.218631713} (output_boundary_collections_create_006.log line 7)",
+        "bcc006 cross-script: [vectors.memory='hot' (not in enum)] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.240675721} (output_boundary_collections_create_006.log line 5 — even a non-enum string is accepted, indicating wholesale field-ignoring rather than pinned-specific tolerance)",
+        "bcc006 cross-script verdict: VERDICT: DEFECT_FOUND (Type4_StateLogicViolation: memory cached accepted but readback vectors.memory=None != 'cached') (line 10)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Request-side-decidable constraint breach (dense VectorParams + memory='pinned' is decidable from the request alone per the versioned spec's own exclusion sentence) returned not merely 2xx-with-business-error-code but a plain success envelope: HTTP 200 with result:true, status:'ok' and no error marker whatsoever — strictly further from a rejection than the typical 200+code pattern. Same for the non-enum 'hot' value in bcc006."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_collections_create_007",
+        "boundary_collections_create_006"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_collections_create_006",
+      "assertion_text_quoted": "memory IN {cold, cached, pinned}; pinned is not supported for dense vector storage",
+      "api_violates_assertion": true,
+      "note": "violates-declaration self-check: the probe is squarely INSIDE the assertion's constraint domain (dense VectorParams.memory with value 'pinned' is exactly the combination the spec excludes) and the response was success (200, result:true), so the value is neither outside the domain nor genuinely compliant — api_violates_assertion=true is the honest reading. Mechanism nuance for the auditor: source forensics show v1.18.0 does not honor the memory contract by acceptance-and-application either — the field is dropped entirely (readback absent for cold/cached/pinned/hot alike), so the caller's documented-unsupported setting produced a success response with zero client-visible signal (neither applied, nor rejected). Dispatch provenance recorded honestly: the candidates.jsonl constraint_id field was the empty string; the constraint was recovered from the attack text and matches the script header (debate_logs/semantic_collections_create_007.py line 6 'constraint_ids: qdrant_type_collections_create_006') and the constraint found verbatim in structured_contract.json type_constraints.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_collections_create_006 present in structured_contract.json constraints.type_constraints (endpoint collections+create, evidence_tier explicit, source_status reachable, assertion as quoted above)",
+        "doc: source_url v-1-18-x create-collection page reachable (webReader render + curl 200 on the versioned OpenAPI shard); shard schemas.Memory enum [cold,cached,pinned] + VectorParamsMemory description contains the verbatim sentence '`pinned` is not supported for dense vector storage'",
+        "script: semantic_collections_create_007.py lines 236-237 sent PUT /collections/scc07_1788388168_bad_pinned with body {\"vectors\":{\"size\":4,\"distance\":\"Cosine\",\"memory\":\"pinned\"}} via runtime path_key create_collection",
+        "log: output_semantic_collections_create_007.log lines 12-14 — create returned status=200 raw={\"result\":true,\"status\":\"ok\",...} and the script adjudicated VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "pinned (whole tree, -i) -> 3 files",
+        "MemoryPlacement|memory_placement -> 0 files",
+        "pub memory -> 1 file (grpc memory_report_json, unrelated)",
+        "deny_unknown_fields -> 10 sites in lib/segment/src/types.rs (none on VectorParams)",
+        "pub struct VectorParams -> lib/api grpc + lib/collection/src/operations/types.rs:1338",
+        "pub struct HnswConfigDiff -> config_diff.rs:38",
+        "enum Memory|Cold|Cached -> FileStorageIntent {Cached, OnDisk} only (telemetry)",
+        "memory (openapi/ dir) -> 0 files",
+        "pub struct CreateCollection -> lib/storage/src/content_manager/collection_meta_ops.rs:109"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/types.rs (VectorParams 1331-1382; SparseVectorParams 1389-1409; SparseIndexParams 1411-1438; VectorsConfig 1462-1479)",
+        "lib/collection/src/operations/config_diff.rs (HnswConfigDiff 34-77)",
+        "lib/storage/src/content_manager/collection_meta_ops.rs (CreateCollection 109-190; CreateCollectionOperation::new 192+)",
+        "src/actix/api/collections_api.rs (create_collection handler 111-121)",
+        "lib/segment/src/common/memory_usage.rs (FileStorageIntent 1-93)",
+        "lib/segment/src/types.rs (deny_unknown_fields sites 986-1050, 3689-3810; StrictModeConfig 1080+)",
+        "lib/common/common/src/universal_io/disk_cache/controller.rs (is_pinned 326-329)",
+        "openapi/ directory listing (ytt templates; zero 'memory' occurrences)"
+      ],
+      "source_excerpt": "<DESKTOP>/vdb_src/qdrant/v1.18.0 (git tag v1.18.0, HEAD db3fca3) lib/collection/src/operations/types.rs lines 1331-1375:\n\n/// Params of single vector data storage\n#[derive(\n    Debug, Hash, Deserialize, Serialize, JsonSchema, Validate, Anonymize, Clone, PartialEq, Eq,\n)]\n#[serde(rename_all = \"snake_case\")]\n#[anonymize(false)]\npub struct VectorParams {\n    /// Size of a vectors used\n    #[validate(custom(function = \"validate_nonzerou64_range_min_1_max_65536\"))]\n    pub size: NonZeroU64,\n    /// Type of distance function used for measuring distance between vectors\n    pub distance: Distance,\n    /// Custom params for HNSW index. If none - values from collection configuration are used.\n    #[serde(default, skip_serializing_if = \"is_hnsw_diff_empty\")]\n    #[validate(nested)]\n    pub hnsw_config: Option<HnswConfigDiff>,\n    /// Custom params for quantization. If none - values from collection configuration are used.\n    #[serde(\n        default,\n        alias = \"quantization\",\n        skip_serializing_if = \"Option::is_none\"\n    )]\n    #[validate(nested)]\n    pub quantization_config: Option<QuantizationConfig>,\n    /// If true, vectors are served from disk, improving RAM usage at the cost of latency\n    /// Default: false\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub on_disk: Option<bool>,\n\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    /// Defines which datatype should be used to represent vectors in the storage.\n    ...(datatype doc)...\n    pub datatype: Option<Datatype>,\n\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub multivector_config: Option<MultiVectorConfigs>,\n}\n\n-- NO `memory` field exists anywhere in this struct, and there is no #[serde(deny_unknown_fields)] / #[schemars(deny_unknown_fields)] attribute on it. Companion findings: HnswConfigDiff (lib/collection/src/operations/config_diff.rs:38-77) fields are m/ef_construct/full_scan_threshold/max_indexing_threads/on_disk/payload_m/inline_storage — also NO memory, though the deployed v-1-18-x spec documents HnswConfigDiff.memory as well; SparseIndexParams (types.rs:1416-1438) likewise has no memory. A whole-tree grep finds no MemoryPlacement type, no request-facing `memory` field, and 'pinned' only in lib/common/common/src/universal_io/disk_cache/controller.rs:326 `fn is_pinned(...)` (internal disk-cache block pinning, unrelated to the REST memory-placement enum) plus two .github CI action files. The repo's own openapi/ ytt templates contain zero 'memory' occurrences.",
+      "call_chain_traced": "PUT /collections/{collection_name} (src/actix/api/collections_api.rs:111-121, handler takes Json<CreateCollection>) -> CreateCollection.vectors: VectorsConfig with #[serde(default)] #[validate(nested)] (lib/storage/src/content_manager/collection_meta_ops.rs:109-114) -> VectorsConfig is #[serde(untagged)] enum Single(VectorParams) | Multi(BTreeMap<_, VectorParams>) (lib/collection/src/operations/types.rs:1468-1473) -> VectorParams (types.rs:1338) declares NO memory field and NO deny_unknown_fields, so serde's default unknown-field tolerance silently DROPS the 'memory' key for ANY value (cold, cached, pinned, or non-enum 'hot' — matching the bcc006 observation) -> collection is created with the parsed params (size/distance honored; memory placement falls to defaults) -> describe (GET /collections/{name}) serializes VectorParams, which has no memory field to emit -> readback '__absent__'. The validator derive can only validate declared fields, so no validation layer ever sees the memory value; CreateCollectionOperation::new applies only vector-NAME validation. StrictModeConfig (lib/segment/src/types.rs:1081+) governs query limits/filtering/ef caps and contains no unknown-JSON-field rejection mechanism.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (pre-probe /healthz=200 'healthz check passed' log line 4; control setup_default create OK log line 5)",
+        "concurrency (sequential creates with fresh per-probe collection names scc07_*_ok_cold/_ok_cached/_bad_pinned)",
+        "cache_delay (the readback absence of memory is structural — the field is never deserialized or persisted for ANY value, not a timing artifact)",
+        "request_typo (request body is exactly the scripted {vectors:{size:4,distance:Cosine,memory:'pinned'}} and the raw 200 response is logged)",
+        "by_design_in_source (no explicit intent marker exists: no comment, no deny_unknown_fields opt-out note, no maintainer citation declaring memory intentionally ignored — per the v3.4 tightened rule, bare 'no validation seen' cannot be marked by_design)"
+      ],
+      "surviving": [
+        "doc_version_skew: the served v-1-18-x OpenAPI shard carries later-patch 1.18.x content (FeatureFlags description 'single_file_mmap_vector_storage ... Enabled by default in Qdrant 1.18.3+') while the deployed target is the v1.18.0 git tag, whose code lacks the memory-placement feature entirely — docs-ahead-of-code within the minor line explains why the code has no memory field, but it does NOT explain away the observed behavior: the v1.18.0 server returned outright success (200, result:true) for a documented-unsupported combination without applying, rejecting, or signaling anything about the memory setting. This skew is left for the auditor to weigh against the constraint's doc grounding."
+      ]
+    }
+  }
+}

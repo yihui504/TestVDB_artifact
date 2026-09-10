@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_r2_dropfunction_tag_009",
+  "endpoint": "collections+drop_function",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "endpoint_registry collections+drop_function: 'Drop function (json tag quirk: capital-F FunctionName)'，与源码 request_v2.go json tag 逐字一致。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "capital-F FunctionName (per contract quirk)    -> code=0     {\"code\":0,\"data\":{}}   (function 'no_such_fn' 不存在)",
+      "secondary_observations": [
+        "lowercase functionName                         -> code=0     {\"code\":0,\"data\":{}}",
+        "empty FunctionName                             -> code=1802  ...Field validation for 'FunctionName' failed...",
+        "missing name key entirely                      -> code=1802  ...Field validation for 'FunctionName' failed...",
+        "non-string FunctionName (int)                  -> code=1801  ...cannot unmarshal number into Go struct field CollectionDropFunctio...",
+        "NOTE: lowercase fieldName behaves same as capital-F (both reach lookup)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "not-found 场景以 HTTP 200 + code:0 返回成功——客户端误删（拼写错误）将无任何诊断信号"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_dropfunction_tag_009.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "collections+drop_function endpoint_registry 条目 (json tag quirk: capital-F FunctionName)",
+      "assertion_text_quoted": "Drop function (json tag quirk: capital-F FunctionName)",
+      "api_violates_assertion": false,
+      "note": "violates=False 理由：契约该条目只记载 json tag 形态（capital-F），未断言'删不存在 function 必须 not-found'。大小写双拼写均 code:0 与 tag 记载不矛盾（gin 对无 tag 匹配键走不区分大小写回退路径）。not-found 静默成功是契约空白行为，缺陷主张落在 Type2 诊断质量，非断言违背。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: drop_function endpoint_registry 记载 capital-F FunctionName tag quirk",
+        "doc: 源码 request_v2.go:93-97 tag 逐字一致",
+        "script: {FunctionName:'no_such_fn'} 与 {functionName:'no_such_fn'} 均 POST collections+drop_function",
+        "log: 两拼写均 code=0（不存在 function 上无 not-found）"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["CollectionDropFunction", "dropCollectionFunctionTask", "DropCollectionFunctionRequest"],
+      "files_examined": ["internal/distributed/proxy/httpserver/request_v2.go (L93-107)", "internal/distributed/proxy/httpserver/handler_v2.go (dropCollectionFunction L916-930)", "internal/proxy/function_task.go (PreExecute L281-297; Execute L299-311)"],
+      "source_excerpt": "internal/proxy/function_task.go:281-311 (dropCollectionFunctionTask):\nfunc (t *dropCollectionFunctionTask) PreExecute(ctx context.Context) error {\n\tcoll, err := getCollectionInfo(...)\n\tif err != nil { return err }\n\tfor _, f := range coll.schema.Functions {\n\t\tif f.Name == t.FunctionName { t.fSchema = f; break }\n\t}\n\treturn nil\n}\nfunc (t *dropCollectionFunctionTask) Execute(ctx context.Context) error {\n\tif t.fSchema == nil { return nil }        // <-- 不存在的 function: 静默返回 nil = 幂等成功\n\tif t.fSchema.Type == schemapb.FunctionType_BM25 { return fmt.Errorf(\"currently does not support droping BM25 function\") }\n\t...DropCollectionFunction...\n}\n-- not-found 无任何错误分支；集合不存在时才报错(getCollectionInfo)。大小写双拼写: Go json unmarshal 对无精确 tag 匹配的键做大小写不敏感回退，'functionName' 也能填充 FunctionName 字段。",
+      "call_chain_traced": "router(drop_function) -> wrapperPost(&CollectionDropFunction{}) -> gin 大小写不敏感绑定 -> handler_v2 dropCollectionFunction -> proxy DropCollectionFunction -> dropCollectionFunctionTask.PreExecute(查 schema Functions 循环) -> Execute: fSchema==nil 直接 return nil -> HTTPReturn wrapperReturnDefault {code:0}",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error", "请求笔误(双拼写+empty+missing+int 四组对照)", "集合不存在(getCollectionInfo 会报 coll 错, 实测集合存在)"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": {
+    "A_contract": "endpoint_registry 显式记载 tag quirk；not-found 语义为契约空白",
+    "B_log": "主观测逐字, 单脚本但判定确定性高(code:0 vs 1802/1801 对照清晰)",
+    "C_control": "empty/missing 1802 + non-string 1801 对照证明绑定层工作正常",
+    "D_source": "Execute nil-分支幂等设计逐字实锤(function_task.go:301)",
+    "overall": "源码级 by-design 幂等；是否算缺陷取决于 Type2 诊断标准（对照: 同 handler 族 alter_function/collection not-found 均 code 100）"
+  }
+}

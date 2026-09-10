@@ -1,0 +1,99 @@
+{
+  "defect_id": "semantic_cluster_telemetry_001",
+  "endpoint": "cluster+telemetry (GET /cluster/telemetry)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: no doc_preflight.json sidecar exists in the contract dir (results/qdrant/v1.18.0/ has only structured_contract/raw_knowledge/deployment_meta/doc_coverage/contract_validation); WebFetch of the source_url was domain_blocked by network policy, but the alternate web reader fetched the page successfully (title 'Collect cluster telemetry data | Qdrant | API Reference'), so the URL is live. version: page header and URL both show v1.18.x, matching target v1.18.0. content: the page documents exactly GET /cluster/telemetry -> '200 Retrieved' with result {collections, cluster {enabled: true, number_of_peers: 1, peers: {}}} and query params details_level (integer, optional) and timeout (integer, optional, >=1, default 60); NO 4xx/5xx response and NO distributed-mode precondition is documented, so the assertion's core promise (200 telemetry read) is the doc's own claim; minor note: the assertion's field list (id, app, collections, cluster, requests, memory, hardware, search_pool, quota) is the full TelemetryData schema of the service /telemetry face, while this page's example shows the cluster-scoped subset - same claim level, not a contradiction. endpoint_precision: endpoint_registry entry 'cluster+telemetry' (method GET, same source_url, doc_quote 'Returns 200 TelemetryData ...; internal/ops-oriented.', verified_at 2026-09-02T12:34:08Z) exists in structured_contract.json. Note: contract field source_status='reachable' but source_verified=false at build time; re-verified live here.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[control GET /cluster/telemetry] status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000238317}",
+      "secondary_observations": [
+        "[pre-probe] /healthz status=200 raw=healthz check passed",
+        "[5xx] /healthz probe status=200 raw=healthz check passed  (liveness confirmed on both sides of the 500)",
+        "rest sibling script boundary_cluster_telemetry_001: \"[baseline default(absent)] status=500 raw={\\\"status\\\":{\\\"error\\\":\\\"Service internal error: Could not get telemetry from cluster\\\"}\\\",\\\"time\\\":0.000130203}\" (timeout omitted, default form)",
+        "rest sibling script boundary_cluster_telemetry_002: \"[class-B timeout='+1'] status=500 raw={\\\"status\\\":{\\\"error\\\":\\\"Service internal error: Could not get telemetry from cluster\\\"}\\\",\\\"time\\\":0.000209122}\" (documented min timeout=1)",
+        "rest sibling script boundary_cluster_telemetry_005: \"[details_level=0] status=500 raw={\\\"status\\\":{\\\"error\\\":\\\"Service internal error: Could not get telemetry from cluster\\\"}\\\",\\\"time\\\":0.000199927}\"",
+        "rest sibling script boundary_cluster_telemetry_004: \"[control probe: documented no-param GET] status=500 raw={\\\"status\\\":{\\\"error\\\":\\\"Service internal error: Could not get telemetry from cluster\\\"}\\\",\\\"time\\\":0.00024596}\" - identical disposition on the no-param, timeout-only, and details_level faces: parameter-independent server failure",
+        "comparative in-family endpoint GET /cluster (cluster_status, boundary_cluster_status_001 log): 200 success envelope served on the same standalone deployment, while GET /cluster/telemetry 500s - incoherent degradation inside the /cluster family",
+        "grpc GetTelemetry face: face_unavailable - no session script exercises the gRPC face (REST-only pipeline); service /telemetry face also not exercised in-session (all telemetry scripts exit at the control 500 before the sibling call); recorded honestly, no fabricated comparison lines"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "the request is a documented, valid, parameterless read; the server returns an honest HTTP 500 (Service internal error), not a 2xx masking a client error. Type3 runtime failure on a legal request - no input-validation semantics involved."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_cluster_telemetry_001 (DEFECT_FOUND Type3, exit code 1)",
+        "boundary_cluster_telemetry_001 (DEFECT_FOUND)",
+        "boundary_cluster_telemetry_002 (DEFECT_FOUND)",
+        "boundary_cluster_telemetry_003 (DEFECT_FOUND)",
+        "boundary_cluster_telemetry_004 (DEFECT_FOUND)",
+        "boundary_cluster_telemetry_005 (DEFECT_FOUND)",
+        "semantic_cluster_telemetry_002/003/004 and state_cluster_telemetry_001-004: same control 500 but self-recorded VERDICT: SCRIPT_ERROR (their oracles require a working control face for param-level conclusions) - all 13 logs contain the identical 'Could not get telemetry from cluster' body"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_telemetry_001",
+      "assertion_text_quoted": "returns 200 TelemetryData; internal/ops-oriented endpoint",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates-declaration self-check: the observed request is the documented default no-param GET, squarely inside the assertion's domain (a plain 200 read promise); observed deterministic 500 contradicts the promised 200, so api_violates_assertion=true with no constraint-citation change needed. Note for the auditor: the candidates.jsonl constraint_id field arrived mechanically empty; the constraint id is carried by the attack string, the script header (constraint_ids: qdrant_behavioral_cluster_telemetry_001), and the log verdict text, and the assertion exists verbatim in structured_contract.json - no contract break."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_cluster_telemetry_001 present in structured_contract.json assertions (evidence_tier=explicit, endpoint cluster+telemetry); candidates.jsonl constraint_id field empty but attack string + script header carry the id",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/distributed/cluster-telemetry live via web reader, v1.18.x, documents GET /cluster/telemetry -> 200 Retrieved with cluster telemetry payload; no 4xx/5xx and no distributed-mode precondition documented",
+        "script: semantic_cluster_telemetry_001.py derives the path /cluster/telemetry from raw_knowledge api_endpoints[cluster+telemetry].url and issues the documented no-param GET through the runtime",
+        "log: output_semantic_cluster_telemetry_001.log line 6 records status=500 'Service internal error: Could not get telemetry from cluster' with /healthz 200 on both sides; VERDICT: DEFECT_FOUND (Type3_RuntimeFailure); exit code 1"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Could not get telemetry from cluster",
+        "resolve_telemetries",
+        "cluster/telemetry|cluster_telemetry",
+        "standalone mode",
+        "id_to_address",
+        "struct ClusterTelemetryParams|MIN_CLUSTER_TELEMETRY_DETAILS_LEVEL"
+      ],
+      "files_examined": [
+        "src/common/telemetry_ops/distributed_telemetry.rs (read in full, 560 lines)",
+        "src/actix/api/cluster_api.rs (read lines 1-50, 95-179, 180-303)",
+        "src/main.rs (read init_channel_service lines 285-319)",
+        "lib/storage/src/content_manager/toc/mod.rs (read standalone guards at 552-575 and 770-787)",
+        "lib/collection/src/shards/channel_service.rs (grep context: id_to_address declared line 22, Default::default() line 47)"
+      ],
+      "source_excerpt": "src/actix/api/cluster_api.rs:203-290 (handler, abridged to load-bearing lines):\n203  #[get(\"/cluster/telemetry\")]\n204  async fn get_cluster_telemetry(...) -> HttpResponse {\n236      let timeout = params.timeout.unwrap_or(DEFAULT_GRPC_TIMEOUT.as_secs());\n238      let all_peers: Vec<_> = channel_service\n239          .id_to_address\n240          .read()\n241          .keys()\n242          .copied()\n243          .collect();\n245      let mut futures = all_peers\n246          .into_iter()\n247          .map(|peer_id| {\n248              channel_service\n249                  .with_qdrant_client(peer_id, |mut client| {\n250                      let request = grpc::GetTelemetryRequest { ... };\n256                      async move { client.get_telemetry(request).await }\n257                  })\n258                  .map_err(move |err| (peer_id, err))\n259          })\n260          .collect::<FuturesUnordered<_>>();\n262      let mut telemetries = Vec::with_capacity(futures.len());\n263      let mut missing_peers = Vec::new();\n265      while let Some(result) = futures.next().await { ... telemetries.push(telemetry) ... }\n284      let distributed_telemetry =\n285          DistributedTelemetryData::resolve_telemetries(access, telemetries, missing_peers)?;\n287      Ok(distributed_telemetry)\n290  }\n\nsrc/common/telemetry_ops/distributed_telemetry.rs:151-158 (the error site):\n151      pub fn resolve_telemetries(\n...\n156          // Use the telemetry from node with highest term/commit\n157          let base_telemetry = newest_telemetry(&telemetries)\n158              .ok_or_else(|| StorageError::service_error(\"Could not get telemetry from cluster\"))?;\n\nsrc/common/telemetry_ops/distributed_telemetry.rs:552-560 (why it is None):\n552      fn newest_telemetry(telemetries: &[TelemetryData]) -> Option<&TelemetryData> {\n553          telemetries.iter().max_by_key(|telemetry| { ... })\n560      }   // max_by_key on an empty slice returns None -> 500\n\nsrc/main.rs:287-316 (standalone leaves the peer map empty):\n299      if is_distributed_deployment {\n300          // We only need channel_service in case if cluster is enabled.\n...\n314          channel_service.id_to_address = persistent_consensus_state.peer_address_by_id.clone();\n316      }   // standalone: id_to_address stays Default::default() (channel_service.rs:47) -> empty map\n\nContrast - sibling endpoints in the SAME file DO guard standalone explicitly:\ncluster_api.rs:108-110 (remove_peer): None => Err(StorageError::bad_request(\"Distributed mode disabled.\".to_string())),\ncluster_api.rs:125 and :146 (cluster metadata keys): .ok_or_else(|| StorageError::service_error(\"Qdrant is running in standalone mode\"))?\nlib/storage/src/content_manager/toc/mod.rs:563 and :778: same explicit \"Qdrant is running in standalone mode\" guard\ncluster_api.rs:23-25 (the ONLY comment near the handler, about a different concern):\n23    /// For now, we only handle details_level >= 2\n24    /// TODO(cluster telemetry): Handle lower levels",
+      "call_chain_traced": "actix route #[get(\"/cluster/telemetry\")] cluster_api.rs:203 -> get_cluster_telemetry -> all_peers = channel_service.id_to_address keys (cluster_api.rs:238-243; empty in standalone because main.rs:299-316 only populates it when is_distributed_deployment, and channel_service.rs:47 initializes it Default::default()) -> FuturesUnordered over zero peers -> telemetries remains [] (cluster_api.rs:262-282) -> DistributedTelemetryData::resolve_telemetries (cluster_api.rs:284-285) -> newest_telemetry(&[]) returns None (distributed_telemetry.rs:552-560) -> StorageError::service_error(\"Could not get telemetry from cluster\") (distributed_telemetry.rs:157-158) -> helpers::time maps the StorageError to the observed HTTP 500 body. The handler never queries local/self telemetry and contains no standalone-mode branch, unlike its siblings.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "validation_absent reading: the guard the endpoint needs - a standalone/distributed-mode check producing a clean 4xx or at least an explicit 'standalone mode' diagnostic, as implemented by sibling endpoints in the same file (cluster_api.rs:125/146) and in toc/mod.rs:563/778 - is absent from get_cluster_telemetry, so every standalone request falls into the generic 500. by_design_in_source is NOT claimed: no comment, docstring, or maintainer citation anywhere on this path declares the standalone 500 intended; the only nearby comment (cluster_api.rs:23-24) is a details_level TODO about a different parameter. The 500 is the unguarded consequence of an empty peer map, and the handler has no local-telemetry fallback, while the documentation scopes no deployment precondition and its own example shows a single-peer deployment (number_of_peers: 1) succeeding."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env/deployment-down: /healthz 200 immediately before and after the 500 (log lines 5 and 7); container testvdb-qdrant-standalone reported healthy in deployment_meta.json",
+        "concurrency/race: idle no-param read, disposition identical across 13 scripts and many hours, only the 'time' field varies",
+        "request-parameter typo: request carries no parameters at all; path derived from contract raw_knowledge; sibling scripts with different param faces observe the byte-identical error",
+        "transient 5xx: not intermittent - 100% of in-session attempts on this endpoint returned the same 500 body"
+      ],
+      "surviving": "deployment-mode conditionality: source-proven that the failure is deterministic in standalone mode (empty id_to_address -> empty telemetries -> 500). The auditor must weigh whether the vendor defense 'endpoint only meaningful on distributed deployments' overrides the contract: the documentation page documents no such precondition (no 4xx/5xx, no mode note) and its example shows number_of_peers:1 succeeding, and sibling endpoints degrade with an explicit standalone message rather than this generic 500. Not by-design-declared in source."
+    }
+  }
+}

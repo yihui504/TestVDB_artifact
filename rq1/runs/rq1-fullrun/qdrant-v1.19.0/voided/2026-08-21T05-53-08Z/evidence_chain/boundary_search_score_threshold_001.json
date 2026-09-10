@@ -1,0 +1,53 @@
+{
+  "defect_id": "boundary_search_score_threshold_001",
+  "endpoint": "/collections/{collection_name}/points/search:POST",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Constraint qdrant_range_search_points_001: limit range documented, but score_threshold valid range [0.0, 1.0] not explicitly stated in primary docs",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: score_threshold=-0.1 (min-1 violation) → HTTP 200, Body: {\"result\":[{\"id\":1,\"version\":1,\"score\":0.99999994}]} → VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — score_threshold=-0.1 should return 4xx, got 200",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "score_threshold=-0.1 < 0.0 invalid but returned HTTP 200 with results"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_search_score_threshold_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_search_points_001",
+      "assertion_text_quoted": "limit >= 1 and limit <= 1000 (score_threshold range implied but not explicit)",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract: qdrant_range_search_points_001 (limit range documented, score_threshold implicit)", "doc: search endpoint parameters listed", "script: boundary_search_score_threshold_001", "log: Type1_IllegalSuccess — score_threshold=-0.1 returned HTTP 200"],
+      "chain_broken_at": "log",
+      "break_detail": "score_threshold=-0.1 violates semantic range [0,1] for scores but API accepts without error",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["score_threshold.*0.*1", "validate.*score", "SearchParams"],
+      "files_examined": ["lib/segment/src/types.rs", "lib/collection/src/operations/verification/mod.rs"],
+      "source_excerpt": "lib/segment/src/types.rs SearchParams defines score_threshold as Option<ScoreType> (f64 wrapper) without range validation; verification check_search_params() does not validate score_threshold bounds",
+      "call_chain_traced": "REST request → SearchParams → internal scoring",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "No validation for score_threshold parameter range despite semantic expectation [0.0, 1.0]; negative values accepted"
+    }
+  }
+}

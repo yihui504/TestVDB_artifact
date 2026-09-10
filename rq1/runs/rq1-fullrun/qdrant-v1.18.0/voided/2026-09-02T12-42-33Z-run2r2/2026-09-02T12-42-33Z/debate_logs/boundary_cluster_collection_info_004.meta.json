@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_collection_info_004",
+  "endpoint": "cluster+collection+info",
+  "param": "collection_name",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "boundary",
+  "oracle": {
+    "statement": "create -> GET cluster info 200 with result.shard_count; delete confirmed visible on GET /collections/{name} (poll <=10s) -> GET cluster info must flip to exactly 404; stale 200 on the confirmed-deleted name = Type4_StateLogicViolation; 5xx = Type3_RuntimeFailure (healthz rechecked) — assertion qdrant_behavioral_cluster_collection_info_001 both halves",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

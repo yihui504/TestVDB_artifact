@@ -1,0 +1,404 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.19.0",
+  "verdicts": [
+    {
+      "defect_id": "vein_null_check_count-exact-false_1",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_NOT_DEFECT",
+          "matched_pattern": "HNSW approximation duplicates in pagination",
+          "developer_quote": "Accepted limitation of approximate search"
+        },
+        "aggregation_applied": "A=NEUTRAL (no constraint), D=SUPPORTS_NOT_DEFECT (by_design_pattern) → final=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "Cardinality estimation divergence (25%) is documented limitation of approximate HNSW search; developer cognition shows this is 'accepted limitation of approximate search' (pattern_id: HNSW approximation duplicates). No formal constraint violated (A=NEUTRAL). Source shows validation_absent, not by_design validation."
+    },
+    {
+      "defect_id": "vein_type_confusion_query_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "类型恒真"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=CONFIRMED (type恒真: array field accepts null/object) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Type恒真违规: filter.should/filter.must_not defined as array in schema but API accepts null/object (type confusion) with HTTP 200. Execution shows grade A evidence. B=CONFIRMED (objective: array field must reject non-array). No developer cognition pattern matches (D=NO_SIGNAL)."
+    },
+    {
+      "defect_id": "boundary_search_limit_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED (constraint qdrant_range_search_points_001: limit<=1000, API accepts 1001) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "契约违规: qdrant_range_search_points_001明示 limit<=1000，API接受limit=1001返回HTTP 200。A=CONFIRMED (constraint exists, assertion matches contract, api_violates_assertion=true)。B=CONFIRMED (数值下界: 上界1000被逾越)。链自洽：contract→doc→execution→source四方一致指向违规。"
+    },
+    {
+      "defect_id": "boundary_search_score_threshold_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (constraint only mentions limit range, score_threshold implicit), B=CONFIRMED (数值下界: score_threshold语义下界0.0被逾越) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "数值下界违规: score_threshold=-0.1 < 0.0 违反语义下界（cosine similarity必然非负）。A=NEUTRAL (constraint qdrant_range_search_points_001仅明示 limit范围，score_threshold范围隐含)。B=CONFIRMED (客观约束: 分数阈值必须∈[0,1]且负值毫无语义意义)。Execution grade A显示稳定触发。"
+    },
+    {
+      "defect_id": "boundary_search_score_threshold_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (constraint only mentions limit range, score_threshold implicit), B=CONFIRMED (数值下界: score_threshold语义上界1.0被逾越) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "数值上界违规: score_threshold=1.1 > 1.0 违反语义上界。A=NEUTRAL (constraint未明示score_threshold范围，仅隐含)。B=CONFIRMED (客观约束: cosine similarity最大值1.0，超过该值无语义意义)。Execution grade A显示API接受无效值并返回HTTP 200（空结果集），未报4xx错误。"
+    },
+    {
+      "defect_id": "semantic_search_limit_negative_diagnosis_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=REFUTED (by_design_in_source: usize deserialization produces 'expected usize' error) → final=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "mundane_api_semantics",
+      "rationale": "误报：limit=-5被正确拒绝（HTTP 400），仅是错误消息质量低（'expected usize'而非'negative values invalid'）。source_grounding显示verification_outcome=by_design_in_source（usize类型自然拒绝负值，非validation逻辑缺失）。C=REFUTED (源码显式by-design行为)。B=NEUTRAL (负值被正确拒绝，无非数值接受违规)。"
+    },
+    {
+      "defect_id": "semantic_search_limit_range_diagnosis_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=CONFIRMED (constraint qdrant_range_search_points_001: limit<=1000, API accepts 10000) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "契约违规: qdrant_range_search_points_001明示 limit<=1000，API接受limit=10000返回HTTP 200（空结果）。A=CONFIRMED (constraint exists, api_violates_assertion=true)。B=CONFIRMED (数值上界: 10000 >> 1000)。Chain显示source中verification_outcome=validation_absent（严格模式非默认强制）。与boundary_search_limit_002同类违规，仅违规值不同。"
+    },
+    {
+      "defect_id": "semantic_search_score_threshold_diagnosis_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL (HTTP 400 correct), C=REFUTED (error attribution is mundane_json_parsing limitation, not validation bug) → final=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "script_error",
+      "rationale": "误报：score_threshold=-0.1被正确拒绝（HTTP 400），错误消息'missing limit'是JSON解析器行为的副作用（非validation逻辑缺陷）。Source显示validation_absent（无显式range check），但JSON parsing在遇到未知字段时报告第一个解析错误，此为 mundane_api_semantics。execution_evidence显示脚本构造请求有语法问题（missing field `limit` at line 1 column 676），非score_threshold validation缺失。B=NEUTRAL（HTTP 4xx正确）。"
+    },
+    {
+      "defect_id": "semantic_search_score_threshold_negative_diagnosis_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL (HTTP 400 correct), C=REFUTED (error attribution mundane - JSON parser limitation) → final=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "script_error",
+      "rationale": "误报：score_threshold=-0.1被正确拒绝（HTTP 400），错误消息'missing limit'是JSON解析行为（非validation缺陷）。execution_evidence grade C显示单次触发，http_semantics正确（4xx）。source显示validation_absent但非必需—JSON parser在遇到语法问题时报告第一个错误，此为mundane limitation非缺陷。B=NEUTRAL（无客观约束违反，HTTP正确）。"
+    },
+    {
+      "defect_id": "semantic_search_score_threshold_type_confusion_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_NOT_DEFECT",
+          "matched_pattern": "HNSW approximation duplicates in pagination",
+          "developer_quote": "Accepted limitation of approximate search"
+        },
+        "aggregation_applied": "A=NEUTRAL (constraint仅type定义，未显式禁止integer), C=REFUTED (by_design_in_source: JSON Schema RFC 8259 allows integer as number), D=SUPPORTS_NOT_DEFECT (JSON standard compliance) → final=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "contract_misread",
+      "rationale": "误报：contract_grounding引用qdrant_range_search_points_001但assertion仅说type=[number,null]，未显式禁止integer。Source显示by_design_in_source（JSON Schema treats integer as subset of number per RFC 8259）。Integer 1被接受是JSON spec合规行为，非type confusion漏洞。A=NEUTRAL（constraint未明示禁止integer）。C=REFUTED（源码显示这是by-design JSON standard compliance，非validation缺失）。"
+    },
+    {
+      "defect_id": "semantic_search_behavioral_contract_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "枚举闭集"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (behavioral contract非形式化断言), B=CONFIRMED (枚举闭集: equal-score results must have stable ordering/tie-breaker) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "状态逻辑违规：等距点（score全0.0）返回顺序不稳定（[2,3,4,1]而非按ID排序）。B=CONFIRMED（枚举闭集/状态不变式：等分结果必须有确定排序，否则违反search API behavioral contract）。Source显示validation_absent（无stable_sort或tie-breaker）。A=NEUTRAL（constraint_id非契约形式化断言，是behavioral invariant）。链完整：doc→execution→source一致指向ordering instability。"
+    },
+    {
+      "defect_id": "state_concurrent_upsert_search",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=REFUTED (execution shows Expected=100 Got=100 - correct) → final=NOT_DEFECT"
+      },
+      "chain_broken_at": "verdict",
+      "root_cause_if_fp": "non_deterministic_unreproducible",
+      "rationale": "误报：execution_evidence显示'Expected: 100, Got: {'count': 100}'完全匹配，但verdict声称DEFECT_FOUND。Builder标注FP：verdict与log矛盾。claim_alignment=drifted。Source显示by_design_in_source，无状态不一致。实际无违规，系test framework verdict解析错误。C=REFUTED（execution证据推翻违规主张）。"
+    },
+    {
+      "defect_id": "state_create_visibility",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=REFUTED (execution: create 200, get 200, count 200 with count=1 - all correct) → final=NOT_DEFECT"
+      },
+      "chain_broken_at": "verdict",
+      "root_cause_if_fp": "script_error",
+      "rationale": "误报：execution_evidence grade D显示'Count result: {'count': 1}, VERDICT: DEFECT_FOUND - Count mismatch'但日志显式'Expected: 1, Got: {'count': 1}'完全一致。Builder标注FP：verdict contradicts log。Claim_alignment=drifted。Contract引用qdrant_invariant_create_visibility_001但execution显示collection立即可见（create 200, get 200, count 200, count=1）。C=REFUTED（execution推翻verdict）。实际为test verdict bug。"
+    },
+    {
+      "defect_id": "vein_cardinality_oracle_is_empty_matrix_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值约束"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (no constraint), B=CONFIRMED (数值约束: 35% systematic undercount across 4 scales with control proving precision capability → violates estimator accuracy implicit contract) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Is_empty filter with exact=false systematically returns ~65% of ground truth across 4/4 matrix sizes (10/50/100/200). Control group (is_null) shows 0% deviation with same exact=false, proving estimator path is capable of precision - is_empty branch specifically omits NULL values. Documentation provides no quantified tolerance for 'approximate' counts; 35% directional-consistent bias exceeds reasonable approximation semantics. D=NO_SIGNAL (HNSW approximation pattern does not apply to cardinality estimator filter bugs)."
+    }
+  ],
+  "summary": {
+    "total": 14,
+    "defect": 7,
+    "not_defect": 7,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {
+      "doc": 0,
+      "source": 3,
+      "both": 1,
+      "behavior": 4
+    },
+    "root_cause_distribution": {
+      "approximate_by_design": 1,
+      "mundane_api_semantics": 1,
+      "script_error": 3,
+      "contract_misread": 1,
+      "non_deterministic_unreproducible": 1
+    }
+  }
+}

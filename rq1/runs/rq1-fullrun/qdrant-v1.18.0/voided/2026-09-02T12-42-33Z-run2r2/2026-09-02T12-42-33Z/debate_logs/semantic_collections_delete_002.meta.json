@@ -1,0 +1,15 @@
+{
+  "defect_id": "semantic_collections_delete_002",
+  "endpoint": "collections+delete",
+  "param": "timeout",
+  "expected_defect_type": "Type1_IllegalRejection",
+  "strategy": "illegal_rejection",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_delete_001"
+  ],
+  "oracle": {
+    "statement": "all 5 legal legs return exactly 200 with envelope result=true (collections+delete response_shape result:boolean): plain delete, DELETE ?timeout=5 (documented optional integer query min 1), delete of a collection holding 3 upserted points, delete issued with zero settle delay after create-200+exists=true, and re-create of the SAME name after a 200 delete; any 4xx refusal on a premise-verified existing collection = Type1_IllegalRejection; 5xx with /healthz alive = Type3; 2xx!=200 = measured conflict-zone note (expected_responses declare only 200 ok)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

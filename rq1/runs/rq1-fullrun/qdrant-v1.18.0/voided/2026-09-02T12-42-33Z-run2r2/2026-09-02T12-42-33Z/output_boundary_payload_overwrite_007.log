@@ -1,0 +1,17 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+baseline: point 1 visible (payload {}), exact count=1
+
+step1 payload+set a=1,b=2 -> status=200
+raw: {"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.004317169}
+step1 OK: payload exactly {'a': 1, 'b': 2} via points+get
+
+step2 payload+overwrite c=3 -> status=200
+raw: {"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.002922938}
+step2 OK: payload exactly {'c': 3} — {a,b} removed (replace, not merge)
+
+step3 discriminator payload+set d=4 -> status=200
+raw: {"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.005142964}
+step3 OK: set merged (c kept, d added) — set vs overwrite are genuinely distinct semantics
+collateral OK: vector deep-equal baseline readback; exact count stable (1 -> 1)
+VERDICT: NO_DEFECT

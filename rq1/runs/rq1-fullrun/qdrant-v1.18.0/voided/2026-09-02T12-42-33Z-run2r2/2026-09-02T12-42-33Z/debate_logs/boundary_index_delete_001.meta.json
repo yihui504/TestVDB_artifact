@@ -1,0 +1,15 @@
+{
+ "defect_id": "boundary_index_delete_001",
+ "endpoint": "index+delete",
+ "param": "field_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "state_idempotent_delete_lifecycle",
+ "constraint_ids": [
+  "qdrant_state_index_delete_001",
+  "qdrant_behavioral_index_delete_001"
+ ],
+ "oracle": {
+  "statement": "on a live bidl1_* collection: delete#1 (existing index) returns 200 AND collections+get result.payload_schema no longer contains the field (residue = Type4); deletes #2/#3, never-indexed payload field and never-existing field all return exactly 200 (non-200 = Type1 legal-input-rejected signal against the unconditional idempotent-200 promise); 5xx/transport = Type3 with /healthz re-check; 200 legs with non-object result printed SHAPE_CONFLICT measured-only",
+  "source": "docstring"
+ }
+}

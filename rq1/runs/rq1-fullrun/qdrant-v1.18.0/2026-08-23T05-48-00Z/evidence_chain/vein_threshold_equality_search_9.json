@@ -1,0 +1,113 @@
+{
+  "defect_id": "vein_threshold_equality_search_9",
+  "endpoint": "/collections/{name}/points/search, /points/query, /points/recommend, /points/search/groups (score_threshold param)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "rework_round": 1,
+  "rework_order_type": "EVIDENCE_GAP",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "WebFetch qdrant.tech 与 api.qdrant.tech 均 domain_blocked(网络受限,非FAIL); 版本 PASS(raw_knowledge chunk 标 Doc Version 1.18.x, 且以 v1.18.0 源码 OpenAPI doc comment 同源核对—api.qdrant.tech 文档由 lib/api/src/rest/schema.rs 的 /// 注释生成); 内容一致性 PARTIAL—claim 引用的语义句在源码 doc comment 层核实为真且同版本内三种表述两种语义自相矛盾: (1)REST search/recommend 族 schema.rs:1156-1159/1195-1198 主句包含式 'Define a minimal score threshold... less similar results will not be returned' vs 同段从句严格式 'E.g. for cosine similarity only higher scores will be returned'; (2)REST query 族 schema.rs:572/778/1245 仅严格式 'Return points with scores better than this threshold.'; (3)gRPC proto points.proto:537/586/697/746 包含式 'If provided - cut off results with worse scores'(等值非 worse, 按此应保留). auditor 指令1答案: 双盲材料内无任何 score_threshold 官方等值保留用例(chunks.json 33 chunks threshold 零命中; raw_knowledge.md 仅4处参数列表提及; structured_contract.json 仅 schema number|null 无 description; 源码全部测试 score_threshold: None); 端点 PASS(四端点 raw log+rework 实验均真实响应).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "search th==S: n=0 | th==S-0.01: n=1  [原 log 主观测, Cosine LargeBetter, S=1.0 来自 'search top score S=1.0 id=3']",
+      "secondary_observations": [
+        "query  th==S: n=0",
+        "recommend th==S: n=0",
+        "groups  th==S: n=0 | th==S-0.01: n=1",
+        "[rework 对称实验 Euclid SmallBetter, dim=1 点[1.0] vs query[0.0] 精确 d=1.0] search baseline: http=200 n=1 top_score=1.0 id=1",
+        "[rework] search  th=1.0: http=200 n=0  (等值排除, SmallBetter 方向对称)",
+        "[rework] search  th=1.01: http=200 n=1 scores=[1.0]  (反事实恢复)",
+        "[rework] search  th=0.99: http=200 n=0  (收紧侧排除, 排除非浮点噪声)",
+        "[rework] query th=1.0: http=200 body={\"result\":{\"points\":[]},\"status\":\"ok\"}",
+        "[rework] query th=1.01: http=200 body含 id=1 score=1.0  (恢复)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "非错误映射问题: 请求全合法(200+ok), 观测是行为语义与文档包含式表述的矛盾(等值点被排除), 非非法输入被 2xx 接受"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_threshold_equality_search_9 (原探测: Cosine 四端点+反事实, 自清理 green)",
+        "rework builder 对称实验 (Euclid search/query + 双侧反事实, 见 output_rework_vein_threshold_equality_search_9.log; 首段脚本 query 响应解析 TypeError 后补跑修正, 现象观测不受影响, cleanup 200 完成)"
+      ],
+      "reproducibility_note": "grade 取 B 审慎档: 第二脚本为 rework 定向复现(按 auditor 工单指令2执行), 非独立发现; 两脚本两种度量方向(LargeBetter/SmallBetter)同模式: 等值排除+双侧反事实恢复",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "(vein 探索型, 无 contract 约束条目; structured_contract.json 中 score_threshold 仅以 schema 参数出现—'number|null', required:false, source:openapi mechanical backfill—无任何语义断言, 此为 constraint_id 空的机械根因)",
+      "assertion_text_quoted": "REST search/recommend 族(schema.rs:1156-1159): 'Define a minimal score threshold for the result. If defined, less similar results will not be returned. Score of the returned result might be higher or smaller than the threshold depending on the Distance function used. E.g. for cosine similarity only higher scores will be returned.' | REST query 族(schema.rs:572): 'Return points with scores better than this threshold.' | gRPC(points.proto:537): 'If provided - cut off results with worse scores'",
+      "api_violates_assertion": true,
+      "note": "api_violates_assertion=true 相对包含式表述(minimal/less similar/worse than): 等值点(分数==threshold)被观测排除(n=0)违反'minimal/less similar/worse 被砍则等值应保留'; 相对严格式表述(only higher/better than)则不违反(严格>恰排除等值). 非模糊判定: 规范文本自身分裂, 按 auditor 指令3标注 doc_internal_contradiction 转主进程人工复核.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: structured_contract.json 仅 schema 级 score_threshold(number|null), 无语义约束条目 → 链规范起点落在 doc 层",
+        "doc: v1.18.0 源码 OpenAPI doc comment(官方 REST 文档生成源)三种表述两种语义—search 族段内自相矛盾(主句包含式 vs 从句严格式), query 族仅严格式, gRPC 族包含式; 双盲材料无等值保留官方用例; WebFetch qdrant.tech/api.qdrant.tech domain_blocked",
+        "script: vein_threshold_equality_search_9.py(Cosine S=1.0 等值探针四端点) + rework 对称实验(Euclid d=1.0 精确构造, search/query, 双侧反事实)",
+        "log: 四端点 th==S 全 n=0 + th=S-0.01/S+0.01 双侧反事实恢复 + Euclid 同模式(方向对称), 与源码 check_threshold 严格不等式逐点吻合"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "doc_internal_contradiction: 同一 v1.18.0 的官方文档表述层(search 族主句 vs 从句; query 族 vs gRPC 族)对等值语义给出相反规范, 且实现层自身分裂(check_threshold 严格 >/ vs formula_rescore.rs:88 'point.score >= threshold' 包含式), 双盲材料内无法定规范权威 → 按 auditor rework_order 指令3 转主进程人工复核",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "score_threshold|check_threshold (49 文件命中)",
+        "check_threshold\\( (3 调用点: edge/search.rs:138, collection/local_shard/search.rs:173, segment/types.rs:359 定义)",
+        "cut off|worse than (gRPC proto/生成码 8+ 命中)",
+        "fn postprocess (Euclid 分数形式确认)",
+        "score_threshold: (Some\\()?0\\.[0-9]+|score_threshold: Some|score_threshold: None (官方测试用例检索)"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs (check_threshold 定义, 行 344-364)",
+        "lib/api/src/rest/schema.rs (三种 doc comment 表述, 行 572-578/1156-1160/1195-1199/1245-1246)",
+        "lib/collection/src/shards/local_shard/search.rs (threshold 应用点+take_while, 行 149-181)",
+        "lib/segment/src/segment/read_view/formula_rescore.rs (formula 路径 >= 包含式, 行 85-93)",
+        "lib/segment/src/spaces/simple.rs (Euclid postprocess=sqrt, 行 74-77)",
+        "lib/api/src/grpc/proto/points.proto (gRPC 包含式表述, 行 537/586/697/746)",
+        "lib/api/src/grpc/qdrant.rs (生成码表述, 行 5901 等)",
+        "lib/collection/tests/integration/collection_test.rs, grouping_test.rs, pagination_test.rs, multi_vec_test.rs (全部 score_threshold: None, 无等值边界用例)"
+      ],
+      "source_excerpt": "lib/segment/src/types.rs:357-364:\n    /// Checks if score satisfies threshold condition\n    pub fn check_threshold(&self, score: ScoreType, threshold: ScoreType) -> bool {\n        match self.distance_order() {\n            Order::LargeBetter => score > threshold,\n            Order::SmallBetter => score < threshold,\n        }\n    }\n\nlib/collection/src/shards/local_shard/search.rs:170-178 (REST search/query 主路径应用):\n                if let Some(threshold) = req.score_threshold {\n                    processed_res\n                        .take_while(|scored_point| {\n                            distance.check_threshold(scored_point.score, threshold)\n                        })\n                        .collect()\n\nlib/segment/src/segment/read_view/formula_rescore.rs:86-91 (formula rescore 路径, 包含式):\n        let rescored = match score_threshold {\n            Some(threshold) => {\n                Either::Left(rescored_iter.filter(move |point| point.score >= threshold))\n            }\n            None => Either::Right(rescored_iter),\n        }\n\nlib/api/src/rest/schema.rs:1156-1159 (REST search/recommend 族 doc comment, 段内自相矛盾):\n    /// Define a minimal score threshold for the result.\n    /// If defined, less similar results will not be returned.\n    /// Score of the returned result might be higher or smaller than the threshold depending on the\n    /// Distance function used. E.g. for cosine similarity only higher scores will be returned.\n\nlib/api/src/grpc/proto/points.proto:537: // If provided - cut off results with worse scores",
+      "call_chain_traced": "REST schema.rs score_threshold(Option<ScoreType>) doc comment → collection 层 search 请求 → lib/collection/src/shards/local_shard/search.rs:170 Nearest 先 postprocess_score(types.rs:320, Euclid=sqrt 距离化) → check_threshold(types.rs:359) 严格 >/→ take_while 截断; 平行路径 formula rescore(formula_rescore.rs:88) 用 >= 包含式 — 同参数两路径等值语义不同; edge/search.rs:138 同样走 check_threshold",
+      "verification_outcome": "by_design_in_source",
+      "outcome_note": "by_design_in_source 限义: 严格不等式是源码显式实现(非校验缺失/非意外), 且官方测试套件无等值边界用例(不构成等值保留的实现意图证据); 但实现层自身分裂(check_threshold 严格 vs formula_rescore >=)与文档三种表述两种语义使 by-design 抗辩不能单方成立, 权威冲突按指令标 doc_internal_contradiction 转人工 — 本字段非判定结论",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (等值精确浮点构造: dim=1 Euclid d=sqrt(1.0)=1.0, threshold 直接取 API 返回 score 原值, 排除浮点转换误差)",
+        "concurrency (单线程顺序请求, 无并发窗口)",
+        "typo (threshold 值=服务器自报 top score 原样回传, vein_summary: 'server-reported top score S fed back as score_threshold')",
+        "cache (每次新建 collection + upsert?wait=true; rework 实验反事实对照在同 collection 内切换 th 即翻转结果, 排除缓存)",
+        "estimation_noise (四端点+两种度量方向双侧反事实一致恢复: th 放宽一档 n=1 收紧一档 n=0, 边界精确钉在等值点)"
+      ],
+      "surviving": "doc_internal_contradiction: 规范权威未定(文档三种表述两种语义 + 实现两路径语义分裂), 非平凡解释可排除项, 属规范层缺口, 按 auditor 指令转主进程人工复核"
+    }
+  },
+  "rework_evidence": {
+    "order_dispatched": {
+      "type": "EVIDENCE_GAP",
+      "claim": "score_threshold excludes points whose score EQUALS the threshold (strict >); docs say 'cut off results with less than a threshold'",
+      "targeted_instruction": "补证定向：在双盲可用材料内检索score_threshold官方示例是否含等值保留用例；对Euclid(SmallBetter)做对称等值实验；若仍无法定权威，标注doc_internal_contradiction转主进程人工复核"
+    },
+    "instruction_1_official_equality_example": "双盲材料内不存在: chunks.json(33 chunks) threshold 零命中; raw_knowledge.md 仅4处参数列表('score_threshold (number|null)')无语义句; structured_contract.json 仅 schema 无 description; 源码官方测试(collection_test/grouping_test/pagination_test/multi_vec_test/integration 全族) score_threshold 全为 None, 无等值边界用例",
+    "instruction_2_euclid_symmetric_experiment": "已完成(target localhost:6333 存活, healthz passed): Euclid dim=1 点[1.0] vs query[0.0] → 精确 score=1.0; search th=1.0 n=0 / th=1.01 n=1 / th=0.99 n=0; query th=1.0 n=0 / th=1.01 n=1 — SmallBetter 方向与 Cosine LargeBetter 对称, 均严格不等式等值排除; 原始输出 output_rework_vein_threshold_equality_search_9.log, cleanup 200",
+    "instruction_3_authority_determination": "无法定权威 → doc_internal_contradiction 已标注(chain_trace.break_detail): 文档层 v1.18.0 源码 doc comment 三种表述两种语义(search 族段内主句包含式 vs 从句严格式; query 族仅严格式; gRPC 族包含式) + 实现层 check_threshold(严格) vs formula_rescore.rs:88(>=包含式)分裂; 转主进程人工复核",
+    "additional_finding": "auditor rationale 引用的 '同库rescore路径用>=' 已补核属实(formula_rescore.rs:88); 另核实 gRPC 文档表述为包含式('cut off results with worse scores', points.proto:537/586/697/746), 系 rework 前未入链的第三表述来源",
+    "supplement_log": "output_rework_vein_threshold_equality_search_9.log"
+  }
+}

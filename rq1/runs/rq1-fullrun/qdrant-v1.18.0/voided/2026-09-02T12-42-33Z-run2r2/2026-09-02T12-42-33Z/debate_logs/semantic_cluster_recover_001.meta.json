@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_recover_001",
+  "endpoint": "cluster+recover",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract",
+  "oracle": {
+    "statement": "on the disabled face POST /cluster/recover -> 4xx refusal (2xx judged on coherent-post-state rule: data intact + healthz 200 + /cluster disposition consistent, else Type4; /cluster still 'disabled' after an executed 200 = G9 inconsistency = Type4); 5xx with /healthz alive = Type3; after the leg /healthz=200, collection listed, exact count==3, scroll readback identical, GET /cluster disposition (time excluded) unchanged - drift = Type4 (assertion qdrant_behavioral_cluster_recover_001)",
+    "source": "docstring"
+  }
+}

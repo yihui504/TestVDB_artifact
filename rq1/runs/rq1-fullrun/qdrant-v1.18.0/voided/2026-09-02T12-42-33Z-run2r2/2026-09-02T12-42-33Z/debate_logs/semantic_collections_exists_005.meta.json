@@ -1,0 +1,15 @@
+{
+  "defect_id": "semantic_collections_exists_005",
+  "endpoint": "collections+exists",
+  "param": "collection_name",
+  "expected_defect_type": "Type1_IllegalRejection",
+  "strategy": "illegal_rejection",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_exists_001"
+  ],
+  "oracle": {
+    "statement": "every candidate the create face accepts (plain control / 63-char / digits+hyphens / routing-edge names points, exists, aliases - created only when absent, ownership-guarded) is answered by the exists face with 200 + result.exists boolean True; every never-created twin X+0g is answered 200 + result.exists False; any non-200 (incl. 404, never-404 clause) on these legal-format names = Type1_IllegalRejection; untruthful values = Type4; create-face rejection of a candidate = skip-with-note (no fabrication); 5xx with /healthz alive = Type3; transport with healthy /healthz = SCRIPT_ERROR",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

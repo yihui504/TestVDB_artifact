@@ -1,0 +1,61 @@
+{
+  "defect_id": "vein_batch_ordering_invalid_points_batch_1",
+  "endpoint": "POST /collections/{collection}/points/batch",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "FAIL",
+      "version_match": "N/A",
+      "content_consistency": "N/A",
+      "endpoint_precision": "N/A",
+      "sdk_rest_confusion": false,
+      "detail": "source_url not specified - this is an R3 vein mining candidate without documented contract grounding. Cannot verify documentation claims about valid ordering enum values.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "VERDICT: DEFECT_FOUND; EVIDENCE: Invalid ordering='invalid_value' returns 200 (should reject with 400); CONTROL: ordering='weak' and 'strong' correctly return 200; TEST_RESPONSE: {\"result\":[{\"operation_id\":1,\"status\":\"acknowledged\"}],\"status\":\"ok\",\"time\":0.000185122}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx (业务成功码)",
+        "note": "API returns HTTP 200 with status=ok for invalid ordering enum value, treating batch as successful rather than rejecting invalid input"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_batch_ordering_invalid_points_batch_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint_id specified - this is an R3 vein mining candidate without contract grounding",
+      "api_violates_assertion": true,
+      "note": "No constraint to verify against - defect based on enum semantics (WriteOrdering should reject unknown values)",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:N/A (no constraint_id)", "doc:N/A (no source_url)", "script:vein_batch_ordering_invalid_points_batch_1.py", "log:DEFECT_FOUND - invalid ordering='invalid_value' returned 200"],
+      "chain_broken_at": "contract",
+      "break_detail": "No constraint_id exists for this R3 candidate - contract grounding is missing",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["WriteOrdering", "ordering", "UpdateParams", "enum"],
+      "files_examined": [
+        "lib/collection/src/operations/point_ops.rs (lines 45-60: WriteOrdering enum definition with Weak/Medium/Strong variants)",
+        "src/common/update.rs (lines 36-45: UpdateParams struct with ordering: WriteOrdering field)"
+      ],
+      "source_excerpt": "From lib/collection/src/operations/point_ops.rs:\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, Copy, Default)]\n#[serde(rename_all = \"snake_case\")]\npub enum WriteOrdering {\n    #[default]\n    Weak,\n    Medium,\n    Strong,\n}\n\nFrom src/common/update.rs:\n#[serde_with::serde_as]\n#[derive(Copy, Clone, Debug, Deserialize, Serialize, Validate)]\npub struct UpdateParams {\n    #[serde(default)]\n    pub wait: bool,\n    #[serde(default)]\n    pub ordering: WriteOrdering,\n    #[serde_as(as = \"Option<DurationSeconds<String>>\")\n    pub timeout: Option<Duration>,\n}",
+      "call_chain_traced": "1. REST request deserializes JSON payload into UpdateParams (src/common/update.rs)\n2. ordering field: WriteOrdering with serde(default) - enum has three variants: Weak, Medium, Strong\n3. serde with rename_all='snake_case' expects 'weak', 'medium', 'strong' in JSON\n4. When unknown value like 'invalid_value' is provided, serde's default behavior is to ignore unknown fields during deserialization if the field has default value\n5. WriteOrdering has #[default] attribute on Weak variant, so unknown/invalid values default to Weak\n6. No validation occurs after deserialization to check if the provided value matched a valid enum variant\n7. Result: invalid ordering='invalid_value' silently defaults to Weak and batch proceeds successfully",
+      "verification_outcome": "validation_absent",
+      "note": "Source confirms validation_absent: WriteOrdering enum has only three variants (Weak/Medium/Strong) with #[serde(default)] on Weak. Serde deserializes unknown enum values using the default variant (Weak) instead of rejecting them. No post-deserialization validation checks whether the input value was a valid enum member.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "by_design"],
+      "surviving": "Type1_IllegalSuccess - API accepts invalid ordering enum value 'invalid_value' due to serde defaulting to Weak variant instead of rejecting unknown values"
+    }
+  }
+}

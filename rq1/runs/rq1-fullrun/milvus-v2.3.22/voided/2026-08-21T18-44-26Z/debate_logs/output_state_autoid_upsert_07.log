@@ -1,0 +1,11 @@
+create autoId=true: 200 {"code":200,"data":{}}
+insert explicit PK on autoId: 200 {"code":1804,"message":"fail to deal the insert data, error: invalid parameter[expected=][actual=set primary key but autoID == true]"}
+upsert explicit PK on autoId: 200 {"code":1804,"message":"fail to deal the insert data, error: invalid parameter[expected=][actual=set primary key but autoID == true]"}
+autoId insert: 200 {"code":200,"data":{"insertCount":3,"insertIds":[468539281520724805,468539281520724806,468539281520724807]}}
+alias create: 200 {"code":200,"data":{}}
+drop aliased collection: 200 {"code":200,"data":{}}
+alias describe after target dropped: 200 {"code":1600,"message":"alias not found[database=default][alias=st_auto_al07]"}
+recreate autoId=false: 200 {"code":200,"data":{}}
+alias describe after recreate: 200 {"code":1600,"message":"alias not found[database=default][alias=st_auto_al07]"}
+has via stale alias after recreate: 200 {"code":200,"data":{"has":false}}
+VERDICT: NO_DEFECT

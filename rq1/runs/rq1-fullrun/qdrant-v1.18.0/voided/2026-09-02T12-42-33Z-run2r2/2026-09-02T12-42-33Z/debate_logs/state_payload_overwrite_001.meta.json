@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_payload_overwrite_001",
+  "endpoint": "payload+overwrite",
+  "param": "payload",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "count_consistency",
+  "oracle": {
+    "statement": "after a wait=true overwrite {\"tag\":\"overwritten\",\"extra\":true} on points [1,2,3] (expect HTTP 200) on a 6-point collection: ids 1-3 payload EXACTLY {\"tag\":\"overwritten\",\"extra\":true}; ids 4-6 payload equals the original 4-key dict; all 6 vectors equal the baseline readback vectors (<=1e-6); exact count still 6",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

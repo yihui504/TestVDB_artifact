@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_collections_name_length_011",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "milvus.io/docs/limitations.md 抓取成功（web_reader 200），原文表格 'Shard | 16' 与 'Collection | 255 characters'、'A resource name must start with a letter or an underscore' 全部在页；契约 numShards<=16 与文档一致。REST 端点 collections+create 精确匹配",
+      "evidence_source": "doc",
+      "doc_quote": "Shard | 16；The name of a resource such the collection name, partition name, or index name can contain numbers, letters, and underscores (_). A resource name must start with a letter or an underscore (_)."
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "numShards 17 (max+1) -> code=0 raw={\"code\":0,\"data\":{}}（numShards 0 与 -1 同为 code=0）",
+      "secondary_observations": [
+        "name len 255 (max) -> code=0（正确）",
+        "name len 256 -> code=1100（正确拒绝）",
+        "name empty -> code=1802（正确）",
+        "name NUL embedded -> code=1100（正确）",
+        "VarChar max_length=65536/-1 -> code=1100 'should be in (0, 65535]'（正确）"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "主观测为越界值 2xx+code:0 接受"},
+      "reproducibility": "单脚本（派发方标注 #9-11 跨版本同病——本 session 内仅本脚本）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_collections_name_length_011.py"],
+      "claim_alignment_note": "claim 指向 numShards 越界接受——已兑现（三值全 code:0）。'REST 路径完全未验证' 子claim在源码层确认（见 source_grounding）。名称长度等对照项全部正确拒绝，故 defect 域收窄到 numShards 单参数"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_range_collections_create_005",
+      "assertion_text_quoted": "numShards <= 16 (proxy.maxShardNum)",
+      "api_violates_assertion": true,
+      "note": "numShards 0/-1/17 均被接受；17>16 直接违反约束上界；0/-1 违反下界语义（契约只写上界，0/-1 是否在断言域内留 auditor）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_range_collections_create_005 (numShards<=16)",
+        "doc: limitations.md 'Shard | 16' 原文在页",
+        "script: boundary_collections_name_length_011.py quick create + numShards 0/-1/17",
+        "log: numShards 17 -> code=0"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["MaxShardNum", "numShards", "shardsNum", "ShardsNum"],
+      "files_examined": [
+        "pkg/util/paramtable/component_param.go (L2144-2152 MaxShardNum 默认 16)",
+        "internal/distributed/proxy/httpserver/handler_v2.go (L2000-2007 shardsNum 解析)",
+        "internal/distributed/proxy/httpserver/request_v2.go (CollectionReq 结构体 L~1659-1678)",
+        "internal/proxy/task.go (L395-397 MaxShardNum 校验)",
+        "internal/rootcoord/create_collection_task.go (L60-70)"
+      ],
+      "source_excerpt": "handler_v2.go L2000-2007：`shardsNum := int32(ShardNumDefault); if shardsNumStr, ok := httpReq.Params[\"shardsNum\"]; ok { if shards, err := strconv.ParseInt(...); err == nil { shardsNum = int32(shards) } }; req.ShardsNum = shardsNum` —— REST 层只识别 params.shardsNum 键。request_v2.go CollectionReq 结构体无 numShards 字段（grep numShards/NumShards 在 httpserver 目录零命中）。task.go:395 的上界校验 `if t.ShardsNum > Params.ProxyCfg.MaxShardNum...` 依赖 ShardsNum 已被正确赋值——客户端发送的顶层 \"numShards\" 键落入 Params map 但从不映射到 ShardsNum，故 17/-1/0 旁路全部校验（ShardsNum 恒为默认值）。",
+      "call_chain_traced": "REST create(body.numShards=17) -> CollectionReq 无该字段 -> Params pass-through -> ShardsNum=ShardNumDefault -> task.go:395 校验默认值（恒通过）-> 建表",
+      "verification_outcome": "validation_absent",
+      "note": "sufficiency: grep_zero_hits（numShards 在 REST 层零命中，证明该参数在 REST 契约域根本不存在）。参数名不匹配（SDK/gRPC numShards vs REST 无该顶层参数）是根因——REST 路径对该约束完全未验证，与派发 claim 一致",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["request-typo（参数名 numShards 为 SDK/gRPC 惯用名，非笔误——是 REST 缺字段问题本体）"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "strong（doc 原文 + behavior + source 零命中证明 REST 未接线；注意 auditor 视角：若判定域为'REST 不支持 numShards 顶层参数'，则可能是 API 面缺口而非校验缺陷——契约断言写的是 numShards<=16，观测 REST 接受了携带该键的请求且未拒绝未知参数，语义二选一留给 auditor）"
+}

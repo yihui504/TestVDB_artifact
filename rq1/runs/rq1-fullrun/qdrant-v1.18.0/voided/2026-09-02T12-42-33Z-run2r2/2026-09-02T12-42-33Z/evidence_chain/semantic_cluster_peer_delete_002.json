@@ -1,0 +1,83 @@
+{
+  "defect_id": "semantic_cluster_peer_delete_002",
+  "endpoint": "cluster+peer+delete (DELETE /cluster/peer/{peer_id})",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists; WebFetch was network-blocked (api.qdrant.tech refused by fetch policy) so the page was fetched via web-reader MCP - full content returned, canonical URL confirmed, treated as PASS. Version: page version selector 'v1.18.x' and canonical URL /v-1-18-x/ match target v1.18.0 on major.minor - PASS. Content: the page documents DELETE /cluster/peer/:peer_id with path param peer_id integer Required 'Id of the peer' and exactly one response '200 Deleted' plus the note 'This endpoint returns an error if the node (peer) has shards on it'; the assertion's '4xx on an invalid peer id' clause appears NOWHERE in the page prose and no error-message/diagnostics requirement is documented - PARTIAL (200 clause and endpoint shape documented, 4xx-on-invalid clause is extractor inference). Endpoint precision: contract endpoint_registry cluster+peer+delete = DELETE /cluster/peer/{peer_id} = raw_knowledge api_endpoints url = doc route - PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[alpha string in u64 path slot] status=404 raw=can not parse \"not_a_number\" to a u64 / rubric: score=1/3 (param_named=False, format_hint=True, actionable=False) on message='can not parse \"not_a_number\" to a u64'",
+      "secondary_observations": [
+        "[well-formed ghost u64] status=400 raw={\"status\":{\"error\":\"Bad request: Distributed mode disabled.\"},\"time\":4.972e-6} / rubric: score=0/3 (param_named=False, format_hint=False, actionable=False) on message='Bad request: Distributed mode disabled.'",
+        "[float in u64 path slot] status=404 raw=can not parse \"1.5\" to a u64 / rubric: score=1/3 (param_named=False, format_hint=True, actionable=False)",
+        "[u64+1 overflow value] status=404 raw=can not parse \"18446744073709551616\" to a u64 / rubric: score=1/3 (param_named=False, format_hint=True, actionable=False)",
+        "[rubric table] best score in battery = 1/3 over 4 scored rejections",
+        "[reproducibility] identical raw rejection lines independently captured in output_boundary_cluster_peer_delete_001.log, output_boundary_cluster_peer_delete_002.log, output_boundary_cluster_peer_delete_006.log (e.g. '[probe peer_id='abc'] -> status=404 raw=can not parse \"abc\" to a u64') and output_semantic_cluster_peer_delete_003.log - all four sibling scripts returned NO_DEFECT because their oracles were not diagnostic-quality; only this script applies the Type-2 rubric",
+        "[comparative, rest face, other endpoint] output_boundary_aliases_update_004.log: 'negative create-on-missing-collection -> status=404 raw: {\"status\":{\"error\":\"Not found: Collection `bau47671c910nope` doesn't exist!\"}}' - the same API elsewhere names the parameter subject AND the offending value, showing named diagnostics are within the API's capability",
+        "[comparative, rest face, other endpoint] output_boundary_aliases_list_002.log: 'probe[overlong-100k] ... -> status=400 ... rejected with 400 but empty diagnostic body' - diagnostic quality varies across endpoints on the same face",
+        "[comparative, rest face, cluster family] output_boundary_cluster_collection_update_006.log: '[probe overlong 1MB string value] -> status=400 raw={\"status\":{\"error\":\"Bad request: Distributed mode disabled\"}}' - the generic mode-refusal message is shared across the cluster face, confirming a caller cannot attribute the 400 to a bad peer id",
+        "[face_unavailable] qdrant gRPC exposes no cluster peer-removal operation and SDK clients wrap the same REST route, so no independent interface face exists for comparison; comparison restricted to same-face sibling endpoints"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "No 2xx masking: every invalid peer-id form was rejected. Two distinct 4xx conventions coexist: request-side-decidable parse errors (alpha/float/overflow) surface as HTTP 404 with a plain-text framework message (routing-level semantics - unparseable path segment treated as unmatched route), while the application-level refusal (ghost u64) surfaces as HTTP 400 with the qdrant business envelope {\"status\":{\"error\":...}}; the 404-for-parse-error status choice is itself part of the diagnostics observation"
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["semantic_cluster_peer_delete_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_peer_delete_001",
+      "assertion_text_quoted": "valid peer removal returns HTTP 200; an invalid peer id returns a 4xx error",
+      "api_violates_assertion": false,
+      "note": "candidates.jsonl constraint_id field was empty; the id is taken from the attack string (assertions::qdrant_behavioral_cluster_peer_delete_001) and confirmed by the script header constraint_ids. api_violates_assertion=false because the assertion's negative branch was literally honored - all four invalid peer-id forms returned 4xx (three 404s, one 400), no silent acceptance exists in this chain; the DEFECT claim is a Type-2 diagnostic-quality judgment whose 3-point rubric is fixed test-side (script header, G7 rationale) and appears in neither the contract text nor the documentation page. The contract's parallel description field reads verbatim: \"returns 200 ok; 4xx on an invalid peer id\".",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_cluster_peer_delete_001 found in structured_contract.json (description: \"returns 200 ok; 4xx on an invalid peer id\"; expected_behavior: \"valid peer removal returns HTTP 200; an invalid peer id returns a 4xx error\"; source_url https://api.qdrant.tech/v-1-18-x/api-reference/distributed/remove-peer)",
+        "doc: page reachable at the cited v-1-18-x URL and version matches; it documents DELETE /cluster/peer/:peer_id, peer_id integer Required 'Id of the peer', and only the 200 'Deleted' response plus a shards-error note - it does NOT contain the '4xx on an invalid peer id' promise nor any error-diagnostics requirement",
+        "script: semantic_cluster_peer_delete_002 derives /cluster/peer/{peer_id} from raw_knowledge api_endpoints[cluster+peer+delete].url, sends a 4-form invalid peer-id battery (ghost u64, alpha string, float, u64+1 overflow) with the Type-2 rubric criteria fixed before execution - matches the dispatched attack",
+        "log: VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics); all four probes 4xx, rubric scores 0/3-1/3, best=1/3; every score line re-derivable from the printed raw responses; exit code 1, no script_errors.json/script_retry.json entries"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Broken at the doc link: the contract's negative-branch promise ('4xx on an invalid peer id') is not documentation prose - the remove-peer page documents only the 200 response and 'returns an error if the node (peer) has shards on it' - so the promise cannot be traced to the cited source. Additionally, the Type-2 diagnostic-quality rubric that produced the verdict exists only in the script (neither contract nor doc asserts anything about error-message quality), so the verdict's standard of comparison is test-side. The contract->script->log links themselves are intact and consistent: the 4xx the assertion promises was in fact delivered, and the log says so explicitly ('the 4xx is delivered but undiagnosable').",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["Distributed mode disabled", "cluster/peer/", "can not parse", "validator::Path", "web::Path<", "peer_id"],
+      "files_examined": [
+        "src/actix/api/cluster_api.rs",
+        "src/actix/mod.rs",
+        "src/actix/helpers.rs",
+        "lib/storage/src/content_manager/errors.rs",
+        "Cargo.lock"
+      ],
+      "source_excerpt": "src/actix/api/cluster_api.rs:75-113 (qdrant v1.18.0):\n#[delete(\"/cluster/peer/{peer_id}\")]\nfn remove_peer(\n    dispatcher: web::Data<Dispatcher>,\n    peer_id: web::Path<u64>,\n    Query(params): Query<QueryParams>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Future<Output = HttpResponse> {\n    // Not a collection level request.\n    let pass = new_unchecked_verification_pass();\n\n    helpers::time(async move {\n        auth.check_global_access(AccessRequirements::new().manage(), \"remove_peer\")?;\n\n        let dispatcher = dispatcher.into_inner();\n        let toc = dispatcher.toc(&auth, &pass);\n        let peer_id = peer_id.into_inner();\n\n        let has_shards = toc.peer_has_shards(peer_id).await;\n        if !params.force && has_shards {\n            return Err(StorageError::bad_request(format!(\n                \"Cannot remove peer {peer_id} as there are shards on it\"\n            )));\n        }\n\n        match dispatcher.consensus_state() {\n            Some(consensus_state) => {\n                consensus_state\n                    .propose_consensus_op_with_await(\n                        ConsensusOperations::RemovePeer(peer_id),\n                        params.timeout.map(std::time::Duration::from_secs),\n                    )\n                    .await\n            }\n            None => Err(StorageError::bad_request(\n                \"Distributed mode disabled.\".to_string(),\n            )),\n        }\n    })\n}\n\nsrc/actix/mod.rs:105-106 and :142 (the app-level diagnostic handler this route bypasses):\n    let validate_path_config = actix_web_validator::PathConfig::default()\n        .error_handler(|err, rec| validation_error_handler(\"path parameters\", err, rec));\n    ...\n        .app_data(validate_path_config)",
+      "call_chain_traced": "Two disjoint paths produce the observed rejections. (a) Malformed peer_id: DELETE /cluster/peer/{peer_id} route (cluster_api.rs:75) declares peer_id: web::Path<u64> (line 78) - the PLAIN actix-web extractor; a non-u64 segment fails extraction inside actix-web 4.13.0 (Cargo.lock:231) before the handler runs, and actix-web's default extractor-error response is HTTP 404 with the plain-text deserialization message 'can not parse \"X\" to a u64' (the string has ZERO hits anywhere in the qdrant tree - it is dependency-origin, not a qdrant-authored diagnostic). (b) Well-formed ghost u64: extraction succeeds, toc.peer_has_shards(ghost)=false, then dispatcher.consensus_state() returns None on this single-node deployment, yielding StorageError::bad_request(\"Distributed mode disabled.\") (cluster_api.rs:108-110), Display-formatted 'Bad request: {description}' (lib/storage/src/content_manager/errors.rs:26-27, constructor :65), mapped by ResponseError to HTTP 400 (src/actix/helpers.rs:242-248) inside the qdrant business envelope. The diagnostics gap is structural and verifiable in first-party source: src/actix/mod.rs:105-106 registers actix_web_validator::PathConfig with validation_error_handler(\"path parameters\", ...) (app_data at :142), whose output names the parameter section ('Validation error in path parameters: ...' / 'Deserialize error in path parameters: ...', mod.rs:227-247) - but a repo-wide grep for 'validator::Path' returns exactly ONE hit, the registration itself; no route in the codebase uses actix_web_validator::Path (all twelve path extractors in src/actix/api/*.rs are plain web::Path), so the application's own diagnostic handler for path parameters is unreachable, and every path-parse failure including this one falls through to the framework default. Neither message names the parameter subject 'peer' together with an actionable hint, matching the rubric scores 0/3-1/3. No explicit by-design annotation (comment/docstring/maintainer note) exists for the message quality, so by_design_in_source is not claimable.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "concurrency (deterministic sequential single requests; identical static strings across 5 scripts)",
+        "cache_delay (no cache layer involved in path extraction or consensus_state check)",
+        "request_typo (the four probe values are printed verbatim in the log and match the script battery)"
+      ],
+      "surviving": "deployment-mode gating of the 400 leg only: the sandbox runs qdrant single-node (consensus off), so the well-formed-ghost probe's message is 'Distributed mode disabled.' rather than a peer-specific error; on a distributed deployment that one leg would surface different content (propose_consensus_op_with_await path). The three parse-404 legs and the rubric best=1/3 are mode-independent framework behavior, so the Type-2 observation itself survives this explanation."
+    }
+  }
+}

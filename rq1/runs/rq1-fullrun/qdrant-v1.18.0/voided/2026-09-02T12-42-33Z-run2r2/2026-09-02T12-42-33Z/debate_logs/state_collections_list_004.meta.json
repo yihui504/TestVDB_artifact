@@ -1,0 +1,17 @@
+{
+  "defect_id": "state_collections_list_004",
+  "endpoint": "collections+list",
+  "param": "result.collections[] entries / name field (envelope stability under concurrent lifecycle churn)",
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "concurrent",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_list_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-collections",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "during concurrent prefixed creates plus create/drop churn every GET /collections answers 200 with result.collections a JSON array of {name} entries (malformed 200 envelope = Type4 immediately); 5xx/non-200/transport blips with /healthz alive occur < 2 times (>= 2 = Type3 for 5xx-majority / Type4 otherwise); after all threads join the list converges to all creator names present exactly once and the churned name absent (missing/duplicate/zombie = Type4)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

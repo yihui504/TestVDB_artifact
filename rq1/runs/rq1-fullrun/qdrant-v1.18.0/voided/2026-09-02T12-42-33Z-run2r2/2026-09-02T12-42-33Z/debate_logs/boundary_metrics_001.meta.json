@@ -1,0 +1,17 @@
+{
+ "defect_id": "boundary_metrics_001",
+ "endpoint": "metrics",
+ "param": "anonymize, per_collection (documented boolean query params — positive closure matrix bare x true x false x combined)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "behavioral",
+ "constraint_ids": [
+  "qdrant_behavioral_metrics_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/metrics",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "all 7 positive legs (bare; anonymize=true|false; per_collection=true|false; anonymize=true+per_collection=true|false) answer HTTP 200 with a body parsing as Prometheus text (>=1 HELP/TYPE line and >=1 sample line matching ^name[{labels}]? numeric) — any leg non-2xx on the live face = DEFECT Type4_StateLogicViolation (200 promise broken), 200 with non-Prometheus/empty/JSON body = DEFECT Type4 (format promise broken), 5xx/transport with /healthz alive = DEFECT Type3_RuntimeFailure, 401/403 = SCRIPT_ERROR (auth-gated), bare 404 + healthz 200 = NO_DEFECT endpoint-absence evidence; missing family keywords print DOC_CONSISTENCY_CANDIDATE notes and do not flip the verdict",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

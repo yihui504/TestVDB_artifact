@@ -1,0 +1,106 @@
+{
+  "defect_id": "boundary_cluster_telemetry_005",
+  "endpoint": "GET /cluster/telemetry (contract path cluster+telemetry)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: live fetch of https://api.qdrant.tech/v-1-18-x/api-reference/distributed/cluster-telemetry returned the page 'Collect cluster telemetry data | Qdrant | API Reference' (PASS; no doc_preflight.json sidecar exists in the contract directory, so re-verified directly). version: URL path v-1-18-x and page version banner 'v1.18.x' loosely match target 1.18.0 major.minor (PASS). content: the page documents a 200 'Retrieved' TelemetryData response (example body even shows number_of_peers: 1) and details_level as 'integer Optional - The level of detail to include in the response' with NO min/max; the contract api_endpoints record's description '0..10 verbosity' does NOT appear on the published v-1-18-x page (the script itself logged this divergence at line 5 of the triggering log), and no 5xx or standalone-deployment restriction is documented anywhere on the page (PARTIAL). endpoint precision: endpoint_registry entry cluster+telemetry GET with this exact source_url matches the documented endpoint (PASS).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[details_level=0] status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000199927} | [healthz attempt 1] status=200 raw=healthz check passed (output_boundary_cluster_telemetry_005.log lines 6-7)",
+      "secondary_observations": [
+        "same log line 8: [details_level=1] status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000161727}",
+        "same log line 10: [details_level=10] status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000211903}",
+        "same log line 16: [details_level=11 (source-conflict zone)] status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000276451}",
+        "same log line 12: [details_level='abc'] status=400 raw={\"status\":{\"error\":\"Deserialize error in query parameters: invalid digit found in string\"},\"time\":0.0} — non-u32 input cleanly rejected 400",
+        "same log line 14: [details_level=-1] status=400 raw={\"status\":{\"error\":\"Deserialize error in query parameters: invalid digit found in string\"},\"time\":0.0} — negative rejected by u32 digit-parse failure, not by any range validator",
+        "same log line 5: [domain sources] contract endpoint record: details_level '0..10 verbosity' | published v-1-18-x OpenAPI: {type: integer} NO min/max — divergence recorded, oracle declared per leg below",
+        "parameter-independence (cross-script, rest face): output_boundary_cluster_telemetry_004.log line 7: [documented no-param call] params=None status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000164451} — the identical 500 occurs with NO parameters at all",
+        "parameter-independence (cross-script, same-family param timeout): output_boundary_cluster_telemetry_001.log line 7: [timeout omitted (default-60 form)] params=None status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.003408097}; and line 13: [timeout=60 (documented default value)] params={'timeout': 60} status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000207684} — every legal timeout value also 500s identically",
+        "comparative-forensics obligation: face_unavailable at runtime for the other interface faces (the internal gRPC face is not reachable from the sandbox and no script probed GET /telemetry this session); source-level disposition difference recorded instead in source_grounding — grpc-internal face rejects details_level<2 with Status::invalid_argument('details_level for internal service must be >= 2') while the rest face silently clamps via .max(2) and never rejects"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The failing input details_level=0 is a spec-legal value (within the contract-recorded 0..10 domain; the published page documents no bounds at all), so this is not a client-decidable error returned as 2xx — the server returns a handled 500. Genuinely malformed inputs ('abc', -1) were properly rejected with HTTP 400."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_cluster_telemetry_005",
+        "boundary_cluster_telemetry_001",
+        "boundary_cluster_telemetry_002",
+        "boundary_cluster_telemetry_003",
+        "boundary_cluster_telemetry_004",
+        "semantic_cluster_telemetry_001",
+        "semantic_cluster_telemetry_002",
+        "semantic_cluster_telemetry_003",
+        "semantic_cluster_telemetry_004",
+        "state_cluster_telemetry_001",
+        "state_cluster_telemetry_002",
+        "state_cluster_telemetry_003",
+        "state_cluster_telemetry_004"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_telemetry_001",
+      "assertion_text_quoted": "HTTP 200 with telemetry payload (id, app, collections, cluster, requests, memory, hardware, search_pool, quota)",
+      "api_violates_assertion": true,
+      "note": "The dispatch record carries constraint_id=\"\" (empty) — no constraint was cited. The quoted text is the nearest in-contract anchor, assertion qdrant_behavioral_cluster_telemetry_001 (endpoint cluster+telemetry, category behavioral, evidence_tier explicit, source_status reachable); structured_contract.json contains NO constraint covering the details_level domain at all (raw_knowledge constraints.range for cluster+telemetry is empty; the only range constraint, qdrant_range_cluster_telemetry_001, covers timeout only). violates=True is correct on this anchor: the observed disposition is HTTP 500 with a service-error body, while the assertion promises HTTP 200; the input value details_level=0 is inside the contract-recorded 0..10 domain and unconstrained in the published doc, so no constraint-domain mismatch applies. Attribution caveat for the auditor: the 500 is parameter-independent (identical for 0/1/10/11, for every timeout value, and for parameter-less calls), so the claim's framing as a details_level boundary-domain failure is observationally accurate but causally wrong — see chain_trace and source_grounding.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: BROKEN — dispatch constraint_id is empty; structured_contract.json has no details_level-domain constraint; nearest anchor is assertion qdrant_behavioral_cluster_telemetry_001 (200 promise), which the dispatch did not cite; the script self-declared its oracle from the api_endpoints parameter description '0..10 verbosity' (log line 5)",
+        "doc: PASS-with-divergence — page reachable at v-1-18-x, documents 200 TelemetryData promise (example shows number_of_peers:1) and details_level integer with no bounds; the contract record's '0..10 verbosity' description is absent from the published page; no 5xx and no standalone-mode restriction documented",
+        "script: PASS — boundary_cluster_telemetry_005 sent GET /cluster/telemetry?details_level=0 (plus 1/10/11/'abc'/-1 legs with per-leg /healthz liveness checks), matching the declared strategy1 boundary-domain attack on the details_level query parameter",
+        "log: PASS — VERDICT line 18 quotes the primary raw observation of line 6 verbatim (details_level=0, http 500, error body 'Could not get telemetry from cluster', time 0.000199927); verdict Type3_RuntimeFailure matches a handled server 500 with /healthz alive"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The dispatch cites no constraint_id (empty string), and the contract contains no constraint on the details_level domain — the boundary premise of the attack rests on the api_endpoints parameter description ('0..10 verbosity'), which the published v-1-18-x page does not state (no min/max on the page). The observed 500 does violate the neighboring behavioral assertion qdrant_behavioral_cluster_telemetry_001 (200 promise), so the doc-behavior conflict is real, but the specific parameter-domain chain contract->details_level does not exist.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Could not get telemetry from cluster",
+        "resolve_telemetries",
+        "MIN_CLUSTER_TELEMETRY_DETAILS_LEVEL",
+        "details_level",
+        "id_to_address"
+      ],
+      "files_examined": [
+        "src/actix/api/cluster_api.rs (lines 1-60, 190-303)",
+        "src/common/telemetry_ops/distributed_telemetry.rs (full, 561 lines)",
+        "src/main.rs (lines 270-339)",
+        "src/tonic/api/qdrant_internal_api.rs (lines 70-109)",
+        "src/actix/api/service_api.rs (lines 28-77)",
+        "src/common/telemetry.rs (lines 210-242)"
+      ],
+      "source_excerpt": "// src/actix/api/cluster_api.rs:23-25\n23  /// For now, we only handle details_level >= 2\n24  /// TODO(cluster telemetry): Handle lower levels\n25  const MIN_CLUSTER_TELEMETRY_DETAILS_LEVEL: u32 = 2;\n\n// src/actix/api/cluster_api.rs:42-47 — details_level has NO range validation; timeout does\n42  pub struct ClusterTelemetryParams {\n43      details_level: Option<u32>,\n44      #[validate(range(min = 1))]\n45      timeout: Option<u64>,\n46  }\n\n// src/actix/api/cluster_api.rs:203-220 — REST handler entry and silent clamp of 0/1 to 2\n203 #[get(\"/cluster/telemetry\")]\n204 async fn get_cluster_telemetry(\n...\n217         let details_level = params\n218             .details_level\n219             .unwrap_or_default()\n220             .max(MIN_CLUSTER_TELEMETRY_DETAILS_LEVEL);\n\n// src/actix/api/cluster_api.rs:238-262,284-285 — fan-out to peers, then resolve\n238         let all_peers: Vec<_> = channel_service\n239             .id_to_address\n240             .read()\n241             .keys()\n242             .copied()\n243             .collect();\n245         let mut futures = all_peers\n246             .into_iter()\n247             .map(|peer_id| {\n248                 channel_service\n249                     .with_qdrant_client(peer_id, |mut client| {\n250                         let request = grpc::GetTelemetryRequest {\n251                             collections_selector: collections_selector.clone(),\n252                             details_level,\n253                             timeout,\n254                         };\n255 \n256                         async move { client.get_telemetry(request).await }\n257                     })\n258                     .map_err(move |err| (peer_id, err))\n259             })\n260             .collect::<FuturesUnordered<_>>();\n262         let mut telemetries = Vec::with_capacity(futures.len());\n...\n284         let distributed_telemetry =\n285             DistributedTelemetryData::resolve_telemetries(access, telemetries, missing_peers)?;\n\n// src/common/telemetry_ops/distributed_telemetry.rs:150-158 — the exact 500 origin\n151     pub fn resolve_telemetries(\n...\n156         // Use the telemetry from node with highest term/commit\n157         let base_telemetry = newest_telemetry(&telemetries)\n158             .ok_or_else(|| StorageError::service_error(\"Could not get telemetry from cluster\"))?;\n\n// src/main.rs:282-318 — standalone mode leaves the peer map EMPTY\n284  /// In single-node mode a default-configured service is returned. In distributed mode\n285  /// the service is populated with a TLS-aware channel pool and peer metadata loaded\n286  /// from the persisted consensus state.\n...\n299      if is_distributed_deployment {\n300          // We only need channel_service in case if cluster is enabled.\n...\n314          channel_service.id_to_address = persistent_consensus_state.peer_address_by_id.clone();\n316          channel_service.id_to_metadata = persistent_consensus_state.peer_metadata_by_id.clone();\n317      }\n (if not distributed: id_to_address stays Default::default() = empty, per src/actix/../lib/collection/src/shards/channel_service.rs:22,47)\n\n// src/tonic/api/qdrant_internal_api.rs:90-96 — the internal gRPC face explicitly REJECTS what the REST face silently clamps\n90          if details_level < 2 {\n91              return Err(Status::invalid_argument(\n92                  \"details_level for internal service must be >= 2\",\n93              ));\n94          }\n96          let details_level = DetailsLevel::from(details_level.max(2) as usize);",
+      "call_chain_traced": "GET /cluster/telemetry -> actix get_cluster_telemetry (src/actix/api/cluster_api.rs:204) -> details_level = params.details_level.unwrap_or_default().max(2) [0/1 silently clamped, never rejected; no 0..10 validation exists] -> all_peers = channel_service.id_to_address keys -> in the sandbox's standalone deployment id_to_address is EMPTY (src/main.rs:299-317 populates it only when is_distributed_deployment; channel_service.rs:47 defaults to empty map) -> zero peer futures -> telemetries = [] -> DistributedTelemetryData::resolve_telemetries -> newest_telemetry(&[]) = None -> StorageError::service_error('Could not get telemetry from cluster') (distributed_telemetry.rs:157-158) -> HTTP 500 with the observed body. The 500 is therefore parameter-independent: identical for details_level 0/1/10/11, for every timeout value, and for parameter-less calls — all confirmed in the session logs.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "validation_absent holds for the details_level domain specifically: the REST face performs no range validation of the documented(-in-contract) 0..10 domain — ClusterTelemetryParams (cluster_api.rs:42-46) puts #[validate(range(min = 1))] on timeout but nothing on details_level; values <2 are silently clamped by .max(2) (cluster_api.rs:217-220) under an explicit TODO ('For now, we only handle details_level >= 2 / TODO(cluster telemetry): Handle lower levels', lines 23-25), and values above the recorded maximum (11) pass through unchallenged. The internal gRPC face (qdrant_internal_api.rs:90-94) shows the contrasting disposition: explicit invalid_argument rejection for <2, backed by the comment at telemetry.rs:230 ('This only happens when details_level is < 2, which we explicitly fail'). Separately, the observed 500 itself is NOT a validation question and NOT parameter-dependent: its proximate cause is the standalone deployment shape (empty id_to_address by construction in single-node mode), which the source documents descriptively (main.rs:284-286 'In single-node mode a default-configured service is returned') but nowhere declares as an intended 500 for this endpoint — no comment in the handler marks the standalone 500 as intentional, so by_design_in_source is not satisfied for the 500. Whether the parameter-independence of the 500 (deployment-shape dependency) demotes the Type3 attribution is left to the chain-auditor; the raw observation and its mechanism are both fully established."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "service-down/fragility: /healthz returned 200 'healthz check passed' immediately after every 500 leg (log lines 7, 9, 11, 17)",
+        "concurrency/race: single sequential request per leg, deterministic identical result across 13 scripts",
+        "cache-delay: no cache semantics involved; times are sub-millisecond and stable",
+        "request-parameter typo: parameters are echoed verbatim in each log line"
+      ],
+      "surviving": "deployment-mode dependency: GET /cluster/telemetry structurally cannot return 200 on a standalone (non-distributed) deployment because channel_service.id_to_address is only populated when is_distributed_deployment (src/main.rs:299-317); the sandbox runs the container testvdb-qdrant-standalone (default standalone mode — corroborated by sibling boundary_cluster_recover logs whose 500 body says 'Qdrant is running in standalone mode'). This is the confirmed proximate mechanism of the 500, but it is NOT documented on the endpoint's doc page (no 5xx documented; the 200 example even shows a single-peer result with number_of_peers:1), so whether it counts as a mundane explanation or as an undocumented deployment restriction (a real doc-behavior conflict) is a judgment reserved for the chain-auditor."
+    }
+  }
+}

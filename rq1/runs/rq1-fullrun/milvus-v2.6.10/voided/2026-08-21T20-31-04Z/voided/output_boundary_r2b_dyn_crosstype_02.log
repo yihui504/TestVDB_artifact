@@ -1,0 +1,10 @@
+insert f=10 (int) -> ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+insert f='ten' (str) -> ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[2]}}
+insert f=True (bool) -> ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[3]}}
+insert f=3.5 (float) -> ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[4]}}
+insert f=[1, 2] (list) -> ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[5]}}
+insert f={'n': 1} (dict) -> ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[6]}}
+upsert id=1 f='was-int' -> ok=True raw={"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[1]}}
+DEFECT: dynamic field 'f' established as Int accepts String value on new row (cross-type silent accept)
+DEFECT: upsert rewrites dynamic field 'f' Int->String silently
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess / dynamic field cross-type)

@@ -1,0 +1,17 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[control ASCII keyword] PUT index sp_ctrl -> status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.341742029}
+OK(control): ASCII keyword index accepted with exact echo
+[probe unicode 城市🎯field] -> status=400 raw={"status":{"error":"Format error in JSON body: Invalid json path: '城市🎯field' at line 1 column 46"},"time":0.0}
+  OK(reject): 'unicode 城市🎯field' -> 400 (explicit refusal, legal disposition)
+[probe zero-width a\u200bb] -> status=400 raw={"status":{"error":"Format error in JSON body: Invalid json path: 'a​b' at line 1 column 25"},"time":0.0}
+  OK(reject): 'zero-width a\u200bb' -> 400 (explicit refusal, legal disposition)
+[probe dot-notation lvl2.city (nested payload)] -> status=200 raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.364457974}
+  readback keys (non-control): ["'lvl2.city'"]
+  OK(exact echo): 'dot-notation lvl2.city (nested payload)' persisted byte-exactly as a dict key (opaque string handling; echo='{"data_type": "keyword", "params": {"type": "keyword"}, "points": 1}')
+[probe JSON-injection-shaped name] -> status=400 raw={"status":{"error":"Format error in JSON body: Invalid json path: '{\"$gt\": \"\"}' at line 1 column 32"},"time":0.0}
+  OK(reject): 'JSON-injection-shaped name' -> 400 (explicit refusal, legal disposition)
+[probe SQL-shaped name] -> status=400 raw={"status":{"error":"Format error in JSON body: Invalid json path: ''; DROP TABLE idx--' at line 1 column 36"},"time":0.0}
+  OK(reject): 'SQL-shaped name' -> 400 (explicit refusal, legal disposition)
+OK: exotic field names either echoed byte-exactly or explicitly rejected; no 5xx, no mojibake
+VERDICT: NO_DEFECT

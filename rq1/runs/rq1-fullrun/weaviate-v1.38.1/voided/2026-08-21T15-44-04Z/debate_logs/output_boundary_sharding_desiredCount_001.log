@@ -1,0 +1,14 @@
+[ctrl] desiredCount=1 -> create=200 readback=1 raw={"class":"BndShard_ctrl","invertedIndexConfig":{"bm25":{"b":0.75,"k1":1.2},"cleanupIntervalSeconds":60,"stopwords":{"additions":null,"preset":"en","removals":null},"usingBlockMaxWAND":true},"multiTena
+[zero] desiredCount=0 -> create=422 readback=0 raw={"allowed":null,"error":[{"message":"updating db: TYPE_ADD_CLASS: apply add class: create index: failed to read sharding state: invalid sharding state: physical shards unavailable"}]}
+
+[neg] desiredCount=-1 -> create=200 readback=None raw=
+[neg100] desiredCount=-100 -> create=200 readback=None raw=
+[float] desiredCount=1.5 -> create=422 readback=None raw={"allowed":null,"error":[{"message":"parse sharding config: desiredCount: strconv.ParseInt: parsing \"1.5\": invalid syntax"}]}
+
+[str] desiredCount='3' -> create=422 readback=0 raw={"allowed":null,"error":[{"message":"updating db: TYPE_ADD_CLASS: apply add class: create index: failed to read sharding state: invalid sharding state: physical shards unavailable"}]}
+
+[huge] desiredCount=2147483647 -> create=0 readback=None raw=HTTPConnectionPool(host='localhost', port=8080): Read timed out. (read timeout=30)
+[huge2] desiredCount=1000000000000 -> create=0 readback=None raw=('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+DEFECT[neg] Type1_IllegalSuccess: -1 accepted (2xx) with absent/None readback
+DEFECT[neg100] Type1_IllegalSuccess: -100 accepted (2xx) with absent/None readback
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)

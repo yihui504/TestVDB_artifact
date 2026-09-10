@@ -1,0 +1,38 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+F0 valid control -> status=200
+body bytes: b'{"query": {"nearest": [0.5, 0.25, 0.125, 0.0625]}, "limit": 3}'
+raw: {"result":{"points":[{"id":1,"version":1,"score":0.0057622097},{"id":2,"version":1,"score":0.011524419},{"id":3,"version":1,"score":0.01728663}]},"status":"ok","time":0.000333912}
+F0 valid control OK: 200 with 3 points (envelope result.points)
+
+F1 truncated JSON -> status=400
+body bytes: b'{"query": {"nearest": [0.5, 0.25, 0.125, 0.0625'
+raw: {"status":{"error":"Format error in JSON body: EOF while parsing a list at line 1 column 47"},"time":0.0}
+F1 truncated JSON OK: clean rejection with 400
+
+F2 trailing comma -> status=400
+body bytes: b'{"query": {"nearest": [0.5, 0.25, 0.125, 0.0625]}, "limit": 3,}'
+raw: {"status":{"error":"Format error in JSON body: trailing comma at line 1 column 63"},"time":0.0}
+F2 trailing comma OK: clean rejection with 400
+
+F3 raw NUL in filter key -> status=400
+body bytes: b'{"query": {"nearest": [0.5, 0.25, 0.125, 0.0625]}, "limit": 3, "filter": {"must": [{"key": "ci\x00ty", "match": {'
+raw: {"status":{"error":"Format error in JSON body: control character (\\u0000-\\u001F) found while parsing a string at line 1 column 95"},"time":0.0}
+F3 raw NUL in filter key OK: clean rejection with 400
+
+F4 escaped lone surrogate in key -> status=400
+body bytes: b'{"query": {"nearest": [0.5, 0.25, 0.125, 0.0625]}, "limit": 3, "filter": {"must": [{"key": "ci\\uD800ty", "matc'
+raw: {"status":{"error":"Format error in JSON body: unexpected end of hex escape at line 1 column 101"},"time":0.0}
+F4 escaped lone surrogate in key OK: clean rejection with 400
+
+F5 empty body -> status=400
+body bytes: b''
+raw: {"status":{"error":"Format error in JSON body: EOF while parsing a value at line 1 column 0"},"time":0.0}
+F5 empty body OK: clean rejection with 400
+
+F6 valid control (post-barrage liveness) -> status=200
+body bytes: b'{"query": {"nearest": [0.5, 0.25, 0.125, 0.0625]}, "limit": 3}'
+raw: {"result":{"points":[{"id":1,"version":1,"score":0.0057622097},{"id":2,"version":1,"score":0.011524419},{"id":3,"version":1,"score":0.01728663}]},"status":"ok","time":0.000273379}
+F6 valid control (post-barrage liveness) OK: 200 with 3 points (envelope result.points)
+VERDICT: NO_DEFECT

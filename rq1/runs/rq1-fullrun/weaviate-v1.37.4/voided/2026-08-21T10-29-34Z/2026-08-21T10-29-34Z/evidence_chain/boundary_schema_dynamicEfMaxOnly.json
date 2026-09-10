@@ -1,0 +1,78 @@
+{
+  "defect_id": "boundary_schema_dynamicEfMaxOnly",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Assertion inferred (Min<=Max); github blocked (PARTIAL). Local clone exact v1.37.4. Resulting pair Min(100)==default <= Max(700) is conforming; the observation validates the default-Min interaction rather than exposing a violation.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "c1: only dynamicEfMax=700 set, dynamicEfMin stays default 100 -> http=200, body persists dynamicEfMin=100 dynamicEfMax=700 (status 200, VERDICT: DEFECT_FOUND)",
+      "secondary_observations": [
+        "resulting pair is conforming (Min<=Max); boundary accepted; no clamp, no rejection"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200; a higher-than-default Max with default Min persists as success - conforming pair, boundary probe"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_dynamicEfMaxOnly",
+        "boundary_schema_dynamicEfMinOnly",
+        "boundary_schema_dynamicEf_inverted"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_inferred_hnsw_ef_pairing_001",
+      "assertion_text_quoted": "dynamicEfMin and dynamicEfMax represent paired EF parameters where Min <= Max",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "assertion_id": "weaviate_inferred_hnsw_ef_pairing_001"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:weaviate_inferred_hnsw_ef_pairing_001 -> doc:assertion inferred, source=config.go (default Min=100) -> script:boundary_schema_dynamicEfMaxOnly POST /v1/schema with dynamicEfMax=700 only -> log:http=200, body persists Min=100 Max=700"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "Chain complete but value conforms: default Min=100 <= Max=700 satisfies the assertion. Default interaction accepted; no defect in this specific case, though it shares the no-pairwise-check code path that allows inverted pairs in others.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "DefaultDynamicEFMin value",
+        "SetDefaults DynamicEFMin",
+        "OptionalIntFromMap dynamicEfMax",
+        "pairwise check"
+      ],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go",
+        "entities/vectorindex/dynamic/config.go"
+      ],
+      "source_excerpt": "config.go:30 DefaultDynamicEFMin=100; config.go:92-93 SetDefaults DynamicEFMin=100/DynamicEFMax=500; config.go:183-187 OptionalIntFromMap(\"dynamicEfMax\") overrides Max=700 leaving Min=100; validate() has no pairwise comparison; final pair 100<=700 conforms.",
+      "call_chain_traced": "POST /schema -> SetDefaults (Min=100) -> OptionalIntFromMap dynamicEfMax=700 -> validate() (no pairwise) -> persisted Min=100 Max=700.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "by-design"
+      ],
+      "surviving": "Value conforming; the shared no-pairwise-validation path is the same one that admits inverted pairs, but this specific observation yields a valid pair. Probe documents default interaction accepting valid boundary.",
+      "note": "violates=false because default Min=100<=Max=700 satisfies the quote. Real, observable defect signal lives in the inverted-pair siblings; this boundary probe is conforming."
+    }
+  }
+}

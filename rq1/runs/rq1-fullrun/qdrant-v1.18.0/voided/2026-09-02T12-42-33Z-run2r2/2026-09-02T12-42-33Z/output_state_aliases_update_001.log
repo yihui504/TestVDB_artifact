@@ -1,0 +1,16 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[positive valid batch] status=200 raw={"result":true,"status":"ok","time":0.033458176}
+[list_aliases] status=200 raw={"result":{"aliases":[{"alias_name":"sau1_1788365143_35500_al1","collection_name":"sau1_1788365143_35500_colA"},{"alias_name":"sau1_1788365143_35500_al2","collection_name":"sau1_1788365143_35500_colB"}]},"status":"ok","time":0.000275587}
+positive control OK: sau1_1788365143_35500_al1->sau1_1788365143_35500_colA, sau1_1788365143_35500_al2->sau1_1788365143_35500_colB
+[mixed#1 valid-then-invalid] status=404 raw={"status":{"error":"Not found: Collection `sau1_1788365143_35500_no_such_col` doesn't exist!"},"time":0.021502927}
+[list_aliases] status=200 raw={"result":{"aliases":[{"alias_name":"sau1_1788365143_35500_al1","collection_name":"sau1_1788365143_35500_colA"},{"alias_name":"sau1_1788365143_35500_al2","collection_name":"sau1_1788365143_35500_colB"},{"alias_name":"sau1_1788365143_35500_al3","collection_name":"sau1_1788365143_35500_colB"}]},"status":"ok","time":0.000205996}
+[mixed#2 invalid-then-valid (reversed)] status=404 raw={"status":{"error":"Not found: Collection `sau1_1788365143_35500_no_such_col` doesn't exist!"},"time":0.000124608}
+[list_aliases] status=200 raw={"result":{"aliases":[{"alias_name":"sau1_1788365143_35500_al1","collection_name":"sau1_1788365143_35500_colA"},{"alias_name":"sau1_1788365143_35500_al2","collection_name":"sau1_1788365143_35500_colB"},{"alias_name":"sau1_1788365143_35500_al3","collection_name":"sau1_1788365143_35500_colB"}]},"status":"ok","time":0.000163507}
+mixed#2 invalid-then-valid (reversed): rollback clean (['sau1_1788365143_35500_al5', 'sau1_1788365143_35500_al6'] all absent)
+[mixed#3 destructive rollback (valid delete + invalid create)] status=404 raw={"status":{"error":"Not found: Collection `sau1_1788365143_35500_no_such_col` doesn't exist!"},"time":0.019854359}
+[list_aliases] status=200 raw={"result":{"aliases":[{"alias_name":"sau1_1788365143_35500_al2","collection_name":"sau1_1788365143_35500_colB"},{"alias_name":"sau1_1788365143_35500_al3","collection_name":"sau1_1788365143_35500_colB"}]},"status":"ok","time":0.00023347}
+mixed#3 destructive rollback (valid delete + invalid create): rollback clean (['sau1_1788365143_35500_al7'] all absent)
+DEFECT: mixed#1 valid-then-invalid: alias row(s) ['sau1_1788365143_35500_al3'] visible despite the batch being rejected — partial commit of a one-request alias batch — Type4_StateLogicViolation (qdrant_state_aliases_update_001 atomicity)
+DEFECT: mixed#3 destructive rollback (valid delete + invalid create): destructive action leaked through the rejected batch — sau1_1788365143_35500_al1 should still map to sau1_1788365143_35500_colA, face says None — Type4_StateLogicViolation
+VERDICT: DEFECT_FOUND

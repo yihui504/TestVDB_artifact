@@ -1,0 +1,21 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+A valid positive=[601] -> status=200
+raw: {"result":[{"id":602,"version":1,"score":0.6000004},{"id":603,"version":1,"score":1.0},{"id":604,"version":1,"score":2.0}],"status":"ok","time":0.000434769}
+A OK: 200 with 3 scored points, ids=[602, 603, 604]
+B1 positive=[999999] (missing) -> status=404
+raw: {"status":{"error":"Not found: No point with id 999999 found"},"time":0.000121066}
+DISPOSITION_NOTE [B1 positive missing]: status 404 instead of the documented 400-family (recorded per G9; TMA documents a 404-on-missing-id variant): {"status":{"error":"Not found: No point with id 999999 found"},"time":0.000121066}
+B2 negative=[999999] (missing) -> status=404
+raw: {"status":{"error":"Not found: No point with id 999999 found"},"time":0.000274689}
+DISPOSITION_NOTE [B2 negative missing]: status 404 instead of the documented 400-family (recorded per G9; TMA documents a 404-on-missing-id variant): {"status":{"error":"Not found: No point with id 999999 found"},"time":0.000274689}
+C missing collection -> status=404
+raw: {"status":{"error":"Not found: Collection `sr_missing_7c49912d` doesn't exist!"},"time":1.781e-6}
+C OK: missing collection -> 404 as documented
+D positive=[501] using=txt (point has no txt) -> status=400
+raw: {"status":{"error":"Wrong input: Positive vectors should not be empty with `average` strategy"},"time":0.000268791}
+D OK: point-without-used-vector rejected with 400-family
+D+ positive=[501] using=img (point HAS img) -> status=200
+raw: {"result":[{"id":502,"version":1,"score":1.0}],"status":"ok","time":0.000468325}
+D+ OK: control face 200 — the D rejection is attributable to the missing used vector alone
+VERDICT: NO_DEFECT

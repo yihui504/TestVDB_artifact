@@ -1,0 +1,32 @@
+[Test 1] Empty should clause
+  Response status: 200
+  Returned points count: 30
+  Expected: 0 (empty result)
+
+[Test 2] Single condition in should
+  Response status: 200
+  Returned IDs: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30]...
+  Total count: 10
+  Expected count: 10 (category=A)
+  ✓ PASS: single condition returns correct count
+
+[Test 3] Compound OR - union of two conditions
+  Response status: 200
+  Returned IDs: [1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16, 18, 19, 21, 22, 24, 25, 27, 28, 30]...
+  Total count: 20
+  Expected count: 20 (A OR B)
+  ✓ PASS: compound OR returns correct union without duplicates
+
+[Test 4] Compound OR - union of three conditions
+  Response status: 200
+  Total count: 30
+  Expected count: 30 (A OR B OR C)
+  ✓ PASS: compound OR with 3 conditions returns correct union
+
+============================================================
+VERDICT: DEFECT_FOUND
+============================================================
+Total findings: 1
+
+Defect Summary:
+- empty_should: empty should clause returned 30 points instead of 0

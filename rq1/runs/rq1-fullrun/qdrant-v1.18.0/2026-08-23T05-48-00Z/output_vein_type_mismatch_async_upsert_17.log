@@ -1,0 +1,11 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+empty vector []: wait=true -> 400 | wait=false -> 200 (acknowledged)
+wrong dim 3: wait=true -> 400 | wait=false -> 200 (acknowledged)
+wrong dim 5: wait=true -> 400 | wait=false -> 200 (acknowledged)
+named empty: wait=true -> 400 | wait=false -> 200 (acknowledged)
+update_vectors dim2: wait=true -> 400 | wait=false -> 200
+batch empty vector:  wait=true -> 400 | wait=false -> 200
+readback after 2s: landed ids=[99] (expect only [99])
+point 1 vector after async bad update_vectors: [0.18257418, 0.36514837, 0.5477226, 0.73029673] (stored Cosine-normalized; expect 4 components, unchanged)
+VERDICT: DEFECT_FOUND — all async (wait=false) write paths skip vector validation: every invalid shape is 200-acknowledged then silently dropped (upsert, update_vectors, batch); identical payloads 400 with wait=true; valid async writes land (control)

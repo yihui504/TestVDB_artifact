@@ -1,0 +1,8 @@
+CASE both         status=200 code=1100 ok=False | {"code":1100,"message":"primary keys (ids) and query vectors (data) are mutually exclusive. Please provide either 'ids' or 'data', not both"}
+CASE neither      status=200 code=1802 ok=False | {"code":1802,"message":"either 'ids' (for primary key search) or 'data' (for vector search) must be provided"}
+CASE ids_empty    status=200 code=1802 ok=False | {"code":1802,"message":"either 'ids' (for primary key search) or 'data' (for vector search) must be provided"}
+CASE ids_ok       status=200 code=0 ok=True | {"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+CASE data_ok      status=200 code=0 ok=True | {"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+VERDICT_NO_DEFECT

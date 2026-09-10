@@ -1,0 +1,8 @@
+[v1 insert explicit id] http=200 body={"code":1804,"message":"fail to deal the insert data, error: invalid parameter[expected=][actual=set primary key but autoID == true]"}
+[v1 upsert autoID] http=200 body={"code":1100,"message":"cannot upsert an autoID collection: invalid parameter[expected=autoID: false][actual=autoID: true]"}
+[v1 insert no id control] http=200
+[v2 schema create] http=200 body={"code":200,"data":{}}
+[v2 insert no id (autoID=false)] http=200 body={"code":1804,"message":"fail to deal the insert data, error: strconv.ParseInt: parsing \"\": invalid syntax: invalid parameter[expected=Int64][actual=]"}
+[v2 describe readback] {"code":200,"data":{"aliases":[],"autoId":false,"collectionID":468539281521143481,"collectionName":"bnd_pk009_v2","consistencyLevel":"Bounded","description":"","enableDynamicField":false,"fields":[{"autoId":false,"description":"","id":100,"name":"id","partitionKey":false,"primaryKey":true,"type":"Int64"},{"autoId":false,"description":"","id":101,"name":"vector","params":[{"key":"dim","value":"8"}]
+[v2 insert id=42 control] http=200 body={"code":200,"data":{"insertCount":1,"insertIds":[42]}}
+VERDICT: NO_DEFECT

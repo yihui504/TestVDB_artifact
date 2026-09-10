@@ -1,0 +1,84 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "R35 (incremental; R1-R34 in chain_verdicts{,_r2.._r34}.json)",
+  "verdicts": [
+    {
+      "defect_id": "boundary_points_delete_invalid_filter_004",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "same-family inconsistency"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "SUPPORTS_DEFECT",
+                       "matched_pattern": "Parameter validation on filter/condition APIs (blindspot_indicators; recurring pattern 'Filter condition validation gaps' x51) — phenomenon-level match: no-matcher filter condition accepted on points+delete",
+                       "developer_quote": null},
+        "aggregation_applied": "mechanical A=CONFIRMED (id+quote_ok) -> implied_verdict=DEFECT -> final=DEFECT; B=CONFIRMED concordant"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "violated unit is a behavioral 200/404/400 disposition promise (category 'behavioral' in contract) — none of type/range/state/resource_bound/doc_consistency expresses a status-disposition assertion",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "Mechanical A=CONFIRMED (qdrant_behavioral_points_delete_001, id+quote_ok, verbatim contract line 7153): constraint promises 400 on an invalid filter, observed T2 {\"filter\":{\"must_not\":{\"key\":\"grp\"}}} accepted 200 with destructive wipe 6->0 (grade A, 3-script repro). B=CONFIRMED same-family inconsistency: T1/m1/m4/F3/F4 sibling malformed shapes all 400 while the no-matcher condition is silently accepted; source shows validate_field_condition ('At least one field condition must be specified', unit-tested) never invoked on the REST delete path, and the chain honestly narrows the violation to the no-matcher condition since the MaybeOneOrMany object container is doc-legal.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_points_delete_selector_005",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "mutually exclusive parameters"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": null,
+                       "developer_quote": null},
+        "aggregation_applied": "mechanical A=CONFIRMED (id+quote_ok) -> implied_verdict=DEFECT -> final=DEFECT; B=CONFIRMED concordant"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "violated unit is a behavioral disposition + documented OR-selector grammar promise — none of type/range/state/resource_bound/doc_consistency expresses a request-grammar/disposition assertion",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "Mechanical A=CONFIRMED (qdrant_behavioral_points_delete_001, id+quote_ok): S2 both-selector body (points[2] AND filter) accepted 200 with silent points-branch resolution (count 4->3; live repro on a fresh collection scroll-confirmed id2 deleted, id3 grp=red survived). B=CONFIRMED mutually-exclusive-parameters per the doc's verbatim 'PointIdsList object Required OR FilterSelector object Required' exactly-one grammar; source: untagged enum first-variant-wins, PointIdsList lacks deny_unknown_fields while the sibling Filter branch carries it, no mutual-exclusion validation on the path, gRPC oneof structurally immune (REST-only gap). D=NO_SIGNAL (filter-validation cognition anchors do not isomorphically cover selector grammar); the 400-on-invalid-filter trigger is the weakest-worded of the three chains (S2's filter is individually well-formed; exactly-one semantics grammar-implied) — doubt recorded, mechanized ruling stands.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_delete_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "same-family inconsistency"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "SUPPORTS_NOT_DEFECT",
+                       "matched_pattern": "Lenient filter parsing: null / single-object / array forms all accepted by design for filter condition fields (blindspot_indicators entry carrying an explicit by-design stance; phenomenon-level match to the primary m2 should:null observation)",
+                       "developer_quote": "This is fine and expected... it would be a breaking change"},
+        "aggregation_applied": "mechanical A=CONFIRMED (id+quote_ok) -> implied_verdict=DEFECT -> final=DEFECT; m2-leg source doubt (C=REFUTED / D=SUPPORTS_NOT_DEFECT) recorded for manual main-process review, NOT overturned per E2 rule; m3 leg uncovered by any by-design marker"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "violated unit is a behavioral 200/404/400 disposition promise — none of type/range/state/resource_bound/doc_consistency expresses a status-disposition assertion",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "Mechanical A=CONFIRMED (qdrant_behavioral_points_delete_001, id+quote_ok): primary m2 {\"filter\":{\"should\":null}} accepted 200 with wipe 3->0; m3 key-only condition {\"must\":[{\"key\":\"grp\"}]} also 200 with blast unmeasurable (m2 confound disclosed in-chain). B=CONFIRMED same-family inconsistency (m1/m4/B5 rejected 400 vs m2/m3 silently accepted 200). Source doubt exists on the m2 leg only — null->None is unit-tested intent (test_deserialize_one_or_many) and the maintainer lenient-parsing quote is a phenomenon-level match (C=REFUTED/D=SUPPORTS_NOT_DEFECT for m2), while m3 has no marker (validate_field_condition unwired on REST; gRPC validates at entry — face asymmetry); per E2 the doubt goes to manual main-process review, the mechanized A ruling keeps DEFECT.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 3,
+    "defect": 3,
+    "not_defect": 0,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {},
+    "constraint_category_distribution": {"other": 3},
+    "candidate_class_distribution": {"strict_defect": 3, "exploratory_candidate": 0, "rejected": 0}
+  }
+}

@@ -1,0 +1,9 @@
+setup: 0
+limit 16383 + offset 1 = 16384 (at max)      -> code=0     n=49   {"code":0,"cost":0,"data":[{"distance":0.000008000033,"id":1},{"distance":0.00003199989,"id":2},{"distance":0.0000719999
+limit 16384 + offset 1 = 16385 (max+1)       -> code=65535 n=None {"code":65535,"message":"offset+topk [16385] is invalid, it should be in range [1, 16384], but got 16385"}
+limit 1 + offset 1000000                     -> code=65535 n=None {"code":65535,"message":"offset [1000000] is invalid, it should be in range [1, 16384], but got 1000000"}
+limit -1                                     -> code=65535 n=None {"code":65535,"message":"topk [-1] is invalid, it should be in range [1, 16384], but got -1"}
+offset -1                                    -> code=65535 n=None {"code":65535,"message":"offset [-1] is invalid, it should be in range [1, 16384], but got -1"}
+no limit/offset (default 100 expected, only 50 rows) -> code=0     n=50   {"code":0,"cost":0,"data":[{"distance":0,"id":0},{"distance":0.000008000033,"id":1},{"distance":0.00003199989,"id":2},{"
+offset 0 only                                -> code=0     n=50   {"code":0,"cost":0,"data":[{"distance":0,"id":0},{"distance":0.000008000033,"id":1},{"distance":0.00003199989,"id":2},{"
+VERDICT: NO_DEFECT

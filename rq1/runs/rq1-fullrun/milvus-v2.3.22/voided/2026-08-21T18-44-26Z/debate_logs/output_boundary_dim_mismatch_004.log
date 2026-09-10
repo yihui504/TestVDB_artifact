@@ -1,0 +1,14 @@
+[create dim=8] http=200
+[insert dim=4] http=200 body={"code":1804,"message":"fail to deal the insert data, error: []float32 size 4 doesn't equal to vector dimension 8 of FloatVector"}
+[insert dim=9] http=200 body={"code":1804,"message":"fail to deal the insert data, error: []float32 size 9 doesn't equal to vector dimension 8 of FloatVector"}
+[insert dim=0] http=200 body={"code":1804,"message":"fail to deal the insert data, error: []float32 size 0 doesn't equal to vector dimension 8 of FloatVector"}
+[search dim=4] http=200 body={"code":200,"data":[]}
+[search dim=9] http=200 body={"code":200,"data":[]}
+[v2 search dim=4] http=200 body={"code":1801,"message":"can only accept json format request, error: dimension: 8, but length of []float: 4: invalid parameter[expected=FloatVector][actual=[0.1, 0.1, 0.1, 0.1]]"}
+[v2 search empty vector] http=200 body={"code":1801,"message":"can only accept json format request, error: dimension: 8, but length of []float: 0: invalid parameter[expected=FloatVector][actual=[]]"}
+[v2 search data=[]] http=200 body={"code":65535,"message":"nq [0] is invalid, nq (number of search vector per search request) should be in range [1, 16384], but got 0"}
+[insert dim=8 control] http=200
+[search dim=8 control] http=200
+DEFECT: search dim=4: Type1_IllegalSuccess (mismatch accepted)
+DEFECT: search dim=9: Type1_IllegalSuccess (mismatch accepted)
+VERDICT: DEFECT_FOUND

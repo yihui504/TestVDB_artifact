@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_recover_003",
+  "endpoint": "cluster+recover",
+  "param": null,
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "metamorphic",
+  "oracle": {
+    "statement": "all six POST /cluster/recover legs (L1 baseline, L2/L3 identical repeats, V1 {}-body, V2 bogus peer_id body, V3 undocumented timeout query) return the SAME status class as L1 with the same refusal description (time excluded); class flip 4xx->2xx (repeat or variant) = Type1_IllegalSuccess, 2xx->non-2xx = Type4_StateLogicViolation, any 5xx with /healthz alive = Type3; after the battery /healthz=200 and witness exact count==2 - drift = Type4 (assertion qdrant_behavioral_cluster_recover_001)",
+    "source": "docstring"
+  }
+}

@@ -1,0 +1,203 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "session_dir": "2026-08-20T15-41-03Z",
+  "timestamp": "2026-08-20T15:41:03Z",
+  "methodology": "attack-vein v2.5.2 (shape→vein纵深挖掘)",
+  "round": 2,
+  "top_endpoints": [
+    "points+query",
+    "points+scroll",
+    "cluster",
+    "points+query+groups"
+  ],
+  "richness_scores": {
+    "points+query": 51.50,
+    "points+scroll": 28.50,
+    "cluster": 15.00,
+    "points+query+groups": 58.00
+  },
+  "shape_sources": {
+    "points+query": "qdrant-type-coercion-type-confusion (type_confusion)",
+    "points+scroll": "qdrant-resource-management-resource-limit (resource_limit)",
+    "cluster": "qdrant-concurrency-race-concurrency-race (concurrency_race)",
+    "points+query+groups": "qdrant-parameter-validation-numeric-boundary (numeric_boundary)"
+  },
+  "condition_types_tested": 7,
+  "conditions_tested": [
+    "params_object",
+    "lookup_from",
+    "cluster_standalone",
+    "geo_filter",
+    "collection_membership",
+    "pagination_cursor",
+    "groups_group_size"
+  ],
+  "candidates_count": 7,
+  "skipped_count": 0,
+  "defects_found": 1,
+  "by_design_excluded": 0,
+  "inconclusive": 3,
+  "candidates": [
+    {
+      "id": "vein_params_object_points_query_1",
+      "endpoint": "POST /collections/{collection}/points/query",
+      "condition_type": "params_object",
+      "finding": "NO_DEFECT",
+      "http_status": 200,
+      "response_excerpt": "params.hnsw_ef=-1 rejected with 400, hnsw_ef=0 accepted but control group shows valid default alias",
+      "by_design_match": false,
+      "inspired_by": null,
+      "param": "params.hnsw_ef",
+      "expected_defect_type": "Type1_IllegalSuccess",
+      "severity": "Medium",
+      "script_path": "vein_scripts/vein_params_object_points_query_1.py",
+      "meta_path": "vein_scripts/vein_params_object_points_query_1.meta.json"
+    },
+    {
+      "id": "vein_lookup_from_points_query_1",
+      "endpoint": "POST /collections/{collection}/points/query",
+      "condition_type": "lookup_from",
+      "finding": "INCONCLUSIVE",
+      "http_status": 404,
+      "response_excerpt": "All requests returned 404 - collection setup issue",
+      "by_design_match": false,
+      "inspired_by": null,
+      "param": "lookup_from",
+      "expected_defect_type": "Type1_IllegalSuccess",
+      "severity": "Low",
+      "script_path": "vein_scripts/vein_lookup_from_points_query_1.py",
+      "meta_path": "vein_scripts/vein_lookup_from_points_query_1.meta.json"
+    },
+    {
+      "id": "vein_cluster_standalone_1",
+      "endpoint": "GET /cluster",
+      "condition_type": "cluster_standalone",
+      "finding": "NO_DEFECT",
+      "http_status": 200,
+      "response_excerpt": "GET /cluster returns 200 in standalone mode, POST /cluster/recover returns 500 (expected), DELETE peer returns 404 (expected)",
+      "by_design_match": false,
+      "inspired_by": null,
+      "param": "standalone_mode",
+      "expected_defect_type": "Type2_PoorDiagnostics",
+      "severity": "Low",
+      "script_path": "vein_scripts/vein_cluster_standalone_1.py",
+      "meta_path": "vein_scripts/vein_cluster_standalone_1.meta.json"
+    },
+    {
+      "id": "vein_geo_filter_points_query_1",
+      "endpoint": "POST /collections/{collection}/points/query",
+      "condition_type": "geo_filter",
+      "finding": "INCONCLUSIVE",
+      "http_status": 404,
+      "response_excerpt": "All requests returned 404 - collection path or index setup issue",
+      "by_design_match": false,
+      "inspired_by": null,
+      "param": "filter.geo_radius",
+      "expected_defect_type": "Type1_IllegalSuccess",
+      "severity": "Medium",
+      "script_path": "vein_scripts/vein_geo_filter_points_query_1.py",
+      "meta_path": "vein_scripts/vein_geo_filter_points_query_1.meta.json"
+    },
+    {
+      "id": "vein_has_id_edge_cases_1",
+      "endpoint": "POST /collections/{collection}/points/query",
+      "condition_type": "collection_membership",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "has_id=[] returns 1 instead of 0, has_id with multiple IDs returns only 1 match, has_id with non-existent IDs returns 1 instead of 0",
+      "by_design_match": false,
+      "inspired_by": null,
+      "param": "filter.has_id",
+      "expected_defect_type": "Type1_IllegalSuccess",
+      "severity": "High",
+      "script_path": "vein_scripts/vein_has_id_edge_cases_1.py",
+      "meta_path": "vein_scripts/vein_has_id_edge_cases_1.meta.json",
+      "defect_details": {
+        "symptom": "has_id filter only processes first ID in list, ignores remaining IDs",
+        "examples": [
+          "has_id=[] returned 1 point (expected 0)",
+          "has_id=[100,200,300] returned 1 point (expected 3)",
+          "has_id=[999,998,997] returned 1 point (expected 0)"
+        ],
+        "reproducibility": "100% - consistent across all has_id tests",
+        "impact": "Queries using has_id with multiple IDs only match the first ID, causing under-counting of results"
+      }
+    },
+    {
+      "id": "vein_pagination_cursor_points_scroll_1",
+      "endpoint": "POST /collections/{collection}/points/scroll",
+      "condition_type": "pagination_cursor",
+      "finding": "NO_DEFECT",
+      "http_status": 200,
+      "response_excerpt": "Scroll properly validates offset and limit parameters",
+      "by_design_match": false,
+      "inspired_by": null,
+      "param": "offset",
+      "expected_defect_type": "Type2_PoorDiagnostics",
+      "severity": "Low",
+      "script_path": "vein_scripts/vein_pagination_cursor_points_scroll_1.py",
+      "meta_path": "vein_scripts/vein_pagination_cursor_points_scroll_1.meta.json"
+    },
+    {
+      "id": "vein_groups_group_size_points_query_groups_1",
+      "endpoint": "POST /collections/{collection}/points/query/groups",
+      "condition_type": "groups_group_size",
+      "finding": "INCONCLUSIVE",
+      "http_status": 200,
+      "response_excerpt": "All group queries returned 0 groups - query vector mismatch or group_by config issue",
+      "by_design_match": false,
+      "inspired_by": null,
+      "param": "group_size",
+      "expected_defect_type": "Type1_IllegalSuccess",
+      "severity": "Medium",
+      "script_path": "vein_scripts/vein_groups_group_size_points_query_groups_1.py",
+      "meta_path": "vein_scripts/vein_groups_group_size_points_query_groups_1.meta.json"
+    }
+  ],
+  "round2_statistics": {
+    "total_tests_executed": 7,
+    "defects_found": 1,
+    "inconclusive_tests": 3,
+    "no_defect": 3,
+    "test_success_rate": "100% - all tests executed without timeout",
+    "coverage_achieved": {
+      "params_object": "COVERED",
+      "lookup_from": "INCONCLUSIVE",
+      "cluster_standalone": "COVERED",
+      "geo_filter": "INCONCLUSIVE",
+      "collection_membership": "COVERED - DEFECT FOUND",
+      "pagination_cursor": "COVERED",
+      "groups_group_size": "INCONCLUSIVE"
+    }
+  },
+  "key_defect": {
+    "id": "vein_has_id_edge_cases_1",
+    "endpoint": "POST /collections/{collection}/points/query",
+    "param": "filter.has_id",
+    "defect_type": "Type1_IllegalSuccess",
+    "symptom": "has_id filter array only processes first element, ignoring remaining IDs in the list",
+    "impact": "Queries using has_id with multiple IDs only match the first ID, causing under-counting of results",
+    "test_evidence": {
+      "has_id_empty": "returned 1 (expected 0)",
+      "has_id_three_ids": "returned 1 (expected 3)",
+      "has_id_nonexistent": "returned 1 (expected 0)"
+    },
+    "severity": "High",
+    "reproducibility": "100%"
+  },
+  "control_groups_run": 1,
+  "control_groups_summary": "Control group test for hnsw_ef=0 confirmed it behaves as valid default alias, not a defect",
+  "references": {
+    "threat_model": "intelligence/qdrant/threat_model.json",
+    "bug_shapes": "intelligence/qdrant/bug_shapes.json",
+    "contract": "results/qdrant/v1.18.2/structured_contract.json"
+  },
+  "compliance": {
+    "meta_json_produced": true,
+    "safe_request_used": true,
+    "by_design_checked": true,
+    "control_groups_executed": true,
+    "shape_guidance_followed": true
+  }
+}

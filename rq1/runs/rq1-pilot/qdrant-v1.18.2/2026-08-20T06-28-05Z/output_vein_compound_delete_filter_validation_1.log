@@ -1,0 +1,144 @@
+[SETUP] Creating collection...
+
+[TEST 1] Empty filter {} - should reject (no condition specified)
+  Response: HTTP 200
+  Status: ok
+  Operation ID: 2
+
+[TEST 2] Both points AND filter specified - should reject (ambiguous)
+  Response: HTTP 200
+  Status: ok
+  Operation ID: 3
+
+[TEST 3] Valid compound filter - control group (should work)
+  Response: HTTP 200
+  Operation ID: 4
+
+============================================================
+VERDICT: DEFECT_FOUND
+Defect Type: Type1_IllegalSuccess
+Severity: P1_High
+
+Finding: Delete endpoint accepts 2 invalid filter combinations without validation
+
+Test Cases:
+  1. Empty filter {} should return 400
+  2. Both points AND filter should return 400 (ambiguous)
+
+Bug Shape: qdrant-parameter-validation-numeric-boundary
+Threat Model Reference: Hist 67 - Parameter Validation (88 historical instances)
+============================================================
+{
+  "verdict": "DEFECT_FOUND",
+  "defect_type": "Type1_IllegalSuccess",
+  "severity": "P1_High",
+  "finding": "Delete endpoint accepts 2 invalid filter combinations without validation",
+  "findings": [
+    {
+      "test": "empty_filter",
+      "http_status": 200,
+      "response": {
+        "result": {
+          "operation_id": 2,
+          "status": "acknowledged"
+        },
+        "status": "ok",
+        "time": 0.000317425
+      },
+      "expected": "HTTP 400 Bad Request - empty filter is invalid",
+      "actual": "HTTP 200 - _safe_err(resp)",
+      "finding": "DEFECT"
+    },
+    {
+      "test": "ambiguous_selector",
+      "http_status": 200,
+      "response": {
+        "result": {
+          "operation_id": 3,
+          "status": "acknowledged"
+        },
+        "status": "ok",
+        "time": 0.000205542
+      },
+      "expected": "HTTP 400 Bad Request - ambiguous selector (both points and filter)",
+      "actual": "HTTP 200 - _safe_err(resp)",
+      "finding": "DEFECT"
+    },
+    {
+      "test": "valid_compound_filter",
+      "http_status": 200,
+      "response": {
+        "result": {
+          "operation_id": 4,
+          "status": "acknowledged"
+        },
+        "status": "ok",
+        "time": 0.000283739
+      },
+      "expected": "HTTP 200 OK - valid filter",
+      "actual": "HTTP 200 - success",
+      "finding": "PASS"
+    }
+  ],
+  "endpoint": "DELETE /collections/{collection}/points",
+  "test_cases": [
+    "Empty filter {} should return 400",
+    "Both points AND filter should return 400 (ambiguous)"
+  ],
+  "bug_shape": "qdrant-parameter-validation-numeric-boundary",
+  "threat_model_reference": "Hist 67 - Parameter Validation (88 historical instances)",
+  "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+  "evidence": {
+    "defect_count": 2,
+    "total_tests": 3,
+    "all_findings": [
+      {
+        "test": "empty_filter",
+        "http_status": 200,
+        "response": {
+          "result": {
+            "operation_id": 2,
+            "status": "acknowledged"
+          },
+          "status": "ok",
+          "time": 0.000317425
+        },
+        "expected": "HTTP 400 Bad Request - empty filter is invalid",
+        "actual": "HTTP 200 - _safe_err(resp)",
+        "finding": "DEFECT"
+      },
+      {
+        "test": "ambiguous_selector",
+        "http_status": 200,
+        "response": {
+          "result": {
+            "operation_id": 3,
+            "status": "acknowledged"
+          },
+          "status": "ok",
+          "time": 0.000205542
+        },
+        "expected": "HTTP 400 Bad Request - ambiguous selector (both points and filter)",
+        "actual": "HTTP 200 - _safe_err(resp)",
+        "finding": "DEFECT"
+      },
+      {
+        "test": "valid_compound_filter",
+        "http_status": 200,
+        "response": {
+          "result": {
+            "operation_id": 4,
+            "status": "acknowledged"
+          },
+          "status": "ok",
+          "time": 0.000283739
+        },
+        "expected": "HTTP 200 OK - valid filter",
+        "actual": "HTTP 200 - success",
+        "finding": "PASS"
+      }
+    ]
+  },
+  "expected_behavior": "API should reject invalid filter selectors with 400 error",
+  "actual_behavior": "Returns 200 OK with operation_id, silently accepting invalid input"
+}

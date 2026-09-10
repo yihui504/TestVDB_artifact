@@ -1,0 +1,75 @@
+{
+  "defect_id": "state_load_lifecycle_01",
+  "endpoint": "collections+refresh_load",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint milvus_state_collections_load_002 声明 search/query on not-loaded -> 101（errors.go:66 逐字一致，PASS）；但该约束未覆盖 refresh_load 这一入口——claim 的 65535 出现在契约未列举的端点上，属契约覆盖缺口而非断言矛盾；session 契约 state 勘误（truncate/refresh handler 路由说明）另记。无 sdk_rest_confusion。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "refresh_load(released): {\"code\":65535,\"message\":\"call query coordinator LoadCollection: collection not loaded[collection=468541070445080888]\"}",
+      "secondary_observations": [
+        "search after release: {\"code\":101,\"message\":\"failed to search: collection not loaded[collection=...]\"} — 同状态同底层错误，search 入口正确映射 101",
+        "load_state after release: {\"code\":0,\"data\":{\"loadState\":\"LoadStateNotLoad\"}}",
+        "refresh_load(loaded): {\"code\":0,\"data\":{}} — 已加载态刷新正常"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 + code:65535 泛化错误码；同一状态错误在 search 侧是 200+101——错误码映射不一致是核心观测。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/state_load_lifecycle_01.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_state_collections_load_002",
+      "assertion_text_quoted": "state!=Loaded AND (search|query) => code==101",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "violates=False 理由：断言域为 search|query 入口，二者均返回 101（log 直证）；refresh_load 不在断言域内，其 65535 是入口未列举的相邻现象（契约覆盖缺口），非本断言违反。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_state_collections_load_002 (errors.go:66 ErrCollectionNotLoaded code=101)",
+        "doc: source_url .milvus-src-2610/pkg/util/merr/errors.go 可达且原文一致",
+        "script: state_load_lifecycle_01.py release 后调用 refresh_load + search 双入口对照",
+        "log: refresh_load 65535 vs search 101 并列出现，同根因错误字符串 'collection not loaded'"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "契约 state_constraints 无任何条目覆盖 refresh_load 入口的错误码映射——四环中 contract 环对 claim 现象未定义（断言域不含 refresh_load），链在 contract→claim 处存在覆盖缺口（非 doc/log 断链）。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "\"collection not loaded\" internal/ + pkg/",
+        "ErrCollectionNotLoaded errors.go",
+        "refreshCollection querycoordv2/services.go",
+        "func (s *Server) LoadCollection services.go"
+      ],
+      "files_examined": [
+        ".milvus-src-2610/pkg/util/merr/errors.go:66 (ErrCollectionNotLoaded=101)",
+        ".milvus-src-2610/internal/querycoordv2/services.go:197-247 (LoadCollection refresh 分支), 500-517 (refreshCollection)",
+        ".milvus-src-2610/internal/proxy/task.go:2159-2167 (loadCollectionTask.Execute 错误包装 'call query coordinator LoadCollection: %s')"
+      ],
+      "source_excerpt": "// internal/querycoordv2/services.go:500-508\nfunc (s *Server) refreshCollection(ctx context.Context, collectionID int64) error {\n\tcollection := s.meta.CollectionManager.GetCollection(ctx, collectionID)\n\tif collection == nil {\n\t\treturn merr.WrapErrCollectionNotLoaded(collectionID)\n\t}\n\t// Check that collection is fully loaded.\n\tif collection.GetStatus() != querypb.LoadStatus_Loaded {\n\t\treturn merr.WrapErrCollectionNotLoaded(collectionID, \"collection not fully loaded\")\n\t}\n...\n// internal/proxy/task.go:2165-2167\n\tt.result, err = t.mixCoord.LoadCollection(ctx, request)\n\tif err = merr.CheckRPCCall(t.result, err); err != nil {\n\t\treturn fmt.Errorf(\"call query coordinator LoadCollection: %s\", err)\n\t}",
+      "call_chain_traced": "handler_v2.go:777 refreshLoadCollection (Refresh:true) → proxy loadCollectionTask.Execute task.go:2166 → qcoord LoadCollection refresh 分支 services.go:222 → refreshCollection:505 返回 WrapErrCollectionNotLoaded(=merr 101 错误对象)；但 proxy 层用 fmt.Errorf 裸包装（非 merr.Wrap），errors.Wrapf 丢失 merr 错误类型 → HTTP 层无法 Code(err) 取 101，回落 65535。search 侧 task_search.go 直接用 merr 透传故 101。根因=错误类型在 proxy task.go 包装处丢失。",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay"],
+      "surviving": null
+    }
+  }
+}

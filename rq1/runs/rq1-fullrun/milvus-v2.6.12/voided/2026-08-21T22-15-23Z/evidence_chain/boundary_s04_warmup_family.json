@@ -1,0 +1,71 @@
+{
+  "defect_id": "boundary_s04_warmup_family",
+  "endpoint": "collections+alter_properties",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint create_007 source_url=.milvus-src-2612/pkg/common/common.go（本地 clone 可达，ValidateWarmupPolicy 源码验证存在）；断言与 alter 路径行为一致（BOGUS/42/SYNC→1100）；create_008 显式记载 bare warmup 是 unvalidated pass-through（契约已捕获该现象）。端点 alter_properties 在 endpoint_registry。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "CASE bare warmup=BOGUS(str)             ACCEPTED(illegal) persisted_warmup={} | {\"code\":0,\"data\":{}}（主观测：非法值 code:0 接受后 describe 无 warmup 属性，静默丢弃）",
+      "secondary_observations": [
+        "CASE bare warmup={vectorIndex:BOGUS}    ACCEPTED(illegal) persisted_warmup={} | {\"code\":0,\"data\":{}}",
+        "CASE bare warmup={vectorIndex:sync} (nested form) ACCEPTED(illegal) persisted_warmup={} | {\"code\":0,\"data\":{}}（嵌套合法值同样被丢弃）",
+        "对照组平铺 API 全部正常：flat warmup.scalarField='SYNC' rejected: {\"code\":1100,\"message\":\"invalid warmup value for key warmup.scalarField: invalid warmup policy: SYNC, must be 'disable' or 'sync'\"}（BOGUS/42/DISABLED 同样 1100）",
+        "flat 合法值 sync/disable 均 ok 且 persisted_warmup 持久化"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "非法 warmup 值以 HTTP 200 + code:0 返回（静默成功）；正确平铺形态下同类非法值返回 HTTP 200 + code:1100"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_s04_warmup_family.py", "vein_scripts/vein_warmup_bare_key_001.py（C create bare warmup: {\"code\":0,\"data\":{}}）", "debate_logs/state_alter_props_loaded_003.py（B bare warmup on loaded 走的是 104 loaded 拦截，未到值校验）"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_collections_create_008",
+      "assertion_text_quoted": "create with params:{warmup: <any value>} currently succeeds (code==0) - unvalidated pass-through; tr...",
+      "api_violates_assertion": false,
+      "note": "契约 create_008 显式记载 bare warmup 是未校验透传——API 行为与该断言一致（violates=false，现象被契约收录为已知行为而非违反）。但 create_007 要求 warmup.* key 值 NOT IN {disable,sync} => 1100：bare key 是否落入 007 的约束域存疑（007 约束的是 warmup.{scalarField|scalarIndex|vectorField|vectorIndex} 四个平铺 key，不含裸 'warmup'）。accept-then-silently-drop 的静默丢弃部分无契约覆盖。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:create_008 明载 bare warmup pass-through（code:0）",
+        "doc:pkg/common/common.go ValidateWarmupPolicy 值域 {disable,sync}",
+        "script:alter_properties 传 properties.warmup=BOGUS/嵌套",
+        "log:code:0 接受 + describe persisted_warmup={}（静默丢弃）"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["ValidateWarmupPolicy", "IsFieldWarmupKey", "WarmupKey", "hasWarmupProp"],
+      "files_examined": [
+        "pkg/common/common.go",
+        "internal/proxy/task.go"
+      ],
+      "source_excerpt": "pkg/common/common.go:343-360:\n// IsFieldWarmupKey checks if a key is the field-level warmup key\nfunc IsFieldWarmupKey(key string) bool {\n\treturn key == WarmupKey   // WarmupKey = \"warmup\" (common.go:268)\n}\n// ValidateWarmupPolicy validates that the warmup policy value is valid\nfunc ValidateWarmupPolicy(value string) error {\n\tif value != WarmupDisable && value != WarmupSync {\n\t\treturn fmt.Errorf(\"invalid warmup policy: %s, must be '%s' or '%s'\", ...)\n\t}\n\treturn nil\n}\n\ninternal/proxy/task.go:459-468 (alter path):\n\tif hasWarmupProp(t.GetProperties()...) {\n\t\tfor _, prop := range t.GetProperties() {\n\t\t\tif common.IsFieldWarmupKey(prop.GetKey()) {\n\t\t\t\treturn merr.WrapErrParameterInvalidMsg(\"warmup key '%s' is only allowed at field level, use warmup.scalarField/... at collection level\", ...)\n\t\t\t}\n\t\t\tif common.IsCollectionWarmupKey(prop.GetKey()) {\n\t\t\t\tif err := common.ValidateWarmupPolicy(prop.GetValue()); err != nil { ... 1100 }\n\t\t\t}\n\t\t}\n\t}",
+      "call_chain_traced": "common.go:339 IsWarmupKey = IsFieldWarmupKey('warmup') || IsCollectionWarmupKey(warmup.*)；common.go:356 ValidateWarmupPolicy 值域 {disable,sync}。alter 路径 task.go:459-468：hasWarmupProp 命中后逐 prop 校验——但脚本观测 bare 'warmup' 在 alter 请求下 code:0 而非 1100，说明到达该分支的前提（hasWarmupProp/请求字段被提取为 properties）与 httpserver 侧字段提取有关：httpserver 将 REST properties 转成 KeyValue 对时，非字符串/嵌套值或未识别形态可能未进入 t.Properties 或被跳过。create 路径对 collection 级 properties 的等价校验在 task.go:1353/1632（alter 相关）与 create 链（proxy/util.go:635/694/709）不对称。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay"],
+      "surviving": "bare key 静默丢弃属 undocumented 行为差异（create_008 契约已记录为 pass-through），是否算缺陷取决于契约层面将 008 视为规范行为还是已知缺陷——判定权在 auditor"
+    }
+  }
+}

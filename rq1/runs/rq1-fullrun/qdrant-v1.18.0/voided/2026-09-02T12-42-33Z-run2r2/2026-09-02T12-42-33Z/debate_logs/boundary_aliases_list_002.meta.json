@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_list_002",
+ "endpoint": "aliases+list",
+ "param": "collection_name",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "type",
+ "oracle": {
+  "statement": "GET /aliases is documented as parameterless (\"list across all collections\"); for every probed collection_name value the endpoint returns either (a) 200 with the full documented envelope intact and the prefix-owned alias still present (param ignored), or (b) a 4xx rejection whose body carries a non-empty error diagnostic; 5xx = Type3_RuntimeFailure, 200 with result.aliases missing/mis-nested = Type4_StateLogicViolation, 200 where the prefix-owned alias of collection c1 silently vanishes because another collection's name was passed = Type1_IllegalSuccess (undocumented filtering breaks \"across all collections\"), empty-body 4xx = Type2_PoorDiagnostics (constraint qdrant_behavioral_aliases_list_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

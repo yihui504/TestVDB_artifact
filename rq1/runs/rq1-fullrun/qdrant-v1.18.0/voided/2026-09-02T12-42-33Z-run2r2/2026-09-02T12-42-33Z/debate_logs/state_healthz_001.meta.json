@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_healthz_001",
+ "endpoint": "healthz",
+ "param": null,
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "concurrent",
+ "constraint_ids": [
+  "qdrant_behavioral_healthz_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/healthz",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "every probe on the healthy instance returns HTTP 200 (0 anomalies); a non-{200,503} status or transport loss followed by >=1 immediate 200 /healthz re-probe = DEFECT (1+ non-503 spec-violating status = Type3 Type3_RuntimeFailure; >=2 recovered transport losses = Type3); persistent non-200 across re-probes / no aliveness proof after the burst = SCRIPT_ERROR (unhealthy branch or dead service not adjudicable read-only); sole 503-with-recovery samples = NO_DEFECT with observations printed",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

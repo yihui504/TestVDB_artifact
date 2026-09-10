@@ -1,0 +1,67 @@
+{
+  "defect_id": "boundary_s11_consistency_level",
+  "endpoint": "entities+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraint search_001（consistencyLevel IN {Strong,Session,Bounded,Eventually,Customized} else code==1100, message 含 'consistencyLevel can only be'）与 log WEAK/strong 两 case 的 1100 文案逐字吻合；本地 clone 可达。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "CASE empty string               status=200 ok=True | {\"code\":0,\"cost\":0,\"data\":[{\"distance\":0,\"id\":1}],\"topks\":[1]}（主观测：空串绕过枚举）",
+      "secondary_observations": [
+        "CASE bogus WEAK => 1100 'consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded'（枚举校验存在证明）",
+        "CASE lowercase strong => 1100 同文案",
+        "CASE int 3 => 1801 json unmarshal；CASE list => 1801",
+        "CASE null => code:0（未传等价，正常）；四个合法枚举值均 code:0"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "非法枚举值以 200+1100 返回；空串以 200+code:0 静默接受并回退默认 Bounded"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_s11_consistency_level.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_entities_search_001",
+      "assertion_text_quoted": "consistencyLevel IN {Strong,Session,Bounded,Eventually,Customized} else code==1100 (message: consist...",
+      "api_violates_assertion": true,
+      "note": "空串不属于枚举集合（也非 null/缺失），请求显式携带 consistencyLevel:\"\" 却 code:0——值在参数域内（该字段被显式赋值）而不在枚举域，violates=true；源码证实空串与未传走同一回退分支。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:search_001 枚举外值 => 1100",
+        "doc:source=handler_v2.go（本地 clone 可达，convertConsistencyLevel 已读）",
+        "script:search 传 consistencyLevel:''",
+        "log:http=200 code:0（与 WEAK/strong 的 1100 对照）"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "空串 case 与契约 else=>1100 矛盾；源码 if reqConsistencyLevel != \"\" 先行短路，空串落入默认 Bounded 回退",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["convertConsistencyLevel", "ConsistencyLevel_value"],
+      "files_examined": ["internal/distributed/proxy/httpserver/utils.go"],
+      "source_excerpt": "internal/distributed/proxy/httpserver/utils.go:1729-1739:\nfunc convertConsistencyLevel(reqConsistencyLevel string) (commonpb.ConsistencyLevel, bool, error) {\n\tif reqConsistencyLevel != \"\" {\n\t\tlevel, ok := commonpb.ConsistencyLevel_value[reqConsistencyLevel]\n\t\tif !ok {\n\t\t\treturn 0, false, merr.WrapErrParameterInvalidMsg(fmt.Sprintf(\"parameter:'%s' is incorrect, please check it\", reqConsistencyLevel))\n\t\t}\n\t\treturn commonpb.ConsistencyLevel(level), false, nil\n\t}\n\t// ConsistencyLevel_Bounded default in PyMilvus\n\treturn commonpb.ConsistencyLevel_Bounded, true, nil\n}",
+      "call_chain_traced": "convertConsistencyLevel 将空串与'未设置'统一处理：reqConsistencyLevel==\"\" 直接回退 Bounded（isDefault=true），不进入枚举表查找——空串因此绕过 1100。null(JSON) 在反序列化为 Go string 零值 \"\" 后同路径（行为等价于省略，可辩护）；与显式非法字符串（WEAK/strong 走 !ok => 1100）形成对照。唯一悬空形态是空串这一种。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request_typo"],
+      "surviving": "空串=默认回退是源码显式设计（注释 'default in PyMilvus'），但与契约枚举断言字面冲突——契约/实现不一致，缺陷归属（文档侧 or 实现侧）留 auditor"
+    }
+  }
+}

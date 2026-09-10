@@ -1,0 +1,21 @@
+setup: ready
+limit=0 offset=0 -> http=200 code=65535 ok=False raw={"code":65535,"message":"topk [0] is invalid, it should be in range [1, 16384], but got 0"}
+limit=1 offset=0 -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+limit=-1 offset=0 -> http=200 code=65535 ok=False raw={"code":65535,"message":"topk [-1] is invalid, it should be in range [1, 16384], but got -1"}
+limit=16383 offset=0 -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+limit=16384 offset=0 -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+limit=16385 offset=0 -> http=200 code=65535 ok=False raw={"code":65535,"message":"topk [16385] is invalid, it should be in range [1, 16384], but got 16385"}
+limit=100000 offset=0 -> http=200 code=65535 ok=False raw={"code":65535,"message":"topk [100000] is invalid, it should be in range [1, 16384], but got 100000"}
+limit=2147483647 offset=0 -> http=200 code=65535 ok=False raw={"code":65535,"message":"topk [2147483647] is invalid, it should be in range [1, 16384], but got 2147483647"}
+limit=1000000 offset=1000000 -> http=200 code=65535 ok=False raw={"code":65535,"message":"topk [1000000] is invalid, it should be in range [1, 16384], but got 1000000"}
+limit=10 offset=16374 -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[]}
+limit=10 offset=16375 -> http=200 code=65535 ok=False raw={"code":65535,"message":"offset+topk [16385] is invalid, it should be in range [1, 16384], but got 16385"}
+limit=10 offset=1000000 -> http=200 code=65535 ok=False raw={"code":65535,"message":"offset [1000000] is invalid, it should be in range [1, 16384], but got 1000000"}
+limit='100' offset=0 -> http=200 code=1801 ok=False raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field SearchReqV2.limit of type int32"}
+limit=None offset=0 -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+limit=1.5 offset=0 -> http=200 code=1801 ok=False raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number 1.5 into Go struct field SearchReqV2.limit of type int32"}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) - out-of-range limit/offset accepted: [(None, 0)]

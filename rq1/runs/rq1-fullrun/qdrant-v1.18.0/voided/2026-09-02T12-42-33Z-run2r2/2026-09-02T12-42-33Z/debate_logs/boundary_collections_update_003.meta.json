@@ -1,0 +1,11 @@
+{
+ "defect_id": "boundary_collections_update_003",
+ "endpoint": "collections+update",
+ "param": "hnsw_config.full_scan_threshold",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "on a live bcu003_* collection, PATCH hnsw_config.full_scan_threshold=9 and =0 each return HTTP 400/422 (any 2xx = Type1_IllegalSuccess; 5xx with /healthz alive = Type3_RuntimeFailure); PATCH full_scan_threshold=10 and =10000 each return HTTP 200 with envelope result true (4xx = Type1_IllegalRejection of a documented-legal value)",
+  "source": "docstring"
+ }
+}

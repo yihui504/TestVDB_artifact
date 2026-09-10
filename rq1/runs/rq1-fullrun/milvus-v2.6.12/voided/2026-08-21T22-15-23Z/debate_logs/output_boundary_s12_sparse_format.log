@@ -1,0 +1,12 @@
+CASE dict {1:0.5} (ok)              ok=True | {"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+CASE dict neg index {-1:0.5}        ok=False | {"code":1804,"message":"fail to deal the insert data, error: strconv.ParseUint: parsing \"-1\": invalid syntax: invalid parameter[expected=S
+CASE dict non-numeric key {a:0.5}   ok=False | {"code":1804,"message":"fail to deal the insert data, error: strconv.ParseUint: parsing \"a\": invalid syntax: invalid parameter[expected=Sp
+CASE dict empty {}                  ok=True | {"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+VERDICT_DEFECT 1 s12 dict empty {} accepted
+CASE dict value str                 ok=False | {"code":1804,"message":"fail to deal the insert data, error: invalid value type in JSON: string: invalid parameter[expected=SparseFloatVecto
+CASE list [0.1,0.2] (dense form)    ok=False | {"code":1804,"message":"fail to deal the insert data, error: json: cannot unmarshal array into Go value of type map[string]interface {}: inv
+CASE nested dict                    ok=False | {"code":1804,"message":"fail to deal the insert data, error: invalid value type in JSON: map[string]interface {}: invalid parameter[expected
+CASE search sparse w/ dense list    ok=False | {"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal array into Go value of type map[string]interface 
+CASE search sparse dict (ok)        ok=True | {"code":0,"cost":0,"data":[{"distance":0.25,"id":1}],"topks":[1]}
+
+VERDICT_DEFECT_FOUND

@@ -1,0 +1,30 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+G valid raw-body batch -> status=200
+raw: {"result":[[{"id":3,"version":1,"score":0.75}]],"status":"ok","time":0.000801988}
+G guard: raw-body path live (200, inner exactly 1)
+
+F1 truncated JSON -> status=400
+raw: {"status":{"error":"Format error in JSON body: EOF while parsing an object at line 1 column 15"},"time":0.0}
+F1 truncated JSON: 400 clean rejection
+
+F2 trailing comma -> status=400
+raw: {"status":{"error":"Format error in JSON body: trailing comma at line 1 column 42"},"time":0.0}
+F2 trailing comma: 400 clean rejection
+
+F3 bare NUL byte in body -> status=400
+raw: {"status":{"error":"Format error in JSON body: expected `,` or `}` at line 1 column 39"},"time":0.0}
+F3 bare NUL byte in body: 400 clean rejection
+
+F4 JSON-escaped NUL in filter key -> status=400
+raw: {"status":{"error":"Format error in JSON body: Invalid json path: 'gr\u0000p' at line 1 column 110"},"time":0.0}
+F4 JSON-escaped NUL in filter key: judge-call face — 400 clean rejection; recorded for the judge
+
+F5 lone UTF-16 surrogate in match value -> status=400
+raw: {"status":{"error":"Format error in JSON body: unexpected end of hex escape at line 1 column 104"},"time":0.0}
+F5 lone UTF-16 surrogate in match value: judge-call face — 400 clean rejection; recorded for the judge
+
+F6 overlong 1MB filter key -> status=200
+raw: {"result":[[]],"status":"ok","time":0.000871959}
+F6: accepted; inner len=0 (key matches nothing; non-defect)
+VERDICT: NO_DEFECT

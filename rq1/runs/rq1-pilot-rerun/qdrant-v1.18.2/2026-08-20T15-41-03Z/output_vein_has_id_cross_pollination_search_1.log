@@ -1,0 +1,27 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[CROSS-POLLINATION] Testing has_id defect on search endpoint
+Inspired by: DEFECT_FOUND on query endpoint - has_id only processes first ID
+
+[SETUP] Creating collection with known test data...
+
+[TEST 1] search with has_id=[100,200,300]
+  status=200
+  Results: 3 points
+[OK] NO DEFECT: All 3 IDs matched
+
+[TEST 2] search with has_id=[]
+  status=200
+  Results: 0 points
+[OK] NO DEFECT: Empty has_id returns 0
+
+[TEST 3] search with has_id=[999,998,997] (non-existent)
+  status=200
+  Results: 0 points
+[OK] NO DEFECT: Non-existent IDs return 0
+
+============================================================
+CROSS-POLLINATION ANALYSIS
+Checking if has_id defect exists across query/search/recommend
+============================================================
+VERDICT: NO_DEFECT

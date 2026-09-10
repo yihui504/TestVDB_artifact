@@ -1,0 +1,628 @@
+【任务】你是数据库缺陷判定审查员（single-LLM 臂 · 完备材料列 · run1 batch1）。
+对下面 7 个候选缺陷**逐案独立判定**：每案基于且仅基于该案材料，判断该候选描述的是否为真实缺陷（CONFIRMED）或误报（FALSE_POSITIVE）。各案完全独立，禁止跨案参考或让前案结论影响后案。
+
+规则（冻结模板，逐字沿用原臂）：
+- 只依据材料内容判断，不假设材料之外的信息
+- 契约依据是 expected 的参考；若契约条目与候选 endpoint 无关，忽略之
+- 材料中 VERDICT: UNKNOWN 行表示重放捕获无上游断言输出，非判定线索
+- 无契约依据时按观察行为本身评估
+- 材料中的「补充契约依据（文档考古补全）」段与原契约段同等地位；「维护者态度参考（developer_cognition）」段为维护者对同类历史现象的表态——是否与本案相关、是否采信，由你判断
+
+每案输出一行 JSON：{"defect_id": "...", "verdict": "CONFIRMED|FALSE_POSITIVE", "confidence": 0.0-1.0, "rationale": "一句话理由"}
+
+全部判完后：把 7 行 JSON 逐行写入
+<ARTIFACT_ROOT>/.paperpilot/phase2-rerun/arms/single_llm/run1_complete/verdicts_batch1.md
+（一行一案，不要其他内容），并在汇报中逐行贴出。
+
+【材料开始 · 案 1 milvus_008】
+=== 候选缺陷 milvus_008 ===
+[vendor=milvus version=2.6.12 defect_type=behavior endpoint=entities+search]
+
+--- 观察到的行为（observed） ---
+观察摘要（probe 产出）：
+- [c1] COSINE identical-vector search over 100 queries: max_distance=1.000000238418579, 11 queries with distance>1.0
+
+执行日志全文（output_milvus_008.log）：
+=== REQ 1 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "repro_<tracked>", "dimension": 4, "metricType": "COSINE", "dbName": "default"}
+=== RESP 1 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 2 ===
+POST http://localhost:19530/v2/vectordb/entities/insert
+payload: {"collectionName": "repro_<tracked>", "dbName": "default", "data": [{"id": 0, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 1, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 2, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 3, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 4, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 5, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 6, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 7, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 8, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 9, "vector": [0.1, 0.1, 0.1, 0.1]}]}
+=== RESP 2 ===
+status: 200
+body: {"code":0,"cost":0,"data":{"insertCount":10,"insertIds":[0,1,2,3,4,5,6,7,8,9]}}
+
+=== REQ 3 ===
+POST http://localhost:19530/v2/vectordb/indexes/create
+payload: {"collectionName": "repro_<tracked>", "dbName": "default", "indexParams": [{"fieldName": "vector", "indexName": "idx_vec", "metricType": "COSINE", "indexType": "FLAT", "params": {"nlist": 8}}]}
+=== RESP 3 ===
+status: 200
+body: {"code":65535,"message":"CreateIndex failed: creating multiple indexes on same field is not supported"}
+
+=== REQ 4 ===
+POST http://localhost:19530/v2/vectordb/collections/load
+payload: {"collectionName": "repro_<tracked>", "dbName": "default"}
+=== RESP 4 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 5 ===
+POST http://localhost:19530/v2/vectordb/entities/search
+payload: {"collectionName": "repro_<tracked>", "dbName": "default", "data": [[0.1, 0.1, 0.1, 0.1]], "limit": 3, "outputFields": ["*"]}
+=== RESP 5 ===
+status: 200
+body: {"code":0,"cost":0,"data":[{"distance":1,"id":0,"vector":[0.1,0.1,0.1,0.1]},{"distance":1,"id":1,"vector":[0.1,0.1,0.1,0.1]},{"distance":1,"id":2,"vector":[0.1,0.1,0.1,0.1]}],"topks":[3]}
+
+
+
+
+--- 契约依据（expected，来自该版本 API 契约） ---
+约束条目（10 条，来自 milvus 2.6.12 契约，endpoint=entities+search）：
+{"constraint_id": "milvus_type_entities_delete_001", "endpoint": "entities+delete", "type": "type_constraint", "description": "filter must be a valid boolean expression string", "assertion": "filter is a valid boolean expression", "source_url": "https://github.com/milvus-io/milvus/blob/v2.6.17/internal/distributed/proxy/httpserver/constant.go", "confidence": 1.0}
+{"constraint_id": "milvus_type_entities_get_001", "endpoint": "entities+get", "type": "type_constraint", "description": "id must match the collection primary key type (Int64 or VarChar)", "assertion": "id type matches collection primary key type", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Get.md", "confidence": 1.0}
+{"constraint_id": "milvus_type_entities_search_001", "endpoint": "entities+search", "type": "type_constraint", "description": "data must be array of float arrays, annsField must be a vector field, limit must be positive integer", "assertion": "data is array[array[float]] AND annsField is a vector field AND limit > 0", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Search.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_entities_search_001", "endpoint": "entities+search", "type": "range_constraint", "description": "vector dimensions in data must match collection vector dimension", "assertion": "vector dimension == collection dimension", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Search.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_entities_search_002", "endpoint": "entities+search", "type": "range_constraint", "description": "limit + offset must be < 16384", "assertion": "limit + offset < 16384", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Search.md", "confidence": 1.0}
+{"constraint_id": "milvus_state_entities_delete_001", "endpoint": "entities+delete", "type": "state_constraint", "description": "Deleted entities cannot be recovered", "assertion": "delete is irreversible", "source_url": "https://github.com/milvus-io/milvus/blob/v2.6.17/internal/distributed/proxy/httpserver/constant.go", "confidence": 1.0}
+{"constraint_id": "milvus_state_entities_search_001", "endpoint": "entities+search", "type": "state_constraint", "description": "Collection must be loaded; index must exist on annsField", "assertion": "collection is loaded AND index exists on annsField", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Search.md", "confidence": 1.0}
+{"assertion_id": "milvus_behavioral_entities_search_001", "endpoint": "entities+search", "description": "Search returns 400 on vector dimension mismatch", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Search.md", "confidence": 1.0}
+{"assertion_id": "milvus_behavioral_entities_delete_001", "endpoint": "entities+delete", "description": "Delete returns 400 on invalid filter expression", "source_url": "https://github.com/milvus-io/milvus/blob/v2.6.17/internal/distributed/proxy/httpserver/constant.go", "confidence": 1.0}
+{"assertion_id": "milvus_behavioral_entities_get_001", "endpoint": "entities+get", "description": "Get entities returns 400 if id type mismatches collection schema", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Get.md", "confidence": 1.0}
+
+相关契约段（关键词定位 1 条）：
+{"endpoint": "collections+create", "kind": "type_constraints", "description": "metricType must be L2, IP, or COSINE", "assertion": "metricType in [L2, IP, COSINE]", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+
+
+--- 补充契约依据（文档考古补全，同版本契约） ---
+{"constraint_id": "milvus_metric_cosine_range_001", "endpoint": "entities+search", "description": "COSINE distance = 1 - cosine similarity; similarity in [-1,1] so identical vectors distance=0, range [0,2]", "assertion": "metric_type == COSINE implies distance = 1 - cosine_similarity in [0, 2]; identical vectors distance == 0", "type": "state_constraint", "evidence_tier": "explicit", "source_url": "https://raw.githubusercontent.com/milvus-io/milvus-docs/ebb6de53/site/en/userGuide/search-query-get/metric.md", "_provenance": "doc-archaeology 2026-08-20: issue #49059; snapshot ebb6de53 cosine similarity [-1,1] / distance = 1 - similarity."}
+
+VERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)
+
+【材料结束 · 案 1】
+
+【材料开始 · 案 2 milvus_010】
+=== 候选缺陷 milvus_010 ===
+[vendor=milvus version=2.6.16 defect_type=semantics endpoint=collections+create]
+
+--- 观察到的行为（observed） ---
+观察摘要（probe 产出）：
+- [c1] create with negative TTL -> http=200, code=0
+- [c1_rb] describe collection after negative-TTL create -> http=200
+- [c2] control: alter_properties with negative TTL -> http=200, code=1100
+
+执行日志全文（output_milvus_010.log）：
+=== REQ 1 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_ttl_neg", "dbName": "default"}
+=== RESP 1 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 2 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_ttl_neg", "dimension": 4, "metricType": "L2", "properties": {"collection.ttl.seconds": -100}}
+=== RESP 2 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 3 ===
+POST http://localhost:19530/v2/vectordb/collections/describe
+payload: {"collectionName": "test_ttl_neg", "dbName": "default"}
+=== RESP 3 ===
+status: 200
+body: {"code":0,"data":{"aliases":[],"autoId":false,"collectionID":468358976047044489,"collectionName":"test_ttl_neg","consistencyLevel":"Bounded","description":"","enableDynamicField":true,"fields":[{"autoId":false,"clusteringKey":false,"description":"","id":100,"name":"id","nullable":false,"partitionKey":false,"primaryKey":true,"type":"Int64"},{"autoId":false,"clusteringKey":false,"description":"","id":101,"name":"vector","nullable":false,"params":[{"key":"dim","value":"4"}],"partitionKey":false,"primaryKey":false,"type":"FloatVector"}],"functions":[],"indexes":[{"fieldName":"vector","indexName":"vector","metricType":"L2"}],"load":"LoadStateLoading","partitionsNum":1,"properties":[{"key":"timezone","value":"UTC"}],"shardsNum":1},"message":""}
+
+=== REQ 4 ===
+POST http://localhost:19530/v2/vectordb/collections/alter_properties
+payload: {"collectionName": "test_ttl_neg", "properties": {"collection.ttl.seconds": -100}}
+=== RESP 4 ===
+status: 200
+body: {"code":1100,"message":"collection TTL is out of range, expect [-1, 3155760000], got -100: invalid parameter"}
+
+=== REQ 5 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_ttl_neg", "dbName": "default"}
+=== RESP 5 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 6 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_ttl_neg", "dimension": 4, "metricType": "L2", "properties": {"collection.ttl.seconds": -100}}
+=== RESP 6 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 7 ===
+POST http://localhost:19530/v2/vectordb/collections/describe
+payload: {"collectionName": "test_ttl_neg", "dbName": "default"}
+=== RESP 7 ===
+status: 200
+body: {"code":0,"data":{"aliases":[],"autoId":false,"collectionID":468359796041078668,"collectionName":"test_ttl_neg","consistencyLevel":"Bounded","description":"","enableDynamicField":true,"fields":[{"autoId":false,"clusteringKey":false,"description":"","id":100,"name":"id","nullable":false,"partitionKey":false,"primaryKey":true,"type":"Int64"},{"autoId":false,"clusteringKey":false,"description":"","id":101,"name":"vector","nullable":false,"params":[{"key":"dim","value":"4"}],"partitionKey":false,"primaryKey":false,"type":"FloatVector"}],"functions":[],"indexes":[{"fieldName":"vector","indexName":"vector","metricType":"L2"}],"load":"LoadStateLoading","partitionsNum":1,"properties":[{"key":"timezone","value":"UTC"}],"shardsNum":1},"message":""}
+
+=== REQ 8 ===
+POST http://localhost:19530/v2/vectordb/collections/alter_properties
+payload: {"collectionName": "test_ttl_neg", "properties": {"collection.ttl.seconds": -100}}
+=== RESP 8 ===
+status: 200
+body: {"code":1100,"message":"collection TTL is out of range, expect [-1, 3155760000], got -100: invalid parameter"}
+
+
+
+--- 契约依据（expected，来自该版本 API 契约） ---
+约束条目（11 条，来自 milvus 2.6.16 契约，endpoint=collections+create）：
+{"constraint_id": "milvus_type_collections_create_001", "endpoint": "collections+create", "type": "type_constraint", "description": "collectionName must be a string", "assertion": "collectionName is of type string", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_type_collections_create_002", "endpoint": "collections+create", "type": "type_constraint", "description": "metricType must be L2, IP, or COSINE", "assertion": "metricType in [L2, IP, COSINE]", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_type_collections_create_003", "endpoint": "collections+create", "type": "type_constraint", "description": "consistencyLevel must be Strong, Session, Bounded, or Eventually", "assertion": "consistencyLevel in [Strong, Session, Bounded, Eventually]", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_001", "endpoint": "collections+create", "type": "range_constraint", "description": "dimension must be 1-32768 for FloatVector", "assertion": "1 <= dimension <= 32768", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_002", "endpoint": "collections+create", "type": "range_constraint", "description": "shardsNum must be >= 1", "assertion": "shardsNum >= 1", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_003", "endpoint": "collections+create", "type": "range_constraint", "description": "partitionsNum >= 1", "assertion": "partitionsNum >= 1", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_004", "endpoint": "collections+create", "type": "range_constraint", "description": "ttlSeconds must be >= 0", "assertion": "ttlSeconds >= 0", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_005", "endpoint": "collections+create", "type": "range_constraint", "description": "VarChar max_length must be 1-65535", "assertion": "1 <= VarChar.max_length <= 65535", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_state_collections_create_001", "endpoint": "collections+create", "type": "state_constraint", "description": "Collection creation is atomic; collection names are unique within a database, and re-creation is idempotent when the schema is unchanged", "assertion": "collection creation is atomic AND collectionName is unique within dbName; re-creating an existing collection with the SAME schema is an idempotent no-op returning 200, re-creating with a DIFFERENT schema returns an error", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"assertion_id": "milvus_behavioral_collections_create_001", "endpoint": "collections+create", "description": "Create collection returns 200 on success", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"assertion_id": "milvus_behavioral_collections_create_002", "endpoint": "collections+create", "description": "Create collection returns 400 on invalid parameters; duplicate name is not an error when the schema is unchanged (idempotent no-op)", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+
+API 模板：endpoint=collections+alter doc_quote='200 on success; 404 if collection not found' source=None
+
+
+--- 维护者态度参考（developer_cognition，vendor=milvus） ---
+以下为该 vendor 维护者在历史 issue 中对同类现象的明确 by-design 表态（供判定参考；与本案是否相关由你判断）：
+- [相关 issues: [50192]] Concurrent rename+create idempotent semantics: rename(dst) racing with create(dst) both returning success is tolerated—rename to an existing-name target is treated as idempotent no-op when parameters match（维护者原话: "sounds like a by designed. Milvus returns success if creating a collection with the same name and parameters."）
+- [相关 issues: [50193]] get_stats rowCount reflects flushed data only: rowCount=0 after insert before flush is expected (query returns full rows; stats lag by design)（维护者原话: "This is by design. The entities number in collection stats only shows the data that flushed. Please retry with flush() after insert()."）
+- [相关 issues: [50319]] REST v2 quick-create mode semantics: creating via quick/fast mode (dimension-only) auto-loads and does not enforce full schema/load-state checks; search on such collections succeeding is expected（维护者原话: "The behavior described here appears to come from REST v2 quick/fast collection creation mode, not from search/query bypassing the collection load-stat"）
+- [相关 issues: [50351]] REST v2 create ignores unconsumed top-level fields: params not consumed by quick-create (e.g. top-level shardsNum) are silently ignored rather than rejected; consumed via params.shardsNum（维护者原话: "I think this is by design. The payload in this issue uses top-level shardsNum, but this field is not consumed by the REST v2 create API. shardsNum is "）
+
+VERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)
+
+【材料结束 · 案 2】
+
+【材料开始 · 案 3 milvus_013】
+=== 候选缺陷 milvus_013 ===
+[vendor=milvus version=2.6.16 defect_type=param_validation endpoint=collections+list]
+
+--- 观察到的行为（observed） ---
+观察摘要（probe 产出）：
+- [c1] Request-Timeout=3.5 (float) header -> http=200, code=0
+- [c2] Request-Timeout=abc (string) header -> http=200, code=0
+- [c3] control: Request-Timeout=10 (integer) -> http=200, code=0
+
+执行日志全文（output_milvus_013.log）：
+=== REQ 1 ===
+POST http://localhost:19530/v2/vectordb/collections/list
+headers: {"Request-Timeout": "3.5"}
+payload: {}
+=== RESP 1 ===
+status: 200
+body: {"code":0,"data":[]}
+
+=== REQ 2 ===
+POST http://localhost:19530/v2/vectordb/collections/list
+headers: {"Request-Timeout": "abc"}
+payload: {}
+=== RESP 2 ===
+status: 200
+body: {"code":0,"data":[]}
+
+=== REQ 3 ===
+POST http://localhost:19530/v2/vectordb/collections/list
+headers: {"Request-Timeout": "10"}
+payload: {}
+=== RESP 3 ===
+status: 200
+body: {"code":0,"data":[]}
+
+
+
+--- 契约依据（expected，来自该版本 API 契约） ---
+[契约中无 endpoint=collections+list 的约束条目]
+
+相关契约段（关键词定位 4 条）：
+{"endpoint": "collections+drop", "kind": "type_constraints", "description": "collectionName must be a non-empty string", "assertion": "collectionName is non-empty string", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Drop.md", "confidence": 1.0}
+{"endpoint": "collections+load", "kind": "type_constraints", "description": "collectionName must be a non-empty string for load", "assertion": "collectionName is non-empty string", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Load.md", "confidence": 1.0}
+{"endpoint": "collections+rename", "kind": "type_constraints", "description": "collectionName and newCollectionName must be non-empty strings", "assertion": "collectionName is non-empty string AND newCollectionName is non-empty string", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Rename.md", "confidence": 1.0}
+{"endpoint": "partitions+create", "kind": "type_constraints", "description": "partitionName must be a non-empty string", "assertion": "partitionName is non-empty string", "source_url": "https://github.com/milvus-io/milvus/blob/v2.6.17/internal/distributed/proxy/httpserver/constant.go", "confidence": 1.0}
+
+
+--- 补充契约依据（文档考古补全，同版本契约） ---
+{"constraint_id": "milvus_type_request_timeout_001", "endpoint": "entities+query", "description": "Request-Timeout header must be an integer", "assertion": "header Request-Timeout matches ^[0-9]+$ (non-integer rejected)", "type": "state_constraint", "evidence_tier": "explicit", "source_url": "https://milvus.io/api-reference/restful/v2.3.x/v2/Vector%20(v2)/Query.md", "_provenance": "doc-archaeology 2026-08-20: issue #49890 (2026-05-18) — API reference documents Request-Timeout as integer type; float 3.5 silently truncated, string \"abc\" silently ignored."}
+
+VERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)
+
+【材料结束 · 案 3】
+
+【材料开始 · 案 4 milvus_014】
+=== 候选缺陷 milvus_014 ===
+[vendor=milvus version=2.6.16 defect_type=behavior endpoint=collections+create]
+
+--- 观察到的行为（observed） ---
+观察摘要（probe 产出）：
+- [c1] create collection with dim=32768 -> http=200, code=0
+- [c2] control: create with dim=32769 -> http=200, code=65535
+
+执行日志全文（output_milvus_014.log）：
+=== REQ 1 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_large_dim", "dbName": "default"}
+=== RESP 1 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 2 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_large_dim2", "dbName": "default"}
+=== RESP 2 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 3 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_large_dim", "schema": {"autoID": false, "enableDynamicField": true, "fields": [{"fieldName": "id", "dataType": "Int64", "isPrimary": true}, {"fieldName": "vector", "dataType": "FloatVector", "elementTypeParams": {"dim": 32768}}]}}
+=== RESP 3 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 4 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_large_dim2", "schema": {"autoID": false, "enableDynamicField": true, "fields": [{"fieldName": "id", "dataType": "Int64", "isPrimary": true}, {"fieldName": "vector", "dataType": "FloatVector", "elementTypeParams": {"dim": 32769}}]}}
+=== RESP 4 ===
+status: 200
+body: {"code":65535,"message":"invalid dimension: 32769 of field vector. float vector dimension should be in range 2 ~ 32768"}
+
+=== REQ 5 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_large_dim", "dbName": "default"}
+=== RESP 5 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 6 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_large_dim2", "dbName": "default"}
+=== RESP 6 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 7 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_large_dim", "schema": {"autoID": false, "enableDynamicField": true, "fields": [{"fieldName": "id", "dataType": "Int64", "isPrimary": true}, {"fieldName": "vector", "dataType": "FloatVector", "elementTypeParams": {"dim": 32768}}]}}
+=== RESP 7 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 8 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_large_dim2", "schema": {"autoID": false, "enableDynamicField": true, "fields": [{"fieldName": "id", "dataType": "Int64", "isPrimary": true}, {"fieldName": "vector", "dataType": "FloatVector", "elementTypeParams": {"dim": 32769}}]}}
+=== RESP 8 ===
+status: 200
+body: {"code":65535,"message":"invalid dimension: 32769 of field vector. float vector dimension should be in range 2 ~ 32768"}
+
+
+
+--- 契约依据（expected，来自该版本 API 契约） ---
+约束条目（11 条，来自 milvus 2.6.16 契约，endpoint=collections+create）：
+{"constraint_id": "milvus_type_collections_create_001", "endpoint": "collections+create", "type": "type_constraint", "description": "collectionName must be a string", "assertion": "collectionName is of type string", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_type_collections_create_002", "endpoint": "collections+create", "type": "type_constraint", "description": "metricType must be L2, IP, or COSINE", "assertion": "metricType in [L2, IP, COSINE]", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_type_collections_create_003", "endpoint": "collections+create", "type": "type_constraint", "description": "consistencyLevel must be Strong, Session, Bounded, or Eventually", "assertion": "consistencyLevel in [Strong, Session, Bounded, Eventually]", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_001", "endpoint": "collections+create", "type": "range_constraint", "description": "dimension must be 1-32768 for FloatVector", "assertion": "1 <= dimension <= 32768", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_002", "endpoint": "collections+create", "type": "range_constraint", "description": "shardsNum must be >= 1", "assertion": "shardsNum >= 1", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_003", "endpoint": "collections+create", "type": "range_constraint", "description": "partitionsNum >= 1", "assertion": "partitionsNum >= 1", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_004", "endpoint": "collections+create", "type": "range_constraint", "description": "ttlSeconds must be >= 0", "assertion": "ttlSeconds >= 0", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_005", "endpoint": "collections+create", "type": "range_constraint", "description": "VarChar max_length must be 1-65535", "assertion": "1 <= VarChar.max_length <= 65535", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_state_collections_create_001", "endpoint": "collections+create", "type": "state_constraint", "description": "Collection creation is atomic; collection names are unique within a database, and re-creation is idempotent when the schema is unchanged", "assertion": "collection creation is atomic AND collectionName is unique within dbName; re-creating an existing collection with the SAME schema is an idempotent no-op returning 200, re-creating with a DIFFERENT schema returns an error", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"assertion_id": "milvus_behavioral_collections_create_001", "endpoint": "collections+create", "description": "Create collection returns 200 on success", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"assertion_id": "milvus_behavioral_collections_create_002", "endpoint": "collections+create", "description": "Create collection returns 400 on invalid parameters; duplicate name is not an error when the schema is unchanged (idempotent no-op)", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+
+相关契约段（关键词定位 1 条）：
+{"endpoint": "collections+create", "kind": "state_constraints", "description": "Collection creation is atomic; collection name must be unique within a database", "assertion": "collection creation is atomic AND collectionName is unique within dbName", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+
+API 模板：endpoint=users+create doc_quote='200 on success; 400 if user already exists or password too weak' source=None
+
+
+--- 维护者态度参考（developer_cognition，vendor=milvus） ---
+以下为该 vendor 维护者在历史 issue 中对同类现象的明确 by-design 表态（供判定参考；与本案是否相关由你判断）：
+- [相关 issues: [50192]] Concurrent rename+create idempotent semantics: rename(dst) racing with create(dst) both returning success is tolerated—rename to an existing-name target is treated as idempotent no-op when parameters match（维护者原话: "sounds like a by designed. Milvus returns success if creating a collection with the same name and parameters."）
+- [相关 issues: [50193]] get_stats rowCount reflects flushed data only: rowCount=0 after insert before flush is expected (query returns full rows; stats lag by design)（维护者原话: "This is by design. The entities number in collection stats only shows the data that flushed. Please retry with flush() after insert()."）
+- [相关 issues: [50319]] REST v2 quick-create mode semantics: creating via quick/fast mode (dimension-only) auto-loads and does not enforce full schema/load-state checks; search on such collections succeeding is expected（维护者原话: "The behavior described here appears to come from REST v2 quick/fast collection creation mode, not from search/query bypassing the collection load-stat"）
+- [相关 issues: [50351]] REST v2 create ignores unconsumed top-level fields: params not consumed by quick-create (e.g. top-level shardsNum) are silently ignored rather than rejected; consumed via params.shardsNum（维护者原话: "I think this is by design. The payload in this issue uses top-level shardsNum, but this field is not consumed by the REST v2 create API. shardsNum is "）
+
+VERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)
+
+【材料结束 · 案 4】
+
+【材料开始 · 案 5 milvus_018】
+=== 候选缺陷 milvus_018 ===
+[vendor=milvus version=2.6.16 defect_type=behavior endpoint=collections+rename]
+
+--- 观察到的行为（observed） ---
+观察摘要（probe 产出）：
+- [c1] concurrent rename->dst and create(dst): rename -> http=200, code=0; create -> http=200, code=0
+
+执行日志全文（output_milvus_018.log）：
+=== REQ 1 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_rename_src", "dbName": "default"}
+=== RESP 1 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 2 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_rename_dst", "dbName": "default"}
+=== RESP 2 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 3 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_rename_src", "dimension": 4, "metricType": "L2"}
+=== RESP 3 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 4 ===
+POST http://localhost:19530/v2/vectordb/entities/insert
+payload: {"collectionName": "test_rename_src", "data": [{"id": 1, "vector": [0.1, 0.2, 0.3, 0.4]}]}
+=== RESP 4 ===
+status: 200
+body: {"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+
+=== REQ 5 ===
+POST http://localhost:19530/v2/vectordb/collections/rename
+payload: {"collectionName": "test_rename_src", "newCollectionName": "test_rename_dst", "dbName": "default"}
+=== RESP 5 ===
+status: 200
+body: {"code":65535,"message":"duplicated new collection name default:test_rename_dst with other collection name or alias"}
+
+=== REQ 6 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_rename_dst", "dimension": 4, "metricType": "L2"}
+=== RESP 6 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 7 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_rename_src", "dbName": "default"}
+=== RESP 7 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 8 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_rename_dst", "dbName": "default"}
+=== RESP 8 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 9 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_rename_src", "dimension": 4, "metricType": "L2"}
+=== RESP 9 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 10 ===
+POST http://localhost:19530/v2/vectordb/entities/insert
+payload: {"collectionName": "test_rename_src", "data": [{"id": 1, "vector": [0.1, 0.2, 0.3, 0.4]}]}
+=== RESP 10 ===
+status: 200
+body: {"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+
+=== REQ 11 ===
+POST http://localhost:19530/v2/vectordb/collections/rename
+payload: {"collectionName": "test_rename_src", "newCollectionName": "test_rename_dst", "dbName": "default"}
+=== RESP 11 ===
+status: 200
+body: {"code":65535,"message":"duplicated new collection name default:test_rename_dst with other collection name or alias"}
+
+=== REQ 12 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_rename_dst", "dimension": 4, "metricType": "L2"}
+=== RESP 12 ===
+status: 200
+body: {"code":0,"data":{}}
+
+
+
+--- 契约依据（expected，来自该版本 API 契约） ---
+约束条目（2 条，来自 milvus 2.6.16 契约，endpoint=collections+rename）：
+{"constraint_id": "milvus_type_collections_rename_001", "endpoint": "collections+rename", "type": "type_constraint", "description": "collectionName and newCollectionName must be non-empty strings", "assertion": "collectionName is non-empty string AND newCollectionName is non-empty string", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Rename.md", "confidence": 1.0}
+{"constraint_id": "milvus_state_collections_rename_001", "endpoint": "collections+rename", "type": "state_constraint", "description": "Collection must exist; new name must not already exist", "assertion": "source collection exists AND new collection name does NOT exist", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Rename.md", "confidence": 1.0}
+
+API 模板：endpoint=collections+get_load_state doc_quote='200 with load state and progress' source=None
+
+
+--- 维护者态度参考（developer_cognition，vendor=milvus） ---
+以下为该 vendor 维护者在历史 issue 中对同类现象的明确 by-design 表态（供判定参考；与本案是否相关由你判断）：
+- [相关 issues: [50192]] Concurrent rename+create idempotent semantics: rename(dst) racing with create(dst) both returning success is tolerated—rename to an existing-name target is treated as idempotent no-op when parameters match（维护者原话: "sounds like a by designed. Milvus returns success if creating a collection with the same name and parameters."）
+- [相关 issues: [50193]] get_stats rowCount reflects flushed data only: rowCount=0 after insert before flush is expected (query returns full rows; stats lag by design)（维护者原话: "This is by design. The entities number in collection stats only shows the data that flushed. Please retry with flush() after insert()."）
+- [相关 issues: [50319]] REST v2 quick-create mode semantics: creating via quick/fast mode (dimension-only) auto-loads and does not enforce full schema/load-state checks; search on such collections succeeding is expected（维护者原话: "The behavior described here appears to come from REST v2 quick/fast collection creation mode, not from search/query bypassing the collection load-stat"）
+- [相关 issues: [50351]] REST v2 create ignores unconsumed top-level fields: params not consumed by quick-create (e.g. top-level shardsNum) are silently ignored rather than rejected; consumed via params.shardsNum（维护者原话: "I think this is by design. The payload in this issue uses top-level shardsNum, but this field is not consumed by the REST v2 create API. shardsNum is "）
+
+VERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)
+
+【材料结束 · 案 5】
+
+【材料开始 · 案 6 milvus_019】
+=== 候选缺陷 milvus_019 ===
+[vendor=milvus version=2.6.16 defect_type=behavior endpoint=collections+get_stats]
+
+--- 观察到的行为（observed） ---
+观察摘要（probe 产出）：
+- [c1] get_stats after insert+load -> http=200, code=0, rowCount=0
+- [c1_q] query after insert+load -> http=200, code=0, returned 5 rows (id 0-4)
+
+执行日志全文（output_milvus_019.log）：
+=== REQ 1 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_rowcount", "dbName": "default"}
+=== RESP 1 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 2 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_rowcount", "dimension": 4}
+=== RESP 2 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 3 ===
+POST http://localhost:19530/v2/vectordb/entities/insert
+payload: {"collectionName": "test_rowcount", "data": [{"id": 0, "value": 0, "vector": [0.1, 0.2, 0.3, 0.4]}, {"id": 1, "value": 1, "vector": [0.1, 0.2, 0.3, 0.4]}, {"id": 2, "value": 2, "vector": [0.1, 0.2, 0.3, 0.4]}, {"id": 3, "value": 3, "vector": [0.1, 0.2, 0.3, 0.4]}, {"id": 4, "value": 4, "vector": [0.1, 0.2, 0.3, 0.4]}]}
+=== RESP 3 ===
+status: 200
+body: {"code":0,"cost":0,"data":{"insertCount":5,"insertIds":[0,1,2,3,4]}}
+
+=== REQ 4 ===
+POST http://localhost:19530/v2/vectordb/collections/load
+payload: {"collectionName": "test_rowcount", "dbName": "default"}
+=== RESP 4 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 5 ===
+POST http://localhost:19530/v2/vectordb/collections/get_stats
+payload: {"collectionName": "test_rowcount"}
+=== RESP 5 ===
+status: 200
+body: {"code":0,"data":{"rowCount":0}}
+
+=== REQ 6 ===
+POST http://localhost:19530/v2/vectordb/entities/query
+payload: {"collectionName": "test_rowcount", "filter": "id>=0", "outputFields": ["id"]}
+=== RESP 6 ===
+status: 200
+body: {"code":0,"cost":0,"data":[{"id":0},{"id":1},{"id":2},{"id":3},{"id":4}]}
+
+
+=== REQ 7 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_rowcount", "dbName": "default"}
+=== RESP 7 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 8 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_rowcount", "dimension": 4}
+=== RESP 8 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 9 ===
+POST http://localhost:19530/v2/vectordb/entities/insert
+payload: {"collectionName": "test_rowcount", "data": [{"id": 0, "value": 0, "vector": [0.1, 0.2, 0.3, 0.4]}, {"id": 1, "value": 1, "vector": [0.1, 0.2, 0.3, 0.4]}, {"id": 2, "value": 2, "vector": [0.1, 0.2, 0.3, 0.4]}, {"id": 3, "value": 3, "vector": [0.1, 0.2, 0.3, 0.4]}, {"id": 4, "value": 4, "vector": [0.1, 0.2, 0.3, 0.4]}]}
+=== RESP 9 ===
+status: 200
+body: {"code":0,"cost":0,"data":{"insertCount":5,"insertIds":[0,1,2,3,4]}}
+
+=== REQ 10 ===
+POST http://localhost:19530/v2/vectordb/collections/load
+payload: {"collectionName": "test_rowcount", "dbName": "default"}
+=== RESP 10 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 11 ===
+POST http://localhost:19530/v2/vectordb/collections/get_stats
+payload: {"collectionName": "test_rowcount"}
+=== RESP 11 ===
+status: 200
+body: {"code":0,"data":{"rowCount":0}}
+
+=== REQ 12 ===
+POST http://localhost:19530/v2/vectordb/entities/query
+payload: {"collectionName": "test_rowcount", "filter": "id>=0", "outputFields": ["id"]}
+=== RESP 12 ===
+status: 200
+body: {"code":0,"cost":0,"data":[{"id":0},{"id":1},{"id":2},{"id":3},{"id":4}]}
+
+
+
+
+--- 契约依据（expected，来自该版本 API 契约） ---
+约束条目（1 条，来自 milvus 2.6.16 契约，endpoint=collections+get_stats）：
+{"assertion_id": "milvus_behavioral_collections_get_stats_001", "endpoint": "collections+get_stats", "description": "Get stats returns row count and statistics", "source_url": "https://github.com/milvus-io/milvus/blob/v2.6.17/internal/distributed/proxy/httpserver/constant.go", "confidence": 1.0}
+
+API 模板：endpoint=collections+load doc_quote='200 on success; 404 if collection not found; 400 if no index exists on collection' source=None
+
+
+--- 维护者态度参考（developer_cognition，vendor=milvus） ---
+以下为该 vendor 维护者在历史 issue 中对同类现象的明确 by-design 表态（供判定参考；与本案是否相关由你判断）：
+- [相关 issues: [50192]] Concurrent rename+create idempotent semantics: rename(dst) racing with create(dst) both returning success is tolerated—rename to an existing-name target is treated as idempotent no-op when parameters match（维护者原话: "sounds like a by designed. Milvus returns success if creating a collection with the same name and parameters."）
+- [相关 issues: [50193]] get_stats rowCount reflects flushed data only: rowCount=0 after insert before flush is expected (query returns full rows; stats lag by design)（维护者原话: "This is by design. The entities number in collection stats only shows the data that flushed. Please retry with flush() after insert()."）
+- [相关 issues: [50319]] REST v2 quick-create mode semantics: creating via quick/fast mode (dimension-only) auto-loads and does not enforce full schema/load-state checks; search on such collections succeeding is expected（维护者原话: "The behavior described here appears to come from REST v2 quick/fast collection creation mode, not from search/query bypassing the collection load-stat"）
+- [相关 issues: [50351]] REST v2 create ignores unconsumed top-level fields: params not consumed by quick-create (e.g. top-level shardsNum) are silently ignored rather than rejected; consumed via params.shardsNum（维护者原话: "I think this is by design. The payload in this issue uses top-level shardsNum, but this field is not consumed by the REST v2 create API. shardsNum is "）
+
+VERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)
+
+【材料结束 · 案 6】
+
+【材料开始 · 案 7 milvus_022】
+=== 候选缺陷 milvus_022 ===
+[vendor=milvus version=2.6.17 defect_type=behavior endpoint=collections+create]
+
+--- 观察到的行为（observed） ---
+观察摘要（probe 产出）：
+- [c1] first create -> http=200, code=0
+- [c1b] duplicate identical create -> http=200, code=0
+
+执行日志全文（output_milvus_022.log）：
+=== REQ 1 ===
+POST http://localhost:19530/v2/vectordb/collections/drop
+payload: {"collectionName": "test_dup", "dbName": "default"}
+=== RESP 1 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 2 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_dup", "dimension": 4, "metricType": "COSINE", "idType": "Int64", "autoID": false}
+=== RESP 2 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 3 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "test_dup", "dimension": 4, "metricType": "COSINE", "idType": "Int64", "autoID": false}
+=== RESP 3 ===
+status: 200
+body: {"code":0,"data":{}}
+
+
+
+--- 契约依据（expected，来自该版本 API 契约） ---
+约束条目（11 条，来自 milvus 2.6.17 契约，endpoint=collections+create）：
+{"constraint_id": "milvus_type_collections_create_001", "endpoint": "collections+create", "type": "type_constraint", "description": "collectionName must be a string", "assertion": "collectionName is of type string", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_type_collections_create_002", "endpoint": "collections+create", "type": "type_constraint", "description": "metricType must be L2, IP, or COSINE", "assertion": "metricType in [L2, IP, COSINE]", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_type_collections_create_003", "endpoint": "collections+create", "type": "type_constraint", "description": "consistencyLevel must be Strong, Session, Bounded, or Eventually", "assertion": "consistencyLevel in [Strong, Session, Bounded, Eventually]", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_001", "endpoint": "collections+create", "type": "range_constraint", "description": "dimension must be 1-32768 for FloatVector", "assertion": "1 <= dimension <= 32768", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_002", "endpoint": "collections+create", "type": "range_constraint", "description": "shardsNum must be >= 1", "assertion": "shardsNum >= 1", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_003", "endpoint": "collections+create", "type": "range_constraint", "description": "partitionsNum >= 1", "assertion": "partitionsNum >= 1", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_004", "endpoint": "collections+create", "type": "range_constraint", "description": "ttlSeconds must be >= 0", "assertion": "ttlSeconds >= 0", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_range_collections_create_005", "endpoint": "collections+create", "type": "range_constraint", "description": "VarChar max_length must be 1-65535", "assertion": "1 <= VarChar.max_length <= 65535", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"constraint_id": "milvus_state_collections_create_001", "endpoint": "collections+create", "type": "state_constraint", "description": "Collection creation is atomic; collection names are unique within a database, and re-creation is idempotent when the schema is unchanged", "assertion": "collection creation is atomic AND collectionName is unique within dbName; re-creating an existing collection with the SAME schema is an idempotent no-op returning 200, re-creating with a DIFFERENT schema returns an error", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"assertion_id": "milvus_behavioral_collections_create_001", "endpoint": "collections+create", "description": "Create collection returns 200 on success", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+{"assertion_id": "milvus_behavioral_collections_create_002", "endpoint": "collections+create", "description": "Create collection returns 400 on invalid parameters; duplicate name is not an error when the schema is unchanged (idempotent no-op)", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+
+相关契约段（关键词定位 1 条）：
+{"endpoint": "collections+create", "kind": "state_constraints", "description": "Collection creation is atomic; collection name must be unique within a database", "assertion": "collection creation is atomic AND collectionName is unique within dbName", "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md", "confidence": 1.0}
+
+
+--- 维护者态度参考（developer_cognition，vendor=milvus） ---
+以下为该 vendor 维护者在历史 issue 中对同类现象的明确 by-design 表态（供判定参考；与本案是否相关由你判断）：
+- [相关 issues: [50192]] Concurrent rename+create idempotent semantics: rename(dst) racing with create(dst) both returning success is tolerated—rename to an existing-name target is treated as idempotent no-op when parameters match（维护者原话: "sounds like a by designed. Milvus returns success if creating a collection with the same name and parameters."）
+- [相关 issues: [50193]] get_stats rowCount reflects flushed data only: rowCount=0 after insert before flush is expected (query returns full rows; stats lag by design)（维护者原话: "This is by design. The entities number in collection stats only shows the data that flushed. Please retry with flush() after insert()."）
+- [相关 issues: [50319]] REST v2 quick-create mode semantics: creating via quick/fast mode (dimension-only) auto-loads and does not enforce full schema/load-state checks; search on such collections succeeding is expected（维护者原话: "The behavior described here appears to come from REST v2 quick/fast collection creation mode, not from search/query bypassing the collection load-stat"）
+- [相关 issues: [50351]] REST v2 create ignores unconsumed top-level fields: params not consumed by quick-create (e.g. top-level shardsNum) are silently ignored rather than rejected; consumed via params.shardsNum（维护者原话: "I think this is by design. The payload in this issue uses top-level shardsNum, but this field is not consumed by the REST v2 create API. shardsNum is "）
+
+VERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)
+
+【材料结束 · 案 7】

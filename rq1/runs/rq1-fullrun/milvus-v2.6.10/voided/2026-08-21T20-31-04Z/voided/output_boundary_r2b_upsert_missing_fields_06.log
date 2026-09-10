@@ -1,0 +1,7 @@
+seed insert -> ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+upsert missing vector -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: missing vector field: vec: invalid parameter[expected=FloatVector][actual=]"}
+upsert missing scalar num -> ok=False raw={"code":1804,"message":"fail to deal the insert data, error: strconv.ParseInt: parsing \"\": invalid syntax: invalid parameter[expected=Int64][actual=]"}
+upsert data=[] -> ok=False raw={"code":1804,"message":"fail to deal the insert data, error: missing required parameters"}
+upsert nonexistent id=999 -> ok=True raw={"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[999]}}
+  readback id=999 -> present=False raw={"code":101,"message":"failed to query: collection not loaded[collection=468545658377626500]"}
+VERDICT: NO_DEFECT

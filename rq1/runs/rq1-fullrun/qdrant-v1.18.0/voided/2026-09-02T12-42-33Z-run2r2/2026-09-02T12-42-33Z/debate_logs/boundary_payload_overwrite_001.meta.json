@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_overwrite_001",
+ "endpoint": "payload+overwrite",
+ "param": "points",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "with 3 points carrying {\"city\",\"n\",\"tag\"} each, overwrite points=[1] payload={\"lang\":\"nl\"} (wait=true query) returns 200; afterwards scroll shows point 1 payload EXACTLY {\"lang\":\"nl\"} (all 3 old keys gone, new key byte-equal), points 2/3 payloads deep-equal baseline, all 3 vectors deep-equal the baseline readback vectors, exact count stays 3 — old-key residue or new-key distortion on point 1, collateral change on points 2/3, vector change or count drift each = Type4_StateLogicViolation; non-200 on the legal overwrite = Type1_IllegalSuccess (promise: overwrite succeeds on valid targets); 5xx/transport = Type3_RuntimeFailure with /healthz re-check (constraint qdrant_state_payload_overwrite_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

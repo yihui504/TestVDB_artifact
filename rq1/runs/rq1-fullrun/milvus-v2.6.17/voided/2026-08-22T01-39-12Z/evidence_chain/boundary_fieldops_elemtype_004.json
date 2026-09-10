@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_fieldops_elemtype_004",
+  "endpoint": "entities+upsert",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "milvus.io/docs/limitations.md 可达（mcp web_reader 200），含 VARCHAR 65535 等约束；Array 元素类型一致性为通用类型系统约束，文档无逐字 null 元素条目——契约依据主要来自源码 tier（task_upsert_partial_op.go），文档层为佐证非主证",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "null elem -> code=0 raw={\"code\":0,\"cost\":0,\"data\":{\"upsertCount\":1,\"upsertIds\":[1]}} — readback tags={'Data': {'StringData': {'data': ['a', 'b', '']}}} （null 被持久化为空串 ''）",
+      "secondary_observations": [
+        "int elem -> code=1804 'Mismatch type string with value number ... [expected=Array of VarChar]'",
+        "float elem -> code=1804 'Mismatch type string with value number ... [1.5]'",
+        "bool elem -> code=1804 'Mismatch type string with value bool ... [true]'",
+        "dict elem -> code=1804 'Mismatch type string with value object'",
+        "nested list -> code=1804 'Mismatch type string with value array'",
+        "mixed ['ok',7,null] -> code=1804 'Mismatch type ... at index 7'（null 之前的 7 先触发）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "主观测为非法值被接受（2xx+code:0），非错误形态问题"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_fieldops_elemtype_004.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_state_entities_upsert_fieldops_001",
+      "assertion_text_quoted": "any(fieldOps structural violation) => code 1100, no rows modified; non-REPLACE op present => request implicitly promoted to partialUpdate=true",
+      "api_violates_assertion": true,
+      "note": "契约明言元素类型不匹配（element-type mismatch）属 fieldOps 结构违规应 1100 拒绝且零行修改；null 元素观测为 code:0 且行被修改（tags 变 ['a','b','']），约束被违反——注意契约引用 state_001 而更精确的元素类型约束在 fieldops_001/002 族，此处按契约原文'element-type mismatch - all rejected 1100'执行",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_state_entities_upsert_fieldops_001 (element-type mismatch => 1100)",
+        "doc: limitations.md VARCHAR/类型系统约束（佐证层）",
+        "script: boundary_fieldops_elemtype_004.py ARRAY_APPEND null 元素（七种元素形态对照）",
+        "log: null elem code=0 + readback ['a','b',''] vs int/float/bool/dict/nested 全 1804"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["mismatched type with value", "expected=Array", "GetArrayData ArrayData", "case schemapb.DataType_VarChar"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/utils.go (checkAndSetData DataType_Array 分支 ~L520-625)",
+        "internal/distributed/proxy/httpserver/handler_v2.go (upsert L1313-1360)",
+        "internal/proxy/task_upsert_partial_op.go (validateFieldPartialUpdateOps L100-187)",
+        "internal/proxy/task_upsert.go (L1126 调用点)"
+      ],
+      "source_excerpt": "utils.go checkAndSetData 的 DataType_Array/ElementType_VarChar 分支：`arr := make([]string, 0); err := json.Unmarshal([]byte(dataString), &arr); if err != nil { return ... merr.WrapErrParameterInvalid(...\" of \"+...ElementType, dataString, err.Error()) }; reallyData[fieldName] = &schemapb.ScalarField{Data: &schemapb.ScalarField_StringData{StringData: &schemapb.StringArray{Data: arr}}}` —— Go json.Unmarshal 对 [\"a\",\"b\",null] 目标 []string 时将 null 解码为零值 \"\"，不报错；int/float/bool 元素则类型不匹配报错（对应 1804 消息族）。task_upsert_partial_op.go:174 的元素类型校验只比较声明 ElementType 与 payload 声明，不做逐元素 null 检查；L56-58 对 upsert 行 ValidData=false 显式跳过（显式 null 列），但嵌在数组内的 null 元素走 json 零值路径。",
+      "call_chain_traced": "REST upsert(handler_v2.go:1313) -> buildFieldPartialUpdateOps(request_v2.go:345) -> checkAndSetData(utils.go:363, Array<VarChar> 分支 json.Unmarshal) -> anyToColumns -> proxy Upsert -> task_upsert.go:1126 validateFieldPartialUpdateOps（无逐元素 null 校验）-> 持久化 ''",
+      "verification_outcome": "validation_absent",
+      "note": "null-in-array 逐元素校验在 REST 转换层与 proxy 校验层均不存在；json 零值解码使其静默成 ''。注意 task_upsert_partial_op.go:55-58 对显式 null 行（ValidData=false）是 by-design 跳过，但数组内 null 元素不属于该豁免域",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request-typo"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "strong（behavior 七形态对照 + source 转换层逐行定位；文档层为佐证）"
+}

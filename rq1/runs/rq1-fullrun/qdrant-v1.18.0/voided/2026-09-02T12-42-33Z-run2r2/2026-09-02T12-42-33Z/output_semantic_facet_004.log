@@ -1,0 +1,19 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: aace008b collection=sfa04_aace008b
+[probe C1 limit=null] -> status=200 raw={"result":{"hits":[{"value":"alpha","count":10},{"value":"beta","count":8},{"value":"gamma","count":5},{"value":"delta","count":2}]},"status":"ok","time":0.000248726}
+OK(200): 'C1 limit=null' limit=None accepted
+[probe C2 limit=5] -> status=200 raw={"result":{"hits":[{"value":"alpha","count":10},{"value":"beta","count":8},{"value":"gamma","count":5},{"value":"delta","count":2}]},"status":"ok","time":0.000322132}
+OK(200): 'C2 limit=5' limit=5 accepted
+[probe T1 str '5'] limit='5' -> status=400 raw={"status":{"error":"Format error in JSON body: invalid type: string \"5\", expected usize at line 1 column 30"},"time":0.0}
+OK(reject): 'T1 str '5'' limit='5' -> 400: {"status":{"error":"Format error in JSON body: invalid type: string \"5\", expected usize at line 1 column 30"},"time":0.0}
+[probe T2 float 5.5] limit=5.5 -> status=400 raw={"status":{"error":"Format error in JSON body: invalid type: floating point `5.5`, expected usize at line 1 column 30"},"time":0.0}
+OK(reject): 'T2 float 5.5' limit=5.5 -> 400: {"status":{"error":"Format error in JSON body: invalid type: floating point `5.5`, expected usize at line 1 column 30"},"time":0.0}
+[probe T3 bool true] limit=True -> status=400 raw={"status":{"error":"Format error in JSON body: invalid type: boolean `true`, expected usize at line 1 column 31"},"time":0.0}
+OK(reject): 'T3 bool true' limit=True -> 400: {"status":{"error":"Format error in JSON body: invalid type: boolean `true`, expected usize at line 1 column 31"},"time":0.0}
+[probe T4 array [5]] limit=[5] -> status=400 raw={"status":{"error":"Format error in JSON body: invalid type: sequence, expected usize at line 1 column 30"},"time":0.0}
+OK(reject): 'T4 array [5]' limit=[5] -> 400: {"status":{"error":"Format error in JSON body: invalid type: sequence, expected usize at line 1 column 30"},"time":0.0}
+[probe T5 object {n:5}] limit={'n': 5} -> status=400 raw={"status":{"error":"Format error in JSON body: invalid type: map, expected usize at line 1 column 35"},"time":0.0}
+OK(reject): 'T5 object {n:5}' limit={'n': 5} -> 400: {"status":{"error":"Format error in JSON body: invalid type: map, expected usize at line 1 column 35"},"time":0.0}
+OK: schema-legal null/integer limits accepted; string/float/bool/array/object limits all rejected 4xx (no silent type coercion of facet limit)
+VERDICT: NO_DEFECT

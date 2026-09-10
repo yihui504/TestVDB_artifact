@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_sharding_desiredCount_001",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint weaviate_range_sharding_desired_count_001 的 source_url 为 go-func 引用（usecases/sharding/config/config.go validate()），非 http URL，无法 WebFetch 可达性验证；其 description 已如实记录 'validate() 无显式校验（实测 0 被运行时拒绝，负值被 200 接受——GT issue #11729）'；endpoint /v1/schema 在 endpoint_registry 命中",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[neg] desiredCount=-1 -> create=200 readback=None raw= / [neg100] desiredCount=-100 -> create=200 readback=None raw= / DEFECT[neg] Type1_IllegalSuccess: -1 accepted (2xx) with absent/None readback",
+      "secondary_observations": [
+        "[zero] desiredCount=0 -> create=422 readback=0 raw={\"allowed\":null,\"error\":[{\"message\":\"updating db: TYPE_ADD_CLASS: apply add class: create index: failed to read sharding state: invalid sharding state: physical shards unavailable\"}]}",
+        "[float] desiredCount=1.5 -> create=422 readback=None raw={\"allowed\":null,\"error\":[{\"message\":\"parse sharding config: desiredCount: strconv.ParseInt: parsing \\\"1.5\\\": invalid syntax\"}]}",
+        "[huge] desiredCount=2147483647 -> create=0 readback=None raw=HTTPConnectionPool(host='localhost', port=8080): Read timed out. (read timeout=30)",
+        "[huge2] desiredCount=1000000000000 -> create=0 readback=None raw=('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+        "[ctrl] desiredCount=1 -> create=200 readback=1"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "负值 desiredCount 为请求侧可判定非法输入，以 200 返回且无错误体；对照组 0/1.5 正确 422——错误通道选择不一致"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_sharding_desiredCount_001.py", "debate_logs/boundary_sharding_desiredCount_dos_002.py (同参数族)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_range_sharding_desired_count_001",
+      "assertion_text_quoted": "shardingConfig.desiredCount >= 1",
+      "api_violates_assertion": true,
+      "note": "观测 -1/-100 以 200 接受，直接违反 desiredCount>=1 断言；值在 quote 约束域内（整数 shard count），violates=True 无歧义",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_range_sharding_desired_count_001 'shardingConfig.desiredCount >= 1'",
+        "doc: 无公开文档 URL；契约自 source_url=go-func usecases/sharding/config/config.go validate() 推断",
+        "script: debate_logs/boundary_sharding_desiredCount_001.py POST /v1/schema desiredCount=-1/-100",
+        "log: [neg] create=200 readback=None（phantom 200）；对照 [zero]=422 runtime"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["physical shards unavailable|func \\(c \\*Config\\) Validate", "func (c *Config) validate() error [sharding]"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\usecases\\sharding\\config\\config.go (L28-146, 全文)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\cluster\\schema\\reader.go (L106 附近, 错误串定位)"
+      ],
+      "source_excerpt": "usecases/sharding/config/config.go L53-70:\nfunc (c *Config) validate() error {\n\tif c.Key != \"_id\" {\n\t\treturn errors.Errorf(\"sharding only supported on key '_id' for now, \"+\n\t\t\t\"got: %s\", c.Key)\n\t}\n\tif c.Strategy != \"hash\" { ... }\n\tif c.Function != \"murmur3\" { ... }\n\treturn nil\n}\n— validate() 只校验 Key/Strategy/Function，对 DesiredCount 无任何 >=1 或上限校验。L104-108 optionalIntFromMap(asMap, \"desiredCount\", ...) 直接赋值。负值流入：cluster/schema/reader.go L106: return fmt.Errorf(\"invalid sharding state: physical shards unavailable\")（仅 0/正数不足时触发；负数不触发该检查→200 phantom）",
+      "call_chain_traced": "POST /schema → ParseConfig(input, nodeCount) L85 → optionalIntFromMap desiredCount L104 → validate() L53（无 desiredCount 校验）→ 集群 schema 应用 → reader.go L106 physical shards 检查（负值绕过，返回 200 但索引未建立→GET readback None）",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（对照 ctrl=200/readback=1 正常）", "concurrency（确定性复现，非间歇）"],
+      "surviving": null
+    }
+  }
+}

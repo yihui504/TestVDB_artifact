@@ -1,0 +1,75 @@
+{
+  "defect_id": "vein_type_mismatch_points_upsert_2",
+  "endpoint": "/collections/{collection_name}/points",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation does not specify behavior for empty vector arrays; upsert endpoint documented but zero-length vector handling not explicitly documented",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "Line 8-9: Upserting point with empty vector array [] → Status: 200, Response: {'result': {'operation_id': 1, 'status': 'acknowledged'}, 'status': 'ok', 'time': 0.000191398}. Line 15-17: Scrolling to verify stored points → Status: 200, Points found: [10], Total count: 1. Line 19: [DEFECT_FOUND] Empty vector (id=1) was silently discarded",
+      "secondary_observations": [
+        "Line 11-12: Upserting point with correct vector → Status: 200, Response: {'result': {'operation_id': 2, 'status': 'acknowledged'}, 'status': 'ok'}",
+        "Line 15-17: Scroll verification confirms only 1 point stored (id=10 with valid vector), empty vector point (id=1) absent"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 (acknowledged but silently discarded)",
+        "note": "HTTP 200 OK with 'acknowledged' status returned for empty vector [] which is invalid input. No 4xx error despite zero-length vector being semantically invalid."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_type_mismatch_points_upsert_2"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A - no constraint_id in candidate metadata",
+      "api_violates_assertion": true,
+      "note": "API accepts empty vector array [] without validation and returns success. Empty vectors are semantically invalid for vector search operations.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: N/A (no constraint_id)",
+        "doc: upsert endpoint documented but empty vector handling unspecified",
+        "script: vein_type_mismatch_points_upsert_2 sends empty vector []",
+        "log: HTTP 200 OK + acknowledged returned but scroll shows empty vector point not stored (silent discard)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "HTTP response indicates success (200 OK + acknowledged) but actual storage shows silent failure. Zero-length vector is invalid input that should be rejected with 4xx error per API best practices.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "check_vector_against_config",
+        "vector.len",
+        "WrongVectorDimension",
+        "validation.*empty"
+      ],
+      "files_examined": [
+        "lib/segment/src/common/mod.rs",
+        "lib/segment/src/data_types/vectors.rs",
+        "lib/segment/src/segment/segment_ops.rs"
+      ],
+      "source_excerpt": "File: lib/segment/src/common/mod.rs, Lines 188-203:\n\nfn check_vector_against_config(\n    vector: VectorRef,\n    vector_config: &VectorDataConfig,\n) -> OperationResult<()> {\n    match vector {\n        VectorRef::Dense(vector) => {\n            // Check dimensionality\n            let dim = vector_config.size;\n            if vector.len() != dim {\n                return Err(OperationError::WrongVectorDimension {\n                    expected_dim: dim,\n                    received_dim: vector.len(),\n                });\n            }\n            Ok(())\n        }\n        // ...\n    }\n}\n\nNote: The validation check `if vector.len() != dim` would catch empty vectors (len=0) if dim > 0, BUT this error is caught and suppressed at higher levels.\n\nIn the upsert flow, even though check_named_vectors() returns an error for empty vectors, the error is handled by handle_point_version_and_failure() which logs the error internally but still allows the operation to complete with 'acknowledged' status in async mode.",
+      "call_chain_traced": "upsert_point → check_named_vectors → check_vector_against_config (detects len=0 vs expected dim>0) → returns WrongVectorDimension or similar error → error caught by handle_point_version_and_failure → logged in segment error_status → HTTP layer still returns 200 OK due to async 'acknowledged' pattern",
+      "verification_outcome": "validation_present",
+      "note": "Source code shows dimension validation EXISTS (check_vector_against_config line 196: if vector.len() != dim) which would reject empty vectors, but the error is caught and suppressed at the segment error handler level, resulting in silent discard rather than client-facing 4xx error.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "缓存延迟", "笔误"],
+      "surviving": "Type1_IllegalSuccess: Empty vector [] is semantically invalid input (zero vectors cannot participate in similarity search). API should reject with 400 Bad Request but instead returns 200 OK + acknowledged while silently discarding the point."
+    }
+  }
+}

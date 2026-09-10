@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_collection_update_003",
+  "endpoint": "cluster+collection+update",
+  "param": "shard_id",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "boundary",
+  "oracle": {
+    "statement": "invalid shard ids (-1, u32max, u32max+1, in-domain non-existent) on drop_replica/abort_transfer -> 400/422 each; any 2xx = Type1_IllegalSuccess (operation accepted against an invalid shard); 4xx other than 400/422 = Type2_PoorDiagnostics; 5xx = Type3_RuntimeFailure with /healthz rechecked",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

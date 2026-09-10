@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_update_001",
+ "endpoint": "aliases+update",
+ "param": "timeout",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "boundary closure — every timeout>=1 probe with a valid create_alias action returns 200 with envelope result:boolean true and the alias really listed by GET /aliases; every timeout<1 probe (0/-1/-100) is rejected with 4xx (documented min 1); 200 on a timeout<1 probe that actually applied the alias = Type1_IllegalSuccess; 5xx = Type3_RuntimeFailure (healthz rechecked); 200 whose envelope breaks result:boolean = Type4_StateLogicViolation (constraint qdrant_behavioral_aliases_update_001 + parameter description \"query: min 1\")",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

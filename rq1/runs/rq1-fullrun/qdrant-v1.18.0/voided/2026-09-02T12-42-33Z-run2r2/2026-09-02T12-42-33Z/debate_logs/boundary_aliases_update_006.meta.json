@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_update_006",
+ "endpoint": "aliases+update",
+ "param": "actions[].create_alias.alias_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "special_value",
+ "oracle": {
+  "statement": "for every special-value name (unicode/emoji, RTL+zero-width, SQL-injection, JSON-injection, overlong 100k) the create either (a) returns 200 and GET /aliases lists the name bound to the owning collection BYTE-EXACTLY and the follow-up delete 200 removes it, or (b) rejects 4xx with non-empty diagnostics; roundtrip mismatch / name vanish / wrong collection binding = Type4_StateLogicViolation, 5xx = Type3_RuntimeFailure (healthz rechecked), 200-then-delete-404 permanently-stuck alias = Type4_StateLogicViolation (constraint qdrant_behavioral_aliases_update_001 + aliases+list response_shape result.aliases[].alias_name string)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

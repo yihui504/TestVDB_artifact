@@ -1,0 +1,25 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['collection_exists', 'delete_points']
+[seed upsert 6 pts] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.004444209}
+[seed count] status=200 raw={"result":{"count":6},"status":"ok","time":0.000209838}
+[B3 exists spdel2_1788475221_34244_missing] status=200 raw={"result":{"exists":false},"status":"ok","time":6.27e-6}
+[B3] exists probe returned exists=False — collection name collision; retiring name
+[B3-missing-collection] status=404 body={"points": [1]} raw={"status":{"error":"Not found: Collection `spdel2_1788475221_34244_missingx9` doesn't exist!"},"time":5.582e-6}
+[B1-ids-branch] status=200 body={"points": [100]} raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.005020674}
+[B1] OK: valid ids-delete 200
+[B2-filter-branch] status=200 body={"filter": {"must": [{"key": "grp", "match": {"value": "a"}}]}} raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.00467548}
+[B2] OK: valid filter-delete 200
+[baseline count] status=200 raw={"result":{"count":3},"status":"ok","time":0.000180646}
+[m1-must-not-a-list] status=400 body={"filter": {"must": "not-a-list"}} raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PointsSelector"},"time":0.0}
+[m2-should-null] status=200 body={"filter": {"should": null}} raw={"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.003604623}
+[m2-should-null count] status=200 raw={"result":{"count":0},"status":"ok","time":0.000066551}
+[m3-cond-without-match] status=200 body={"filter": {"must": [{"key": "grp"}]}} raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.003657538}
+[m3-cond-without-match count] status=200 raw={"result":{"count":0},"status":"ok","time":0.000104402}
+[m4-match-without-key] status=400 body={"filter": {"must": [{"match": {"value": "b"}}]}} raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PointsSelector"},"time":0.0}
+[B5-empty-selector] status=400 body={} raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PointsSelector"},"time":0.0}
+DEFECT: (m2-should-null) malformed filter accepted with 200 — Type1_IllegalSuccess (behavioral assertion promises 400 on invalid filter)
+DEFECT: (m2-should-null) exact count 0 != 3 after a 200-accepted malformed filter — invalid clause silently applied — Type4_StateLogicViolation
+DEFECT: (m3-cond-without-match) malformed filter accepted with 200 — Type1_IllegalSuccess (behavioral assertion promises 400 on invalid filter)
+DEFECT: (m3-cond-without-match) exact count 0 != 3 after a 200-accepted malformed filter — invalid clause silently applied — Type4_StateLogicViolation
+VERDICT: DEFECT_FOUND

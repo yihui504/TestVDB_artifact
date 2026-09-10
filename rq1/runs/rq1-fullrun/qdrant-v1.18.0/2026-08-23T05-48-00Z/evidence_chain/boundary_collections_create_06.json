@@ -1,0 +1,84 @@
+{
+  "defect_id": "boundary_collections_create_06",
+  "endpoint": "PUT /collections/{collection_name} (collections+create)",
+  "defect_type": "Type1_IllegalSuccess (claimed)",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PASS",
+      "link_reachability": "reachable_via_contract_snapshot",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "contract constraint qdrant_range_collections_create_004 assertion 'strict_mode_config.max_resident_memory_percent IN [1,100]', evidence_tier=explicit, source_status=reachable. 本地 raw_knowledge.md L72 同口径: 'max_resident_memory_percent(min 1, max 100, deprecated -> node-wide PUT /quotas, removal scheduled 1.21)'; L974/L999 (quotas 节): 'max_resident_memory_percent (integer|null, min 1, max 100)' 且 'unset (null) = resource not capped; limits only enforced while enabled=true' — 文档自身明确 null 是合法的未设置态。源 OpenAPI 镜像 .qdrant-src-1190/docs/redoc/v1.18.x/openapi.json L8185/L10843 同参数。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "9 cases 全部按预期: 0→422 'value 0 invalid, must be from 1 to 100'; 1→200; 100→200; 101→422; -5/1e9/50.5/'50'→400 type/format errors; null→200 → VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — max_resident_memory_percent=null accepted with 200",
+      "secondary_observations": [
+        "数值边界本身验证完好: 0 和 101 均被 422 拒绝并给出精确错误信息, 1/100 通过 — constraint [1,100] 的 validator 生效",
+        "类型层验证完好: 负数/超 u8/浮点/字符串均 400 拒绝",
+        "唯一'违规'点是 null 被 200 接受 — 但这是脚本的 should_reject 断言选择, 非服务器行为异常",
+        "DESCRIBE 输出因脚本 raw[:400] 截断未展示 strict_mode_config 回显, 无法从 log 直接确认 null 的持久化形态"
+      ],
+      "claim_alignment": "misaligned",
+      "claim_alignment_note": "claim_hint 断言 null 应被拒绝, 但 contract assertion 'IN [1,100]' 是值域约束, 仅约束提供了值的情况; 文档明示 null=not capped 是合法态。claim 的 should_reject=true 前提本身与契约/文档语义相悖。",
+      "http_semantics": {
+        "client_error_returned_as": "422/400",
+        "note": "错误诊断质量良好: 422 给出字段级区间错误, 400 给出 serde 级类型错误, 均含定位信息"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_collections_create_06"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_collections_create_004",
+      "assertion_text_quoted": "strict_mode_config.max_resident_memory_percent IN [1, 100] (type: range_constraint, evidence_tier: explicit)",
+      "api_violates_assertion": false,
+      "constraint_note": "契约文本无 'nullable: false' / 'required' 标注, 参数为 optional。IN [1,100] 应读作条件约束: 提供值时必须落在 [1,100] — null(未提供值) 不落入值域检查范围。执行结果(0/101 被拒, 1/100 通过)恰是该约束的正确实现。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_range_collections_create_004 (structured_contract.json) — 存在且 explicit, 值域 [1,100]",
+        "doc: raw_knowledge.md L72/L974/L999 — null=not capped 明示合法; 参数 deprecated(→PUT /quotas, 1.21 移除)",
+        "script: debate_logs/boundary_collections_create_06.py — 9 case 覆盖 下界/上界/越界/类型/字符串/null",
+        "log: output_boundary_collections_create_06.log — 8/9 case 与验证语义一致, 仅 null case 的脚本侧 should_reject 前设错误"
+      ],
+      "chain_broken_at": "claim_premise",
+      "break_detail": "四环(契约→文档→脚本→日志)本身完整一致, 断链在 claim 侧: 脚本把 null 标记为 should_reject=True, 但契约/文档/源码三方一致表明 null 是合法的 Option::None。执行证据不支持 DEFECT_FOUND。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "max_resident_memory_percent",
+        "range(min = 1, max = 100)",
+        "struct StrictModeConfig"
+      ],
+      "files_examined": [
+        ".qdrant-src-1190/lib/segment/src/types.rs L1079-1181 (StrictModeConfig 定义, L1176-1180 max_resident_memory_percent: Option<u8> + #[validate(range(min=1,max=100))] + 文档注释 'Value in [1,100]')",
+        ".qdrant-src-1190/lib/api/src/grpc/qdrant.rs L1042+ (gRPC 侧同结构)",
+        ".qdrant-src-1190/lib/api/build.rs L171 ('StrictModeConfig.max_resident_memory_percent', 'range(min = 1, max = 100)' — validator 注册)"
+      ],
+      "source_excerpt": "lib/segment/src/types.rs L1176-1181 (qdrant v1.18.0):\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    #[validate(range(min = 1, max = 100))]\n    pub max_resident_memory_percent: Option<u8>,",
+      "call_chain_traced": "PUT /collections → StrictModeConfig (serde Deserialize, Option<u8>) → validator derive range(min=1,max=100) — validator 仅对 Some(v) 求值, None 跳过; serde 对 JSON null 反序列化为 None 不报错 → 200",
+      "verification_outcome": "validation_present_and_correct",
+      "verification_note": "根因确认: null 被接受是 Rust Option + validator derive 的标准语义 — 字段整体 optional, 值域约束仅在提供值时适用。源码文档注释与 OpenAPI/文档三处一致。无任何验证缺失。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env(localhost 正常, 各 case 请求均正常响应)",
+        "script_error(exit 0, 9 case 全执行)",
+        "validation_missing(0/101/类型错误全部被拒, validator 实证生效)"
+      ],
+      "surviving": "by_design(强): (1) 字段为 Option<u8>, null=未设置是 API 惯例且文档明示 'unset (null) = resource not capped'; (2) quotas 文档同参数显式标注 integer|null; (3) 参数已 deprecated(1.21 移除), null 语义继承自同一 Option 设计。唯一残留疑点: strict_mode_config 下 enabled=true + null 是否等价于'启用严格模式但不限额' — 文档 L999 表明限额仅在启用且设置时生效, 属文档化行为。判定建议倾向 FALSE_POSITIVE, 终判留给 chain-auditor。"
+    }
+  }
+}

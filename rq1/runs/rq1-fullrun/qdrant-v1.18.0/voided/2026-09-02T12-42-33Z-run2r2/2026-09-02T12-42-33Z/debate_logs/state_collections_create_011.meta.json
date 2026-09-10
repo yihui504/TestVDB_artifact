@@ -1,0 +1,12 @@
+{
+ "defect_id": "state_collections_create_011",
+ "endpoint": "collections+create",
+ "param": "wal_config",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "oracle": {
+  "statement": "all-minima wal_config (wal_capacity_mb=1, wal_segments_ahead=0, wal_retain_closed=0) create -> 200 with readback echoing each; wal_capacity_mb=0 / wal_segments_ahead=-1 -> 400/422 + describe 404",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,72 @@
+{
+  "defect_id": "state_batch_partial_002",
+  "endpoint": "DELETE /v1/batch/objects",
+  "defect_type": "Type3",
+  "evidence_weight": "strong",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "domain_blocked",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "raw_knowledge.md L230-234 documents DELETE /batch/objects as 'Removes multiple data objects based on a filter specified in the request body... where clause'; it specifies the match-body shape but says nothing about status code for a non-match body. Live docs.weaviate.io fetch blocked by network (domain_blocked). Endpoint exists in embedded OpenAPI spec.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "objects-array body DELETE /batch/objects: 500 {\"error\":[{\"message\":\"validate: empty match clause\"}]}",
+      "secondary_observations": [
+        "batch status: 200",
+        "per-object reported status: [(1, 'SUCCESS'), (2, 'FAILED'), (3, 'SUCCESS')]",
+        "obj2 GET: 404",
+        "match batch delete: 200 {\"deletionTimeUnixMilli\":-62135596800000,\"dryRun\":false,...}",
+        "post-batch-delete obj1 GET (expect 404): 404"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "主违规是反向情形：客户端校验错误（body 无 match 子句）以 HTTP 500 而非 4xx 返回——错误通道选择缺陷；对照语义：POST /batch/objects 部分失败以 200+逐对象状态报告。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_batch_partial_002.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "none_matching",
+      "assertion_text_quoted": "structured_contract.json constraints 中无 batch-delete 校验类约束（state_constraints 为空数组）；raw_knowledge.md L232: 'Removes multiple data objects based on a filter specified in the request body. Deletion occurs based on the filter criteria provided in the `where` clause.'",
+      "api_violates_assertion": true,
+      "note": "契约未显式规定非 match body 的状态码，violates=true 基于 REST 语义惯例（客户端输入错误应 4xx，非 5xx）+ 同函数内相邻分支（GetCachedClass 失败、where 解析失败）已被开发者显式归类为 ErrInvalidUserInput→422，唯 match==nil 分支仍是裸 errors.New→500，属错误通道不一致而非约束明文违反。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 无对应 constraint（state_constraints=[]）——链环缺失",
+        "doc: raw_knowledge.md L230-234 记录 DELETE /batch/objects 需 match/where body",
+        "script: state_batch_partial_002.py L72-74 发 {\"objects\":[...]} 无 match 子句的 DELETE",
+        "log: 500 validate: empty match clause"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "structured_contract.json 无覆盖 batch-delete 错误语义的 constraint；doc/script/log 三环自洽。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["empty match clause", "ErrInvalidUserInput batch_delete"],
+      "files_examined": [
+        "usecases/objects/batch_delete.go",
+        "adapters/handlers/rest/handlers_batch_objects.go"
+      ],
+      "source_excerpt": "usecases/objects/batch_delete.go L124-137:\nfunc (b *BatchManager) validateBatchDelete(ctx context.Context, principal *models.Principal,\n\tmatch *models.BatchDeleteMatch, dryRun *bool, output *string,\n) (*BatchDeleteParams, uint64, error) {\n\tif match == nil {\n\t\treturn nil, 0, errors.New(\"empty match clause\")   // 裸 error → REST 层 default 分支 → 500\n\t}\n\tif len(match.Class) == 0 {\n\t\treturn nil, 0, errors.New(\"empty match.class clause\")\n\t}\n\tif match.Where == nil {\n\t\treturn nil, 0, errors.New(\"empty match.where clause\")\n\t}\n对照同文件 L146/L153-156: 相邻失败路径已用 NewErrInvalidUserInput(...) 并注释 'classify it as ErrInvalidUserInput — otherwise the REST handler maps the parse/validation failure to a 500 instead of a 422'",
+      "call_chain_traced": "REST handler → BatchManager.BatchDelete → validateBatchDelete(match==nil) → errors.New（非 ErrInvalidUserInput）→ handlers_batch_objects.go L186-189 default 分支 → 422 UnprocessableEntity（实测 500 说明该分支在 v1.38.0 二进制中走的是 InternalServerError 路径，或错误包装 validate: 前缀在更外层丢失类型）",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "caching_delay"],
+      "surviving": null
+    }
+  }
+}

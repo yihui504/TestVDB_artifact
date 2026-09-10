@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_points_recommend_bounds_006",
+  "endpoint": "points+recommend",
+  "param": "limit",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "state_bounds_validation",
+  "oracle": {
+    "statement": "recommend limit=1 offset=0 (boundary minima) returns 200 with <=1 entries and limit=8 returns 200 with 1..8 entries; limit=0, limit=-1, offset=-1 and a request with limit omitted each return HTTP 4xx — 200 = Type1_IllegalSuccess (constraint: limit required, minimum 1; offset minimum 0); verbatim repeat of the limit=1 request with zero mutations between returns 200 again (4xx = Type4); 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "R4",
+  "verdicts": [
+    {
+      "defect_id": "boundary_cluster_collection_info_003",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "REFUTED", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": null,
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Unit involved is a behavioral endpoint assertion (200-with-cluster-info / 404-for-unknown response promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_collection_info_001, id+quote_ok, violates=false -> REFUTED; wire forensics show urllib3 collapsed /cluster/collection/.. to 'GET /cluster/' so the asserted endpoint never saw the probe, and the real documented face GET /collections/{name}/cluster returns the promised 404 with a collection-naming diagnostic (comparative probe in-chain). Chain broken at script (transcribed): script derived nonexistent route /cluster/collection/{collection_name} (absent from docs/openapi and src/actix) AND the dot-segment was dissolved client-side, so the 200 is the #[get(\"/cluster\")] cluster_status handler's legitimate Disabled envelope. fp=both: doc endpoint_precision PARTIAL (tested route nonexistent in v1.18.0 docs) and source validation_present (StorageError::NotFound -> 404, helpers.rs:242-249) each independently overturn; root cause is script_error (wrong route + client normalization).",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_cluster_collection_info_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": null,
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical; source by_design doubt recorded, cannot overturn per E2 rule)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_type_cluster_collection_info_001 (type_constraint), quote verbatim from contract, observed grade-A 200 body contains five of six asserted members with resharding_operations key absent -> violates=true -> CONFIRMED -> DEFECT (mechanical, deterministic across 5 scripts + live recheck; B=NEUTRAL: a missing optional response member fits no objective constraint class). Doubt recorded, not applied: source shows by_design_in_source (types.rs:340 '// TODO(resharding): remove this skip when releasing resharding' above #[serde(skip_serializing_if)]) and the version's own OpenAPI marks the member nullable/not-required (chain_broken_at=doc: contract containment over-claims); per the E2 mechanized rule this cannot overturn DEFECT — flagged for main-process manual contract review. Cognition confidence-degradation only: maintainer priority 'API backward compatibility over strict validation' has no phenomenon-level anchor.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_cluster_collection_info_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": null,
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical; source by_design doubt recorded, cannot overturn per E2 rule)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_type_cluster_collection_info_001, quote verbatim, branch-B 200 raw body lacks resharding_operations -> violates=true -> CONFIRMED -> DEFECT (mechanical). The dispatched state faces behaved as documented (never-existed probe 404, post-delete 404 with diagnostic — no ghost state), so the DEFECT rests on the shape face the script header explicitly declared in-scope; correspondence holds since claim_hint names no specific phenomenon and the chain's log_pattern is the script's own primary DEFECT observation. Doubt recorded: by_design_in_source (TODO-commented serde skip, upstream test_resharding_extras.py:63 asserts absence on idle, OpenAPI nullable/not-required) — cannot overturn A per E2 rule; flagged for manual review.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_cluster_collection_info_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": null,
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical; source by_design doubt recorded, cannot overturn per E2 rule)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_type_cluster_collection_info_001, quote verbatim, the 3-shard collection's 200 info body lacks resharding_operations in every lifecycle phase -> violates=true -> CONFIRMED -> DEFECT (mechanical). The claimed CRUD-then-COUNT consistency oracle itself PASSED in-chain (count face 25/25 and 0/0 reconcile with local points sums), so the DEFECT rests solely on the response-shape face; B=NEUTRAL (missing optional member, no objective class). Doubt recorded: by_design_in_source (serde skip + TODO comment + upstream tests) and the field was dropped from OpenAPI required[] between v1.11.x and v1.18.x — per E2 rule this cannot overturn DEFECT; flagged for manual contract review.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_cluster_collection_info_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": null,
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical; source by_design doubt recorded, cannot overturn per E2 rule)"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_type_cluster_collection_info_001, quote verbatim, post-recreate 200 and 16/16 race-window reads all omit resharding_operations (deterministic, also on quiescent reads) -> violates=true -> CONFIRMED -> DEFECT (mechanical); the behavioral 404 clause was honored ([post-race absent] 404). Chain broken at contract (transcribed): dispatch constraint_id was empty — recovered from the script header's dual citation, both ids verified present in structured_contract.json with the same source_url, so the join is repaired in-chain and does not block the ruling. Doubt recorded: by_design_in_source (TODO-marked serde skip; OpenAPI optional/nullable) plus the honest nuance that resharding already shipped while the TODO cleanup never executed — cannot overturn DEFECT per E2 rule; flagged for manual review.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_cluster_collection_info_004",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": null,
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical; source by_design doubt recorded, cannot overturn per E2 rule)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_type_cluster_collection_info_001, quote verbatim, 2x write-phase 200s and the post-settle read all omit resharding_operations -> violates=true -> CONFIRMED -> DEFECT (mechanical). The script's declared BS-03 concurrency-drift hypothesis found NO drift (count face 200 == local_sum 200 == expected, zero 4xx/5xx), so the omission is a static serialization policy, not a concurrency state violation — the Type4 attribution in the log is secondary-mechanism mislabeling, but the primary shape observation is genuine and covered. Chain broken at doc (transcribed): contract->doc link over-claims containment (v1.18.x OpenAPI nullable/not-required, doc content_consistency FAIL in-chain); per the E2 mechanized rule the by_design source evidence (TODO serde skip, consensus-test utils.py:582 defensively handling absence) cannot overturn DEFECT — flagged for main-process manual review.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "defect": 5,
+    "not_defect": 1,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 0, "both": 1, "behavior": 0},
+    "root_cause_distribution": {"script_error": 1},
+    "constraint_category_distribution": {"type": 5, "other": 1},
+    "candidate_class_distribution": {"strict_defect": 5, "exploratory_candidate": 0, "rejected": 1}
+  }
+}

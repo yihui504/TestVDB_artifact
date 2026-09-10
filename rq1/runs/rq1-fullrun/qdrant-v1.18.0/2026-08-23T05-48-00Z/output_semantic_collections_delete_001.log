@@ -1,0 +1,11 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+create: 200 {"result":true,"status":"ok","time":0.228893581}
+insert 3 pts: 200 {"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.004221526}
+delete#1 (existing): 200 {"result":true,"status":"ok","time":0.00776774}
+describe after delete: 404 {"status":{"error":"Not found: Collection `sem_del_lc_1787505157` doesn't exist!"},"time":8.123e-6}
+list: 200 {"result":{"collections":[{"name":"bnd_c2of2_vis"},{"name":"bnd_crt_tc_27795"},{"name":"bnd_crt_tc_38420"},{"name":"bnd_crt_tc_51915"},{"name":"bnd_crt_tc_70289"}]},"status":"ok","time":0.000014515}
+get_point after delete: 404 {"status":{"error":"Not found: Collection `sem_del_lc_1787505157` doesn't exist!"},"time":0.000013469}
+delete#2 (missing): 200 {"result":false,"status":"ok","time":0.000118267}
+VERDICT: DEFECT_FOUND (Type4_StateLogicViolation)
+contract asserts DELETE missing collection => 404, got 200 (collection-level contract; points-level idempotency is a separate by-design)

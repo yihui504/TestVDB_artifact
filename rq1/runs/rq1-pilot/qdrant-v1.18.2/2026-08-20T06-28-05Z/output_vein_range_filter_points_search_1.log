@@ -1,0 +1,48 @@
+============================================================
+TestVDB Attack Vein - Range Filter on Points Search
+============================================================
+
+Results: {
+  "endpoint": "POST /collections/{collection}/points/search",
+  "condition_type": "range_filter",
+  "findings": [
+    {
+      "test": "range_filter_valid_baseline",
+      "http_status": 404,
+      "result_count": 0,
+      "error": "HTTP 404: {\"status\":{\"error\":\"Not found: Collection `test_vein_collection` doesn't exist!\"},\"time\":2.637e-6}",
+      "verdict": "DEFECT_FOUND"
+    },
+    {
+      "test": "range_filter_inverted_bounds",
+      "http_status": 404,
+      "result_count": 0,
+      "error": "HTTP 404: {\"status\":{\"error\":\"Not found: Collection `test_vein_collection` doesn't exist!\"},\"time\":2.229e-6}",
+      "finding": "NO_DEFECT",
+      "rationale": "Inverted range (gte > lte) should return 400 but returned 200 OK"
+    },
+    {
+      "test": "range_filter_equal_bounds",
+      "http_status": 404,
+      "result_count": 0,
+      "error": "HTTP 404: {\"status\":{\"error\":\"Not found: Collection `test_vein_collection` doesn't exist!\"},\"time\":2.064e-6}",
+      "finding": "NO_DEFECT",
+      "rationale": "Equal bounds should match exactly 1 point (price=300)"
+    },
+    {
+      "test": "range_filter_fractional_bounds_on_integer",
+      "http_status": 404,
+      "result_count": 0,
+      "error": "HTTP 404: {\"status\":{\"error\":\"Not found: Collection `test_vein_collection` doesn't exist!\"},\"time\":4.232e-6}",
+      "finding": "NO_DEFECT",
+      "rationale": "Fractional bounds on integer field should truncate or reject"
+    }
+  ],
+  "overall_verdict": "NO_DEFECT"
+}
+
+============================================================
+Cleanup: Deleting test collection
+============================================================
+
+VERDICT: NO_DEFECT

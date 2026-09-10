@@ -1,0 +1,96 @@
+{
+  "defect_id": "boundary_points_query_batch_positive_001",
+  "endpoint": "points+query+batch (POST /collections/{collection_name}/points/query/batch)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PARTIAL (domain_blocked): no doc_preflight.json sidecar exists anywhere under the contract tree; today's re-verification of https://api.qdrant.tech/v-1-18-x/api-reference/query/batch-query failed with environment network restriction on BOTH api.qdrant.tech and qdrant.tech (WebFetch domain-verification block + fallback reader 500 network error) — per spec recorded as domain_blocked/PARTIAL, not FAIL; the contract's own batch-time record (structured_contract.json:7341 source_status=reachable, and endpoint_registry entry verified_at 2026-09-02T12:34:08Z) is the only reachability witness. Version PASS: source_url embeds v-1-18-x routing and doc_version '1.18.x (versioned v-1-18-x api-reference)' matches target v1.18.0 major.minor. Content PARTIAL: live prose unverifiable (domain_blocked); contract-side endpoint_registry doc_quote 'Executes multiple queries in one call; returns 200 with a list of per-query results; 404 for a missing collection.' matches the assertion text, but note the order_by range-index precondition is NOT stated on the batch-query page — it lives on the indexing/ordering doc the error message itself links (https://qdrant.tech/documentation/concepts/indexing/#payload-index), so the 200 promise is conditional on per-variant documented preconditions. Endpoint precision PASS: registry lookup at structured_contract.json:5498-5503 (path points+query+batch, method POST, same source_url, verified_at present).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "B1 3-entry batch -> status=400\nraw: {\"status\":{\"error\":\"Wrong input: No range index for `order_by` key: `rank`. Please create one to use `order_by`. Check https://qdrant.tech/documentation/concepts/indexing/#payload-index to see which payload schemas support Range conditions\"},\"time\":0.002277406}",
+      "secondary_observations": [
+        "[output_boundary_points_query_batch_resource_009.log, same session/setup, face rest] 'R2 single entry limit=INT_MAX -> status=200' — a batch WITHOUT order_by was accepted 200 on the same collection (batch machinery functional; that script's final VERDICT: NO_DEFECT)",
+        "[output_boundary_points_query_variant_matrix_001.log, face rest] 'leg M1 nearest (named form) (form 1) -> status=200' and 'leg M2 recommend (positive by-id) (form 1) -> status=200' — non-order_by variants accepted; 'leg M5 order_by (payload key ts) (form 1) -> status=400' with raw: {\"status\":{\"error\":\"Wrong input: No range index for `order_by` key: `ts`. Please create one to use `order_by`. ...\"}} — same precondition error on a different payload key",
+        "[output_boundary_points_query_batch_mixed_008.log, same endpoint] 'M1 heterogeneous batch -> status=400' with the IDENTICAL raw body 'No range index for `order_by` key: `rank`' — mixed_008's 'heterogeneous batch rejected' claim traces to the same missing-precondition cause, not to heterogeneity",
+        "[output_boundary_points_query_batch_malformed_010.log, same endpoint] 'VERDICT: SCRIPT_ERROR — G guard: valid raw body returned 400; raw transport broken, later faces confounded' — sibling script self-reported the identical confound as a SCRIPT_ERROR on its positive guard leg",
+        "[face_unavailable] no single-query-face control leg with the same order_by payload exists in any log (request bodies are not logged), so a live rest-vs-single-face same-payload comparison is unobtainable; source-level equivalence established instead (see source_grounding.call_chain_traced)"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "order_by-on-unindexed-key is a request-side-decidable error and the server surfaced it as HTTP 400 with a descriptive body naming the key, the requirement and the remediation doc link — proper 4xx semantics, no 2xx masking. The claim's own label 'Type1_IllegalSuccess' does not match the observed phenomenon (a rejection, not an illegal success)."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_points_query_batch_positive_001",
+        "boundary_points_query_batch_mixed_008",
+        "boundary_points_query_batch_malformed_010",
+        "boundary_points_query_batch_resource_009",
+        "boundary_points_query_variant_matrix_001"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_batch_001",
+      "assertion_text_quoted": "HTTP 200 with one result per search in the same order; missing collection returns 404",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "violates=false reason (per violates-declaration self-check): the observed 400 did not engage the quoted promise because the request was not a valid batch — it embedded an order_by search on payload key `rank` while no payload range index existed on that key, a precondition the server's own error states explicitly ('Please create one to use `order_by`') and that the in-source design enforces (see source_grounding). The promise '200 with one result per search' applies to valid requests; sibling legs in the same session show valid batches (without order_by) returning 200. The cited constraint is the right one (endpoint matches); no alternative constraint citation is needed. The failure is in the script's positive-control setup, not in the API's compliance with this assertion. Note also: constraint_id was empty in candidates.jsonl; located via the dispatched chunk unit assertions::qdrant_behavioral_points_query_batch_001 (structured_contract.json:7333-7343)."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_query_batch_001 found at structured_contract.json:7333-7343 (endpoint points+query+batch, expected_behavior 'HTTP 200 with one result per search in the same order; missing collection returns 404') — link present; cid was empty in candidates.jsonl and was located via the chunk unit assertions::qdrant_behavioral_points_query_batch_001",
+        "doc: source_url https://api.qdrant.tech/v-1-18-x/api-reference/query/batch-query — today domain_blocked on both documentation domains; contract-side witness only (source_status=reachable at 7341; endpoint_registry verified_at=2026-09-02T12:34:08Z with matching doc_quote) — link holds on contract-side evidence, PARTIAL",
+        "script: boundary_points_query_batch_positive_001 — the log records NO raw request body; the server's own error proves the 3-entry batch embedded an order_by search on payload key `rank` with no range index created on it — the documented order_by precondition was never established, so the script's 'valid documented batch' premise is FALSE → BREAK",
+        "log: the verdict line asserts 'valid documented batch rejected' and labels it Type1_IllegalSuccess, but the raw body it quotes names the actual cause (missing range index) — the verdict layer inherits the script's false validity premise"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The 400 does not evidence rejection of a fully-valid batch. The executor-flagged anomaly is CONFIRMED: the 400 traces to the order_by range-index precondition (script-side missing setup), not to a genuine rejection of a valid batch. Primary observation remains faithfully quoted; claim_alignment=partial because the claim's 'valid documented batch' premise is contradicted by the error body itself. The dispatch-prompted cross-check legs ('single-entry closure', 'filter-disjoint attribution') are NOT present in this log — the whole log contains only the B1 leg (6 lines total: 2 interpreter warnings, the B1 status line, the raw body, the verdict). Independently-standing evidence instead comes from sibling logs: resource_009 R2 (batch without order_by -> 200, NO_DEFECT) and variant_matrix M1/M2 (-> 200) prove the endpoint does honor the 200-with-results promise for genuinely valid batches.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "No range index",
+        "MissingRangeIndexForOrderBy",
+        "Wrong input",
+        "order_by (lib/collection/src/shards)",
+        "read_ordered_filtered",
+        "query_batch",
+        "\\brank\\b (word-boundary; 18 hits, all RRF/MMR doc comments — `rank` is a script-chosen payload key with no dedicated source handling)"
+      ],
+      "files_examined": [
+        "lib/segment/src/common/operation_error.rs (lines 55-79)",
+        "lib/segment/src/segment/read_view/order_by.rs (lines 27-114 and 154-160)",
+        "lib/collection/src/operations/types.rs (lines 901-929, 1104-1153)",
+        "lib/collection/src/shards/local_shard/query.rs (lines 295-334)",
+        "lib/collection/src/collection/query.rs (lines 445-562)",
+        "lib/collection/src/shards/local_shard/scroll.rs (grep-level: lines 262-296)",
+        "lib/collection/src/shards/remote_shard.rs (grep-level: lines 1161-1182)"
+      ],
+      "source_excerpt": "lib/segment/src/common/operation_error.rs:61-64 —\n    #[error(\n        \"No range index for `order_by` key: `{key}`. Please create one to use `order_by`. Check https://qdrant.tech/documentation/concepts/indexing/#payload-index to see which payload schemas support Range conditions\"\n    )]\n    MissingRangeIndexForOrderBy { key: String },\n\nlib/segment/src/segment/read_view/order_by.rs:36-41 —\n        let numeric_index = self\n            .payload_index\n            .numeric_index_for(&order_by.key)\n            .ok_or_else(|| OperationError::MissingRangeIndexForOrderBy {\n                key: order_by.key.to_string(),\n            })?;\n(same check repeated at order_by.rs:109-114 in filtered_read_by_value_stream)\n\nlib/collection/src/operations/types.rs:1147 —\n            OperationError::MissingRangeIndexForOrderBy { .. } => Self::bad_input(err.to_string()),\nlib/collection/src/operations/types.rs:904-905 —\n    #[error(\"Wrong input: {description}\")]\n    BadInput { description: String },\n\nlib/collection/src/shards/local_shard/query.rs:309-321 (universal-query routing into the shared scroll machinery) —\n            ScoringQuery::OrderBy(order_by) => {\n                // create single scroll request for rescoring query\n                let filter = filter_with_sources_ids(sources.into_iter());\n                ...\n                let scroll_request = QueryScrollRequestInternal {\n                    limit,\n                    filter: Some(filter),\n                    with_payload: false.into(),\n                    with_vector: false.into(),\n                    scroll_order: ScrollOrder::ByField(order_by),\n                };",
+      "call_chain_traced": "REST POST /collections/{name}/points/query/batch -> storage toc -> Collection::query_batch (lib/collection/src/collection/query.rs:445; per-request results merged in request order, any failing request fails the whole batch via `?`) -> local_shard/query.rs:309 ScoringQuery::OrderBy -> query_scroll_batch -> local_shard/scroll.rs:262-296 read_ordered_filtered -> segment read_view/order_by.rs:36-41 (and :109-114) numeric_index_for(&order_by.key) returns None -> OperationError::MissingRangeIndexForOrderBy -> types.rs:1147 CollectionError::bad_input -> types.rs:904 'Wrong input: {description}' -> HTTP 400. Crucially the check lives in the SHARED segment layer beneath BOTH interface faces: the single points+query face routes order_by through the same ScoringQuery::OrderBy -> scroll machinery, and remote_shard.rs:1161-1182 forwards order_by over gRPC to the same local check — the rejection is face-independent (batch vs single makes no difference), consistent with the sibling-log evidence.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source",
+      "note": "Explicit in-source intent evidence: the maintainer-authored #[error(...)] doc text states the requirement, the remediation ('Please create one to use `order_by`') and a documentation URL; the same pattern family appears for faceting (MissingMapIndexForOrderBy's sibling MissingMapIndexForFacet at operation_error.rs:65-68). This is a declared precondition enforced at read time and mapped to a descriptive 400 — not an accidental or unannotated behavior. The observed API response matches the source exactly; no gap between source and behavior exists."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (server responsive and deterministic: 5 scripts, identical descriptive 400 body, /healthz unaffected)",
+        "concurrency (single sequential request; no race window)",
+        "cache delay (index absence is persistent collection state, not visibility lag)"
+      ],
+      "surviving": "request-side missing precondition — script setup flaw: the batch's order_by search on payload key `rank` was issued without creating the payload range index that the order_by feature requires; the 'valid documented batch' premise of the claim is false, and the 400 is the source-explicit, documented rejection for this input. The defect claim dissolves into a test-harness precondition error."
+    }
+  }
+}

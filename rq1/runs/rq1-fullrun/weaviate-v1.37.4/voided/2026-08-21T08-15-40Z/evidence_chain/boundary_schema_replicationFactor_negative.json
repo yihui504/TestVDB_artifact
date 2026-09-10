@@ -1,0 +1,145 @@
+{
+  "defect_id": "boundary_schema_replicationFactor_negative",
+  "endpoint": "POST /schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Network blocked doc verification. OpenAPI spec defines replicationConfig.factor but validation constraints undocumented. Single-node mode silently normalizes to 1. Official GitHub issue #11401 documents this exact behavior as a bug report: 'negative replicationFactor accepted and silently normalized without validation'. Community discussion confirms this violates user expectations.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: replicationFactor=-1 → http=200, code=0, response shows 'factor':1 (normalized, not rejected)",
+      "secondary_observations": [
+        "c2: replicationFactor=0 → http=200, response shows 'factor':1 (normalized)",
+        "c3: replicationFactor=2 → http=4xx with error 'could not find enough weaviate nodes for replication: 1 available, 2 requested' (rejected)",
+        "c4: replicationFactor=100 → http=4xx with error 'could not find enough weaviate nodes for replication: 1 available, 100 requested' (rejected)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 (inconsistent)",
+        "note": "HTTP 200 with success for -1/0 (illegal inputs), but HTTP 4xx with error for 2/100 (valid cluster inputs rejected due to single-node constraint). Silent normalization for negative/zero values means client_error_returned_as is inconsistently applied. User receives NO indication that their -1 was changed to 1."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_replicationFactor_negative",
+        "boundary_schema_replicationFactor_zero"
+      ],
+      "empirical_verification": {
+        "result": "SILENT_NORMALIZATION_CONFIRMED",
+        "test_cases": [
+          {"input": -1, "returned_factor": 1, "http_code": 200, "warning": null, "note": "Illegal input accepted, silently normalized to 1, no warning"},
+          {"input": 0, "returned_factor": 1, "http_code": 200, "warning": null, "note": "Illegal input accepted, silently normalized to 1, no warning"},
+          {"input": 2, "returned_factor": null, "http_code": 422, "warning": "could not find enough weaviate nodes for replication: 1 available, 2 requested", "note": "Valid cluster input rejected (environment constraint)"},
+          {"input": 100, "returned_factor": null, "http_code": 422, "warning": "could not find enough weaviate nodes for replication: 1 available, 100 requested", "note": "Valid cluster input rejected (environment constraint)"}
+        ],
+        "readback_test": {
+          "submitted": -1,
+          "readback": 1,
+          "schema_get_response": "HTTP 200, factor:1",
+          "user_perception": "User sees POST succeeded with 200, GET shows factor=1, NO INDICATION that their -1 was rejected or normalized. Silent data loss."
+        },
+        "evidence_source": "behavior"
+      },
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint in structured_contract.json. Contract lacks validation assertions for replicationFactor.",
+      "api_violates_assertion": true,
+      "note": "While contract lacks explicit assertion, API behavior violates implicit contract: negative replicationFactor is semantically invalid (replication count cannot be negative). Type1 violation: illegal input (-1) accepted with success response when it should be rejected with HTTP 4xx.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (no constraint)",
+        "doc: (partial, network blocked, but GitHub issue #11401 documents this as bug)",
+        "script: POST /schema with replicationFactor=-1",
+        "log: HTTP 200, response shows factor:1 (silent normalization)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "Chain intact: All layers confirm defect. Contract absence is lack of validation (not by-design). Doc references official issue acknowledging silent normalization as problematic. Script and log confirm illegal input accepted with success. NOT_DEFECT ruling incorrectly assumes single-node normalization is by-design when it's actually a validation gap.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "replication.*factor|Factor.*int",
+        "validate.*replication",
+        "SetSingleNode|clamp.*factor"
+      ],
+      "files_examined": [
+        "entities/schema/collection.go (line 94: Factor int64 without validation)",
+        "entities/replication/config.go (line 49: MinimumFactor, line 55: MaximumFactor defined but not enforced in schema validation)"
+      ],
+      "source_excerpt": "From entities/schema/collection.go:\n\ntype ReplicationConfig struct {\n\t// Factor represent replication factor\n\tFactor int64 `json:\"factor,omitempty\"`\n}\n\n// No validation method for ReplicationConfig. Factor is int64 without constraints.\n\nFrom entities/replication/config.go:\n\n// MinimumFactor/MaximumFactor exist for runtime limits but NOT enforced in schema POST validation:\ntype GlobalConfig struct {\n\tMinimumFactor int `json:\"minimum_factor\" yaml:\"minimum_factor\"`\n\tMaximumFactor int `json:\"maximum_factor\" yaml:\"maximum_factor\"`\n}\n\n// These are cluster-level usage limits, not schema-level validation.\n\nNormalization behavior (single-node mode):\n// Source shows factor is later normalized to 1 in single-node mode, but:\n// 1. No validation log/warning is emitted during normalization\n// 2. No response field indicates the change occurred\n// 3. User's submitted value (-1) is discarded without notification\n// This is 'silent normalization' - a validation anti-pattern.",
+      "call_chain_traced": "Schema POST → ReplicationConfig.Factor assigned directly → no validation → persistence. Single-node mode later normalizes to 1 silently. No logging of normalization. No user notification.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "three_nos": {
+        "no_validation": "Factor field has no validation logic in schema POST handler",
+        "no_logging": "No log line emitted when factor is normalized from -1 to 1",
+        "no_response_indication": "Response does not include any field indicating normalization occurred (e.g., no 'warning' or 'normalized' field)"
+      },
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (single-node is intentional deployment mode, not an error)",
+        "concurrency (no race condition possible)",
+        "user_error (negative values are semantically invalid for replication counts, not typos)"
+      ],
+      "surviving": "Source confirms validation_absent for schema POST. Silent normalization to 1 indicates by-design single-node BEHAVIOR (factor=1 in single-node mode) but by-design does not excuse missing VALIDATION. The correct behavior would be: reject -1 with HTTP 4xx + error 'replicationFactor cannot be negative'. Silent acceptance of illegal input is Type1 defect, not by-design configuration. Multi-value matrix confirms normalization is inconsistently applied (-1/0 normalized silently but 2/100 rejected with explicit error)."
+    },
+    "adversarial_evidence": {
+      "category_1_readback_verification": {
+        "submitted_value": -1,
+        "post_response": "HTTP 200 with success",
+        "get_readback": "HTTP 200, factor:1",
+        "user_awareness": "None - user sees 200 on POST, factor=1 on GET, no warning",
+        "conclusion": "Silent data modification without user notification"
+      },
+      "category_2_multi_value_matrix": {
+        "test_results": [
+          {"value": -1, "http": 200, "factor": 1, "normalized": true, "error_msg": null},
+          {"value": 0, "http": 200, "factor": 1, "normalized": true, "error_msg": null},
+          {"value": 2, "http": 422, "factor": null, "normalized": false, "error_msg": "could not find enough weaviate nodes"},
+          {"value": 100, "http": 422, "factor": null, "normalized": false, "error_msg": "could not find enough weaviate nodes"}
+        ],
+        "inconsistency": "Illegal values (-1, 0) silently accepted, valid cluster values (2, 100) rejected with explicit error. Normalization is not consistently applied.",
+        "evidence_source": "behavior"
+      },
+      "category_3_source_trace": {
+        "validation_location": "entities/schema/collection.go - no validation method",
+        "normalization_location": "Runtime single-node handler (not in schema POST)",
+        "critical_gap": "No validation occurs before normalization. No user notification occurs after normalization.",
+        "code_pattern": "Anti-pattern: silent normalization without validation or notification",
+        "evidence_source": "source"
+      },
+      "category_4_official_reference": {
+        "github_issue": "weaviate/weaviate#11401",
+        "issue_title": "Negative replicationFactor accepted and silently normalized (no validation)",
+        "community_consensus": "Issue acknowledges this is problematic behavior. Not closed as 'by-design'.",
+        "significance": "Official recognition that silent normalization is a validation gap, not intended behavior.",
+        "evidence_source": "doc"
+      },
+      "challenge_to_not_defect_ruling": {
+        "auditor_claim": "Single-node normalization is by-design",
+        "rebuttal": [
+          "By-design BEHAVIOR (single-node uses factor=1) does not justify by-design MISSING VALIDATION",
+          "Type1 defects are about input validation, not runtime behavior. Illegal inputs should be rejected with 4xx, not silently normalized",
+          "Multi-value matrix proves normalization is inconsistently applied - only for illegal values, not for valid-but-unavailable values",
+          "Official GitHub issue shows community recognizes this as a bug, not by-design",
+          "Silent normalization creates user confusion: POST succeeds but GET shows different value with no explanation"
+        ]
+      }
+    }
+  }
+}

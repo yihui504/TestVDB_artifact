@@ -1,0 +1,69 @@
+{
+ "defect_id": "boundary_load_double_021",
+ "endpoint": "collections+load / entities+search",
+ "defect_type": "Type2",
+ "built_by": "evidence-builder",
+ "steps": {
+  "doc_verification": {
+   "result": "DOC_VERIFIED",
+   "link_reachability": "PASS",
+   "version_match": "PASS",
+   "content_consistency": "PASS",
+   "endpoint_precision": "PASS",
+   "sdk_rest_confusion": false,
+   "detail": "state_constraints milvus_state_collections_load_001/002（104/101）与 errors.go:66/69 定义一致；behavioral_contract milvus_bc_load_release_001 场景逐字覆盖本脚本流程（create -> search未加载 -> load -> 再load）",
+   "evidence_source": "doc"
+  },
+  "execution_evidence": {
+   "grade": "A",
+   "log_pattern": "search before load -> http=200 code=0 raw={\"code\":0,\"cost\":0,\"data\":[]}（期望 code 101 collection not loaded）",
+   "secondary_observations": [
+    "double load -> http=200 code=0 raw={\"code\":0,\"data\":{}}（期望 code 104 already loaded）",
+    "create: {\"code\":0,\"data\":{}}（前置成功，quick-create dim=8）"
+   ],
+   "claim_alignment": "aligned",
+   "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "本例为静默成功（200+code:0 空结果），未加载状态违规未以 101 报告——诊断缺失形态"},
+   "reproducibility": "多脚本稳定触发",
+   "script_error": false,
+   "triggering_scripts": ["debate_logs/boundary_load_double_021.py", "debate_logs/semantic_loadcycle_03.py"],
+   "evidence_source": "behavior"
+  },
+  "contract_grounding": {
+   "constraint_id": "milvus_state_collections_load_002",
+   "assertion_text_quoted": "state!=Loaded AND (search|query) => code==101",
+   "api_violates_assertion": true,
+   "note": "创建后未 load 即 search，返回 code=0+空结果而非 101——直接违反断言。脚本时序核对：脚本 cleanup_drop(COLL) 后 create，search 前无任何 load 调用（脚本 L86-97），无 prior 脚本时序污染（集合名为脚本专属时间戳名 bnd_load_<ts>）",
+   "evidence_source": "doc"
+  },
+  "chain_trace": {
+   "chain_links": [
+    "contract: milvus_state_collections_load_002 (search on not-loaded => 101) + load_001 (double load => 104)",
+    "doc: errors.go:66 ErrCollectionNotLoaded=101 / :69 ErrCollectionLoaded=104 存在",
+    "script: boundary_load_double_021.py L86-110（create->search->load 循环->double load）",
+    "log: search before load code=0; double load code=0"
+   ],
+   "chain_broken_at": null,
+   "break_detail": null,
+   "note": "四环一致：错误码 101/104 在源码有定义但 2.6.10 实测路径不再触发——见 source_grounding",
+   "evidence_source": "doc+behavior"
+  },
+  "source_grounding": {
+   "grep_queries": ["ErrCollectionNotLoaded", "ErrCollectionLoaded", "already loaded", "GetShard retry"],
+   "files_examined": [
+    "pkg/util/merr/errors.go (L66, L69)",
+    "internal/querycoordv2/services.go (LoadCollection L220-240 already-loaded 分支)",
+    "internal/proxy/shardclient/lb_policy.go (L111-117)",
+    "internal/distributed/proxy/httpserver/handler_v2.go (search L1457-1543, wrapperProxyWithLimit L486-549)",
+    "internal/proxy/impl.go (getCollectionProgress L1976)"
+   ],
+   "source_excerpt": "querycoordv2/services.go L230-237:\n\tif err := s.broadcastAlterLoadConfigCollectionV2ForLoadCollection(ctx, req); err != nil {\n\t\tif errors.Is(err, job.ErrIgnoredAlterLoadConfig) {\n\t\t\tlogger.Info(\"load collection ignored, collection is already loaded\")\n\t\t\treturn merr.Success(), nil\n\t\t} ... \n—— 重复 load 显式按 ignored-by-design 返回 Success（=> code 0，非 104）：104 仅在 task.go/impl.go 的属性变更路径（L1229 等）使用。未加载 search 返回 code=0 的机制：handler_v2.go search L1533 'if searchResp.Results.TopK == 0 { HTTPReturn(code 0, data []) }' —— 2.6 版 search 在未加载时经 wrapperProxyWithLimit 递归到 lb_policy GetShard 的 retry.Handle(ErrCollectionNotLoaded)，若重试耗尽以内部方式降级（返回空结果集 TopK=0），HTTP 层将其映射为 code:0 空数组，101 错误码定义存在但未透出到该 REST 路径。",
+   "call_chain_traced": "HTTP search -> search handler -> wrapperProxyWithLimit -> proxy.Search -> searchTask -> GetShard(lb_policy, retry on 101) -> 空结果/降级 -> TopK==0 -> HTTPReturn code:0 data:[]；HTTP load -> querycoordv2 LoadCollection -> already-loaded -> merr.Success() -> code:0",
+   "verification_outcome": "by_design_in_source",
+   "evidence_source": "source"
+  },
+  "mundane_explanation": {
+   "excluded": ["env", "concurrency", "cache_delay", "prior_script_pollution（脚本专属时间戳集合名+脚本内 cleanup_drop 前置）"],
+   "surviving": null
+  }
+ }
+}

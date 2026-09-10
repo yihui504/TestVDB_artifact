@@ -1,0 +1,11 @@
+setup user: code=0
+wrong password(old)                                  -> code=1400  {"code":1400,"message":"old password not correct for r2upw67461_u: not authenticated"}
+missing password(old) key                            -> code=1802  {"code":1802,"message":"missing required parameters, error: Key: 'NewPasswordReq.Password' Error:Field validation for 'Password' failed on the 'requir
+empty password(old)                                  -> code=1802  {"code":1802,"message":"missing required parameters, error: Key: 'NewPasswordReq.Password' Error:Field validation for 'Password' failed on the 'requir
+newPassword len 3 (min 6)                            -> code=1100  {"code":1100,"message":"invalid password length: invalid parameter[3 out of range 6 \u003c= value \u003c= 72]"}
+newPassword len 73 (max 72)                          -> code=1100  {"code":1100,"message":"invalid password length: invalid parameter[73 out of range 6 \u003c= value \u003c= 72]"}
+legit change                                         -> code=0     {"code":0,"data":{}}
+old cred -> HTTP 200 | new cred -> HTTP 200
+root with wrong oldPassword                          -> code=1400  {"code":1400,"message":"old password not correct for root: not authenticated"}
+FINDING: OLD password STILL valid >=3s after successful change (credential cache not invalidated)
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)

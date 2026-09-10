@@ -1,0 +1,20 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+baseline: 3 payloads visible via scroll
+
+face A selector-less (payload only) -> status=400
+raw: {"status":{"error":"Format error in JSON body: Either list of point ids or filter must be provided"},"time":0.0}
+face A cleanly rejected with 400 (mentions: ['point', 'filter'] — NOTE only, R29)
+
+face B points=null filter=null -> status=400
+raw: {"status":{"error":"Format error in JSON body: Either list of point ids or filter must be provided"},"time":0.0}
+face B cleanly rejected with 400 (mentions: ['point', 'filter'] — NOTE only, R29)
+
+face C points=[] -> status=400
+raw: {"status":{"error":"Bad request: Empty update request"},"time":0.00026618}
+face C cleanly rejected with 400 (acceptable posture)
+
+face D points=[1] filter=null -> status=200
+raw: {"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.005065858}
+face D OK: merge landed on point 1 only; points 2/3 deep-equal baseline
+VERDICT: NO_DEFECT

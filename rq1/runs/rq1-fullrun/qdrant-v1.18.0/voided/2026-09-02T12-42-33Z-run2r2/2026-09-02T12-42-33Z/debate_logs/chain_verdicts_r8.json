@@ -1,0 +1,127 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "boundary_cluster_status_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": "what_developers_prioritize: 'Cluster communication over single-node correctness' — don't-care dimension, annotation only, never decides",
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok, violates=true; mechanical anchor-conflict not fired) -> implied_verdict=DEFECT -> final=DEFECT (mechanical, no LLM re-judgment; doc/source doubt recorded in rationale + manual main-process review suggested per E2)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_type_cluster_status_001, id+quote_ok (quote verbatim vs constraints.type_constraints[13]), violates=true -> CONFIRMED -> implied_verdict=DEFECT; mechanized aggregation keeps final=DEFECT. Source doubt exists (chain_broken_at=doc): in-chain doc_verification content_consistency=FAIL (flat grid absent from the live v1.18.x page and every in-repo OpenAPI snapshot v0.10.0-v1.18.x) and source_grounding=by_design_in_source (docstring'd tagged enum ClusterStatus{Disabled,Enabled} types.rs:243-250; dispatcher.rs:267 None=>Disabled; the version's published oneOf declares {\"status\":\"disabled\"} a legal 200 variant) — routed to manual main-process review, verdict unchanged per the mechanized rule. Cross-chain note: sibling chains on the identical GET /cluster observation diverged on the violates declaration (semantic_cluster_status_002 violates=false -> NOT_DEFECT; state_cluster_status_001 gray-zone -> NOT_DEFECT) — a main-process reconciliation signal, recorded here because it argues the same defect_id family is contract mis-distillation.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_cluster_status_003",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": "what_developers_prioritize: 'Performance optimization over diagnostic completeness' — don't-care dimension, annotation only, never decides",
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (mechanized, id+quote_ok, violates=false; mechanical B=NOT_TRIGGERED so no CONFLICT) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "mundane_api_semantics",
+      "constraint_category": "other",
+      "category_no_fit_reason": "wrong-verb refusal diagnostics-quality claim — no unit of type/range/state/resource_bound/doc_consistency in the contract covers error-body content on an undocumented verb face",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_status_001, id+quote_ok, violates=false -> REFUTED -> implied NOT_DEFECT; the assertion blesses only the GET/200 face, which held in-log ([control GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},...}, log line 5), so the POST/PUT/DELETE/PATCH face ([verb POST /cluster] -> status=404 raw=, log line 6) is outside its domain — an honest domain declaration, and the chain's own full-contract scan found no unit covering wrong-verb diagnostics (chain_broken_at=contract). B=NEUTRAL: measured honest 4xx with no 2xx masking (HTTP-tautology condition 2 unmet — no contract/doc error-form claim on this face), no value accepted, no objective class engaged; residual signal recorded for manual review: qdrant's repo-side OpenAPI response() template attaches 4XX:ErrorResponse JSON (openapi.lib.yml) which the empty 404 does not carry — a doc-side doubt, not a mechanical trigger. C=CONFIRMED (genuine diagnostics gap: framework-default empty 404 vs handler-level JSON errors, no intent marker in source) but LOW weight cannot overturn mechanical A.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_cluster_status_002",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": "what_developers_prioritize: 'Cluster communication over single-node correctness' — don't-care dimension, annotation only, never decides",
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (mechanized, id+quote_ok, violates=false; mechanical B=NOT_TRIGGERED so no CONFLICT) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": "contract_misread",
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_type_cluster_status_001, id+quote_ok, violates=false -> REFUTED -> implied NOT_DEFECT; the served payload is inside the documented domain — the live v1.18.x page's canonical 200 example IS the observed {\"result\":{\"status\":\"disabled\"}} (log: [control GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.962e-6}). fp=both: doc content_consistency=FAIL (asserted flat grid absent from the page and all in-repo snapshots v1.1.2..v1.18.x, raft_state/commit_index exist only nested as raft_info.role/raft_info.commit) + source by_design_in_source (#[serde(tag=\"status\")] enum ClusterStatus{Disabled,Enabled} types.rs:243-250, dispatcher.rs:264-269 None=>Disabled arm). B=NEUTRAL: no violating value was accepted — a documented discriminated-union variant was returned, engaging none of the six objective classes; cross-chain note: boundary_cluster_status_001 declared violates=true on the same constraint and identical observation -> DEFECT — divergence flagged for main-process reconciliation.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_cluster_status_004",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": "what_developers_prioritize: 'Performance optimization over diagnostic completeness' — don't-care dimension, annotation only, never decides",
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (mechanized, id+quote_ok, violates=false; mechanical B=NOT_TRIGGERED so no CONFLICT) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "mundane_api_semantics",
+      "constraint_category": "other",
+      "category_no_fit_reason": "wrong-verb refusal diagnostics-quality claim — the contract's only cluster+status units cover the GET 200 face; no unit of any category covers error-body content on an undocumented verb face",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_status_001, id+quote_ok, violates=false -> REFUTED -> implied NOT_DEFECT; the claim's phenomenon ([L1 POST /cluster (empty body)] status=404 raw= with rubric_score=0/3) lies outside both chunk units, which govern only the GET 200 face (control GET 200 held at both brackets), and the Type2 rubric is an in-script oracle — chain_broken_at=contract. B=NEUTRAL: honest 4xx, no 2xx masking, no accepted value, no objective class engaged. C=CONFIRMED (genuine gap, live-reproduced 2026-09-03: handler-level 404 carries a 100-byte diagnostic JSON while every wrong-verb 404 incl. POST /telemetry carries zero bytes) but LOW weight cannot overturn mechanical A; residual OpenAPI 4XX:ErrorResponse-template signal routed to manual review, not a strict verdict.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_cluster_status_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "NEUTRAL", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": "what_developers_prioritize: 'Cluster communication over single-node correctness' — don't-care dimension, annotation only, never decides",
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=NEUTRAL (mechanized constraint_absent — artifact: the chain's constraint_id field embeds a parenthetical annotation so exact-match failed; the bare id qdrant_type_cluster_status_001 IS present in the contract and the quote is verbatim) -> GREY_ZONE; mechanical B=NOT_TRIGGERED; LLM fallback B=NEUTRAL, C=REFUTED, D=NO_SIGNAL -> gray-zone aggregation final=NOT_DEFECT"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": "contract_misread",
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=NEUTRAL is a mechanical artifact (annotated constraint_id string; the quote is verbatim vs type_constraints[13]) -> GREY_ZONE; B=NEUTRAL because no violating value was accepted — the 200 returned the documented discriminated-union variant (P0 log line 3 raw={\"result\":{\"status\":\"disabled\"}}), engaging none of the six objective classes, and the asserted flat grid is unsatisfiable even on the Enabled variant (raft_state/commit_index exist only as raft_info.role/raft_info.commit per consensus_manager.rs:270-283). C=REFUTED on explicit source intent (docstrings on the ClusterStatus enum types.rs:243-250, dispatcher.rs:264-269 Disabled arm, and the version's published oneOf whose canonical example is byte-identical to the observed payload); D=NO_SIGNAL -> gray-zone aggregation NOT_DEFECT. Correspondence note: the dispatched state-transition face (key-set/mode stability P0->P5) PASSED in-chain (no drift; count controls 8/4 held); the fired DEFECT (lines 18-19, missing peer_id/raft_state/commit_index/peers) is the shape face of the same GET /cluster endpoint — same phenomenon as the sibling shape chains, no forensic drift.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "defect": 1,
+    "not_defect": 4,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 2, "source": 0, "both": 2, "behavior": 0},
+    "root_cause_distribution": {"contract_misread": 2, "mundane_api_semantics": 2},
+    "constraint_category_distribution": {"type": 3, "other": 2},
+    "candidate_class_distribution": {"strict_defect": 1, "exploratory_candidate": 0, "rejected": 4}
+  }
+}

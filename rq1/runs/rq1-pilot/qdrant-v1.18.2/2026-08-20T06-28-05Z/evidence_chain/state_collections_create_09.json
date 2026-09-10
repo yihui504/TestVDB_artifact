@@ -1,0 +1,72 @@
+{
+  "defect_id": "state_collections_create_09",
+  "endpoint": "PUT /collections/{collection_name}",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Source_url reachable (https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection), version 1.18.x matches target 1.18.2. No explicit name validation rules documented in API reference; endpoint PUT /collections/{collection_name} is correctly specified.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[test_123] status=200, expected_success=True | [test space] status=200, expected_success=False | [test/slash] status=404, expected_success=False | [test\\backslash] status=422, expected_success=False | [test?question] status=200, expected_success=False | [test*asterisk] status=422, expected_success=False | [test'apostrophe] status=200, expected_success=False",
+      "secondary_observations": "[] status=404 (expected 400) | [test:colon] status=422 | [test|pipe] status=422 | [test<angle>] status=422 | [test\\backslash] status=422 | [test*asterisk] status=422 | [test\"quote] status=422",
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "Mixed: HTTP 200 for invalid names, HTTP 422/404 for others",
+        "note": "Inconsistent error signaling: spaces/apostrophes/question marks return 200 (success), while other invalid chars return 422/404. Empty string returns 404 instead of 400."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["state_collections_create_09"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No explicit constraint_id in structured_contract.json for collection name validation beyond endpoint definition",
+      "api_violates_assertion": true,
+      "note": "Source code validation at src/actix/api/mod.rs:33-39 (StrictCollectionPath) uses validate_collection_name which only blocks INVALID_NAME_CHARS [<, >, :, \", /, \\, |, ?, *, \\0, \\u{1F}]. Spaces and apostrophes are not checked, allowing invalid names through.",
+      "evidence_source": "source"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: endpoint PUT /collections/{collection_name}",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection (no explicit name validation documented)",
+        "script: state_collections_create_09 tests 20 name patterns",
+        "log: 9 invalid patterns return HTTP 200 (spaces, apostrophes, question marks, etc.)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Source code validation (validate_collection_name at lib/common/common/src/validation.rs:110-115) only rejects 11 specific filesystem-unsafe chars, NOT spaces or other punctuation. Script observes names with spaces/apostrophes succeeding with HTTP 200 when they should be rejected with 4XX. Contract implies name validation but enforcement is incomplete.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "validate_collection_name",
+        "INVALID_NAME_CHARS",
+        "StrictCollectionPath",
+        "collection_name.*valid"
+      ],
+      "files_examined": [
+        "lib/common/common/src/validation.rs (lines 87-115)",
+        "src/actix/api/mod.rs (lines 27-53)",
+        "lib/api/build.rs (line 144)",
+        "src/actix/api/collections_api.rs (lines 111-125)"
+      ],
+      "source_excerpt": "File: lib/common/common/src/validation.rs\n\n// Line 87-95: Character set definition\nconst INVALID_NAME_CHARS: [char; 11] =\n    ['<', '>', ':', '\"', '/', '\\\\', '|', '?', '*', '\\0', '\\u{1F}'];\n\n// Line 110-115: Validation function (no space check!)\npub fn validate_collection_name(value: &str) -> Result<(), ValidationError> {\n    check_invalid_name_chars(value, \"collection name\")\n}\n\n// Line 99-108: Helper function\nfn check_invalid_name_chars(value: &str, kind: &str) -> Result<(), ValidationError> {\n    let Some(c) = INVALID_NAME_CHARS.into_iter().find(|c| value.contains(*c)) else {\n        return Ok(());\n    };\n    // returns error if char found\n}\n\n---\nFile: src/actix/api/mod.rs (lines 33-39)\n\n#[derive(Deserialize, Validate)]\nstruct StrictCollectionPath {\n    #[validate(\n        length(min = 1, max = 255),\n        custom(function = \"validate_collection_name\")\n    )]\n    collection_name: String,\n}",
+      "call_chain_traced": "REST endpoint: PUT /collections/{collection_name} → collections_api.rs:112 create_collection() → uses StrictCollectionPath → validates via validate_collection_name (only checks INVALID_NAME_CHARS, not spaces/punctuation).",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "race"],
+      "surviving": "State logic violation: Name validation function is incomplete by design (only filesystem-unsafe chars), allowing spaces/apostrophes through as valid names when they should be rejected per HTTP 4XX client error semantics."
+    }
+  }
+}

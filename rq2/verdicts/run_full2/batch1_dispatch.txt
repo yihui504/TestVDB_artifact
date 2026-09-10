@@ -1,0 +1,43 @@
+# RQ2 全阶段重跑派发词模板(81 冻结包 × 完整确认阶段;与三连发同盲判协议)
+
+## 任务
+你是 TestVDB 确认阶段(完整形态:evidence-chain 判定 + 四视角交叉质询)的独立裁决者。对下列每个候选缺陷:先 Read 其冻结材料包(observed 执行记录 + expected 契约),再按四视角分别评估,最后按保守规则聚合终判。
+
+## 每案材料
+- milvus_001: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_001.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.3.0
+- milvus_002: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_002.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.10
+- milvus_003: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_003.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.10
+- milvus_004: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_004.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.10
+- milvus_005: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_005.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.10
+- milvus_006: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_006.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.10
+- milvus_007: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_007.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.10
+- milvus_008: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_008.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.12
+- milvus_009: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_009.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- milvus_010: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_010.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- milvus_011: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_011.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- milvus_012: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_012.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- milvus_013: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_013.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- milvus_014: pack=c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_014.md | source=c:\<HOME>\<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- 维护者认知(三库各一,全文 Read 一次即可):<INTEL_ROOT>/intelligence/milvus/developer_cognition.json | .../qdrant/developer_cognition.json | .../weaviate/developer_cognition.json
+
+## 四视角(每案逐一评估)
+- **A 契约**:observed 是否明确违反包内契约断言?(判定断言文本是否真正覆盖观察到的行为面——机械包含性检查)
+- **B 物理**:执行记录内部是否自洽?观察到的状态变化/复现声称是否有对应请求-响应记录支撑?
+- **C 认知**:developer_cognition.json 的模式(by_design_patterns / blindspot_indicators / recurring_patterns / developer_cognition_signals)是否支持"该项目会将其认定为 bug"?若认知材料与该案行为面无关,记 NEUTRAL。
+- **D 源码**:在**该案版本的源码 clone**中定位相关校验逻辑(grep 参数名/错误消息关键词/端点路由;可多次 grep 后 Read 命中文件),判定:validation_absent(文档/契约承诺的校验在源码中不存在)/ validation_present(校验在场且与观察一致→非缺陷证据)/ by_design_in_source(源码注释或结构表明行为有意为之)/ not_found(定位不到相关代码)。必须记录关键证据(文件:行号 + 一句话)。
+
+## 聚合规则(保守,与既定口径一致)
+按优先级:
+1. **否决票优先**:D=by_design_in_source(源码注释/结构明示行为有意),或 A=REFUTED(断言不被违反),或 C 的 by_design_patterns 明确命中该行为面 → 终判 **FALSE_POSITIVE**;
+2. **A 主导**:否则若 A=CONFIRMED(观察明确违反契约断言)→ 终判 **CONFIRMED**。D=validation_absent 时提高 confidence;D=validation_present 或 not_found 时降低 confidence 但**不否决**(源码定位失败不是行为正确的证据);
+3. **A=NEUTRAL 兜底**:仅当 B=CONFIRMED 且 D=validation_absent → CONFIRMED;其余 → FALSE_POSITIVE;
+4. 证据不足一律 **FALSE_POSITIVE**(保守方向:牺牲 recall 保 precision)。
+
+## 纪律
+- 只依据上述三类材料判定;不联网、不读材料清单之外的文件;每案独立,不受其他案影响。
+- 源码 grep 失败(版本不匹配等)时如实记 D=not_found,不得臆测。
+
+## 产出
+Write 一个 JSONL 文件(每行一个 JSON 对象)到 **c:\<HOME>\<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\rq2_3run\run_full2\verdicts_batch1.jsonl**:
+`{"defect_id": "<case-id>", "verdict": "CONFIRMED|FALSE_POSITIVE", "confidence": <float>, "perspectives": {"A": "CONFIRMED|REFUTED|NEUTRAL", "B": "CONFIRMED|REFUTED|NEUTRAL", "C": "CONFIRMED|REFUTED|NEUTRAL", "D": "validation_absent|validation_present|by_design_in_source|not_found"}, "d_evidence": "<文件:行号 一句话>", "rationale": "<一句中文依据>"}`
+最后返回一行摘要:<case-id>=<verdict>(逗号分隔你那批全部)。

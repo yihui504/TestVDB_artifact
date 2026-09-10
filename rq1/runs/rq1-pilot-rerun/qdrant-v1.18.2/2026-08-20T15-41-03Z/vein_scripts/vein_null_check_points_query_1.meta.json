@@ -1,0 +1,21 @@
+{
+  "defect_id": "vein_null_check_points_query_1",
+  "endpoint": "POST /collections/{collection}/points/query",
+  "param": "filter.should",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "vein_null_check",
+  "description": "API accepts null value for filter.should parameter without validation, should reject with 400 Bad Request",
+  "reference_issue": "threat_model.json rank 1",
+  "condition_type": "null_check",
+  "finding": "DEFECT_FOUND",
+  "test_payload": {
+    "filter": {
+      "should": null
+    }
+  },
+  "expected_behavior": "400 Bad Request with validation error",
+  "actual_behavior": "200 OK - null value silently accepted",
+  "severity": "High",
+  "novelty": "known_pattern",
+  "timestamp": "2026-08-20T15:41:03Z"
+}

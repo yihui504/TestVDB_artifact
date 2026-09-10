@@ -1,0 +1,82 @@
+{
+  "defect_id": "vein_hnsw_ef_null_search_1",
+  "endpoint": "points+search",
+  "condition_type": "null_check",
+  "defect_type": "Type1_IllegalSuccess",
+  "severity": "P1_High",
+  "strategy": "vein_null_check",
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "session_id": "qdrant-v1.18.2-2026-08-20T06-28-05Z",
+  "round": 4,
+  "test_summary": {
+    "test_case": "params.hnsw_ef parameter accepts null value without validation in POST /collections/{collection}/points/search",
+    "expected_behavior": "Should return 400 Bad Request - null is not a valid usize type value",
+    "actual_behavior": "Returns 200 OK with search results, silently accepting null value",
+    "parameter_path": "params.hnsw_ef",
+    "parameter_type": "integer (usize)",
+    "invalid_value_tested": null,
+    "http_status": 200,
+    "response_excerpt": "{\"result\":[{\"id\":1,\"version\":1,\"score\":1.0},...],\"status\":\"ok\"}"
+  },
+  "control_group": {
+    "valid_value_tested": 128,
+    "valid_value_result": "200 OK with results",
+    "control_outcome": "PASS"
+  },
+  "threat_model_reference": {
+    "blindspot": "BS-01",
+    "blindspot_name": "Parameter Type Coercion Trust",
+    "description": "REST API framework/serde assumes validation but null values slip through",
+    "historical_defect_count": 88,
+    "reference_issues": [
+      9373,
+      9418,
+      9419,
+      9420
+    ],
+    "attack_strategy": "type_confusion"
+  },
+  "bug_shape": {
+    "shape_id": "qdrant-type-coercion-type-confusion",
+    "shape_type": "type_confusion",
+    "root_cause_category": "type_coercion",
+    "affected_layer": "request_parsing"
+  },
+  "evidence": {
+    "defect_found": true,
+    "novelty": "LIKELY_NOVEL_INSTANCE",
+    "cross_db_applicable": true,
+    "related_to_known_issues": "Similar to #9373 (type mismatch) and #9418-9420 (null filter validation)",
+    "validation": {
+      "contract_specification": "Contract states hnsw_ef is a search parameter (integer type)",
+      "api_documentation": "Qdrant API docs specify hnsw_ef as an integer parameter controlling HNSW search accuracy",
+      "expected_http_code": 400,
+      "actual_http_code": 200
+    }
+  },
+  "defect_details": {
+    "parameter_name": "hnsw_ef",
+    "parameter_location": "params object in request body",
+    "parameter_schema": {
+      "type": "integer",
+      "required": false,
+      "description": "HNSW search parameter controlling accuracy/performance tradeoff"
+    },
+    "invalid_value": null,
+    "should_reject_because": "null is not a valid integer value for usize type",
+    "why_accepted": "Type coercion/validation gap - null treated as 'no value' instead of invalid type",
+    "impact": "API contract violation - invalid type silently accepted without error"
+  },
+  "submission_readiness": {
+    "has_clear_violation": true,
+    "has_control_group": true,
+    "has_contract_reference": true,
+    "has_reproducible_steps": true,
+    "estimated_success_probability": 0.85,
+    "justification": "Matches BS-01 pattern - null type confusion not validated, similar to historical issues #9418-9420"
+  },
+  "generated_at": "2026-08-20T18:30:00Z",
+  "generated_by": "attack-vein v2.5.2 (Round 4)",
+  "param": "hnsw_ef"
+}

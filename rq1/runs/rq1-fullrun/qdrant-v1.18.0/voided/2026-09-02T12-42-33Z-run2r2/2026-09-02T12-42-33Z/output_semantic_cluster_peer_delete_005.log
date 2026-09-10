@@ -1,0 +1,17 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] remove_peer = /cluster/peer/{peer_id} (raw_knowledge api_endpoints[cluster+peer+delete].url)
+[pre-probe] /healthz status=200
+[witness cluster info] status=200 raw={"result":{"peer_id":285485119185529,"shard_count":1,"local_shards":[{"shard_id":0,"points_count":0,"state":"Active"}],"remote_shards":[],"shard_transfers":[]},"status":"ok","time":0.000264745}
+[discovery] local (only) peer id = 285485119185529
+[baseline GET /cluster] status=200 raw={"result":{"status":"disabled"},"status":"ok","time":9.487e-6}
+[guard: ghost removal (no force) must be refused 4xx] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled."},"time":0.000011808}
+[force=true on ghost peer (existence is not bypassed by force)] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled."},"time":0.000016735}
+[only-peer removal WITHOUT force (consensus-breaking case)] status=400 raw={"status":{"error":"Bad request: Cannot remove peer 285485119185529 as there are shards on it"},"time":0.000016317}
+SKIPPED: force=true against the real last peer (the fully destructive face) - by-design per threat_model the removal is destructive; exercising it would destroy the shared single-node deployment for all subsequent rounds; needs a disposable cluster, so no conclusion is drawn on that face
+[reconcile] /healthz probe status=200 raw=healthz check passed
+[reconcile GET /cluster] status=200 raw={"result":{"status":"disabled"},"status":"ok","time":2.408e-6}
+[reconcile describe] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replica
+[reconcile cluster info] status=200 raw={"result":{"peer_id":285485119185529,"shard_count":1,"local_shards":[{"shard_id":0,"points_count":0,"state":"Active"}],"remote_shards":[],"shard_transfers":[]},"status":"ok","time":0.000611613}
+[summary] guard 4xx / force-on-ghost 4xx / only-peer-no-force 4xx / full reconciliation clean
+VERDICT: NO_DEFECT

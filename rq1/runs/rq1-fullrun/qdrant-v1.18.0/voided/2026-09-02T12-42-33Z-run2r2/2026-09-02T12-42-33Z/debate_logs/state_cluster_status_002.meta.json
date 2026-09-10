@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_status_002",
+  "endpoint": "cluster+status",
+  "param": null,
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "concurrent",
+  "oracle": {
+    "statement": "during a bounded race window (readers hammering GET /cluster while writers commit unique wait=true upserts) every cluster-status read is 200 with key set and status value equal to the baseline fingerprint (>=2 deviations = Type4_StateLogicViolation); no reader/writer 5xx while /healthz stays 200 (>=2 = Type3_RuntimeFailure); after the race exact count == 4 + accepted unique inserts and the control probe returns 200 with the baseline fingerprint (mismatch = Type4)",
+    "source": "docstring"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "endpoint": "collections+update",
+  "constraint_ids": [
+    "qdrant_state_collections_update_001"
+  ],
+  "source_url": "https://qdrant.tech/documentation/manage-data/collections/",
+  "doc_version": "current (site latest; no version archive)",
+  "oracle": {
+    "statement": "size/distance alteration PATCHes on an existing named vector never change the describe-readback vector-space (size stays 4, distance stays Dot; any readback change = Type4_StateLogicViolation - immutability broken), attempt statuses measured-and-recorded (4xx = clean refusal; 200-without-echo = compliant for this unit but recorded as false-success evidence for the behavioral unit, not claimed here); PATCH addressing a nonexistent vector name is refused 4xx (2xx = Type1_IllegalSuccess); changeable side holds: hnsw_config ef_construct=64 PATCH returns 200 AND echoes in describe (200-without-echo = Type4 silent-ignore, run2r #1 inline_storage family); post-patch upsert+search stay healthy (3/3); 5xx with healthy /healthz = Type3_RuntimeFailure; setup/transport failure = SCRIPT_ERROR (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  },
+  "defect_id": "semantic_collections_update_004",
+  "param": "vectors",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract"
+}

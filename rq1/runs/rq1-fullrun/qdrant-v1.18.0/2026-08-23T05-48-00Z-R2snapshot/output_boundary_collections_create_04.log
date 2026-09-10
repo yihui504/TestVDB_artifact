@@ -1,0 +1,13 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+CASE sharding_method=round_robin invalid: status=400 body={"status":{"error":"Format error in JSON body: unknown variant `round_robin`, expected `auto` or `custom` at line 1 column 79"},"time":0.0}
+NOTE Type2 — sharding_method=round_robin invalid rejected but error lacks 'sharding': {"status":{"error":"Format error in JSON body: unknown variant `round_robin`, expected `auto` or `custom` at line 1 column 79"},"time":0.0}
+CASE sharding_method=null: status=200 body={"result":true,"status":"ok","time":0.239277673}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — sharding_method=null accepted with 200
+CASE sharding_method=123: status=400 body={"status":{"error":"Format error in JSON body: expected value at line 1 column 67"},"time":0.0}
+NOTE Type2 — sharding_method=123 rejected but error lacks 'sharding': {"status":{"error":"Format error in JSON body: expected value at line 1 column 67"},"time":0.0}
+CASE sharding_method='' empty: status=400 body={"status":{"error":"Format error in JSON body: unknown variant ``, expected `auto` or `custom` at line 1 column 68"},"time":0.0}
+NOTE Type2 — sharding_method='' empty rejected but error lacks 'sharding': {"status":{"error":"Format error in JSON body: unknown variant ``, expected `auto` or `custom` at line 1 column 68"},"time":0.0}
+CASE vectors map with '' empty name: status=200 body={"result":true,"status":"ok","time":0.231170854}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — vectors map with '' empty name accepted with 200
+CASE vectors map value=null for name a: status=400 body={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 24"},"time":0.0}

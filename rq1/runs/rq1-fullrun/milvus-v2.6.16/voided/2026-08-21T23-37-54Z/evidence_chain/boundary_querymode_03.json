@@ -1,0 +1,55 @@
+{
+  "defect_id": "boundary_querymode_03",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "same constraint create_009; assertion explicitly covers BOTH carriers 'properties/params.query_mode'; contract api_endpoints documents query_mode as collection-level property via params/properties; endpoint collections+create in registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "Status: 200 / Raw: {\"code\":0,\"data\":{}} / VERDICT: DEFECT_FOUND (create with params:{\"query_mode\":\"bogus\"}, collection bnd_qm_03)",
+      "secondary_observations": ["CONTROL alter path (state_query_mode_alter_1 D): 65535 invalid query_mode value \"bogus\"", "boundary_querymode_01 properties carrier: identical code 0 outcome"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "invalid enum accepted as HTTP 200 code 0, no error, no warning"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_querymode_03", "boundary_querymode_01", "vein_query_mode_maturity_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_collections_create_009",
+      "assertion_text_quoted": "properties/params.query_mode NOT IN {unset, 'large_topk'} => code 65535 ...",
+      "api_violates_assertion": true,
+      "note": "params carrier is explicitly named in the constraint domain; observed code 0 violates the demanded 65535; violates=True.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:create_009 params.query_mode => 65535", "doc:common.go:513-526 ValidateQueryMode + task.go:449", "script:boundary_querymode_03.py create_collection {..., params:{query_mode:'bogus'}}", "log:Raw {\"code\":0,\"data\":{}} DEFECT_FOUND"],
+      "chain_broken_at": "script",
+      "break_detail": "same transport-layer drop as boundary_querymode_01: httpReq.Params map is only scanned for a whitelist (ttlSeconds/partitionKeyIsolation/mmap/warmup.*) at handler_v2.go:2019-2049; params.query_mode never forwarded to req.Properties, so the task-level validator never sees it.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["CollectionReq struct (request_v2.go:643)", "WarmupScalarFieldKey (handler_v2.go forwarding whitelist)", "ValidateQueryMode (task.go:449)"],
+      "files_examined": ["internal/distributed/proxy/httpserver/request_v2.go:643-656", "internal/distributed/proxy/httpserver/handler_v2.go:1999-2049", "internal/proxy/task.go:443-451", "pkg/common/common.go:511-526"],
+      "source_excerpt": "handler_v2.go:2037-2049: for _, key := range []string{ common.WarmupScalarFieldKey, common.WarmupScalarIndexKey, common.WarmupVectorFieldKey, common.WarmupVectorIndexKey } { if _, ok := httpReq.Params[key]; ok { req.Properties = append(req.Properties, &commonpb.KeyValuePair{Key: key, Value: fmt.Sprintf(\"%v\", httpReq.Params[key])}) } } - query_mode not among forwarded keys; any unrecognized params key (incl. query_mode) is silently ignored.",
+      "call_chain_traced": "httpReq.Params['query_mode'] -> not in forwarding whitelist (handler_v2.go:2019-2049) -> dropped before proxy.CreateCollection -> createCollectionTask.PreExecute ValidateQueryMode never invoked for this key -> code 0",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "typo", "cache"],
+      "surviving": "same by-design ambiguity as _01 (REST create may not claim params.query_mode support); silent-drop semantics either way"
+    },
+    "evidence_weight": "high (dual-carrier repro + identical root cause)"
+  }
+}

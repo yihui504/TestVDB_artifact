@@ -1,0 +1,22 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] create_collection/upsert_points/get_point/search = /collections/{name}[...points...] (raw_knowledge api_endpoints[].url)
+[pre-probe] /healthz status=200 raw=healthz check passed
+[create scc021_1788393550_euclid distance=Euclid] status=200 raw={"result":true,"status":"ok","time":0.336984943}
+[upsert scc021_1788393550_euclid] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.004390776}
+[get_point scc021_1788393550_euclid] status=200 raw={"result":{"id":1,"payload":{},"vector":[3.0,4.0]},"status":"ok","time":0.000714665}
+[euclid] stored vector = [3.0, 4.0] (L2 norm = 5.000000)
+[euclid] raw storage preserved (norm 5.0000 == 5) - distance semantics intact
+[search scc021_1788393550_euclid q=[0.0, 0.0]] status=200 raw={"result":[{"id":1,"version":1,"score":5.0}],"status":"ok","time":0.003304435}
+[euclid] search([0,0]) score = 5.0 (negative-distance convention expected ~ -5.0; recorded)
+[create scc021_1788393550_cosine distance=Cosine] status=200 raw={"result":true,"status":"ok","time":0.321789413}
+[upsert scc021_1788393550_cosine] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.004297984}
+[get_point scc021_1788393550_cosine] status=200 raw={"result":{"id":1,"payload":{},"vector":[0.6,0.8]},"status":"ok","time":0.000176136}
+[cosine] stored vector = [0.6, 0.8] (L2 norm = 1.000000)
+[cosine] norm-1 storage confirmed - matches the by-design declaration (SKIPPED as attack per threat_model/G3)
+[search scc021_1788393550_cosine q=[3.0, 4.0]] status=200 raw={"result":[{"id":1,"version":1,"score":1.0}],"status":"ok","time":0.000304981}
+[search scc021_1788393550_cosine q=[30.0, 40.0]] status=200 raw={"result":[{"id":1,"version":1,"score":1.0}],"status":"ok","time":0.000265472}
+[cosine invariance] score(q=[3,4])=1.0 (hit id 1); score(q=[30,40])=1.0 (hit id 1)
+[cosine invariance] |s1-s2| = 0.00000000 <= 0.001 - magnitude-invariance holds
+[summary] Euclid storage preserves magnitude; cosine scores are magnitude-invariant; the by-design normalization itself was skipped as an attack target per threat_model - constraint qdrant_behavioral_collections_create_004
+VERDICT: NO_DEFECT

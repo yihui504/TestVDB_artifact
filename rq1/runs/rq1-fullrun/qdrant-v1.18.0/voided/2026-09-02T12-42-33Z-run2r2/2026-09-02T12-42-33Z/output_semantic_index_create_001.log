@@ -1,0 +1,15 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: sic01228d48
+[assertion quote] expected_behavior: 'valid index creation returns HTTP 200; invalid schema (e.g. unknown type) returns 400; missing collection returns 404'
+[setup] created sic01228d48_live (dim=4)
+[PUT index sic01228d48_live/cat] schema="keyword" -> status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.322324961}
+[leg1 envelope] result.status='completed' result.operation_id=2 (measured)
+[leg1 echo] describe payload_schema['cat'] = {"data_type": "keyword", "points": 0} (data_type='keyword', sent 'keyword')
+[PUT index sic01228d48_never_5dd5f6/cat] schema="keyword" -> status=404 raw={"status":{"error":"Not found: Collection `sic01228d48_never_5dd5f6` doesn't exist!"},"time":7.042e-6}
+[PUT index sic01228d48_never_5dd5f6/cat] schema="keyword" -> status=404 raw={"status":{"error":"Not found: Collection `sic01228d48_never_5dd5f6` doesn't exist!"},"time":6.535e-6}
+[PUT index sic01228d48_live/bogus_field] schema="not-a-type" -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 59"},"time":0.0}
+[leg3 note] measured rejection status 400; expected_responses document 400 'bad request / validation error' - any 4xx refusal satisfies the assertion's substance (spec wins, R16)
+[PUT index sic01228d48_live/score_tag] schema="keyword" -> status=200 raw={"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.313815744}
+OK: legal index create -> 200 result:object with keyword echo in describe (stable across control); never-created sic01228d48_never_5dd5f6 -> 404 twice without flapping; unknown schema value refused with 4xx as documented
+VERDICT: NO_DEFECT

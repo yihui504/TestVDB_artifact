@@ -1,0 +1,16 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+seed baseline: exact count == 10 (6 berlin + 4 paris)
+
+W1 delete filter must[city=berlin] -> status=200
+raw: {"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.003273055}
+W1: 200, count == 4 == 4, scroll id set == [7, 8, 9, 10] (cross-face agree)
+
+W2 delete filter {} (empty = matches everything) -> status=200
+raw: {"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.006231546}
+W2: 200, count == 0, scroll empty — match-all wipe complete
+
+W3 delete filter {"must": []} (empty clause list = zero conditions) -> status=200
+raw: {"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.003187215}
+W3: 200, count == 0, scroll empty — second match-all form agrees with W2 (G9 consistent)
+VERDICT: NO_DEFECT

@@ -1,0 +1,101 @@
+{
+  "defect_id": "state_points_query_lifecycle_008",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query, REST)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "link_reachability: domain_blocked — no doc_preflight.json sidecar exists in the contract dir and both fetch channels (WebFetch and web_reader MCP) failed with network restrictions for https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points; recorded PARTIAL per rule, not FAIL. version_match: URL token v-1-18-x matches target v1.18.0 on major.minor, but the page itself is unfetchable so the on-page version banner is unverified. content_consistency: live page unverifiable from this environment; corroborated indirectly by (a) the contract-build-time endpoint_registry doc_quote 'Returns 200 QueryResponse {result: [ScoredPoint], next_page_offset?}; 400 on an invalid query; 404 when the collection is missing.' (captured when source_status=reachable) and (b) the repo-bundled OpenAPI (docs/redoc/master/openapi.json) which documents responses 200/4XX/default-error for this path — note the OpenAPI itself expresses only a generic 4XX error face, so the specific '404 when collection missing' phrasing is the contract's distillation; runtime corroborates 404 as the graceful code (32/40 raced queries returned 404). endpoint_precision: endpoint_registry contains POST points+query with the same source_url and doc_version 1.18.x; the script's raw requests hit exactly this route (actix route registered at src/actix/api/query_api.rs:30). Pure REST constraint, no SDK confusion.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[race] 5xx events (2): [(6, 500, '{\"status\":{\"error\":\"Service internal error: Expected at least one response for one query\"},\"time\":0.030939471}'), (20, 500, '{\"status\":{\"error\":\"Service internal error: Expected at least one response for one query\"},\"time\":0.000296758}')] — followed by [liveness access-5xx-it6] healthz status=200 and [liveness access-5xx-it20] healthz status=200, then DEFECT: (race) access query returned 5xx 2 times with /healthz alive during collection drop/create churn — should be graceful 404, not internal error — Type3_RuntimeFailure / VERDICT: DEFECT_FOUND",
+      "secondary_observations": [
+        "log line 9 (same-request disposition split, timing-only dependence): [race] finished in 3.9s; status tally: {'create_200': 10, 'create_409': 1, 'drop_200': 10, 'query_200': 6, 'query_404': 32, 'query_500': 2} — identical request shape (POST query {\"query\":[0.1,0.2,0.3,0.4],\"limit\":3}) yields 200 (collection present), 404 (graceful documented missing-collection disposition, 32x) or 500 (raced, 2x) depending only on churn timing",
+        "log lines 12-16 (post-cycle coherence, rules out state corruption / service degradation): [post-cycle seed] status=200 ... [post-cycle count] status=200 raw={\"result\":{\"count\":5},...} ... [post-cycle] OK: count == 5 ... [post-cycle by-id query 11] status=200 ... [post-cycle] OK: by-id query works on fresh state",
+        "comparative same-constraint sibling (face rest, no lifecycle churn): output_state_points_query_concurrent_007.log — concurrent overwrite x by-id query race co-anchored on qdrant_behavioral_points_query_001 — VERDICT: NO_DEFECT (no 500s without drop/create churn), isolating the trigger to the collection teardown window",
+        "comparative other faces: face_unavailable — sandbox scripts are REST-only; gRPC/SDK faces of the same race could not be exercised; static note: the gRPC path (src/tonic/api/query_common.rs do_query_batch_points) does not contain the REST guard string, so face divergence is possible but unverified by execution"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "Not an input-validation case (request is well-formed; the 404/200 majority proves encoding is constant). However a disposition note applies: the missing-collection condition — nominally a 4xx/404 per the assertion — surfaced as 5xx 'Service internal error' in the race window, i.e. a resource-state condition was misclassified as an internal error."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["state_points_query_lifecycle_008"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_001",
+      "assertion_text_quoted": "returns 200 QueryResponse {result: [ScoredPoint], next_page_offset?}; 400 on an invalid query; 404 when the collection is missing",
+      "api_violates_assertion": true,
+      "note": "violates-declaration self-check: the phenomenon is not silent-accept but a raced disposition — the assertion's domain is the endpoint's status contract {200, 400, 404}; a query against a momentarily-absent (being-dropped) collection returned 500, which is outside the asserted disposition set and displaces the promised 404 (the 404 clause was upheld in 32/40 non-raced interleavings, so the constraint citation is the right one). The contract's expected_behavior field states the same three-way contract verbatim in prose. constraint_id recovered from the script header (candidates.jsonl dispatch field constraint_id was empty — dispatch-extraction gap recorded for the auditor, constraint itself exists in structured_contract.json).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_query_001 present in structured_contract.json assertions (endpoint points+query, evidence_tier explicit, source_url https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points); NOTE candidates.jsonl constraint_id field is empty — the id was recovered from the script's own 'constraint_ids:' header, a dispatch-metadata gap not a contract absence",
+        "doc: assertion cites the versioned v-1-18-x query-points page; page unfetchable from this environment (domain_blocked both channels, no preflight sidecar) — content corroborated only indirectly via contract-build-time doc_quote and repo OpenAPI generic 4XX face (see doc_verification); not a FAIL, recorded PARTIAL",
+        "script: debate_logs/state_points_query_lifecycle_008.py issues the raw requests the constraint governs — POST query {\"query\":[0.1,0.2,0.3,0.4],\"limit\":3} against the churned collection name via rt PATHS 'query', with DELETE/PUT lifecycle churn in a sibling thread; reproduction rule (>=2 distinct 500s with /healthz alive) declared in the docstring before execution",
+        "log: VERDICT: DEFECT_FOUND backed by raw responses — HTTP 500 bodies {'status':{'error':'Service internal error: Expected at least one response for one query'}} with healthz 200 immediately after each; the body text matches the unique source site (src/actix/api/query_api.rs:91, Display prefix 'Service internal error: ' from lib/storage/src/content_manager/errors.rs:21) character-for-character — the judged phenomenon IS the raw phenomenon, no drift"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Expected at least one response (whole tree: exactly 1 hit, src/actix/api/query_api.rs:91; also confirmed present at same site in v1.18.1/v1.18.2/v1.18.3/v1.19.0 clones)",
+        "async fn query_batch (lib/: toc/point_ops.rs:358, collection/query.rs:445+532, replica_set/read_ops.rs:237, local_shard/shard_ops.rs:457, queue_proxy_shard.rs:423+869, remote_shard.rs:1429)",
+        "fn stop_gracefully (collection/mod.rs:325, shard_holder/mod.rs:136)",
+        "fn select_shards (shard_holder/mod.rs:570)",
+        "fn transposed_iter (common/transpose_iterator.rs:41)",
+        "fn toc / NotFound => / Service internal error (dispatcher.rs:51, actix/helpers.rs:243-247, content_manager/errors.rs:21)",
+        "fn delete_collection (toc/collection_meta_ops.rs:211)",
+        "points/query + 404 in docs/redoc/master/openapi.json (documented response codes)"
+      ],
+      "files_examined": [
+        "src/actix/api/query_api.rs (30-107: route, guard at 88-92)",
+        "lib/storage/src/content_manager/toc/point_ops.rs (358-388: query_batch + get_collection 404 check at 376)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (211-264: delete_collection)",
+        "lib/collection/src/collection/mod.rs (325-328: Collection::stop_gracefully)",
+        "lib/collection/src/shards/shard_holder/mod.rs (136-141: mem::take empties shard map; 570-625: select_shards)",
+        "lib/collection/src/collection/query.rs (146-199 batch_query_shards_concurrently; 202-290 do_query_batch; 445-526 Collection::query_batch)",
+        "lib/collection/src/common/transpose_iterator.rs (41-51)",
+        "lib/collection/src/common/batching.rs (53-79)",
+        "src/actix/helpers.rs (243-260: ServiceError->500, NotFound->404)",
+        "lib/storage/src/content_manager/errors.rs (21: Display prefix)",
+        "lib/collection/src/operations/universal_query/collection_query.rs (680-739: try_into_shard_request always yields exactly one shard request on Ok)",
+        "lib/collection/src/shards/replica_set/read_ops.rs (237-261)",
+        "lib/collection/src/shards/local_shard/shard_ops.rs (457-494)",
+        "lib/collection/src/shards/queue_proxy_shard.rs (423-434, 449-457)",
+        "src/tonic/api/query_common.rs (828-874: gRPC face, different path)",
+        "lib/storage/src/dispatcher.rs (51: toc), docs/redoc/master/openapi.json (response codes)"
+      ],
+      "source_excerpt": "src/actix/api/query_api.rs:78-95 (v1.18.0) — the sole site of the observed error string:\n        let points = dispatcher\n            .toc(&auth, &pass)\n            .query_batch(\n                &collection.collection_name,\n                vec![(request, shard_selection)],\n                params.consistency,\n                auth,\n                params.timeout(),\n                hw_measurement_acc,\n            )\n            .await?\n            .pop()\n            .ok_or_else(|| {\n                StorageError::service_error(\"Expected at least one response for one query\")\n            })?\n            .into_iter()\n            .map(api::rest::ScoredPoint::from)\n            .collect_vec();\n\nlib/storage/src/content_manager/toc/point_ops.rs:366-388 — graceful existence check lives HERE, one level up:\n    ) -> StorageResult<Vec<Vec<ScoredPoint>>> {\n        let mut collection_pass = None;\n        for (request, _shard_selector) in &mut requests {\n            collection_pass = Some(auth.check_point_op(collection_name, request, \"query_batch\")?);\n        }\n        let Some(collection_pass) = collection_pass else {\n            // This can happen only if there are no requests\n            return Ok(vec![]);\n        };\n\n        let collection = self.get_collection(&collection_pass).await?;   // <- NotFound -> 404 path (worked 32/40 times)\n        collection.query_batch(requests, |name| self.get_collection_opt(name), ...).await.map_err(|err| err.into())\n\nlib/storage/src/content_manager/toc/collection_meta_ops.rs:227-239 — concurrent DELETE:\n        let removed_opt = self.collections.write().await.remove(collection_name);\n        if let Some(removed) = removed_opt {\n            ...\n            removed.stop_gracefully().await;      // <- tears down shards while in-flight queries hold Arc<Collection>\n\nlib/collection/src/shards/shard_holder/mod.rs:136-141 — the teardown that creates the race window:\n    pub async fn stop_gracefully(&mut self) {\n        let futures = std::mem::take(&mut self.shards)     // <- EMPTIES the shard map under write lock\n            .into_values()\n            .map(|shard| async move { shard.stop_gracefully().await });\n        futures::future::join_all(futures).await;\n    }\n\nlib/collection/src/collection/query.rs:502-505 — empty-batch shortcut inside Collection::query_batch:\n                |shard_selection, shard_requests, futures| {\n                    if shard_requests.is_empty() {\n                        return Ok(());                      // <- silently dispatches nothing; outer result vec stays empty\n                    }\n                    futures.push(self.do_query_batch(...));\n\nsrc/actix/helpers.rs:245-247 — status mapping:\n            StorageError::NotFound { .. } => http::StatusCode::NOT_FOUND,\n            StorageError::ServiceError { .. } => http::StatusCode::INTERNAL_SERVER_ERROR,",
+      "call_chain_traced": "REST POST /collections/{name}/points/query -> query_points (query_api.rs:32) -> check_strict_mode -> dispatcher.toc().query_batch (toc/point_ops.rs:358) -> get_collection (point_ops.rs:376): collection already removed => Err(NotFound) => HTTP 404 (graceful, observed 32/40); collection still present => Collection::query_batch (collection/query.rs:445) holding Arc<Collection> across awaits. Concurrent DELETE thread: delete_collection (collection_meta_ops.rs:211) -> collections map remove -> removed.stop_gracefully() -> Collection::stop_gracefully (mod.rs:325, takes shards_holder write lock) -> ShardHolder::stop_gracefully (shard_holder/mod.rs:136) std::mem::take(&mut self.shards) empties the shard map. An in-flight query that passed get_collection before the remove then executes against the torn-down shard set; the batch machinery degrades to an empty per-query result (via the shard_requests.is_empty() shortcut at query.rs:503 and/or zero-yield shard-response merging), and the outer Vec comes back empty. The REST guard query_api.rs:88-92 .pop() -> None -> StorageError::service_error('Expected at least one response for one query') -> HTTP 500 (helpers.rs:247; Display prefix errors.rs:21 matches the observed body verbatim). No existence re-check, no retry, no by-design annotation at the guard. The identical guard string is present unchanged in v1.18.1, v1.18.2, v1.18.3 and v1.19.0 clones.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "Precise semantics of validation_absent here: the static missing-collection validation (get_collection -> NotFound -> 404) EXISTS and demonstrably works (32/40 raced queries got the documented 404); what is absent is race-safety for the lifecycle window — after the concurrent teardown, no code path re-validates collection existence before answering, and the empty-result guard hard-maps the raced outcome to 500. by_design_in_source is NOT available: the .ok_or_else guard carries no intent comment (no 'intentionally'/'by design' marker anywhere at the site), satisfying the v3.4 tightened rule that bare unannotated behavior cannot be marked by_design. The script docstring separately cites upstream qdrant #9229 as the known error family (prior-art pointer from dispatch materials, recorded not adjudicated).",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env/service-down: /healthz returned 200 immediately after both 500s (log lines 4-7) and post-cycle seed/count/by-id all succeeded",
+        "script_error: exit code 1 = DEFECT_FOUND (not SCRIPT_ERROR=2); requests well-formed (the 200/404 majority with identical encoding proves it)",
+        "request-parameter typo/encoding: identical request shape produced 200, 404 and 500 varying only with churn timing (tally line 9)",
+        "state corruption confusing the verdict: post-cycle coherence leg passed (count==5, by-id 200) — the 500s are transient raced dispositions, not persistent damage",
+        "cache delay: no cache semantics involved in the query path under test"
+      ],
+      "surviving": "lifecycle race window between get_collection (toc/point_ops.rs:376) and the concurrent shard teardown (shard_holder/mod.rs:137 std::mem::take) — unhandled at the REST guard, which converts the raced empty result to 500 instead of the documented 404"
+    }
+  }
+}

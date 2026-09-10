@@ -1,0 +1,71 @@
+{
+  "defect_id": "semantic_r2b_dynfield_readback_03",
+  "endpoint": "entities+insert / entities+get / entities+query (dynamic outputFields)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约 24 条无 get/query 读路径一致性断言（gap）；唯一相关 envelope 断言不覆盖 outputFields 语义。文档不可达，clone 为准。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "query [meta.details]: ok=False got=None raw={\"code\":65535,\"message\":\"parse output field name failed: meta.details\"}",
+      "secondary_observations": [
+        "query [camélia]: ok=False got=None raw={\"code\":65535,\"message\":\"parse output field name failed: camélia\"}",
+        "get *: 200 {\"code\":0,...,\"data\":[{\"camélia\":\"unicode-name\",\"category\":\"A\",\"extra_score\":42,\"id\":1,\"meta.details\":\"dotted-name\",\"ratio\":3.14,\"vector\":[0.1,0.1,0.1,0.1]}]} —— get(*) 完整返回两个'不可 query'字段",
+        "insert: 200 {\"code\":0,...,\"insertIds\":[1,2]}（两行含 meta.details/camélia 均接受）",
+        "query [category]/[extra_score]/[ratio]: ok=True 正常返回（合法标识符对照组合通过）",
+        "missing in get(*): []"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "get(*) 200+code:0 可读 vs query 200+65535 拒绝——同为读路径的两种结果"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/semantic_r2b_dynfield_readback_03.py", "debate_logs/boundary_r2b_rowfield_names_01.py (同根因 insert 面)", "R2 轮 semantic_r2_getvsquery_06 同域"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "GAP (nearest: milvus_behavioral_envelope_001 成功信封)",
+      "assertion_text_quoted": "nearest: \"success response is {\\\"code\\\":0,\\\"data\\\":...}\" —— 仅定义成功信封，未断言 get/query outputFields 解析一致性；该域在 24 条契约中无断言（gap）",
+      "api_violates_assertion": true,
+      "note": "violates=True 理由：同一字段（insert 接受 + get(*) 可读）在 query 显式点名时被 65535 拒绝——同一数据同一读族 API 行为不一致，违反最小读写一致性语义；非 envelope_001 违反（其只管信封格式），属 gap 域的行为断裂。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: envelope_001 弱覆盖（gap）",
+        "doc: 官方测试 test_milvus_client_query.py:433 断言非法 output field → 65535 parse fail（读侧拒绝已知），但未覆盖 get(*) 与 query 的不对称",
+        "script: semantic_r2b_dynfield_readback_03.py insert meta.details(点号)/camélia(Unicode) + get(*) + query 逐字段点名",
+        "log: get(*) 返回全部字段；query [meta.details]/[camélia] 65535 parse fail；对照组合（category/extra_score/ratio）通过"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "四环自洽；get vs query 路径差异由源码直接解释（见 source_grounding）",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["parse output field name failed", "ParseIdentifier", "Identifier grammar (Plan.g4)", "useAllDyncamicFields"],
+      "files_examined": [
+        "internal/proxy/util.go (1607-1674 getOutputBaseFuncs)",
+        "internal/parser/planparserv2/Plan.g4 (139,152)"
+      ],
+      "source_excerpt": "internal/proxy/util.go:1612-1620（get/query 共用入口 getOutputBaseFuncs）:\n        if outputFieldName == \"*\" {\n            userRequestedPkFieldExplicitly = true\n            for fieldName, field := range allFieldNameMap { ... }\n            useAllDyncamicFields = true\n        } else { ... }\n1637-1664: 非通配名走 planparserv2.ParseIdentifier(...)，err != nil 时 return ... fmt.Errorf(\"parse output field name failed: %s\", outputFieldName)\nPlan.g4:139: Identifier: Nondigit (Nondigit | Digit)*;  152: fragment Nondigit: [a-zA-Z_];\n'*' 分支绕过 identifier 解析直接展开全部动态字段（useAllDyncamicFields=true）；显式点名必须满足 [a-zA-Z_][a-zA-Z0-9_]* 语法——'meta.details'（点号触发嵌套路径解析失败）与 'camélia'（非 ASCII）均不可能通过。",
+      "call_chain_traced": "get 与 query 均经 proxy getOutputBaseFuncs；差异在脚本调用面：get 用 outputFields=[\"*\"] 走通配分支（成功返回），query 用显式名单走 ParseIdentifier（65535）。根因代码点同 #1：util.go:1640-1664。get(*) 可读与 query 点名不可读的不对称在源码结构上成立。",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (对照组 3 字段同 collection 通过)", "concurrency", "cache (insert 后立即 get 可读)"],
+      "surviving": "by-design 弱抗辩：文档可要求动态字段点名用 $meta[\"xxx\"] 形式——但即便如此 get(*) 与 query 的可达性差异仍是事实；交 auditor"
+    }
+  },
+  "cross_reference": "与 boundary_r2b_rowfield_names_01 同根因两面：本链=query 侧（合法 insert + get 可读但 query 点名 65535）；彼链=insert 侧（非法命名写入即黑洞）。共享代码点 internal/proxy/util.go:1640-1664 + Plan.g4 Identifier 语法。",
+  "evidence_weight": "A（主观测+正向对照组双证据，多脚本交叉；源码通配/点名双分支机制直证不对称；契约 gap 为唯一弱点）"
+}

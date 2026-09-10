@@ -1,0 +1,74 @@
+{
+  "target": "weaviate",
+  "version": "v1.38.1",
+  "session_dir": "2026-08-21T15-44-04Z",
+  "top_endpoints": ["POST /v1/schema", "PUT /v1/schema/{className}/shards/{shardName}", "POST /v1/graphql"],
+  "richness_scores": {"POST /v1/schema": 9.5, "PUT /v1/schema/{className}/shards/{shardName}": 6.0, "POST /v1/graphql": 8.0},
+  "candidates_count": 5,
+  "skipped_count": 1,
+  "candidates": [
+    {
+      "id": "vein_hnsw_dynamic_ef_cross_1",
+      "endpoint": "POST /v1/schema",
+      "condition_type": "schema_config_cross",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "stored dynamicEfMin=500 dynamicEfMax=100; controls efConstruction=1/maxConnections=1 -> 422",
+      "by_design_match": false,
+      "inspired_by": null,
+      "script_path": "vein_scripts/vein_hnsw_dynamic_ef_cross_1.py",
+      "source_loc": ".weaviate-src-1381/entities/vectorindex/hnsw/config.go:260 (validate omits DynamicEFMin/Max; parse at 183-195)"
+    },
+    {
+      "id": "vein_shard_status_echo_2",
+      "endpoint": "PUT /v1/schema/{className}/shards/{shardName}",
+      "condition_type": "failure_path_state",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "bogus shard + status=NOT_A_STATUS -> 200 {\"status\":\"NOT_A_STATUS\"}; real shard -> 422 invalid storage status",
+      "by_design_match": false,
+      "inspired_by": null,
+      "script_path": "vein_scripts/vein_shard_status_echo_2.py",
+      "source_loc": ".weaviate-src-1381/adapters/handlers/rest/handlers_schema.go:431 (echoes params.Body); validation only in shard_status.go:102"
+    },
+    {
+      "id": "vein_bm25_motm_negative_3",
+      "endpoint": "POST /v1/graphql",
+      "condition_type": "numeric_boundary",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "minimumOrTokensMatch=-5 accepted, equals no-threshold behavior (all 5 docs returned)",
+      "by_design_match": false,
+      "inspired_by": "vein_hnsw_dynamic_ef_cross_1 (silent accept pattern)",
+      "script_path": "vein_scripts/vein_bm25_motm_negative_3.py",
+      "source_loc": ".weaviate-src-1381/adapters/handlers/graphql/local/common_filters/bm25.go:86; consumed inverted/bm25_searcher.go:379; lsmkv/search_segment.go:146"
+    },
+    {
+      "id": "vein_schema_silent_drop_nested_4",
+      "endpoint": "POST /v1/schema",
+      "condition_type": "silent_substitution",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "properties[].indexNullState=true dropped from readback; runtime IsNull filter errors; class-level control count=1 works",
+      "by_design_match": false,
+      "inspired_by": "vein_hnsw_dynamic_ef_cross_1",
+      "script_path": "vein_scripts/vein_schema_silent_drop_nested_4.py",
+      "source_loc": ".weaviate-src-1381/entities/models/property.go (no indexNullState field; class-level key at entities/models/inverted_index_config.go:40)"
+    },
+    {
+      "id": "vein_replication_async_input_drop_5",
+      "endpoint": "POST /v1/schema",
+      "condition_type": "silent_substitution",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "asyncEnabled=true, factor=1 -> readback asyncEnabled=false; control factor=2 -> 422 loud",
+      "by_design_match": false,
+      "inspired_by": "vein_hnsw_dynamic_ef_cross_1",
+      "script_path": "vein_scripts/vein_replication_async_input_drop_5.py",
+      "source_loc": ".weaviate-src-1381/adapters/handlers/rest/restcompat/wrappers.go:40 (asyncEnabled derived at output, input never consumed)"
+    }
+  ],
+  "skipped": [
+    {"id": "vein_replication_factor_single_node", "reason": "by_design_excluded: factor=2 on 1-node correctly 422"}
+  ]
+}

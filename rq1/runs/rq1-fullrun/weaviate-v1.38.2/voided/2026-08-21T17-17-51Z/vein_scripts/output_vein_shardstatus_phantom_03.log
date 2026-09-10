@@ -1,0 +1,11 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+create class: 200
+real shard: yrNgvrcWPQKL
+phantom shard update: 200 {"status":"READONLY"}
+
+real shard status after phantom update: READY
+control invalid status: 500 {"error":[{"message":"updating db: TYPE_UPDATE_SHARD_STATUS: NOTASTATUS: invalid storage status"}]}
+
+control nonexistent class: 500 {"error":[{"message":"updating db: TYPE_UPDATE_SHARD_STATUS: cannot update shard status to a non-exi
+VERDICT: DEFECT_FOUND (Type3_ErrorHandling) — PUT shards/{shardName} on nonexistent shard returns 200 + echoes requested status while performing no state change; the handler validates status value and class existence but not shard existence, so operators get false success for typos in shard names

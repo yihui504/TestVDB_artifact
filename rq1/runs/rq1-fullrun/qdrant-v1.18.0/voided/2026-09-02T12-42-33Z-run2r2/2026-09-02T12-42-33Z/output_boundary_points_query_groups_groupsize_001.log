@@ -1,0 +1,28 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+setup payload index on 'grp': status=200 (best-effort, non-fatal)
+
+leg Gmin group_size=1 -> status=200
+raw: {"result":{"groups":[{"hits":[{"id":1,"version":1,"score":0.0057622097}],"id":"a"},{"hits":[{"id":6,"version":1,"score":0.03457326}],"id":"b"}]},"status":"ok","time":0.006429331}
+leg Gmin group_size=1 OK: 2 groups x 1 hits (cap honored, envelope result.groups)
+
+leg G2 group_size=2 -> status=200
+raw: {"result":{"groups":[{"hits":[{"id":1,"version":1,"score":0.0057622097},{"id":2,"version":1,"score":0.011524419}],"id":"a"},{"hits":[{"id":6,"version":1,"score":0.03457326},{"id":7,"version":1,"score":0.04033554}],"id":"b"}]},"status":"ok","time":0.001631111}
+leg G2 group_size=2 OK: 2 groups x 2 hits (cap honored, envelope result.groups)
+
+leg Gdef group_size-omitted -> status=200
+raw: {"result":{"groups":[{"hits":[{"id":1,"version":1,"score":0.0057622097},{"id":2,"version":1,"score":0.011524419},{"id":3,"version":1,"score":0.01728663}],"id":"a"},{"hits":[{"id":6,"version":1,"score":0.03457326},{"id":7,"version":1,"score":0.04033554},{"id":8,"version":1,"score":0.046097748}],"id":"b"}]},"status":"ok","time":0.00245118}
+leg Gdef group_size-omitted OK: 2 groups x 3 hits (cap honored, envelope result.groups)
+
+leg G0 group_size=0 -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [search_group_request.group_request.group_size: value 0 invalid, must be 1 or larger]"},"time":0.0}
+leg G0 group_size=0 OK: rejected with 422 (error names 'group_size': True)
+
+leg Gneg group_size=-1 -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 99"},"time":0.0}
+leg Gneg group_size=-1 OK: rejected with 400 (error names 'group_size': False)
+
+leg Gtype group_size='3' -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"3\", expected usize at line 1 column 100"},"time":0.0}
+leg Gtype group_size='3' OK: rejected with 400 (error names 'group_size': False)
+VERDICT: NO_DEFECT

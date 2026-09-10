@@ -1,0 +1,15 @@
+{
+  "defect_id": "boundary_collections_delete_001",
+  "endpoint": "collections+delete",
+  "param": "collection_name",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "boundary",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_delete_001"
+  ],
+  "oracle": {
+    "statement": "DELETE on existing self-created collection -> exactly 200 with envelope result:boolean true; 4xx on the legal delete = Type4 disposition conflict; 5xx/OOM = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

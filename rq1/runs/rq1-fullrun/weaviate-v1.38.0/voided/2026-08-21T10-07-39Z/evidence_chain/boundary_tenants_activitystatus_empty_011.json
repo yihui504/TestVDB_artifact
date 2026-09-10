@@ -1,0 +1,63 @@
+{
+  "defect_id": "boundary_tenants_activitystatus_empty_011",
+  "endpoint": "POST /schema/{className}/tenants",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "ActivityStatus parameter documented with 10-value enum in OpenAPI spec (v1.38.0): ACTIVE, INACTIVE, OFFLOADED, OFFLOADING, ONLOADING, HOT, COLD, FROZEN, FREEZING, UNFREEZING. Empty string is not enum member.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: POST /schema/{className}/tenants with activityStatus='' (empty string) → HTTP 422, error: 'updating schema: TYPE_ADD_TENANT: multi-tenancy is not enabled for class'",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx + error message",
+        "note": "Target rejected request but error message misleading (fails to mention activityStatus/enum)"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_tenants_activitystatus_empty_011"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "activityStatus",
+      "assertion_text_quoted": "activityStatus enum: [ACTIVE, INACTIVE, OFFLOADED, OFFLOADING, ONLOADING, HOT, COLD, FROZEN, FREEZING, UNFREEZING]",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: activityStatus enum (10 values, empty string NOT member)",
+        "doc: OpenAPI spec v1.38.0 explicitly lists 10 enum values",
+        "script: POST /tenants with activityStatus=''",
+        "log: HTTP 422 with misleading error (multi-tenancy not enabled, not enum violation)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Error message doesn't cite parameter name or enum constraint; multi-tenancy check fires before validation",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["validateActivityStatus", "swag.IsZero.*ActivityStatus", "tenant.go:36"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1380\\entities\\models\\tenant.go"
+      ],
+      "source_excerpt": "Line 109-120 in tenant.go:\nfunc (m *Tenant) validateActivityStatus(formats strfmt.Registry) error {\n\tif swag.IsZero(m.ActivityStatus) { // not required\n\t\treturn nil\n\t}\n\n\t// value enum\n\tif err := m.validateActivityStatusEnum(\"activityStatus\", \"body\", m.ActivityStatus); err != nil {\n\t\treturn err\n\t}\n\n\treturn nil\n}\n\nKEY FINDING: swag.IsZero('') returns true for empty strings, bypassing enum validation. Same pattern as tokenization.",
+      "call_chain_traced": "Tenant.Validate() → validateActivityStatus() → swag.IsZero() → early return (no enum check for empty string)",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Empty string bypasses validation, but multi-tenancy check fails first with poor error message (Type2 diagnostics issue)"
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "defect_id": "boundary_s10_quick_full_conflict",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraint create_003（NOT(dimension set AND schema set) else code==1100, source=handler_v2.go）在本地 clone 可达；其余 quick-create 分支（dim required/1100、dim 越界 65535）与 log 对照一致。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "CASE BOTH schema+dimension          ok=True | {\"code\":0,\"data\":{}}（主观测：契约 create_003 预期 1100，实际 code:0）",
+      "secondary_observations": [
+        "CASE full + idDataType conflict     ok=True | {\"code\":0,\"data\":{}}（schema 全量模式下 idDataType 同传也未拒绝）",
+        "CASE quick only (dim) / full only (schema) 均 ok=True（正常基线）",
+        "CASE quick dim=0 => 1100 'dimension is required for quickly create collection'（校验存在证明）",
+        "CASE quick dim=-4 => {\"code\":65535,\"message\":\"invalid dimension: -4. should be in range 2 ~ 32768\"}",
+        "CASE quick dim as str '4' => 1801 json unmarshal；CASE no schema no dim => 1100"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "冲突参数组合以 HTTP 200 + code:0 静默接受；其余非法形态正常返回 200+1100/65535/1801"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_s10_quick_full_conflict.py"],
+      "cross_version_note": "派发单载明同款契约 create_003 在 2.6.10 session(#9) 已判 DEFECT——本链为跨版本重现观测，判定权在 auditor",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_collections_create_003",
+      "assertion_text_quoted": "NOT(dimension set AND schema set) else code==1100",
+      "api_violates_assertion": true,
+      "note": "观测请求同时携带 schema 与 dimension 且返回 code:0——直接违反 NOT(...) else 1100 断言；值确在约束域（两字段同传），violates=true 无歧义。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:create_003 schema+dimension 同传 => 1100",
+        "doc:source_url=handler_v2.go（本地 clone 可达，分支逻辑已读）",
+        "script:create 同时传 schema 与 dimension",
+        "log:ok=True {\"code\":0,\"data\":{}}"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "log 与契约预期 1100 矛盾；源码证实 quick 分支仅在 len(schema.fields)==0 时进入，schema 非空时 dimension 被无声跳过、无互斥检查",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["quickly create collection", "Dimension == 0", "schema.Fields"],
+      "files_examined": ["internal/distributed/proxy/httpserver/handler_v2.go"],
+      "source_excerpt": "internal/distributed/proxy/httpserver/handler_v2.go:1795-1812:\n\tif len(httpReq.Schema.Fields) == 0 {\n\t\tif len(httpReq.Schema.Functions) > 0 { ... \"functions are not supported for quickly create collection\" ... }\n\t\tif httpReq.Dimension == 0 {\n\t\t\terr := merr.WrapErrParameterInvalid(\"collectionName & dimension\", \"collectionName\",\n\t\t\t\t\"dimension is required for quickly create collection(default metric type: \"+DefaultMetricType+\")\")\n\t\t\t... return 1100\n\t\t}\n\t\t// idType/primaryFieldName 默认填充...\n\t}",
+      "call_chain_traced": "quick-create 快路径整体包在 if len(httpReq.Schema.Fields)==0 内；schema.fields 非空时走全量 schema 路径，httpReq.Dimension 不再被读取也无互斥校验（handler 中无 'schema+dimension 同时存在 => 1100' 分支）——互斥约束只在契约层存在，源码 validation_absent。idDataType 同理：只在 quick 分支内消费。",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request_typo", "cache_delay"],
+      "surviving": "schema 优先 + dimension 静默忽略（无显式冲突拒绝）"
+    }
+  }
+}

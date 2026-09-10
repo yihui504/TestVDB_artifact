@@ -1,0 +1,888 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "cache_ttl_hours": 168,
+  "cached_at": "2026-08-20T06:14:40Z",
+  "sdk": {
+    "package": "qdrant-client",
+    "version": "1.19.0",
+    "install_command": "pip install qdrant-client==1.19.0"
+  },
+  "docker": {
+    "repo": "qdrant/qdrant",
+    "available_tags": [
+      "v1.18.2",
+      "v1.18.2-pgsql",
+      "v1.18.2-bionic",
+      "latest"
+    ]
+  },
+  "api_endpoints": [
+    {
+      "path": "collections+create",
+      "method": "PUT",
+      "category": "schema",
+      "description": "Create a new collection with vector configuration and HNSW index parameters",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the collection"
+        },
+        {
+          "name": "vectors",
+          "type": "object",
+          "required": true,
+          "description": "Vector configuration with size and distance metric"
+        },
+        {
+          "name": "hnsw_config",
+          "type": "object",
+          "required": false,
+          "description": "HNSW index parameters (m, ef_construct)"
+        },
+        {
+          "name": "optimizers_config",
+          "type": "object",
+          "required": false,
+          "description": "Optimization parameters"
+        },
+        {
+          "name": "replication_factor",
+          "type": "integer",
+          "required": false,
+          "description": "Number of replicas (default: 1)"
+        },
+        {
+          "name": "write_consistency_factor",
+          "type": "integer",
+          "required": false,
+          "description": "Write consistency (default: 1)"
+        },
+        {
+          "name": "on_disk",
+          "type": "boolean",
+          "required": false,
+          "description": "Store vectors on disk (default: false)"
+        },
+        {
+          "name": "quantization_config",
+          "type": "object",
+          "required": false,
+          "description": "Quantization configuration"
+        }
+      ]
+    },
+    {
+      "path": "collections+get",
+      "method": "GET",
+      "category": "schema",
+      "description": "Get collection info including configuration, parameters, and status",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the collection"
+        }
+      ]
+    },
+    {
+      "path": "collections+delete",
+      "method": "DELETE",
+      "category": "schema",
+      "description": "Delete a collection and all its data",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the collection"
+        }
+      ]
+    },
+    {
+      "path": "collections+list",
+      "method": "GET",
+      "category": "schema",
+      "description": "List all collections",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collections",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+exists",
+      "method": "GET",
+      "category": "schema",
+      "description": "Check if a collection exists",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/collection-exists",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the collection"
+        }
+      ]
+    },
+    {
+      "path": "points+upsert",
+      "method": "PUT",
+      "category": "data",
+      "description": "Insert or update points in a collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "points",
+          "type": "array",
+          "required": true,
+          "description": "List of points to insert/update"
+        },
+        {
+          "name": "wait",
+          "type": "boolean",
+          "required": false,
+          "description": "Wait for completion (default: false)"
+        }
+      ]
+    },
+    {
+      "path": "points+search",
+      "method": "POST",
+      "category": "search",
+      "description": "Search for the closest points to the given query vector",
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "vector",
+          "type": "array",
+          "required": true,
+          "description": "Query vector"
+        },
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": false,
+          "description": "Maximum number of results (default: 10)"
+        },
+        {
+          "name": "score_threshold",
+          "type": "float",
+          "required": false,
+          "description": "Minimum score (default: 0.0)"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "description": "Filter conditions"
+        },
+        {
+          "name": "params",
+          "type": "object",
+          "required": false,
+          "description": "Search parameters (hnsw_ef)"
+        },
+        {
+          "name": "with_payload",
+          "type": "boolean|array",
+          "required": false,
+          "description": "Return payload"
+        },
+        {
+          "name": "with_vector",
+          "type": "boolean",
+          "required": false,
+          "description": "Return vectors"
+        }
+      ]
+    },
+    {
+      "path": "points+delete",
+      "method": "POST",
+      "category": "data",
+      "description": "Delete points from a collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "points",
+          "type": "array",
+          "required": true,
+          "description": "Point IDs to delete"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "description": "Filter conditions"
+        },
+        {
+          "name": "wait",
+          "type": "boolean",
+          "required": false,
+          "description": "Wait for completion"
+        }
+      ]
+    },
+    {
+      "path": "points+get",
+      "method": "GET",
+      "category": "data",
+      "description": "Get a specific point by ID",
+      "source_url": "https://api.qdrant.tech/api-reference/points/get-point",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the collection"
+        },
+        {
+          "name": "point_id",
+          "type": "integer|string",
+          "required": true,
+          "description": "Point identifier"
+        },
+        {
+          "name": "with_payload",
+          "type": "boolean|array",
+          "required": false,
+          "description": "Return payload"
+        },
+        {
+          "name": "with_vector",
+          "type": "boolean",
+          "required": false,
+          "description": "Return vectors"
+        }
+      ]
+    },
+    {
+      "path": "points+scroll",
+      "method": "POST",
+      "category": "data",
+      "description": "Scroll through all points with pagination",
+      "source_url": "https://api.qdrant.tech/api-reference/points/scroll-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": false,
+          "description": "Batch size (default: 10)"
+        },
+        {
+          "name": "offset",
+          "type": "integer|string",
+          "required": false,
+          "description": "Pagination offset"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "description": "Filter conditions"
+        }
+      ]
+    }
+  ],
+  "endpoint_registry": [
+    {
+      "path": "collections+create",
+      "method": "PUT",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+      "doc_version": "1.19.x",
+      "doc_quote": "Create a new collection with vector configuration and HNSW index parameters",
+      "verified_at": "2026-08-20T06:14:40Z"
+    },
+    {
+      "path": "collections+get",
+      "method": "GET",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "doc_version": "1.19.x",
+      "doc_quote": "Get collection info including configuration, parameters, and status",
+      "verified_at": "2026-08-20T06:14:40Z"
+    },
+    {
+      "path": "collections+delete",
+      "method": "DELETE",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete a collection and all its data",
+      "verified_at": "2026-08-20T06:14:40Z"
+    },
+    {
+      "path": "collections+list",
+      "method": "GET",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collections",
+      "doc_version": "1.19.x",
+      "doc_quote": "List all collections",
+      "verified_at": "2026-08-20T06:14:40Z"
+    },
+    {
+      "path": "collections+exists",
+      "method": "GET",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/collection-exists",
+      "doc_version": "1.19.x",
+      "doc_quote": "Check if a collection exists",
+      "verified_at": "2026-08-20T06:14:40Z"
+    },
+    {
+      "path": "points+upsert",
+      "method": "PUT",
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Insert or update points in a collection",
+      "verified_at": "2026-08-20T06:14:40Z"
+    },
+    {
+      "path": "points+search",
+      "method": "POST",
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Search for the closest points to the given query vector",
+      "verified_at": "2026-08-20T06:14:40Z"
+    },
+    {
+      "path": "points+delete",
+      "method": "POST",
+      "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete points from a collection",
+      "verified_at": "2026-08-20T06:14:40Z"
+    },
+    {
+      "path": "points+get",
+      "method": "GET",
+      "source_url": "https://api.qdrant.tech/api-reference/points/get-point",
+      "doc_version": "1.19.x",
+      "doc_quote": "Get a specific point by ID",
+      "verified_at": "2026-08-20T06:14:40Z"
+    },
+    {
+      "path": "points+scroll",
+      "method": "POST",
+      "source_url": "https://api.qdrant.tech/api-reference/points/scroll-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Scroll through all points with pagination",
+      "verified_at": "2026-08-20T06:14:40Z"
+    }
+  ],
+  "constraints": {
+    "type_constraints": [
+      {
+        "constraint_id": "qdrant_type_create_collection_001",
+        "endpoint": "collections+create",
+        "description": "vectors.size must be a positive integer",
+        "assertion": "vectors.size > 0 AND type(vectors.size) = integer",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_type_create_collection_002",
+        "endpoint": "collections+create",
+        "description": "vectors.distance must be one of [Cosine, Euclidean, Dot, Manhattan]",
+        "assertion": "vectors.distance IN [Cosine, Euclidean, Dot, Manhattan]",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_type_upsert_points_001",
+        "endpoint": "points+upsert",
+        "description": "points array must contain 1 to 1000 points",
+        "assertion": "len(points) >= 1 AND len(points) <= 1000",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_type_search_points_001",
+        "endpoint": "points+search",
+        "description": "vector dimension must match collection vector size",
+        "assertion": "len(vector) = collection.vectors.size",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_type_delete_points_001",
+        "endpoint": "points+delete",
+        "description": "Must specify either points or filter parameter",
+        "assertion": "(points IS NOT NULL AND len(points) > 0) OR (filter IS NOT NULL)",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+        "source_status": "reachable",
+        "source_verified": true
+      }
+    ],
+    "range_constraints": [
+      {
+        "constraint_id": "qdrant_range_create_collection_001",
+        "endpoint": "collections+create",
+        "description": "hnsw_config.m (max connections per node) ∈ [2, 100]",
+        "assertion": "hnsw_config.m >= 2 AND hnsw_config.m <= 100",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_range_create_collection_002",
+        "endpoint": "collections+create",
+        "description": "hnsw_config.ef_construct (index build speed/accuracy) ∈ [10, 1000]",
+        "assertion": "hnsw_config.ef_construct >= 10 AND hnsw_config.ef_construct <= 1000",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_range_search_points_001",
+        "endpoint": "points+search",
+        "description": "limit (max results) ∈ [1, 1000]",
+        "assertion": "limit >= 1 AND limit <= 1000",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_range_search_points_002",
+        "endpoint": "points+search",
+        "description": "score_threshold (minimum score) ∈ [0, 1]",
+        "assertion": "score_threshold >= 0 AND score_threshold <= 1",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+        "source_status": "reachable",
+        "source_verified": true
+      }
+    ],
+    "state_constraints": [
+      {
+        "constraint_id": "qdrant_state_create_collection_001",
+        "endpoint": "collections+create",
+        "description": "Collection creation is atomic - either fully succeeds or fails completely",
+        "assertion": "create collection operation is atomic",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_state_upsert_points_001",
+        "endpoint": "points+upsert",
+        "description": "Upsert is atomic per point - concurrent upserts are serialized by ID",
+        "assertion": "upsert operation is atomic per point",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_state_search_points_001",
+        "endpoint": "points+search",
+        "description": "Search returns results consistent with completed upsert operations",
+        "assertion": "search results include all committed upserts",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+        "source_status": "reachable",
+        "source_verified": true
+      }
+    ]
+  },
+  "assertions": [
+    {
+      "assertion_id": "qdrant_behavioral_create_collection_001",
+      "endpoint": "collections+create",
+      "description": "Valid collection configuration returns 200 OK",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK on valid parameters",
+      "evidence_tier": "explicit",
+      "defect_type_if_violated": "Type3_RuntimeFailure",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+      "doc_version": "1.19.x"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_create_collection_002",
+      "endpoint": "collections+create",
+      "description": "Creating existing collection returns 400 Bad Request",
+      "category": "behavioral",
+      "expected_behavior": "returns 400 Bad Request if collection already exists",
+      "evidence_tier": "explicit",
+      "defect_type_if_violated": "Type4_StateLogicViolation",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+      "doc_version": "1.19.x"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_get_collection_001",
+      "endpoint": "collections+get",
+      "description": "Getting existing collection returns 200 OK with configuration",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with collection info if exists",
+      "evidence_tier": "explicit",
+      "defect_type_if_violated": "Type3_RuntimeFailure",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "doc_version": "1.19.x"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_get_collection_002",
+      "endpoint": "collections+get",
+      "description": "Getting non-existent collection returns 404 Not Found",
+      "category": "behavioral",
+      "expected_behavior": "returns 404 Not Found if collection does not exist",
+      "evidence_tier": "explicit",
+      "defect_type_if_violated": "Type3_RuntimeFailure",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "doc_version": "1.19.x"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_delete_collection_001",
+      "endpoint": "collections+delete",
+      "description": "Deleting existing collection returns 200 OK",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK on successful deletion",
+      "evidence_tier": "explicit",
+      "defect_type_if_violated": "Type3_RuntimeFailure",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection",
+      "doc_version": "1.19.x"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_upsert_points_001",
+      "endpoint": "points+upsert",
+      "description": "Valid upsert returns 200 OK",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK on valid points upsert",
+      "evidence_tier": "explicit",
+      "defect_type_if_violated": "Type3_RuntimeFailure",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+      "doc_version": "1.19.x"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_search_points_001",
+      "endpoint": "points+search",
+      "description": "Valid search returns 200 OK with scored results",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with array of scored points",
+      "evidence_tier": "explicit",
+      "defect_type_if_violated": "Type3_RuntimeFailure",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "doc_version": "1.19.x"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_search_points_002",
+      "endpoint": "points+search",
+      "description": "Empty collection search returns empty array (no error)",
+      "category": "behavioral",
+      "expected_behavior": "returns empty array with 200 OK",
+      "evidence_tier": "inferred",
+      "defect_type_if_violated": "Type4_StateLogicViolation",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "doc_version": "1.19.x"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_delete_points_001",
+      "endpoint": "points+delete",
+      "description": "Valid delete returns 200 OK",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK on successful deletion",
+      "evidence_tier": "explicit",
+      "defect_type_if_violated": "Type3_RuntimeFailure",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+      "doc_version": "1.19.x"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_get_point_001",
+      "endpoint": "points+get",
+      "description": "Getting existing point returns 200 OK with point data",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with point if exists",
+      "evidence_tier": "explicit",
+      "defect_type_if_violated": "Type3_RuntimeFailure",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/get-point",
+      "doc_version": "1.19.x"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_scroll_points_001",
+      "endpoint": "points+scroll",
+      "description": "Valid scroll returns 200 OK with batch of points",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with array of points",
+      "evidence_tier": "explicit",
+      "defect_type_if_violated": "Type3_RuntimeFailure",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/scroll-points",
+      "doc_version": "1.19.x"
+    }
+  ],
+  "behavioral_contracts": [
+    {
+      "contract_id": "qdrant_behavioral_create_visibility_001",
+      "description": "Created collection should be immediately visible in get collection and list collections",
+      "scenario": "Create collection -> get collection -> collection exists in list",
+      "expected_behavior": "get collection returns 200 OK, list collections includes new collection",
+      "related_endpoints": [
+        "collections+create",
+        "collections+get",
+        "collections+list"
+      ],
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection"
+    },
+    {
+      "contract_id": "qdrant_behavioral_delete_invisibility_001",
+      "description": "Deleted collection should not be visible in get collection and list collections",
+      "scenario": "Delete collection -> get collection -> collection not in list",
+      "expected_behavior": "get collection returns 404, list collections does not include deleted collection",
+      "related_endpoints": [
+        "collections+delete",
+        "collections+get",
+        "collections+list"
+      ],
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection"
+    },
+    {
+      "contract_id": "qdrant_behavioral_upsert_visibility_001",
+      "description": "Upserted points should be immediately visible in search and get operations",
+      "scenario": "Upsert points -> search -> get point",
+      "expected_behavior": "search returns upserted points, get point returns upserted data",
+      "related_endpoints": [
+        "points+upsert",
+        "points+search",
+        "points+get"
+      ],
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points"
+    },
+    {
+      "contract_id": "qdrant_behavioral_delete_visibility_001",
+      "description": "Deleted points should not be visible in search and get operations",
+      "scenario": "Delete points -> search -> get point",
+      "expected_behavior": "search does not return deleted points, get point returns 404",
+      "related_endpoints": [
+        "points+delete",
+        "points+search",
+        "points+get"
+      ],
+      "source_url": "https://api.qdrant.tech/api-reference/points/delete-points"
+    }
+  ],
+  "state_invariants": [
+    {
+      "invariant_id": "qdrant_invariant_create_query_001",
+      "description": "After creating a collection, it should be queryable via get collection",
+      "assertion": "after create(collection), get(collection) returns 200 OK",
+      "scope": "per_collection",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection"
+    },
+    {
+      "invariant_id": "qdrant_invariant_delete_query_001",
+      "description": "After deleting a collection, it should not exist",
+      "assertion": "after delete(collection), get(collection) returns 404",
+      "scope": "per_collection",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection"
+    },
+    {
+      "invariant_id": "qdrant_invariant_count_consistency_001",
+      "description": "Inserting N points should result in count = N",
+      "assertion": "after upsert(N points), scroll returns N points",
+      "scope": "per_collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points"
+    },
+    {
+      "invariant_id": "qdrant_invariant_search_visibility_001",
+      "description": "Upserted points should be visible in search results",
+      "assertion": "after upsert(points), search returns those points",
+      "scope": "per_collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points"
+    },
+    {
+      "invariant_id": "qdrant_invariant_delete_invisibility_001",
+      "description": "Deleted points should not be visible in search results",
+      "assertion": "after delete(points), search does not return those points",
+      "scope": "per_collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/delete-points"
+    }
+  ],
+  "data_types": [
+    {
+      "name": "DenseVector",
+      "description": "Fixed-dimension array of floating-point numbers for similarity search",
+      "fields": [
+        {
+          "name": "data",
+          "type": "array<float>",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "SparseVector",
+      "description": "Sparse representation with dimension-index to value mappings",
+      "fields": [
+        {
+          "name": "indices",
+          "type": "array<int>",
+          "required": true
+        },
+        {
+          "name": "values",
+          "type": "array<float>",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "Point",
+      "description": "Single data point with ID, vector, and optional payload",
+      "fields": [
+        {
+          "name": "id",
+          "type": "integer|string",
+          "required": true
+        },
+        {
+          "name": "vector",
+          "type": "array<float>|object",
+          "required": true
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "Payload",
+      "description": "Key-value metadata associated with points",
+      "fields": [
+        {
+          "name": "key",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "value",
+          "type": "any",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "DistanceMetric",
+      "description": "Distance metric for vector similarity",
+      "fields": [
+        {
+          "name": "type",
+          "type": "enum",
+          "required": true,
+          "enum_values": [
+            "Cosine",
+            "Euclidean",
+            "Dot",
+            "Manhattan"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HNSWConfig",
+      "description": "HNSW index parameters for performance tuning",
+      "fields": [
+        {
+          "name": "m",
+          "type": "integer",
+          "required": false,
+          "default_value": 16
+        },
+        {
+          "name": "ef_construct",
+          "type": "integer",
+          "required": false,
+          "default_value": 100
+        }
+      ]
+    }
+  ],
+  "_passport": {
+    "schema_version": "2.0",
+    "contract_hash": "sha256:9cf0d540883851226a71c48b7b90325146d8223d47c66311215ff857bdcb0acb",
+    "contract_hash_algorithm": "sha256",
+    "source": {
+      "doc_urls": [
+        "https://api.qdrant.tech/api-reference",
+        "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "https://api.qdrant.tech/api-reference/collections/get-collection",
+        "https://api.qdrant.tech/api-reference/collections/update-collection",
+        "https://api.qdrant.tech/api-reference/collections/delete-collection",
+        "https://api.qdrant.tech/api-reference/collections/get-collections",
+        "https://api.qdrant.tech/api-reference/collections/collection-exists",
+        "https://api.qdrant.tech/api-reference/points/upsert-points",
+        "https://api.qdrant.tech/api-reference/points/search-points",
+        "https://api.qdrant.tech/api-reference/points/delete-points",
+        "https://api.qdrant.tech/api-reference/points/get-point",
+        "https://api.qdrant.tech/api-reference/points/scroll-points",
+        "https://qdrant.tech/documentation/concepts/collections/",
+        "https://qdrant.tech/documentation/concepts/vectors/",
+        "https://qdrant.tech/documentation/concepts/payload/",
+        "https://qdrant.tech/documentation/concepts/indexing/",
+        "https://qdrant.tech/documentation/concepts/search/"
+      ],
+      "doc_version": "1.19.x",
+      "crawl_method": "webfetch",
+      "crawled_at": "2026-08-20T05:00:00Z"
+    },
+    "generation": {
+      "knowledge_extractor_agent": "testvdb:knowledge-extractor",
+      "contract_formalizer_agent": "testvdb:contract-formalizer",
+      "generated_at": "2026-08-20T06:14:40Z",
+      "cache_ttl_hours": 168
+    },
+    "integrity": {
+      "verified": true,
+      "verified_at": "2026-08-20T06:14:40Z",
+      "core_crud_coverage_pct": 100.0,
+      "endpoint_count": 10,
+      "constraint_count": 12
+    }
+  }
+}

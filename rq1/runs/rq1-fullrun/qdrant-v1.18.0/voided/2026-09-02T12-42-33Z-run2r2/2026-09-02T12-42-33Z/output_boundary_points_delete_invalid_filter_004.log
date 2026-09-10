@@ -1,0 +1,16 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+seed baseline: exact count == 9 (3 red + 6 blue)
+
+G guard valid filter delete must[grp=red] -> status=200
+raw: {"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.003562438}
+G: 200, count == 6 == 6 (guard baseline set)
+
+T1 must as STRING -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PointsSelector"},"time":0.0}
+T1 must as STRING: 400 clean rejection; diagnostics name the filter construct
+
+T2 must_not as OBJECT -> status=200
+raw: {"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.00620807}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — T2 must_not as OBJECT: invalid filter ACCEPTED with status 200 (promise: 400); blast radius: DESTRUCTIVE: count moved 6 -> 0: {"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.00620807}
+addendum: the acceptance was destructive — Type4_StateLogicViolation (invalid input mutated state)

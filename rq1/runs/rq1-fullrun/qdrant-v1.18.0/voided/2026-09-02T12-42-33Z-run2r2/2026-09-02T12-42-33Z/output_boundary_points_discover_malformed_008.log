@@ -1,0 +1,19 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+G guard well-formed raw body -> status=200
+raw: {"result":[{"id":3,"version":1,"score":0.85549134},{"id":2,"version":1,"score":0.85465115},{"id":1,"version":1,"score":0.85380113}],"status":"ok","time":0.000695391}
+G: 200 on the raw data= channel, result len=3 (channel proven)
+
+M1 truncated JSON -> status=400
+raw: {"status":{"error":"Format error in JSON body: EOF while parsing a list at line 1 column 71"},"time":0.0}
+M1 truncated JSON: 400 clean parser rejection
+
+M2 NUL byte in string value -> status=400
+raw: {"status":{"error":"Format error in JSON body: control character (\\u0000-\\u001F) found while parsing a string at line 1 column 26"},"time":0.0}
+M2 NUL byte in string value: 400 clean parser rejection
+
+M3 NaN token in sparse values -> status=400
+raw: {"status":{"error":"Format error in JSON body: expected value at line 1 column 69"},"time":0.0}
+M3 NaN token in sparse values: 400 clean parser rejection
+VERDICT: NO_DEFECT

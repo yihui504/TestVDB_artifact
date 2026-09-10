@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_collection_update_004",
+  "endpoint": "cluster+collection+update",
+  "param": "to_peer_id",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "type_coercion",
+  "oracle": {
+    "statement": "each malformed probe (to_peer_id as string/float/boolean, shard_id as string, operation as MoveShard/move-shard/teleport_shard, plus int baseline) returns 400/422 via expect_rejected - any 2xx is Type1_IllegalSuccess (silent type coercion / undocumented enum alias accepted); 5xx with /healthz alive is Type3",
+    "source": "docstring"
+  }
+}

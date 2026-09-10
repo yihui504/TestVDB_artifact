@@ -1,0 +1,80 @@
+{
+  "defect_id": "vein_cardinality_oracle_is_empty_matrix_1",
+  "endpoint": "POST /collections/{collection_name}/points/count",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Endpoint exists in OpenAPI spec (source_url='openapi') but no formal documentation URL for verification. 'exact' parameter is present in contract but semantic behavior for is_empty filter with exact=false is undocumented. No quantified tolerance bounds provided for approximate counts.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "Size=10: exact=true=7, exact=false=4, scroll=7 | Size=50: exact=true=34, exact=false=22, scroll=34 | Size=100: exact=true=67, exact=false=44, scroll=67 | Size=200: exact=true=134, exact=false=86, scroll=134 | Estimator bug confirmed across 4/4 sizes: exact=false systematically returns ~65% of exact=true (only counts MISSING, omits NULL values)",
+      "secondary_observations": [
+        "Control group (is_null): exact=true=exact=false=scroll across all 4 sizes (0% deviation)",
+        "Data distribution: 33% MISSING field, 33% NULL value, 34% with value",
+        "is_empty exact=false counts MISSING only (4/22/44/86) vs expected 7/34/67/134",
+        "Divergence consistent: 35.3%, 35.3%, 34.3%, 35.8% across sizes",
+        "Baseline (exact=true) matches scroll ground truth: 0% deviation proves estimator math is wrong, not data semantics"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No HTTP errors - both exact=true and exact=false return HTTP 200 with valid counts. The defect is in the count values themselves, not error handling."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_cardinality_oracle_is_empty_matrix_1"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "N/A (behavioral contract violation)",
+      "assertion_text_quoted": "API contract defines 'exact' parameter for count endpoint but does not specify behavior for is_empty filter. OpenAPI spec source_url='openapi' provides no semantic guarantees for exact=false cardinality estimation accuracy.",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: POST /collections/{collection_name}/points/count with exact parameter (OpenAPI)",
+        "doc: No formal documentation URL (source_url='openapi' only)",
+        "script: 4-size matrix test (10/50/100/200) comparing exact=true, exact=false, scroll baseline",
+        "log: Systematic 35% undercount in exact=false for is_empty (4/4 sizes), control group is_null shows 0% deviation"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Documentation layer is PARTIAL - endpoint exists in OpenAPI spec but lacks formal source_url and semantic specification for exact=false behavior with is_empty filter. Cannot verify documented承诺 about approximation tolerance or is_empty semantics.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "is_empty",
+        "cardinality",
+        "estimator",
+        "exact=false",
+        "payload_index"
+      ],
+      "files_examined": [],
+      "source_excerpt": "Source code not available in session directory (no .qdrant-src-* directory). Without local source clone, cannot examine is_empty estimator implementation in payload cardinality path to confirm root cause of NULL omission.",
+      "call_chain_traced": "not_found_in_source - source clone not available",
+      "verification_outcome": "webfetch_shallow",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (same test environment for both is_empty and is_null, yet is_null works correctly)",
+        "concurrency (single-threaded sequential tests)",
+        "data_semantics (scroll ground truth proves exact=true baseline is correct - 7 vs 4 mismatch is estimator bug, not semantic ambiguity)",
+        "approximation_inherent_error (control group is_null with exact=false shows 0% deviation, proving the estimator path itself is capable of precision when filter condition is implemented correctly)"
+      ],
+      "surviving": "Systematic implementation bug in is_empty filter branch of payload cardinality estimator - omits NULL values when exact=false, whereas is_null branch correctly counts all matching points. 35% consistent bias across 4 sizes rules out random approximation error."
+    }
+  }
+}

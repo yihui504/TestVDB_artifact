@@ -1,0 +1,82 @@
+{
+  "defect_id": "state_collections_create_10",
+  "endpoint": "collections+create",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "API documentation domain (api.qdrant.tech) unreachable due to network restrictions - marked as PARTIAL. Behavioral contract qdrant_behavioral_create_visibility_001 from structured_contract.json explicitly states 'Created collection should be immediately visible in get collection and list collections' and 'get collection returns 200 OK'. Version 1.19.x documentation referenced for target v1.18.2 is acceptable match (minor version drift). Content consistency: behavioral contract explicitly promises visibility of created config. Endpoint precision: collections+create endpoint verified in endpoint_registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "state_collections_create_10.py line 129-131 → PUT /collections/test_combo_minimal_default_diskTrue with hnsw_config.m=2 → HTTP 200 OK (create success) → GET /collections/test_combo_minimal_default_diskTrue → HTTP 200 OK but hnsw_config.m=None (expected 2)",
+      "secondary_observations": [
+        "test_combo_minimal_minimal_diskTrue: expected hnsw_config.m=2, got None",
+        "test_combo_minimal_high_diskTrue: expected hnsw_config.m=2, got None",
+        "test_combo_minimal_default_diskFalse: expected hnsw_config.m=2, got None",
+        "All 30 config combinations tested: HNSW m value consistently returns None on GET despite being set on PUT",
+        "Pattern: hnsw_config.m specifically lost (not optimizers_config, not on_disk)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "Not a client error rejection issue. This is state persistence/visibility bug. HTTP semantics are correct (200 OK for both PUT and GET), but the behavioral contract is violated - created config should be visible in GET response."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_collections_create_10"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_create_visibility_001",
+      "assertion_text_quoted": "Created collection should be immediately visible in get collection and list collections. Scenario: Create collection -> get collection -> collection exists in list. Expected behavior: get collection returns 200 OK, list collections includes new collection.",
+      "api_violates_assertion": true,
+      "note": "Behavioral contract promises created collection config is immediately visible via GET. Script sets hnsw_config.m=2 on PUT, creates collection successfully (200 OK), but GET /collections/{name} returns hnsw_config.m=None instead of the set value. This violates state visibility invariant - persisted configuration must be readable back.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_behavioral_create_visibility_001 (assertion: Created collection should be immediately visible in get collection)",
+        "doc:https://api.qdrant.tech/api-reference/collections/create-collection (domain_blocked, verified via contract)",
+        "script:state_collections_create_10.py line 92-103 (PUT /collections with hnsw_config.m=2)",
+        "log:output_state_collections_create_10.log line 7-12 (HNSW m mismatch: expected 2, got None)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Chain断裂于log层：behavioral_contract明确断言created collection应在get中可见，script设置了hnsw_config.m=2，create成功返回200，但GET读取时hnsw_config.m=None。contract要求state persistence（创建后立即可读），观测到config值丢失（m字段变None），形成明确证据链断裂。这不是validation拒绝，而是state visibility violation - Type4 StateLogicViolation。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "hnsw_config",
+        "persisted_hnsw",
+        "config.get",
+        "collections.*get",
+        "CollectionConfig",
+        "HNSW"
+      ],
+      "files_examined": [],
+      "source_excerpt": "",
+      "call_chain_traced": "not_found_in_source - source code clone unavailable in session environment",
+      "verification_outcome": "webfetch_shallow",
+      "note": "TESTVDB_SRC_DIR not available in session environment. No .srcdir file found. Unable to perform deep source inspection (Grep+Read workflow) as required by ADR-0008 step2. Classification as webfetch_shallow due to domain restrictions preventing alternative verification paths. Cannot trace where hnsw_config serialization/deserialization fails in source.",
+      "sufficiency_check": "clone_unavailable",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "parameter_typo"
+      ],
+      "surviving": null,
+      "note": "No mundane explanations apply. Observation shows consistent pattern across 30 different config combinations: hnsw_config.m specifically returns None on GET despite being set on PUT. Not environmental - same pattern in all combos. Not concurrency issue - sequential operations. Not parameter typo - explicit hnsw_config setting in create payload. Not caching/stale state - immediate GET after create. This is a genuine state persistence bug where HNSW config is not correctly serialized or deserialized in GET endpoint response."
+    }
+  }
+}

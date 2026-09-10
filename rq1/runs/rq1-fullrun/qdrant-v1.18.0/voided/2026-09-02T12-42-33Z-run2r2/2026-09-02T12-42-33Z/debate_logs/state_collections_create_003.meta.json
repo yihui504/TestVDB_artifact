@@ -1,0 +1,12 @@
+{
+ "defect_id": "state_collections_create_003",
+ "endpoint": "collections+create",
+ "param": "collection_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "upsert_idempotence",
+ "oracle": {
+  "statement": "duplicate create on an existing name -> 409 and post-duplicate readback keeps vectors.size==4/Cosine; 2xx overwrite = Type4, 2xx no-op = Type1; drop+recreate same name -> 200 with new config",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

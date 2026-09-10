@@ -1,0 +1,18 @@
+{
+  "target": "weaviate", "version": "v1.38.0",
+  "session_dir": "<HOME>\.claude\plugins\cache\testvdb\testvdb\2.3.0\results\weaviate\v1.38.0\2026-08-21T10-07-39Z",
+  "top_endpoints": ["POST /v1/schema", "PUT /v1/schema/{className}", "GET /v1/schema/{className}"],
+  "candidates_count": 5, "skipped_count": 0,
+  "candidates": [
+    {"id":"vein_dynamic_ef_minmax_1","endpoint":"POST/PUT /v1/schema","condition_type":"range_filter","finding":"DEFECT_FOUND","http_status":200,"detail":"dynamicEfMin>dynamicEfMax and negatives accepted+persisted on create and update paths","by_design_match":false,"script_path":"vein_scripts/vein_dynamic_ef_minmax_1.py"},
+    {"id":"vein_flat_search_cutoff_2","endpoint":"POST /v1/schema","condition_type":"range_filter","finding":"DEFECT_FOUND","http_status":200,"detail":"flatSearchCutoff=-50000 persisted; ef=10<dynamicEfMin=500 no cross-check","by_design_match":false,"script_path":"vein_scripts/vein_flat_search_cutoff_2.py"},
+    {"id":"vein_hnsw_maxconn_efc_5","endpoint":"POST /v1/schema","condition_type":"range_filter","finding":"DEFECT_FOUND","http_status":200,"detail":"maxConnections=1000>efConstruction=10 accepted while maxConnections=1 is 422-rejected (validators exist, cross-field gap)","by_design_match":false,"script_path":"vein_scripts/vein_hnsw_maxconn_efc_5.py"},
+    {"id":"vein_replication_async_silent_flip_3","endpoint":"GET /v1/schema/{className}","condition_type":"semantic_drift","finding":"DEFECT_FOUND","http_status":200,"detail":"asyncEnabled=true silently read back false; root cause wrappers.go:40 AsyncEnabled=factor>1&&!globallyDisabled","by_design_match":false,"script_path":"vein_scripts/vein_replication_async_silent_flip_3.py"},
+    {"id":"vein_phantom_class_failed_create_4","endpoint":"POST /v1/schema","condition_type":"state_inconsistency","finding":"DEFECT_FOUND","http_status":422,"detail":"422 create (shardingConfig desiredCount=0) leaves phantom class; writes into it return 500","by_design_match":false,"script_path":"vein_scripts/vein_phantom_class_failed_create_4.py"}
+  ],
+  "by_design_excluded": [
+    {"endpoint":"POST /v1/schema","detail":"invertedIndexConfig fully validated: bm25 b/k1 range 422, negative cleanupIntervalSeconds 422, empty/whitespace stopwords 422, unknown preset 422 — no vein"},
+    {"endpoint":"POST /v1/objects","detail":"tenant on MT-disabled class rejected with clear 422 — correct"},
+    {"endpoint":"POST /v1/schema","detail":"replication factor=5 rejected (not enough nodes) with clear 422 — correct; factor=0 coerced to 1 (silent but arguably defaulting)"}
+  ]
+}

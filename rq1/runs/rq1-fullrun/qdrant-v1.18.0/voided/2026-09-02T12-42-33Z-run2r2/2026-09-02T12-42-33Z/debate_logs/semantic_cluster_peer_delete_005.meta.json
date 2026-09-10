@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_peer_delete_005",
+  "endpoint": "cluster+peer+delete",
+  "param": "force",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "behavioral_contract",
+  "oracle": {
+    "statement": "ghost removal (no force) -> 4xx guard, only-peer removal without force -> 4xx (safety check), ghost removal with force=true -> still 4xx (existence is not bypassed by force); any 2xx on these legs = Type1_IllegalSuccess, 5xx with /healthz alive = Type3; after all legs /healthz=200, GET /cluster state envelope (time excluded) unchanged, witness collection describable, its cluster peer_id unchanged - drift = Type4_StateLogicViolation (constraint qdrant_state_cluster_peer_delete_001)",
+    "source": "docstring"
+  }
+}

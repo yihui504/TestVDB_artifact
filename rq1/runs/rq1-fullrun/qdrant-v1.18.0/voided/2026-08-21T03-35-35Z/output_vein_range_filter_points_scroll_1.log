@@ -1,0 +1,65 @@
+[vein_range_filter_points_scroll_1] Testing range_filter on POST /collections/{c}/points/scroll
+DB URL: http://localhost:6333
+Collection: vein_range_filter_scroll_test_1
+
+[Test 1] Valid limit=10
+  Status: 200
+  Points returned: 10
+  [PASS] Valid limit=10 accepted, returned 10 points
+
+[Test 2] Limit=0 (boundary)
+  Status: 422
+  Points returned: 0
+  [REJECTED] limit=0 rejected with 422
+
+[Test 3] Limit=-1 (negative)
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 13"
+  },
+  "time": 0.0
+}
+  [EXPECTED] limit=-1 rejected with 400
+
+[Test 4] Limit=999999999 (extreme)
+  Status: 200
+  Points returned: 100
+  [ACCEPTED] limit=999999999 capped at collection size (100 points)
+
+[Test 5] Limit=10.5 (fractional)
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: invalid type: floating point `10.5`, expected usize at line 1 column 15"
+  },
+  "time": 0.0
+}
+  [EXPECTED] Fractional limit rejected with 400
+
+[Test 6] Offset=50 (valid)
+  Status: 200
+  Points returned: 10
+  [PASS] offset=50 accepted, returned 10 points
+
+[Test 7] Offset=-1 (negative)
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: value -1 is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 27"
+  },
+  "time": 0.0
+}
+  [EXPECTED] offset=-1 rejected with 400
+
+[Test 8] Offset=999999 (beyond collection)
+  Status: 200
+  Points returned: 0
+  [PASS] offset beyond size returns 0 points (correct)
+
+============================================================
+SUMMARY
+============================================================
+No defects found
+
+VERDICT: NO_DEFECT

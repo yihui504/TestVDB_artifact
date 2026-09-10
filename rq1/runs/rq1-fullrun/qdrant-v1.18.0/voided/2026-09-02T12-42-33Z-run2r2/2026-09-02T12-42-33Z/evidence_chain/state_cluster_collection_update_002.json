@@ -1,0 +1,97 @@
+{
+  "defect_id": "state_cluster_collection_update_002",
+  "endpoint": "cluster+collection+update (POST /collections/{collection_name}/cluster) dispatched; verdict-driving observation is on cluster+collection+info (GET /collections/{collection_name}/cluster)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS: no doc_preflight.json sidecar exists in the contract dir (results/qdrant/v1.18.0/); WebFetch to api.qdrant.tech was domain-blocked, but both source_urls were fetched live via an alternate web reader — v1.18.x versioned pages confirmed (collection-cluster-info 'Retrieve cluster details', update-collection-cluster 'Update cluster setup'). Version PASS: both pages carry v-1-18-x routing matching target v1.18.0. Content PARTIAL: the verdict-driving constraint qdrant_type_cluster_collection_info_001 asserts 'response contains ... resharding_operations', but the v-1-18-x page shows that field only in the schema property list and the 200 example (Response prose says only 'result object Optional'), and the in-repo artifact of the same versioned docs (docs/redoc/v1.18.x/openapi.json in the v1.18.0 clone) lists resharding_operations as nullable: true and NOT in required (required = [local_shards, peer_id, remote_shards, shard_count, shard_transfers] — 5 fields only), so the contract's mandatory 'contains' reading over-claims the documentation; additionally the script-declared behavioral constraint's '400 on an invalid peer/shard; 404 for a missing collection' specificity does not appear on the rendered v1.18.x update page (only the 200 response is documented; the bundled OpenAPI has only generic default/4XX 'error' entries). Endpoint precision PASS: /collections/{collection_name}/cluster GET and POST are the correct endpoints present in the spec paths.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "DEFECT: (baseline) 200 but CollectionClusterInfo fields missing: ['resharding_operations'] — Type4_StateLogicViolation — raw={\"result\":{\"peer_id\":285485119185529,\"shard_count\":1,\"local_shards\":[{\"shard_id\":0,\"points_count\":0,\"state\":\"Active\"}],\"remote_shards\":[],\"shard_transfers\":[]},\"status\":\"ok\",\"time\":0.000452379}",
+      "secondary_observations": [
+        "[ids] cluster_status unparseable — fallback local=987655 ghost=987654 (script fabricated peer ids; real peer_id is 285485119185529 per reconcile response — battery peer values were bogus, though moot because the mode gate rejected before peer validation)",
+        "[op move_shard:ghost_to_peer] status=400 raw={\"status\":{\"error\":\"Bad request: Distributed mode disabled\"},\"time\":7.78e-6} (rest: the dispatched invalid-peer/shard battery leg produced ZERO violations — every op rejected 4xx)",
+        "[op move_shard:ghost_shard] status=422 raw={\"status\":{\"error\":\"Validation error in JSON body: [move_shard.to_peer_id: cannot transfer shard to itself, \\\"to_peer_id\\\" must be different than 987655 in \\\"from_peer_id\\\"]\"},\"time\":0.0} (request-shape validation fired before the mode gate)",
+        "OBSERVATION (op move_shard:ghost_shard): rejected with 422 (documented code is 400) — clear rejection, not judged",
+        "[op restart_transfer:unknown] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations\"},\"time\":0.0} (same for start_resharding:ghost_peer — body did not deserialize)",
+        "[reconcile] status=200 ... \"shard_transfers\":[] ... shard_count unchanged — no state pollution; the negative-observability leg (qdrant_state_cluster_collection_update_001) is CLEAN",
+        "comparative face note (source-derived; live probe face_unavailable — runtime is REST-only): rest face OMITS the resharding_operations JSON key when idle (Option None + skip_serializing_if), while the grpc face converts the same None to an always-present EMPTY repeated field (lib/collection/src/operations/conversions.rs:1559-1563 '.flatten().collect()')"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "Primary observation is a 2xx response-shape issue (200 missing a field), not a client-decidable error masked as success; the battery's invalid inputs were honestly rejected with 400/422 (proper 4xx), never 2xx."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_cluster_collection_update_002 (this candidate)",
+        "same missing-resharding_operations observation on the same endpoint family also flagged by: state_cluster_collection_info_001, state_cluster_collection_info_002, state_cluster_collection_info_003, state_cluster_collection_info_004, semantic_cluster_collection_info_002"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_cluster_collection_info_001",
+      "assertion_text_quoted": "response contains peer_id, shard_count (minimum 0), local_shards, remote_shards, shard_transfers, resharding_operations",
+      "api_violates_assertion": true,
+      "note": "api_violates_assertion=true is the LITERAL reading: the observed 200 response body does not contain resharding_operations, exactly what the assertion says the response contains. However the mandatory reading is not doc-grounded (v1.18.x OpenAPI: field optional/nullable, not in required) and the omission is explicitly by-design in source (TODO comment) — the auditor must weigh whether the contract's over-tight reading voids the violation. The dispatch's constraint_id was EMPTY in candidates.jsonl and the script header declared qdrant_behavioral_cluster_collection_update_001 ('valid cluster operation returns HTTP 200 (accepted); invalid peer/shard returns 400; missing collection returns 404') and qdrant_state_cluster_collection_update_001 ('shard move/replicate operations return 200 on acceptance; completion is asynchronous and observable via cluster info (shard_transfers)') — NEITHER of those declared assertions was violated by any observation in this log (all battery ops were properly rejected 4xx; reconcile showed no shard_transfers pollution).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: candidates.jsonl constraint_id is EMPTY; script header declares qdrant_behavioral_cluster_collection_update_001 + qdrant_state_cluster_collection_update_001; the DEFECT that fired grounds instead in qdrant_type_cluster_collection_info_001 (field-presence face of cluster+collection+info) — constraint substitution",
+        "doc: v-1-18-x collection-cluster-info page reachable and shows resharding_operations in schema+200 example, but the same-version OpenAPI artifact (docs/redoc/v1.18.x/openapi.json) marks it optional/nullable and required lists only 5 fields — the contract's mandatory 'contains' reading over-claims the doc",
+        "script: raw requests genuinely sent as described — GET /collections/{name}/cluster baseline (log line [baseline]), 8 POST cluster ops ([op ...]), GET reconcile ([reconcile]); runtime request/response lines intact",
+        "log: DEFECT line faithfully matches the raw response (200, no resharding_operations key) — observation honest, no fabrication; but the verdict is driven by the baseline shape check, not by the dispatched POST invalid peer/shard battery (which produced zero violations)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The candidate's constraint grounding is inconsistent: the dispatch carries constraint_id=\"\"; the script's declared constraints (behavioral+state faces of cluster+collection+update) show NO violation in the log; the verdict-driving check belongs to a different constraint (qdrant_type_cluster_collection_info_001) whose doc-requiredness is itself only PARTIAL (field optional/nullable in the v1.18.x spec). Secondary weakness at the doc link: the contract's 'response contains <all six fields>' is an over-tight paraphrase of a spec that requires only five.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "resharding_operations",
+        "CollectionClusterInfo",
+        "Distributed mode disabled",
+        "cannot transfer shard to itself",
+        "get_resharding_operations_info",
+        "skip_serializing_if"
+      ],
+      "files_examined": [
+        "docs/redoc/v1.18.x/openapi.json (schema required list)",
+        "lib/api/src/grpc/proto/collections.proto:958-967 (CollectionClusterInfo field 6)",
+        "lib/api/src/grpc/qdrant.rs:1898-1905 (prost struct)",
+        "lib/collection/src/operations/types.rs:326-343 (REST DTO with skip + TODO)",
+        "lib/collection/src/collection/collection_ops.rs:398-469 (cluster_info construction)",
+        "lib/collection/src/shards/shard_holder/mod.rs:534-546 (get_resharding_operations_info)",
+        "src/common/collections.rs:233-264 (do_get_collection_cluster / do_update_collection_cluster mode gate)",
+        "src/actix/api/collections_api.rs:198-234 (GET/POST handlers)",
+        "lib/common/common/src/validation.rs:200 (self-transfer validator)",
+        "lib/collection/src/operations/conversions.rs:1539-1564 (REST->gRPC conversion)"
+      ],
+      "source_excerpt": "[1] lib/collection/src/operations/types.rs:326-343 — /// Current clustering distribution for the collection\n#[derive(Debug, Serialize, JsonSchema)]\npub struct CollectionClusterInfo {\n    /// ID of this peer\n    pub peer_id: PeerId,\n    /// Total number of shards\n    pub shard_count: usize,\n    /// Local shards\n    pub local_shards: Vec<LocalShardInfo>,\n    /// Remote shards\n    pub remote_shards: Vec<RemoteShardInfo>,\n    /// Shard transfers\n    pub shard_transfers: Vec<ShardTransferInfo>,\n    /// Resharding operations\n    // TODO(resharding): remove this skip when releasing resharding\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub resharding_operations: Option<Vec<ReshardingInfo>>,\n}\n\n[2] lib/collection/src/shards/shard_holder/mod.rs:534-541 — pub fn get_resharding_operations_info(&self) -> Option<Vec<ReshardingInfo>> {\n    let mut resharding_operations = vec![];\n    // We eventually expect to extend this to multiple concurrent operations, which is why\n    // we're using a list here\n    let Some(resharding_state) = &*self.resharding_state.read() else {\n        return None;\n    };\n\n[3] src/common/collections.rs:260-264 (inside do_update_collection_cluster) — if dispatcher.consensus_state().is_none() {\n    return Err(StorageError::bad_request(\n        \"Distributed mode disabled\".to_string(),\n    ));\n}\n\n[4] lib/common/common/src/validation.rs:200 — &format!(\"cannot transfer shard to itself, \\\"to_peer_id\\\" must be different than {from_peer_id} in \\\"from_peer_id\\\"\"),",
+      "call_chain_traced": "GET face: actix get_cluster_info (src/actix/api/collections_api.rs:198) -> do_get_collection_cluster (src/common/collections.rs:233) -> Collection::cluster_info (lib/collection/src/collection/collection_ops.rs:398) -> shards_holder.get_resharding_operations_info (shard_holder/mod.rs:534) returns None when no active resharding -> serde skip_serializing_if=\"Option::is_none\" (types.rs:341) omits the JSON key -> observed 200 body without resharding_operations. The field IS emitted (as a list) whenever a resharding operation is actually active. POST face: actix update_collection_cluster (collections_api.rs:215) -> request-shape validation first (lib/common/common/src/validation.rs:200 self-transfer check produced the observed 422) -> do_update_collection_cluster (src/common/collections.rs:260): single-node deployment has consensus_state()==None -> 400 'Bad request: Distributed mode disabled' — the exact source of the battery's 400s; peer/shard validation further down was never reached in this deployment. gRPC face difference: lib/collection/src/operations/conversions.rs:1559-1563 converts the same None into an empty repeated field, so the grpc face always 'has' the field while the REST face omits the key.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service healthy throughout: 200s and clean 4xx rejections; phenomenon deterministic on every idle-collection GET, reproduced by 6 scripts)",
+        "concurrency (baseline observation taken before any mutation; sequential script)",
+        "cache delay (field absence is a deterministic serde skip, not eventual consistency)",
+        "request-parameter typo (GET baseline had no parameters)"
+      ],
+      "surviving": "by-design omission: source explicitly declares the skip (types.rs:340 'TODO(resharding): remove this skip when releasing resharding' + Option<Vec<ReshardingInfo>> + skip_serializing_if), and the same-version OpenAPI does not require the field; what genuinely survives is (a) the script-side expectation overreach — REQUIRED_FIELDS mandated an optional/nullable field — and (b) a doc-example inaccuracy: the v-1-18-x 200 example shows resharding_operations populated while real idle responses omit the key. Also noted but non-outcome-affecting: discover_ids fell back to fabricated peer ids 987655/987654 after failing to parse cluster_status."
+    }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "defect_id": "semantic_cluster_collection_info_002",
+  "endpoint": "cluster+collection+info",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: WebFetch of api.qdrant.tech was domain-blocked by the harness, but the alternate web reader retrieved the full live page (canonical URL matches, page build 2026-08-05) -> PASS. version: page is the versioned v-1-18-x api-reference with v1.18.x selector; target v1.18.0 -> PASS (major.minor). content: the page documents all six CollectionClusterInfo members and its 200 example body includes resharding_operations, BUT the normative OpenAPI spec bundled in the target repo (docs/redoc/v1.18.x/openapi.json) marks resharding_operations as nullable:true and keeps it OUT of required[] (required = [local_shards, peer_id, remote_shards, shard_count, shard_transfers]); the doc therefore does not unconditionally promise the member's presence, and the constraint's 'response contains ... resharding_operations' phrasing over-claims relative to the documented schema -> PARTIAL. endpoint: endpoint_registry carries path 'cluster+collection+info' with the same source_url and doc_quote 'Returns 200 with CollectionClusterInfo; 404 for an unknown collection.'; the documented path GET /collections/:collection_name/cluster matches the actix route registered at src/actix/api/collections_api.rs:198 -> PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "cluster info of 's4ci2_1788369999_col': status=200 raw={\"result\":{\"peer_id\":285485119185529,\"shard_count\":1,\"local_shards\":[{\"shard_id\":0,\"points_count\":0,\"state\":\"Active\"}],\"remote_shards\":[],\"shard_transfers\":[]},\"status\":\"ok\",\"time\":0.000344785}",
+      "secondary_observations": [
+        "observed topology: peer_id=285485119185529 shard_count=1 local=1 remote=0 transfers=0 local_shard_ids=[0]  [the five core members are present with documented shapes; only resharding_operations is absent]",
+        "state_cluster_collection_info_001.log:8: DEFECT: (B) 200 but documented fields missing from CollectionClusterInfo: ['resharding_operations'] — Type4_StateLogicViolation",
+        "state_cluster_collection_info_004.log:7: DEFECT: 2 x degraded shape on cluster-info 200s during writes — Type4_StateLogicViolation — samples: [\"200 missing ['resharding_operations']\", \"200 missing ['resharding_operations']\"]",
+        "semantic_cluster_collection_info_005.log: cluster info read#1: status=200 raw={\"result\":{\"peer_id\":285485119185529,\"shard_count\":1,\"local_shards\":[{\"shard_id\":0,\"points_count\":0,\"state\":\"Active\"}],\"remote_shards\":[],\"shard_transfers\":[]},\"status\":\"ok\",\"time\":0.000490153}  [same absent member observed under a NO_DEFECT verdict on a different constraint face - raw corroboration, no claim]",
+        "grpc(source-level static comparison, no live grpc client in sandbox): lib/collection/src/operations/conversions.rs:1559-1563 'resharding_operations: resharding_operations.into_iter().flatten().map(ReshardingInfo::into).collect()' - None flattens to empty; proto3 'repeated ReshardingInfo resharding_operations = 6' (lib/api/src/grpc/proto/collections.proto:964) is not serialized when empty -> the gRPC face also omits the member on idle; no face divergence between rest and grpc",
+        "live recheck by evidence-builder 2026-09-03: PUT /collections/s4ci2_livecheck_col -> {\"result\":true,\"status\":\"ok\"}; GET /collections/s4ci2_livecheck_col/cluster -> {\"result\":{\"peer_id\":285485119185529,\"shard_count\":1,\"local_shards\":[{\"shard_id\":0,\"points_count\":0,\"state\":\"Active\"}],\"remote_shards\":[],\"shard_transfers\":[]},\"status\":\"ok\",\"time\":0.000356363} - resharding_operations again absent on a fresh idle collection (same peer_id); collection deleted afterwards"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "the request was legal (existing collection, no malformed input); the finding is a documented response member omitted from a 200 payload, not a client-error disposition"
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_cluster_collection_info_002",
+        "state_cluster_collection_info_001",
+        "state_cluster_collection_info_002",
+        "state_cluster_collection_info_003",
+        "state_cluster_collection_info_004"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_cluster_collection_info_001",
+      "assertion_text_quoted": "response contains peer_id, shard_count (minimum 0), local_shards, remote_shards, shard_transfers, resharding_operations",
+      "api_violates_assertion": true,
+      "note": "violates=true is the literal reading: the observed 200 payload does not contain resharding_operations, so the assertion text as written is violated; however the doc's own normative schema marks that member nullable/not-required, i.e. the observed member sits outside the doc-guaranteed required set - the constraint-citation-is-stronger-than-the-doc branch of the self-check, left for the auditor to weigh",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: constraints.type_constraints[qdrant_type_cluster_collection_info_001] (endpoint cluster+collection+info, evidence_tier=explicit) asserts 'response contains peer_id, shard_count (minimum 0), local_shards, remote_shards, shard_transfers, resharding_operations', citing https://api.qdrant.tech/v-1-18-x/api-reference/distributed/collection-cluster-info",
+        "doc: page reachable and version-matched; it documents all six members and its 200 example includes resharding_operations, but the official OpenAPI schema (docs/redoc/v1.18.x/openapi.json in the target repo) lists resharding_operations as nullable:true and NOT in required[] - unconditional presence is the contract's reading, not the doc's normative claim",
+        "script: semantic_cluster_collection_info_002 creates collection s4ci2_1788369999_col (dim=4, Cosine) and GETs collection_cluster via runtime path_key (documented route GET /collections/{name}/cluster); oracle checks presence of exactly the six constraint members - faithful to the constraint text",
+        "log: VERDICT DEFECT_FOUND (Type4_StateLogicViolation); the raw 200 payload genuinely lacks resharding_operations - observation accurate, deterministic (5 scripts + live recheck)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "contract->doc link over-claims: the doc's normative schema does not guarantee the member (required[] = [local_shards, peer_id, remote_shards, shard_count, shard_transfers]; resharding_operations nullable:true), and the implementation matches the spec (serde skip_serializing_if on Option). The doc page's example body showing the field is illustrative, not a required-promise. The script and log links are internally consistent; the 'response contains' phrasing of the constraint is the strongest link in the chain and is not supported by the documentation it cites.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "resharding_operations",
+        "struct CollectionClusterInfo",
+        "get_resharding_operations_info",
+        "do_get_collection_cluster",
+        "CollectionClusterInfo"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/types.rs (lines 326-343, CollectionClusterInfo definition)",
+        "lib/collection/src/collection/collection_ops.rs (lines 398-469, cluster_info construction)",
+        "lib/collection/src/shards/shard_holder/mod.rs (lines 534-549, get_resharding_operations_info)",
+        "lib/collection/src/operations/conversions.rs (lines 1537-1566, gRPC conversion)",
+        "lib/api/src/grpc/proto/collections.proto (lines 954-966, CollectionClusterInfoResponse)",
+        "src/actix/api/collections_api.rs (lines 198-213, REST route)",
+        "src/common/collections.rs (lines 233-245, do_get_collection_cluster)",
+        "docs/redoc/v1.18.x/openapi.json (CollectionClusterInfo schema)"
+      ],
+      "source_excerpt": "lib/collection/src/operations/types.rs:326-343:\n/// Current clustering distribution for the collection\n#[derive(Debug, Serialize, JsonSchema)]\npub struct CollectionClusterInfo {\n    /// ID of this peer\n    pub peer_id: PeerId,\n    /// Total number of shards\n    pub shard_count: usize,\n    /// Local shards\n    pub local_shards: Vec<LocalShardInfo>,\n    /// Remote shards\n    pub remote_shards: Vec<RemoteShardInfo>,\n    /// Shard transfers\n    pub shard_transfers: Vec<ShardTransferInfo>,\n    /// Resharding operations\n    // TODO(resharding): remove this skip when releasing resharding\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub resharding_operations: Option<Vec<ReshardingInfo>>,\n}\n\nlib/collection/src/shards/shard_holder/mod.rs:534-541:\n    pub fn get_resharding_operations_info(&self) -> Option<Vec<ReshardingInfo>> {\n        let mut resharding_operations = vec![];\n\n        // We eventually expect to extend this to multiple concurrent operations, which is why\n        // we're using a list here\n        let Some(resharding_state) = &*self.resharding_state.read() else {\n            return None;\n        };\n\nlib/collection/src/collection/collection_ops.rs:452-468 (excerpt):\n        let resharding_operations = shards_holder.get_resharding_operations_info();\n        ...\n        let info = CollectionClusterInfo {\n            peer_id,\n            shard_count,\n            local_shards,\n            remote_shards,\n            shard_transfers,\n            resharding_operations,\n        };\n        Ok(info)\n\nsrc/actix/api/collections_api.rs:198-211 (excerpt):\n#[get(\"/collections/{collection_name}/cluster\")]\nasync fn get_cluster_info( ... ) -> impl Responder {\n    // No request to verify\n    let pass = new_unchecked_verification_pass();\n    helpers::time(do_get_collection_cluster(\n        dispatcher.toc(&auth, &pass), &auth, &collection.collection_name,\n    )).await\n}\n\ndocs/redoc/v1.18.x/openapi.json, CollectionClusterInfo (excerpt):\n\"required\": [\"local_shards\", \"peer_id\", \"remote_shards\", \"shard_count\", \"shard_transfers\"],\n\"resharding_operations\": { \"description\": \"Resharding operations\", \"type\": \"array\", \"items\": {\"$ref\": \"#/components/schemas/ReshardingInfo\"}, \"nullable\": true }",
+      "call_chain_traced": "REST: actix GET /collections/{collection_name}/cluster (src/actix/api/collections_api.rs:198 get_cluster_info) -> do_get_collection_cluster (src/common/collections.rs:233, access-checks then toc.get_collection) -> Collection::cluster_info (lib/collection/src/collection/collection_ops.rs:398) -> shards_holder.get_resharding_operations_info (lib/collection/src/shards/shard_holder/mod.rs:534) which returns None exactly when resharding_state is None (the idle case) -> CollectionClusterInfo { resharding_operations: None } (collection_ops.rs:460-467) -> serde #[serde(skip_serializing_if = \"Option::is_none\")] (types.rs:341) omits the member from the JSON payload. gRPC face: From<CollectionClusterInfo> for CollectionClusterInfoResponse (conversions.rs:1537) flattens None to an empty iterator; proto3 empty repeated field (collections.proto:964) is not serialized on the wire - both interface faces omit the member on idle, consistently.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "cache_delay",
+        "request_typo"
+      ],
+      "surviving": "by_design_in_source - the omission of resharding_operations on idle collections is explicitly declared in source: the maintainer comment '// TODO(resharding): remove this skip when releasing resharding' directly above #[serde(skip_serializing_if = \"Option::is_none\")] on the Option<Vec<ReshardingInfo>> field (types.rs:340-342), the None-on-idle producer (shard_holder/mod.rs:539-541), and the repo's own OpenAPI spec marking the member nullable/not-required; the raw observation (member absent from the 200 payload) is nonetheless genuine and deterministic"
+    }
+  }
+}

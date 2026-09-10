@@ -1,0 +1,251 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": 4,
+  "top_endpoints": [
+    "POST points+count",
+    "POST facet",
+    "POST points+query+groups"
+  ],
+  "richness_scores": {
+    "POST points+recommend+groups": 15.0,
+    "POST points+query": 14.5,
+    "POST points+query+groups": 14.5,
+    "POST points+recommend": 14.5,
+    "POST points+discover": 14.0,
+    "POST facet": 13.5,
+    "POST points+search": 12.5,
+    "POST points+search+groups": 12.5,
+    "POST points+count": 11.5,
+    "POST points+search+matrix+offsets": 11.5,
+    "POST points+search+matrix+pairs": 11.5,
+    "POST points+delete": 11.0,
+    "_note": "all 77 contract endpoints scored per contract filter/exact/optional/complexity (round 1); round 3 expanded families: query-api params, collections+create strict_mode_config, service endpoints",
+    "round4_expansion": "round-4 families scored: batch x5 (query/search/recommend/discover+batch, points+batch), vectors family (update/delete/named create+delete), PATCH collections+update, search+matrix x2, snapshots x13, concurrency; driven by threat_model top_attack_vectors + bug_shapes"
+  },
+  "shape_sources": {
+    "POST points+count": "bug_shapes cardinality_oracle (known_instance #10096 exact:false estimator divergence)",
+    "POST facet": "shape generalization: cardinality_oracle on aggregation endpoint",
+    "POST points+query+groups": "richness rank (est behavior absent, shape-adjacent)",
+    "round3_expansion": "bug_shapes numeric_boundary (limit/threshold/dim boundaries) + type_confusion (f64->f32 vector coercion) + resource_limit (strict-mode capacity guardrails) + concurrency_race (mutation-window burst probes, no repro)",
+    "round4_expansion": "threat_model top_attack_vectors (still_vulnerable set: 9045/9420/9419/9416/9417/9369/9049) + bug_shapes numeric_boundary/type_confusion/resource_limit"
+  },
+  "condition_history": [
+    {
+      "endpoint": "POST points+count",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "detail": "approx(exact:false) ignores one of two same-direction range bounds: lt50+lte100 exact=96 approx=192 (=total); gt60+gte70 exact=80 approx=58. Direction depends on which bound wins; deterministic across repeats",
+      "control": "single-bound ranges approx within ~1-3 of exact (tolerated estimation)"
+    },
+    {
+      "endpoint": "POST points+count",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "detail": "match value type-mismatched to indexed field (str/bool on integer index, int/bool on keyword index): exact=0 scroll=0 but approx=100 (~N/2) consistently",
+      "control": "same-typed match exact==approx (num match 50 -> 4/4)",
+      "inspired_by": "cardinality_oracle bug-shape hint (match-value-type vs schema-type estimator surface)"
+    },
+    {
+      "endpoint": "POST points+count",
+      "condition_type": "null_check",
+      "finding": "DEFECT_FOUND",
+      "detail": "is_empty approx violates empty-or-missing semantics: is_empty(tags) truth=1 approx=0; is_empty(nonexistent) truth=201 approx=100. is_null on indexed field consistent (15/15) — bug specific to is_empty estimator",
+      "control": "is_null num exact=approx=scroll=15"
+    },
+    {
+      "endpoint": "POST points+count",
+      "condition_type": "compound_or",
+      "finding": "DEFECT_FOUND",
+      "detail": "should/match_any OR union under-counts: or(a,b,c) truth=200 approx=144 (-28%); or(a,b) 140->117 borderline. Two-value integer match OR control 6/6 consistent",
+      "control": "single match(a) exact==approx",
+      "inspired_by": "range_filter finding + cardinality_oracle combine_should hint"
+    },
+    {
+      "endpoint": "POST points+count",
+      "condition_type": "geo_filter",
+      "finding": "DEFECT_FOUND",
+      "detail": "geo bbox antimeridian (170..-170) truth=13 approx=56 (+331%); geo_radius earth 6.4e6 truth=35 approx=200 (whole-collection). Geo estimator ignores actual box/radius shape",
+      "inspired_by": "type_mismatch finding + geo_index estimator surface from bug-shape description"
+    },
+    {
+      "endpoint": "POST points+count",
+      "condition_type": "compound_and",
+      "finding": "by_design_excluded",
+      "detail": "AND range+keyword approx 30->35 (17%) — same under/over-estimate magnitude as single range estimator tolerance; no independent AND-specific divergence beyond components"
+    },
+    {
+      "endpoint": "POST facet",
+      "condition_type": "compound_and",
+      "finding": "NO_DEFECT",
+      "detail": "facet exact==approx for all tested keys/filters including range filter with dual bounds (facet uses different code path than count)"
+    },
+    {
+      "endpoint": "POST points+query+groups",
+      "condition_type": "collection_membership",
+      "finding": "NO_DEFECT",
+      "detail": "has_id membership: dup ids dedup correct (1), OR of valid ids correct both paths; str/bool/float has_id properly 400-rejected"
+    },
+    {
+      "endpoint": "POST points+scroll",
+      "condition_type": "pagination_cursor",
+      "finding": "NO_DEFECT",
+      "detail": "full walk 235 unique 0 dups; offset beyond end returns empty next=None; big limit returns all"
+    },
+    {
+      "endpoint": "POST points+scroll",
+      "condition_type": "geo_filter",
+      "finding": "DEFECT_FOUND",
+      "round": 2,
+      "detail": "geo_bounding_box/geo_polygon with EXACT north-pole lat 90.0 (valid input) returns 0 on indexed geo path; 89.9999 returns all matches. Reproducible across lon clusters and both bbox/polygon; bottom=-90 alone unaffected (only top pole). Cross-endpoint: count/scroll/query/facet all 0.",
+      "inspired_by": "round-1 geo_filter finding (estimator) -> adjacent condition: exact pole boundary on scan+index path"
+    },
+    {
+      "endpoint": "POST points+scroll",
+      "condition_type": "pagination_cursor",
+      "finding": "DEFECT_FOUND",
+      "round": 2,
+      "detail": "scroll with order_by: next_page_offset always null even when limit < total (200 pts, limit 70 -> only 70 retrievable, silent truncation). Control: without order_by next_page_offset=71 -> full 200 walk. offset cursor explicitly forbidden with order_by (400), so no paging mechanism at all.",
+      "inspired_by": "order_by discovery during endpoint expansion (contract order_by param on scroll)"
+    },
+    {
+      "endpoint": "POST points+count",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "round": 2,
+      "detail": "integer range value on datetime field silently accepted (200): indexed datetime interprets int as epoch MICROseconds (1767312000000000 == '2026-01-02T00:00:00Z', both 193), unindexed datetime with same int NEVER matches (0) — same request divergent semantics by index presence. Doc: datetime range supports RFC3339 only.",
+      "inspired_by": "round-1 type_mismatch finding -> adjacent: numeric literal on datetime field, indexed vs unindexed"
+    },
+    {
+      "endpoint": "POST points+search (+query, query/groups, recommend)",
+      "condition_type": "numeric_boundary",
+      "finding": "DEFECT_FOUND",
+      "round": 3,
+      "detail": "score_threshold uses strict >: the server-reported top score fed back as score_threshold excludes the point (th==S: n=0 on search/query/recommend/groups; th==S-0.01: n=1). Docs phrase the option as 'cut off results with less than a threshold' — equal scores must be kept. f32 score rounding makes th=S-1e-9 also exclude (threshold rounds back to S).",
+      "control": "threshold clearly below (S-0.01) returns the top point on every endpoint",
+      "inspired_by": "GT-informed 续挖 hint 参数/边界 -> param-sweep on query family shared params"
+    },
+    {
+      "endpoint": "PUT collections+create (strict_mode_config) + PUT points+upsert",
+      "condition_type": "state",
+      "finding": "DEFECT_FOUND",
+      "round": 3,
+      "detail": "strict-mode capacity guardrails accepted + echoed but never enforced: max_points_count=10 with final count 41 (all upserts 200); max_collection_vector_size_bytes=100 with 16B/pt x 41 = 656B; max_collection_payload_size_bytes=100 with 30x200B payloads accepted.",
+      "control": "sibling guardrail upsert_max_batchsize=50 rejects batch of 60 with 400 — enforcement machinery active on same server",
+      "inspired_by": "bug_shapes resource_limit + round-3 expansion into 1.18-new strict_mode_config surface"
+    },
+    {
+      "endpoint": "POST points+query (+search, prefetch)",
+      "condition_type": "state",
+      "finding": "DEFECT_FOUND",
+      "round": 3,
+      "detail": "strict_mode_config.search_max_oversampling=1.0 never enforced: with scalar quantization active (oversampling's real code path), params.oversampling 1.5/2.0/100.0 all 200 on query, 2.0 on search, 50.0 inside prefetch sub-params.",
+      "control": "same collection, sibling search_max_hnsw_ef=16 rejects hnsw_ef=64 with 400",
+      "inspired_by": "guardrail matrix probe — one MISMATCH in an otherwise fully-enforced guardrail family"
+    },
+    {
+      "endpoint": "GET/PUT quotas + GET/POST locks",
+      "condition_type": "missing_endpoint",
+      "finding": "DEFECT_FOUND",
+      "round": 3,
+      "detail": "All four documented 1.18.x service routes return 404 with empty body: GET /quotas, PUT /quotas, GET /locks, POST /locks. Contract lists them (quotas+get/set, locks+get/set) with schemas and behavioral constraints ('node-wide quotas replacing deprecated strict-mode max_resident_memory_percent').",
+      "control": "GET / and GET /healthz on the same service return 200 — route family mounted, these four absent",
+      "inspired_by": "contract endpoint enumeration (77 endpoints) — service section untested in rounds 1-2"
+    },
+    {
+      "endpoint": "PUT points+upsert + POST points+query",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "round": 3,
+      "detail": "f64->f32 silent overflow: upsert accepts vector components up to f64 max (1e300 -> 200); storage is f32 (max 3.4028235e38) so values become +inf. Read-back returns vector [null,null,null,null]; a NORMAL query ranks the corrupted point FIRST with score null (schema: score is a number); oversized query vector makes all scores null; boundary sweep pins transition exactly at f32::MAX (3.4028235e38 one null, 3.5e38 all null). Reproduces on Cosine/Dot/Euclid.",
+      "control": "ordinary points in the same responses keep numeric scores; read-back of normal point returns real components",
+      "inspired_by": "bug_shapes type_confusion + numeric_boundary — JSON f64 parse vs f32 storage seam"
+    },
+    {
+      "endpoint": "POST points+scroll/count/query (filter engine)",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "round": 4,
+      "detail": "Fractional range bounds on INDEXED integer field are floor-truncated: gte 2.5 returns num=2 (out of range), lt 7.5 drops num=7. Exact==scroll (core filter engine, not estimator family). Unindexed same-data field compares correctly -> bug specific to indexed path. Float field fractional bounds correct; fractional match value 400-rejected (strict).",
+      "control": "gt 2.5 -> [3..9] and gte 2.0 -> [2..9] bracket the correct gte 2.5 answer (3..9); unindexed num2 field returns correct ids",
+      "inspired_by": "threat_model vector #13 (issue 9049 KNOWN_ISSUE) + round-1 range_filter finding feedback",
+      "script": "vein_scripts/vein_range_filter_points_count_14.py"
+    },
+    {
+      "endpoint": "POST points+count/scroll/query",
+      "condition_type": "compound_or",
+      "finding": "DEFECT_FOUND",
+      "round": 4,
+      "detail": "filter.min_should {conditions:[], min_count:1} silently degrades to MATCH-ALL (entire collection returned, 200). Unsatisfiable by definition. min_count=0 empty = legit no-op; real-condition min_should correct (min2 -> [8], min1 -> union).",
+      "control": "2-real-condition min_count=2 -> [8] correct; min_count=0 -> all (vacuous truth)",
+      "inspired_by": "threat_model vector #8 (issue 9369 PARTIALLY_FIXED) + BS-04 min_should hint",
+      "script": "vein_scripts/vein_compound_or_min_should_15.py"
+    },
+    {
+      "endpoint": "PUT collections+create",
+      "condition_type": "null_check",
+      "finding": "DEFECT_FOUND",
+      "round": 4,
+      "detail": "vectors={} (empty map) AND vectors field missing entirely -> 200, creates green collection that rejects every upsert/query with 400 'Not existing vector name error: ' (empty name). PATCH cannot rescue: VectorsConfigDiff rejects {size:4,...} (no size field in diff schema) -> permanently unusable.",
+      "control": "normal create on same server accepts upserts (200); scroll/count on broken collection return 200 empty (zombie green state)",
+      "inspired_by": "threat_model vectors #4/#14 (issues 9416/9417 STILL_VULNERABLE)",
+      "script": "vein_scripts/vein_null_check_collections_create_16.py"
+    },
+    {
+      "endpoint": "PUT points+upsert + POST points+batch + PUT vectors+update",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "round": 4,
+      "detail": "Vector validation skipped on ALL async (wait=false) write paths: empty [] / wrong-dim (3,5) / named-empty vectors -> 200 acknowledged then silently dropped (never land; vector unchanged). Identical payloads wait=true -> 400 with precise dimension error. By_design note: wait=false error-visibility entry covers 'fails later, logs only'; the structural finding is the wait=true-only validation asymmetry across 3 endpoints.",
+      "control": "valid upsert wait=false lands and readable (async path works); each invalid payload 400s with wait=true",
+      "inspired_by": "threat_model vector #3 (issue 9045 Critical STILL_VULNERABLE) - panic gone in 1.18.0, illegal-success remains",
+      "script": "vein_scripts/vein_type_mismatch_async_upsert_17.py"
+    },
+    {
+      "endpoint": "POST points+query + count",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "round": 4,
+      "detail": "Filter clause typing silently lenient: should=null / all-null clauses -> 200 (null==absent, no-filter semantics); must/should/must_not as OBJECT (schema: array) -> 200 silently coerced to [object]. Semantics preserved but schema violations never 4xx; typo'd null should-clause executes as no-filter.",
+      "control": "valid equivalents ({} -> 10, must[cat=a] -> 7) match; siblings still honored (must+should:null -> 7)",
+      "inspired_by": "threat_model vectors #1/#2 (issues 9420/9419 STILL_VULNERABLE/PARTIALLY_FIXED)",
+      "script": "vein_scripts/vein_type_mismatch_filter_typing_18.py"
+    }
+  ],
+  "last_finding": {
+    "endpoint": "POST points+query + count",
+    "condition_type": "type_mismatch",
+    "finding": "DEFECT_FOUND",
+    "round": 4
+  },
+  "adjacent_pending": [],
+  "round3_negative_results": [
+    "limit/offset boundary battery on scroll/query/search/groups/facet/matrix: 0/-1/1.5/string all validated 422/400 — clean",
+    "groups default group_size=3: by-design default (explicit 100 returns full groups) — by_design_excluded",
+    "values_count + nested-should on count approx: same N/2 coarse-fallback estimator family as round-1 candidates — no new family filed",
+    "datetime format leniency (naive no-tz accepted as UTC, tz-offsets ok): exact==scroll consistent both paths — not filed",
+    "bool match 1/'true' silently matches 0 but exact==scroll consistent (strict JSON typing) — not filed",
+    "filter semantics battery (nested obj.deep paths, uuid index, explicit-null is_null/is_empty, array any-semantics AND, must_not): all exact==scroll — clean",
+    "payload-mutation transient count=200 alarm was a probe artifact (status code printed instead of count) — false alarm, mutation path clean across payload/delete, set_payload, overwrite_payload, upsert, delete-by-filter, index-create bursts",
+    "fusion weights: count-mismatched and negative weights accepted (lenient) but weights are semantically active (rankings change) — not filed",
+    "vector=null upsert 400 leaks serde internals (VectorStruct) — message-quality only, matches by-design error-format note",
+    "recommend/discover missing ids 404 correct; duplicate sparse indices 422; multivector variable subvector count accepted but mathematically well-defined; hnsw m=0 documented valid (m>=0); query offset no strict cap but offset does not inflate result size",
+    "with_lookup in groups works correctly when group ids exist in lookup collection (nulls for missing ids are correct)",
+    "facet deep: exact==approx incl. filters; ts/geo keys 400 'create index' message is misleading (keyword reindex enables) but facet on datetime not documented — not filed"
+  ],
+  "round4_negative_results": [
+    "batch family (query/search/recommend+batch): per-element filter/limit/offset/threshold/with_payload all honored; mixed-validity batch -> element-level empty result or whole-batch 4xx (recommend 404) - clean",
+    "points+batch ordering: upsert->delete / delete->upsert / set_payload<->upsert / update_vectors<->delete all executed in documented order (correct POST /points batch-get used; earlier 404 alarm was wrong-route probe artifact)",
+    "points+batch atomicity: invalid op anywhere -> whole batch 400 pre-parse, zero partial application",
+    "vectors family: wrong-dim/unknown-name update_vectors 400; named-vector create 1.18 endpoint rejects every body shape tried ({size,distance}/{params:{...}}/idf/sparse) with untagged-enum VectorNameConfig error (doc-schema mismatch, message-quality only); vectors/delete of only vector leaves point alive (vector:{}) visible to count/scroll but never searchable - documented-ambiguous, not filed",
+    "PATCH collections+update: strict_mode range / hnsw m<0 / vectors resize / indexing_threshold<0 all 4xx - clean",
+    "snapshots: upload compatibility check vs existing collection 400 with precise diff; checksum enforced (mismatched 400, format-validated 422); truncated archive 500 File-IO (unpack failure detected, no partial collection); shard 404s correct; concurrent set_payload 12/12 no lost updates",
+    "matrix offsets/pairs: sample>total clamps, filter honored, sample/limit min bounds 422 - clean",
+    "payload selectors: points+filter both -> consistent semantics; neither/empty -> 400",
+    "query=null / query missing: supported no-vector mode (browse with filter; score_threshold correctly 400s 'query needed') - not a defect",
+    "min_should min_count > len(conditions) -> 0 (unsatisfiable reading); no contract oracle for the 'all must match' reading - not filed",
+    "threat_model vectors disproved on v1.18.0: shard_number=0 -> 422; search limit 999999999 -> 200 capped by collection size, no crash; delete-after-wait=false-upsert correct; is_empty shape = round-1 family",
+    "nested{} condition on non-array object payload: exact==scroll==0 consistent; approx 6 divergence = round-1 estimator family (not new)",
+    "index-type vs data-type mismatch (integer index on keyword field etc.): silently created but semantics preserved (exact==scroll); approx N/2 fallback = known round-1 family"
+  ]
+}

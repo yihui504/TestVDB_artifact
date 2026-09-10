@@ -1,0 +1,71 @@
+{
+  "defect_id": "boundary_r2_dynfield_name_upsert_03",
+  "endpoint": "entities/upsert (dynamic field names) + collections/create schema fieldName (对照)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "同 01 号链锚约束 milvus_type_field_name_rules_001（limitations.md，R2 补锚时已核 verified/quoted）；endpoint 契约 registry 覆盖 entities/upsert 与 collections/create。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "upsert dyn field '123field' -> ok=True raw={\"code\":0,\"cost\":0,\"data\":{\"upsertCount\":1,\"upsertIds\":[300]}}",
+      "secondary_observations": [
+        "upsert dyn field '@field' -> ok=True raw={\"code\":0,...,\"upsertIds\":[301]}}",
+        "upsert dyn field 'my-field' -> ok=True raw={\"code\":0,...,\"upsertIds\":[302]}}",
+        "对照组 create schema fieldName='123field' -> ok=False raw={\"code\":1701,\"message\":\"Invalid field name: 123field. The first character of a field name must be an underscore or letter.: field name invalid[field=123field]\"}",
+        "对照组 create schema fieldName='@field' -> ok=False code:1701 (首字符规则)",
+        "对照组 create schema fieldName='my-field' -> ok=False code:1701 (字符集规则)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "upsert 非法字段名 HTTP 200 + code:0 静默接受；create-schema 通道 HTTP 200 + code:1701 正确拒——同一契约双通道行为分叉"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_dynfield_name_upsert_03.py", "debate_logs/boundary_r2_dynfield_name_insert_01.py (insert 通道同模式)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_field_name_rules_001",
+      "assertion_text_quoted": "field names: ^[A-Za-z_][A-Za-z0-9_]*$, length<=255, enforced at insert-time (dynamic fields included)",
+      "api_violates_assertion": true,
+      "note": "123field/@field/my-field 均违反命名 regex 且 upsert code:0 接受；create-schema 对照 1701 拒证明服务端具备该校验（validateFieldName），upsert 动态字段路径未调用。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_field_name_rules_001 (verified tier)",
+        "doc: Resource Naming Rules",
+        "script: boundary_r2_dynfield_name_upsert_03.py upsert 动态字段非法名 + create-schema 对照",
+        "log: upsert code:0 ×3；create-schema code:1701 ×3（对照组正确拒）"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["validateFieldName", "checkAndSetData", "upsert (handler_v2.go)", "field name invalid"],
+      "files_examined": [
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go (checkAndSetData L590-621, upsert 复用同一函数)",
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go (insert/upsert 处理 L1234-1252, checkAndSetData 调用)",
+        ".milvus-src-2610/internal/proxy/util.go (validateFieldName L356-388)"
+      ],
+      "source_excerpt": "handler_v2.go upsert 与 insert 共用 checkAndSetData(body, collSchema, ...) → utils.go L592-621 动态字段分支（同 01 号链引用段）：`for mapKey, mapValue := range data.Map() { if !containsString(fieldNames, mapKey) { if collSchema.EnableDynamicField { ...按 gjson 类型 cast... } } }`——mapKey（动态字段名）无校验。对照组 create/fields-add 通道在 schema 校验路径调用 internal/proxy/util.go validateFieldName L369-381：`if firstChar != '_' && !isAlpha(firstChar) { ... \"The first character of a field name must be an underscore or letter.\" }` / `if c != '_' && !isAlpha(c) && !isNumber(c) { ... \"Field name can only contain numbers, letters, and underscores.\" }`，即 log 中 code:1701 消息的产生点。",
+      "call_chain_traced": "REST upsert → handler_v2 upsert → checkAndSetData（动态字段名零校验）→ anyToColumns 匿名 JSON 列 → code:0。REST collections/create schema 字段 → proxy validateFieldName → 1701。同一命名规则两通道一有一无。",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error", "env", "concurrency", "request_typo"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "STRONG",
+  "evidence_weight_rationale": "verified 契约 + 逐字 code 对照（upsert 0 vs create 1701 同值同规则）+ 源码双通道不对称定位；与 01 号链构成跨通道复现。"
+}

@@ -1,0 +1,16 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+seed_alias_batch status=200 raw={"result":true,"status":"ok","time":0.026139711}
+FALLBACK_TRIGGERED: per-collection alias listing (aliases+collection+list) has no qdrant runtime PATHS key; issuing the contract-derived REST path GET /collections/{collection_name}/aliases via requests
+[FALLBACK_JUSTIFIED: scripts/runtime/qdrant.py PATHS exposes only update_aliases (POST /collections/aliases) and list_aliases (GET /aliases); the chunk unit endpoint aliases+collection+list (contract api_endpoints: method GET, required path parameter collection_name, source_url slug get-collection-aliases) is NOT reachable through the rt.request path_key whitelist, and the sibling list_aliases face cannot express the unit's per-collection 404 branch; the REST route is derived 1:1 from the contract endpoint (raw_knowledge.json document_sources 0-12, v-1-18-x api-reference) and its response shape was confirmed by prior live sessions (200 {"result":{"aliases":[...]}})]
+[positive:existing] status=200 raw={"result":{"aliases":[{"alias_name":"salc_del_al1_1788354857","collection_name":"salc_del_a_1788354857"},{"alias_name":"salc_del_al2_1788354857","collection_name":"salc_del_a_1788354857"}]},"status":"ok","time":5.966e-6}
+positive control OK: salc_del_a_1788354857 lists ['salc_del_al1_1788354857', 'salc_del_al2_1788354857']
+[control:describe never-created] status=404 raw={"status":{"error":"Not found: Collection `salc_del_never_created_1788354857` doesn't exist!"},"time":9.658e-6}
+[NEG-1:never-created] status=200 raw={"result":{"aliases":[]},"status":"ok","time":6.108e-6}
+drop status=200 raw={"result":true,"status":"ok","time":0.020518312}
+[control:describe dropped] status=404 raw={"status":{"error":"Not found: Collection `salc_del_a_1788354857` doesn't exist!"},"time":7.338e-6}
+[sibling:count dropped] status=404 raw={"status":{"error":"Not found: Collection `salc_del_a_1788354857` doesn't exist!"},"time":2.124e-6}
+[NEG-2:dropped] status=200 raw={"result":{"aliases":[]},"status":"ok","time":0.00002959}
+DEFECT: NEG-1: aliases listing of never-created collection returned 200 (expected 404 per unit assertion) — Type4_StateLogicViolation raw={"result":{"aliases":[]},"status":"ok","time":6.108e-6}
+DEFECT: NEG-2: aliases listing of dropped collection returned 200 (expected 404 per unit assertion); sibling faces describe/count on the same name return 404/404 — face asymmetry — Type4_StateLogicViolation raw={"result":{"aliases":[]},"status":"ok","time":0.00002959}
+VERDICT: DEFECT_FOUND

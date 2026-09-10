@@ -1,0 +1,25 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+=== Vein Test: Type Mismatch - Empty Vector Silent Discard ===
+
+1. Creating collection...
+   Status: 200, Response: {'result': True, 'status': 'ok', 'time': 0.243057765}
+
+2. Upserting point with empty vector array []...
+   Status: 200, Response: {'result': {'operation_id': 1, 'status': 'acknowledged'}, 'status': 'ok', 'time': 0.000191398}
+
+3. Upserting point with correct vector...
+   Status: 200, Response: {'result': {'operation_id': 2, 'status': 'acknowledged'}, 'status': 'ok', 'time': 0.000189348}
+
+4. Scrolling to verify stored points...
+   Status: 200
+   Points found: [10]
+   Total count: 1
+
+   [DEFECT_FOUND] Empty vector (id=1) was silently discarded
+   Expected: 400 Bad Request or error about zero-length vector
+   Actual: 200 OK with silent discard
+
+5. Cleaning up collection...
+
+=== VERDICT: DEFECT_FOUND ===

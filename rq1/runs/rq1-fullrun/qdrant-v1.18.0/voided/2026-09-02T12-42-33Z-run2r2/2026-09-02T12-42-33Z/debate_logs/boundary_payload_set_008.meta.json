@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_set_008",
+ "endpoint": "payload+set",
+ "param": "points",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "face A ({payload:{ghost:1}} no selector) and face B ({points:null,filter:null,payload:...}) each return 4xx — on either, 200 with readback state changed on ANY point = Type4_StateLogicViolation (selector-less mass broadcast) and 200 with state unchanged = Type1_IllegalSuccess (explicitly-errored body accepted); face C (points=[]) returns 4xx or 200 no-op (both acceptable, R28 posture) — 200 with state change = Type4; face D (points=[1], filter=null) returns 200 with the merge landing on point 1 only (points 2/3 deep-equal baseline) — non-200 = Type1_IllegalSuccess (documented OR disjunction rejected); 5xx/transport = Type3_RuntimeFailure with /healthz re-check (constraint qdrant_state_payload_set_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

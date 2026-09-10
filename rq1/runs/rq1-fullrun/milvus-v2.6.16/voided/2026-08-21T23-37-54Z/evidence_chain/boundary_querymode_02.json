@@ -1,0 +1,54 @@
+{
+  "defect_id": "boundary_querymode_02",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraints create_009 (query_mode property family at create) + range_entities_search_003 (large_topk limit<=1000000, live-confirmed alter path) both grounded in local clone quota_param.go/common.go v2.6.16; contract api_endpoints documents query_mode as settable at create; registry contains collections+create and entities+search.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "create: 200 {\"code\":0,\"data\":{}} ... Status: 200 / Raw: {\"code\":65535,\"message\":\"topk [100000] is invalid, it should be in range [1, 16384], but got 100000\"} / VERDICT: DEFECT_FOUND (create with properties.query_mode='large_topk' VALID value; search limit=100000 rejected under normal 16384 cap => property had no effect)",
+      "secondary_observations": ["semantic_large_topk_1: F query_mode persisted via create-time properties: False [{'key': 'timezone', 'value': 'UTC'}] - describe read-back shows property absent", "semantic_large_topk_1: mk alter qm sm_ltk_large : 200 code 0, then A large limit=20000: 200 code 0 - alter path effective (control)", "state_truncate-family unrelated; excluded"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "two-layer: create accepted (200/code 0) though ineffective; downstream search returns 200/65535 - diagnostic points at topk not at the dropped property (poor-diagnosis secondary surface)"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_querymode_02", "semantic_large_topk_1 (independent reproduction incl. describe read-back)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_collections_create_009",
+      "assertion_text_quoted": "properties/params.query_mode NOT IN {unset, 'large_topk'} => code 65535 ... (coupled: milvus_range_entities_search_003 'query_mode==large_topk: 1 <= limit <= 1000000 ... live v2.6.16 confirmed')",
+      "api_violates_assertion": true,
+      "note": "claim is 'valid value large_topk set at create is effective'; observed: create-time property silently discarded (code 0, describe lacks it, limit cap stays 16384) while alter path works - the create-path half of the coupled contract is violated. violates=True for the create-path effectiveness claim.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:create_009+search_003 (large_topk at create raises TopKLimit)", "doc:quota_param.go LargeTopKLimit/LargeMaxQueryResultWindow=1000000; task_search.go:171 t.largeTopKEnabled = collectionInfo.queryMode == common.QueryModeLargeTopK", "script:boundary_querymode_02.py create {...properties:{query_mode:'large_topk'}} + index + load + search limit=100000", "log:Raw {\"code\":65535,...[1, 16384]...} DEFECT_FOUND; describe (sibling script) shows property absent"],
+      "chain_broken_at": "script",
+      "break_detail": "identical REST-transport drop as _01/_03: value never leaves the HTTP layer, so the quota coupling in task_search can never activate for create-time settings. Observation chain itself complete.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["CollectionReq struct", "largeTopKEnabled (task_search.go:171)", "query_mode (handler_v2.go zero hits)", "ValidateQueryMode (task.go:449)"],
+      "files_examined": ["internal/distributed/proxy/httpserver/request_v2.go:643-656", "internal/distributed/proxy/httpserver/handler_v2.go:1786-1792,2019-2049", "internal/proxy/task_search.go:171", "internal/proxy/task.go:443-451"],
+      "source_excerpt": "task_search.go:171: t.largeTopKEnabled = collectionInfo.queryMode == common.QueryModeLargeTopK - the raised TopK window keys off the PERSISTED collection property; since handler_v2.go:2019-2049 never forwards query_mode from REST create into req.Properties, the persisted property stays unset and the 16384 cap applies. This explains the exact observed boundary [1, 16384] vs alter-path [1, 1000000].",
+      "call_chain_traced": "create properties.query_mode -> dropped at REST binding/whitelist -> no persisted property -> search task largeTopKEnabled=false -> quota 16384 -> 65535 at limit=100000",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (alter-path control on same server works)", "timing (property check is synchronous describe)", "typo (valid enum value used)"],
+      "surviving": "by-design reading: REST create intentionally property-less (use alter afterwards) - but contract documents create as a query_mode carrier, and silent discard of a VALID value with downstream 65535 misdiagnosis is the observed phenomenon; recorded, not adjudicated"
+    },
+    "evidence_weight": "high (behavioral effect chain complete: describe read-back + alter control + boundary values)"
+  }
+}

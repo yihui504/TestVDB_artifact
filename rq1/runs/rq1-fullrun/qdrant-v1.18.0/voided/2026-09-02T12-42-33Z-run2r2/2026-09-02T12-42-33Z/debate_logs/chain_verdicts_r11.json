@@ -1,0 +1,98 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "r11",
+  "verdicts": [
+    {
+      "defect_id": "boundary_collections_create_013",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "resource boundary"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok; qdrant_resource_shard_number_001 exists in constraints/resource_bound_constraints, assertion_text_quoted verified verbatim against contract assertion field) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "resource_bound",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: qdrant_resource_shard_number_001 present with quote-matching assertion; observed 4294967295 is inside the quoted domain (>=1, uint32, no documented max - premise verified against .sourcedeps/v1.18.0/openapi.json and live page) and none of the three permitted dispositions occurred (RemoteDisconnected mid-request, /healthz status=0 x3 in log lines 15-19). Source grounds the mechanism: shard_distribution.rs:91 (0..shard_number.get()).collect() eagerly materializes 4.29B entries with no upper-bound guard anywhere on the create path, while sibling fields carry deliberate artificial maxima (schema.rs:751 candidates_limit max=16384, VectorParams.size max=65536). B=CONFIRMED resource boundary (graded value gradient: 1000/100000 timeout-but-alive, only u32-max kills); C=CONFIRMED (no by-design marker; mundane_explanation excludes by_design); D=NO_SIGNAL (cognition has no shard/resource-exhaustion anchor).",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_collections_create_015",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "resource boundary"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok; same verified constraint and verbatim quote; empty candidates.jsonl constraint_id field recovered via script header/meta/chunks.json - dispatch-metadata omission, not a chain break) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "resource_bound",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: same constraint verified; leg-B create shard_number=4294967295 got status=0 RemoteDisconnected with two /healthz liveness probes dead, immediately after leg-A shard=1 create/readback/upsert/count all 200 (service demonstrably alive at start). Live same-family contrast probes: replication_factor=4294967295 and write_consistency_factor=4294967295 both returned 200 with healthz 200 - source explains it (shard_distribution.rs:88 clamps replica_number via cmp::min to known peers) while shard_number passes through a NonZeroU32 zero-check only into the unbounded collect. B=CONFIRMED resource boundary with same-family disposition inconsistency; C=CONFIRMED (only related grep hit is a test-fixture comment, no production guard, no by-design marker); D=NO_SIGNAL.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_collections_create_023",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (mechanical, id+quote_ok; qdrant_bc_create_visibility_001 exists in behavioral_contracts, quote matches its description verbatim; api_violates_assertion=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": "log",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Unit involved is a behavioral contract assertion (post-create immediate listability promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: quote verified verbatim against behavioral_contracts[0].description; the raw [list] response body in the chain's own log contains {\"name\":\"scc023_1788393553_vis\"} among 4 collections, so the claimed absence exists only in the script's names[] variable after list_names() (lines 206-212) dropped {\"name\":...} entries because it collects only 'id'-keyed dicts or bare strings - the execution evidence itself does not hold (grade D, chain_broken_at=log, verdict line contradicted by the raw line above it). Source corroborates: REST CollectionDescription has only pub name (no 'id' field on this face) and registration into the TOC map completes before the 200 is sent; sibling boundary_collections_create_019 exercised all six faces of the same contract and observed NO_DEFECT. B=NEUTRAL (list-membership visibility is not a value-domain constraint of any objective class; both requests were valid and returned genuine 2xx envelopes). fp=behavior (schema's grade-D/chain_broken_at=log bucket) with doc+source corroborating.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_collections_create_024",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "resource boundary"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok; constraint linkage recovered from script header after empty dispatch field) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "resource_bound",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: same verified constraint and verbatim quote; positive legs shard_number=1/8 returned 200 with describe echo (echo oracle), then create with shard_number=4294967295 closed the connection in 3.2s and the /healthz probe went status=0 - spec-legal value, no permitted disposition occurred. Independent of any script, the session-level healthz_poll_r11.log shows healthz=000 from 07:38:28 to 07:47:54 with first 200 at 07:50:26 (~12-minute outage, external restart, no self-recovery). Source grounds the standalone path: CollectionShardDistribution::all_local materializes (0..4294967295) into an AHashMap with a heap HashSet per entry, and the build.rs validation registry gives CreateCollection.shard_number range(min=1) only while VectorParams.size carries an explicit max=65536; B=CONFIRMED resource boundary; C=CONFIRMED (grep MAX_SHARD/max_shard/too many shards: zero validation hits); D=NO_SIGNAL.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "defect": 3,
+    "not_defect": 1,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 0, "both": 0, "behavior": 1},
+    "root_cause_distribution": {"script_error": 1},
+    "constraint_category_distribution": {"resource_bound": 3, "other": 1},
+    "candidate_class_distribution": {"strict_defect": 3, "exploratory_candidate": 0, "rejected": 1}
+  }
+}

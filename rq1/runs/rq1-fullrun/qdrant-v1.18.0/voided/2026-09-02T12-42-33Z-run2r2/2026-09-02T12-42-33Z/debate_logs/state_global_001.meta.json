@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_global_001",
+ "endpoint": "global",
+ "param": "write / error_message (locks+set LocksOption fields: lock engagement + refusal-message propagation across the mutation plane, release restore)",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "transaction",
+ "constraint_ids": [
+  "qdrant_inv_lock_blocks_mutations_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/post-locks",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "live /locks: while POST /locks {write:true,error_message:<token>} is 200 and GET /locks reports result.write=true, every mutation face (upsert/delete-points/create-index/create-collection/alias-create/drop-collection) must return non-2xx with <token> in the body and reads stay 200, and after POST {write:false} the same upsert is 200 with count advancing by one — any 2xx or landed mutation under lock = Type1_IllegalSuccess / Type4_StateLogicViolation; if GET+POST /locks both answer 404, NO_DEFECT with endpoint-absence evidence (invariant not actuable)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

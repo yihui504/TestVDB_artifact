@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_delete_004",
+ "endpoint": "payload+delete",
+ "param": "keys",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "(a) delete {\"points\":[1,2],\"keys\":[\"city\",\"ghost_key\"],\"wait\":true} returns 200 with p1/p2 payload exactly {\"n\":..,\"tag\":..} (city gone, n/tag byte-equal baseline values) and p3 deep-equal baseline; (b) the IDENTICAL repeat also returns 200 leaving the same state (resurrected city or lost n/tag = Type4); (c) delete {\"points\":[3],\"keys\":[\"city\"],\"wait\":true} returns 200 with p3 still exactly {\"n\":3,\"tag\":..}; exact count stays exactly 3 after every step (drift = Type4_StateLogicViolation); all vectors deep-equal the baseline readback vectors at the end; a 4xx on any of the three legal deletes = Type1_IllegalSuccess; 5xx = Type3_RuntimeFailure with /healthz re-check (constraint qdrant_state_payload_delete_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,31 @@
+CASE flat warmup.scalarField='sync'     ok persisted_warmup={'warmup.scalarField': 'sync'}
+CASE flat warmup.scalarField='disable'  ok persisted_warmup={'warmup.scalarField': 'disable'}
+CASE flat warmup.scalarField='SYNC'     rejected: {"code":1100,"message":"invalid warmup value for key warmup.scalarField: invalid warmup policy: SYNC, must be 'disable' or 'sync':
+CASE flat warmup.scalarField='DISABLED' rejected: {"code":1100,"message":"invalid warmup value for key warmup.scalarField: invalid warmup policy: DISABLED, must be 'disable' or 'sy
+CASE flat warmup.scalarField='BOGUS'    rejected: {"code":1100,"message":"invalid warmup value for key warmup.scalarField: invalid warmup policy: BOGUS, must be 'disable' or 'sync'
+CASE flat warmup.scalarField=42         rejected: {"code":1100,"message":"invalid warmup value for key warmup.scalarField: invalid warmup policy: 42, must be 'disable' or 'sync': i
+CASE flat warmup.scalarIndex='sync'     ok persisted_warmup={'warmup.scalarIndex': 'sync'}
+CASE flat warmup.scalarIndex='disable'  ok persisted_warmup={'warmup.scalarIndex': 'disable'}
+CASE flat warmup.scalarIndex='SYNC'     rejected: {"code":1100,"message":"invalid warmup value for key warmup.scalarIndex: invalid warmup policy: SYNC, must be 'disable' or 'sync':
+CASE flat warmup.scalarIndex='DISABLED' rejected: {"code":1100,"message":"invalid warmup value for key warmup.scalarIndex: invalid warmup policy: DISABLED, must be 'disable' or 'sy
+CASE flat warmup.scalarIndex='BOGUS'    rejected: {"code":1100,"message":"invalid warmup value for key warmup.scalarIndex: invalid warmup policy: BOGUS, must be 'disable' or 'sync'
+CASE flat warmup.scalarIndex=42         rejected: {"code":1100,"message":"invalid warmup value for key warmup.scalarIndex: invalid warmup policy: 42, must be 'disable' or 'sync': i
+CASE flat warmup.vectorField='sync'     ok persisted_warmup={'warmup.vectorField': 'sync'}
+CASE flat warmup.vectorField='disable'  ok persisted_warmup={'warmup.vectorField': 'disable'}
+CASE flat warmup.vectorField='SYNC'     rejected: {"code":1100,"message":"invalid warmup value for key warmup.vectorField: invalid warmup policy: SYNC, must be 'disable' or 'sync':
+CASE flat warmup.vectorField='DISABLED' rejected: {"code":1100,"message":"invalid warmup value for key warmup.vectorField: invalid warmup policy: DISABLED, must be 'disable' or 'sy
+CASE flat warmup.vectorField='BOGUS'    rejected: {"code":1100,"message":"invalid warmup value for key warmup.vectorField: invalid warmup policy: BOGUS, must be 'disable' or 'sync'
+CASE flat warmup.vectorField=42         rejected: {"code":1100,"message":"invalid warmup value for key warmup.vectorField: invalid warmup policy: 42, must be 'disable' or 'sync': i
+CASE flat warmup.vectorIndex='sync'     ok persisted_warmup={'warmup.vectorIndex': 'sync'}
+CASE flat warmup.vectorIndex='disable'  ok persisted_warmup={'warmup.vectorIndex': 'disable'}
+CASE flat warmup.vectorIndex='SYNC'     rejected: {"code":1100,"message":"invalid warmup value for key warmup.vectorIndex: invalid warmup policy: SYNC, must be 'disable' or 'sync':
+CASE flat warmup.vectorIndex='DISABLED' rejected: {"code":1100,"message":"invalid warmup value for key warmup.vectorIndex: invalid warmup policy: DISABLED, must be 'disable' or 'sy
+CASE flat warmup.vectorIndex='BOGUS'    rejected: {"code":1100,"message":"invalid warmup value for key warmup.vectorIndex: invalid warmup policy: BOGUS, must be 'disable' or 'sync'
+CASE flat warmup.vectorIndex=42         rejected: {"code":1100,"message":"invalid warmup value for key warmup.vectorIndex: invalid warmup policy: 42, must be 'disable' or 'sync': i
+CASE bare warmup=BOGUS(str)             ACCEPTED(illegal) persisted_warmup={} | {"code":0,"data":{}}
+VERDICT_DEFECT 4 s04 bare warmup=BOGUS(str) invalid value accepted then silently dropped
+CASE bare warmup={vectorIndex:BOGUS}    ACCEPTED(illegal) persisted_warmup={} | {"code":0,"data":{}}
+VERDICT_DEFECT 4 s04 bare warmup={vectorIndex:BOGUS} invalid value accepted then silently dropped
+CASE bare warmup={vectorIndex:sync} (nested form) ACCEPTED(illegal) persisted_warmup={} | {"code":0,"data":{}}
+VERDICT_DEFECT 4 s04 bare warmup={vectorIndex:sync} (nested form) invalid value accepted then silently dropped
+VERDICT_DEFECT_FOUND

@@ -1,0 +1,197 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "boundary_aliases_collection_list_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "log",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Unit involved is a behavioral endpoint assertion (200 list / 404-for-unknown response promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_aliases_collection_list_001, id+quote_ok, violates=false -> REFUTED; the raw 200 body {result:{aliases:[{alias_name:bacl1aleda4873b, collection_name:bacl1c1eda4873b}]}} is exactly the asserted list, and doc content_consistency PASS confirms the envelope shape. Chain broken at log: the script's _result_list() demanded a bare list and fired Type4 on a fully conforming envelope (grade D, script_error=true); sibling logs on the same endpoint show the same envelope with no such verdict. Source returns the documented entry on this path, so no server-side candidate survives.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_aliases_collection_list_002",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "log",
+      "root_cause_if_fp": "env_noise",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Unit involved is a behavioral endpoint assertion (200 list / 404-for-unknown response promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_aliases_collection_list_001, id+quote_ok, violates=false -> REFUTED; the empty segment was collapsed by the deliberately registered NormalizePath::trim() (src/actix/mod.rs:121, '// Normalize path' comment) and the 200 came from the describe face answering for a leftover collection literally named 'aliases' — the constrained endpoint's CollectionPath min-1 validation (api/mod.rs:46-53, fires as 422 in sibling 003) was never exercised. B=NEUTRAL because no violating value reached the constrained parameter. The verdict is contingent on leftover sandbox state (2026-08-24 sandbox without that collection returned 404), hence env_noise.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_aliases_collection_list_004",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "same-family inconsistency"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "SUPPORTS_DEFECT", "matched_pattern": "Silent failure in recommend API with missing point IDs (missing-referent queries answered with silent empty success — behavior-class isomorphism)", "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit is a behavioral endpoint assertion (unknown collection -> HTTP 404 response promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_aliases_collection_list_001, id+quote_ok, violates=true -> CONFIRMED; unknown collection bacl4missing_* answered 200 {result:{aliases:[]},status:ok} instead of the asserted 404, stable across 4 independent scripts plus gRPC face. Source validation_absent: do_list_collection_aliases -> alias-map scan only, while the write path (validate_collection_exists) and describe face 404 the same value class (B=same-family inconsistency). Doc doubt recorded (not a ruling): the 404 clause is grounded at batch-extraction level (raw_knowledge/endpoint_registry); the repo-local v1.18.x OpenAPI shows only a generic 4XX bucket — manual review of the assertion's doc grounding suggested; mechanical DEFECT stands.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_aliases_collection_list_005",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": true},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "same-family inconsistency"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "SUPPORTS_DEFECT", "matched_pattern": "Silent failure in recommend API with missing point IDs (missing-referent queries answered with silent empty success — behavior-class isomorphism)", "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit is a behavioral endpoint assertion (unknown collection -> HTTP 404 response promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_aliases_collection_list_001, id+quote_ok, violates=true -> CONFIRMED; the lone-surrogate name x%ED%A0%80y got 200 {aliases:[]} on GET /collections/{name}/aliases, reproduced live. The chain shows this 200 equals the plain unknown-collection silent-200 (server lossily decodes to legal U+FFFD name; plain unknown names identical; control char %01 also 200 while NUL/%2F -> 422 on the same parameter — B=same-family inconsistency). Doc/source doubt exists on the 404 clause (curl-verified page documents 200-only; handler has no 404 branch — chain_broken_at=doc, transcribed): suggest manual main-process review of the assertion's grounding; mechanical DEFECT stands.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_aliases_collection_list_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "same-family inconsistency"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "SUPPORTS_DEFECT", "matched_pattern": "Silent failure in recommend API with missing point IDs (missing-referent queries answered with silent empty success — behavior-class isomorphism)", "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit is a behavioral endpoint assertion (unknown collection -> HTTP 404 response promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_aliases_collection_list_001 (dispatch constraint_id was empty; resolved from script header and attack text), id+quote_ok, violates=true -> CONFIRMED; never-created s2_aclist_ghost_* — API-confirmed non-existent (guard DELETE -> 200 result:false; describe face on same name class -> 404 'doesn't exist') — answered 200 {aliases:[]} instead of the asserted 404. Source validation_absent: no existence check on the read path while describe/write faces enforce it (B=same-family inconsistency). Doc PARTIAL caveat recorded (404 wording goes beyond the machine-readable op text, grounded in raw_knowledge expected_responses {200,404}); mechanical DEFECT stands.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_aliases_collection_list_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "same-family inconsistency"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "SUPPORTS_DEFECT", "matched_pattern": "Silent failure in recommend API with missing point IDs (missing-referent queries answered with silent empty success — behavior-class isomorphism)", "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit is a behavioral endpoint assertion (unknown collection -> HTTP 404 response promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_aliases_collection_list_001 (dispatch constraint_id empty; pinned by script header), id+quote_ok, violates=true -> CONFIRMED; unknown s3_aclist_no_such_* -> 200 {aliases:[]} while the builder's live probe of the describe face on the same name -> 404 with value-named cause diagnostics (B=same-family inconsistency). Source validation_absent: alias_mapping.collection_aliases is a pure map scan; no NotFound can fire. Confidence annotation only: the dispatched Type2 (error-text quality) oracle is vacuous because no 4xx branch exists on this endpoint — the chain reports the branch's absence as Type1, which matches the claim_hint.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_aliases_collection_list_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "same-family inconsistency"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "SUPPORTS_DEFECT", "matched_pattern": "Silent failure in recommend API with missing point IDs (missing-referent queries answered with silent empty success — behavior-class isomorphism)", "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit is a behavioral endpoint assertion (unknown collection -> HTTP 404 response promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_aliases_collection_list_001 (dispatch constraint_id empty; pinned by script header/attack text), id+quote_ok, violates=true -> CONFIRMED; NEG-2 dropped collection (and NEG-1 never-created) -> 200 {aliases:[]} while same-script describe/count controls on the same names -> 404 (B=same-family inconsistency, in-log contrast). Drop cascade removes the collection's alias rows, so the 200 stems from the missing existence check (validation_absent), not residue. Doc PARTIAL caveat (404 reading inferred from generic 4XX + sibling behavior) recorded; mechanical DEFECT stands.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_aliases_collection_list_003",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "log",
+      "root_cause_if_fp": "env_noise",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Unit involved is a behavioral endpoint assertion (200 list / 404-for-unknown response promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_aliases_collection_list_001, id+quote_ok, violates=false -> REFUTED; the churn itself was clean (writer_ok=16/16, 99 reader reads, 0 anomalies) and both per-collection faces — the constrained face — exactly matched expectation ({LIVE:A} and {}). The single global-face extra row sem_gdc1_al_1929a5ad is a pre-existing leftover alias on an existing foreign collection (session_execution_log hygiene records since 2026-08-27; live probe shows both faces agree on it); GET /aliases union semantics is explicit by-design in source (toc list_aliases docstring 'List of all aliases across all collections'). Chain broken at log (verdict 'unreconciled state' unsupported by the raw responses); env_noise root cause.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_aliases_collection_list_004",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "log",
+      "root_cause_if_fp": "env_noise",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Unit involved is a behavioral endpoint assertion (200 list / 404-for-unknown response promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_aliases_collection_list_001, id+quote_ok, violates=false -> REFUTED; upsert idempotence actually held — all 5 phases' per-collection faces passed (idempotent re-insert kept a single row, rebind left no residue on the old target, delete left both faces empty). Every one of the 5 DEFECT lines is the same leftover sem_gdc1_al_1929a5ad global row (pre-existing on the shared instance) colliding with the script's own-aliases-only global expectation; the union design is explicit in source (single HashMap row per alias; list_aliases docstring 'across all collections'). Chain broken at log; env_noise root cause.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "defect": 5,
+    "not_defect": 4,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 1, "both": 3, "behavior": 0},
+    "root_cause_distribution": {"script_error": 1, "env_noise": 3},
+    "constraint_category_distribution": {"other": 9},
+    "candidate_class_distribution": {"strict_defect": 5, "exploratory_candidate": 0, "rejected": 4}
+  }
+}

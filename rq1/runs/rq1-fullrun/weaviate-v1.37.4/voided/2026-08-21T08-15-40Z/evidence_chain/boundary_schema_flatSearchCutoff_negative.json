@@ -1,0 +1,66 @@
+{
+  "defect_id": "boundary_schema_flatSearchCutoff_negative",
+  "endpoint": "POST /schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Network blocked doc verification. OpenAPI spec defines flatSearchCutoff but validation constraints undocumented.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: flatSearchCutoff=-1 → http=200, code=0, class created with negative value",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 with success. Negative cutoff value accepted without error."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_flatSearchCutoff_negative"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint in structured_contract.json. Contract lacks validation assertions for flatSearchCutoff.",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (no constraint)",
+        "doc: (partial, network blocked)",
+        "script: POST /schema with flatSearchCutoff=-1",
+        "log: HTTP 200, negative accepted"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "No constraint defined. Contract lacks semantic assertions for flatSearchCutoff validation.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["flatSearchCutoff", "validate"],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go (lines 201-205: flatSearchCutoff parsing)",
+        "entities/vectorindex/hnsw/config.go (lines 260-323: validate function)"
+      ],
+      "source_excerpt": "From entities/vectorindex/hnsw/config.go:\n\n// Line 201-205: flatSearchCutoff parsed without validation\nif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"flatSearchCutoff\", func(v int) {\n\tuc.FlatSearchCutoff = v\n}); err != nil {\n\treturn uc, err\n}\n\n// Line 34: DefaultFlatSearchCutoff = 40000\n// validate() DOES NOT check u.FlatSearchCutoff < 0 or == 0",
+      "call_chain_traced": "ParseAndValidateConfig → assign v=-1 → validate() skips check → negative persisted",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Source confirms validation_absent. Single script but clear Type1: negative cutoff nonsensical for search parameter."
+    }
+  }
+}

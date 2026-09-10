@@ -1,0 +1,18 @@
+{
+  "target": "weaviate", "version": "v1.38.2", "round": 1,
+  "top_endpoints": ["DELETE /v1/batch/objects", "PUT /v1/schema/{className}/shards/{shardName}", "GET /v1/nodes/{className}"],
+  "richness_scores": {"DELETE /v1/batch/objects": 8.5, "PUT /v1/schema/{className}/shards/{shardName}": 6.0, "GET /v1/nodes/{className}": 4.0, "GET /v1/objects": 5.0, "POST /v1/objects": 5.5},
+  "shape_sources": {"DELETE /v1/batch/objects": "null_handling/validation-channel (contract evidence_tier=verified: match.class/match.where 'currently misuses the 500 channel')", "PUT /v1/schema/{className}/shards/{shardName}": "state_management richness (management endpoint state echo)", "GET /v1/nodes/{className}": "state_management (observability state echo)"},
+  "condition_history": [
+    {"endpoint": "DELETE /v1/batch/objects", "condition_type": "null_check", "finding": "DEFECT_FOUND", "detail": "missing/null match, match.class, match.where => HTTP 500 instead of 422; root cause usecases/objects/batch_delete.go L128/132/136 plain errors.New vs NewErrInvalidUserInput; handler handlers_batch_objects.go L194-197 maps only ErrInvalidUserInput/ErrMultiTenancy/Forbidden to 4xx"},
+    {"endpoint": "DELETE /v1/batch/objects", "condition_type": "range_filter(stopword term)", "finding": "DEFECT_FOUND", "detail": "stopword-only valueText => 500 'docIds: invalid search term, only stopwords provided'; GraphQL same filter = structured error HTTP 200", "inspired_by": "null_check"},
+    {"endpoint": "PUT /v1/schema/{c}/shards/{s}", "condition_type": "existence_check", "finding": "DEFECT_FOUND", "detail": "nonexistent shardName => 200 + echoes status, no state change; validates status value + class existence but not shard existence (cross-pollination from batch-delete validation vein)"},
+    {"endpoint": "PUT /v1/schema/{c}/shards/{s}", "condition_type": "type_mismatch", "finding": "DEFECT_FOUND", "detail": "invalid status string on real shard => 500 'invalid storage status' instead of 4xx", "inspired_by": "existence_check"},
+    {"endpoint": "GET /v1/nodes/{className}", "condition_type": "state_echo", "finding": "DEFECT_FOUND", "detail": "shards:null for class with data while GET /v1/schema/{c}/shards shows READY shard"},
+    {"endpoint": "DELETE /v1/batch/objects?tenant=", "condition_type": "null_check(tenant on non-MT)", "finding": "by_design_excluded", "detail": "returns proper 422 'multi-tenancy disabled, but request was with tenant' — earlier probe 500 was caused by stopword value, not tenant"},
+    {"endpoint": "POST /v1/objects nonexistent class", "condition_type": "existence_check", "finding": "by_design_excluded", "detail": "auto-schema creates class implicitly (default ENABLE_AUTO_SCHEMA)"},
+    {"endpoint": "GET /v1/objects?where=", "condition_type": "filter ignored", "finding": "by_design_excluded", "detail": "where not a documented query param on this endpoint (go-swagger ignores unknown params); GraphQL/verified filter paths work"}
+  ],
+  "last_finding": {"endpoint": "GET /v1/nodes/{className}", "condition_type": "state_echo", "finding": "DEFECT_FOUND"},
+  "adjacent_pending": []
+}

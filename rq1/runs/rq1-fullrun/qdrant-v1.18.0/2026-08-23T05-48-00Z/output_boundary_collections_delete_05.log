@@ -1,0 +1,15 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[empty-trailing-slash] DELETE /collections/ -> 404 | 
+[bare-collections] DELETE /collections -> 404 | 
+[long-1000] DELETE /collections/bd05_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx... -> 422 | {"status":{"error":"Validation error in path parameters: [collection_name: value \"bd05_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+[dot] DELETE /collections/. -> 404 | 
+[dotdot] DELETE /collections/.. -> 404 | 
+[nul-encoded] DELETE /collections/bd05_%00_nul -> 422 | {"status":{"error":"Validation error in path parameters: [collection_name: collection name cannot contain \"\u0000\" char]"},"time":0.0}
+[unicode-missing] DELETE /collections/bd05_не_существует_中文 -> 200 | {"result":false,"status":"ok","time":0.000096047}
+[trailing-space] DELETE /collections/bd05_trailing%20 -> 200 | {"result":false,"status":"ok","time":0.000079752}
+[plus-name] DELETE /collections/bd05+plus+name -> 200 | {"result":false,"status":"ok","time":0.000059173}
+[reserved-aliases] DELETE /collections/aliases -> 200 | {"result":false,"status":"ok","time":0.00006727}
+[unicode-control] create: 200
+[unicode-control] DELETE existing unicode name: 200 raw={"result":true,"status":"ok","time":0.008011317}
+VERDICT: DEFECT_FOUND — [unicode-missing] Type1_IllegalSuccess: 200 DELETE on non-existent name (constraint requires 404) | [trailing-space] Type1_IllegalSuccess: 200 DELETE on non-existent name (constraint requires 404) | [plus-name] Type1_IllegalSuccess: 200 DELETE on non-existent name (constraint requires 404) | [reserved-aliases] Type1_IllegalSuccess: 200 DELETE on non-existent name (constraint requires 404)

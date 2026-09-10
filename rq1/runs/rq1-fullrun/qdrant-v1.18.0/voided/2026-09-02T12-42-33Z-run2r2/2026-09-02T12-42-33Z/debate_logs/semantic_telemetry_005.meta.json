@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_telemetry_005",
+  "endpoint": "telemetry",
+  "param": "anonymize",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "metamorphic",
+  "oracle": {
+    "statement": "M1 - the result section sets of anonymize=true and anonymize=false at details_level=10 are exactly identical and both contain all 9 sections (differing sets = Type4_StateLogicViolation); M2 - details_level=0 and details_level=10 both return 200 with all 9 documented sections present (a missing documented section at either level = Type4_StateLogicViolation; extra additive keys not judged); M3 - when GET /cluster/telemetry answers 200, its result.cluster.enabled equals /telemetry's result.cluster.enabled (disagreement = Type4_StateLogicViolation); 5xx on any leg with /healthz alive = Type3_RuntimeFailure; 4xx on a plain /telemetry leg = Type1_IllegalRejection (constraints qdrant_type_telemetry_001, qdrant_behavioral_cluster_telemetry_001)",
+    "source": "docstring"
+  }
+}

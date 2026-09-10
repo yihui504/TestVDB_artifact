@@ -1,0 +1,38 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: bau29c6e20d7
+positive create -> status=200 raw={"result":true,"status":"ok","time":0.016676501}
+positive delete -> status=200 raw={"result":true,"status":"ok","time":0.01505804}
+probe[actions-missing] -> status=400
+  raw: {"status":{"error":"Format error in JSON body: missing field `actions` at line 1 column 2"},"time":0.0}
+  OK: rejected 400 with non-empty diagnostics
+probe[actions-null] -> status=400
+  raw: {"status":{"error":"Format error in JSON body: invalid type: null, expected a sequence at line 1 column 16"},"time":0.0}
+  OK: rejected 400 with non-empty diagnostics
+probe[actions-string] -> status=400
+  raw: {"status":{"error":"Format error in JSON body: invalid type: string \"create_alias\", expected a sequence at line 1 column 26"},"time":0.0}
+  OK: rejected 400 with non-empty diagnostics
+probe[actions-object] -> status=400
+  raw: {"status":{"error":"Format error in JSON body: invalid type: map, expected a sequence at line 1 column 12"},"time":0.0}
+  OK: rejected 400 with non-empty diagnostics
+probe[actions-int] -> status=400
+  raw: {"status":{"error":"Format error in JSON body: invalid type: integer `42`, expected a sequence at line 1 column 14"},"time":0.0}
+  OK: rejected 400 with non-empty diagnostics
+probe[actions-empty-array] -> status=200
+  raw: {"result":true,"status":"ok","time":0.000056647}
+  OK: empty batch 200 no-op, zero state change
+probe[element-null] -> status=400
+  raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum AliasOperations at line 1 column 18"},"time":0.0}
+  OK: rejected 400 with non-empty diagnostics
+probe[element-string] -> status=400
+  raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum AliasOperations at line 1 column 28"},"time":0.0}
+  OK: rejected 400 with non-empty diagnostics
+probe[element-empty-object] -> status=400
+  raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum AliasOperations at line 1 column 16"},"time":0.0}
+  OK: rejected 400 with non-empty diagnostics
+probe[unknown-action-key] -> status=400
+  raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum AliasOperations at line 1 column 98"},"time":0.0}
+  OK: rejected 400 with non-empty diagnostics
+probe[double-key-element] -> status=200
+  raw: {"result":true,"status":"ok","time":0.015951735}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — invalid actions shape [double-key-element] accepted 200 (silently passed serde validation); prefix-owned state now: ['bau29c6e20d7y']

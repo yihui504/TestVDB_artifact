@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_upsert_vector_dim_002",
+  "endpoint": "/collections/{collection_name}/points:PUT",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url reachable, version mismatch, empty vector validation not explicitly documented but implied by type definition",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: empty vector array [] → http=200, code=0 (acknowledged)",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Target accepted empty vector without validation error"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_upsert_vector_dim_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_create_collection_001",
+      "assertion_text_quoted": "vectors.size must be positive integer (implies non-empty vector)",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_type_create_collection_001 (vectors.size > 0)",
+        "doc:https://api.qdrant.tech/api-reference/collections/create-collection (non-zero dimension implied)",
+        "script:boundary_upsert_vector_dim_002 (empty vector [])",
+        "log:HTTP 200 + acknowledged (target accepted empty vector)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Target accepted empty vector array violating dimension requirement, returning success",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "check_vector_against_config",
+        "check_named_vectors",
+        "vector.len",
+        "empty.*vector",
+        "is_empty"
+      ],
+      "files_examined": [
+        "lib/segment/src/common/mod.rs",
+        "lib/segment/src/segment/entry.rs",
+        "lib/segment/src/data_types/vectors.rs",
+        "lib/segment/src/data_types/named_vectors.rs"
+      ],
+      "source_excerpt": "lib/segment/src/common/mod.rs:188-219\nfn check_vector_against_config(\n    vector: VectorRef,\n    vector_config: &VectorDataConfig,\n) -> OperationResult<()> {\n    match vector {\n        VectorRef::Dense(vector) => {\n            // Check dimensionality\n            let dim = vector_config.size;\n            if vector.len() != dim {\n                return Err(OperationError::WrongVectorDimension {\n                    expected_dim: dim,\n                    received_dim: vector.len(),\n                });\n            }\n            Ok(())\n        }\n        ...\n    }\n}\n\nlib/segment/src/data_types/named_vectors.rs:273-275\npub fn is_empty(&self) -> bool {\n    self.map.is_empty()\n}\n\nNote: check_vector_against_config compares vector.len() with dim. For empty vector [], len=0. If collection dim=2, then 0 != 2 triggers WrongVectorDimension error. However, this validation only occurs if check_named_vectors is invoked with non-empty NamedVectors.",
+      "call_chain_traced": "upsert_point (entry.rs:653) → check_named_vectors (common/mod.rs:149) → check_vector (common/mod.rs:42) → check_vector_against_config (common/mod.rs:188) → dimension check at line 196",
+      "verification_outcome": "validation_present_in_source",
+      "note": "Dimension validation EXISTS in source code (same as dim_001 case). Empty vector [] has len()=0, which would fail the check 'if vector.len() != dim' for any collection with dim > 0. The HTTP 200 response for empty [] suggests either: (a) empty vectors bypass NamedVectors construction (empty map not checked), (b) API layer filters/accepts empty before segment validation, or (c) strict mode not enforced. Source confirms by-design validation logic exists but may not cover empty vector edge case.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "validation_present_in_source"
+    }
+  }
+}

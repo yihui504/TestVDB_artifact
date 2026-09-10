@@ -1,0 +1,64 @@
+{
+  "defect_id": "boundary_collections_create_001",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation at api.qdrant.tech not reachable (domain_blocked). OpenAPI v1.18.x schema defines m with minimum:0 (line 7900), not minimum:2 as constraint claims. Contract assertion m>=2 not enforced in schema.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: m=1 → HTTP 200, response={\"result\":true,\"status\":\"ok\",\"time\":0.260915933}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A (success: true)",
+        "note": "Illegal m=1 accepted with HTTP 200 and success=true, violating constraint requirement"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_create_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_001",
+      "assertion_text_quoted": "hnsw_config.m >= 2 AND hnsw_config.m <= 100",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_001 (assertion: m >= 2 AND m <= 100)",
+        "doc:OpenAPI v1.18.x schema defines m minimum:0 (contradicts contract)",
+        "script:PUT /collections/{name} with hnsw_config.m=1",
+        "log:HTTP 200 with {\"result\":true,\"status\":\"ok\"} (accepted illegal value)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "OpenAPI schema minimum:0 contradicts contract assertion m>=2; schema validation would not catch m=1 violation",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["hnsw_config.*m", "validate.*hnsw", "m.*range"],
+      "files_examined": [
+        "lib/segment/src/index/hnsw_index/config.rs",
+        "docs/redoc/v1.18.x/openapi.json"
+      ],
+      "source_excerpt": "File: docs/redoc/v1.18.x/openapi.json, Lines 7896-7900\n\"m\": {\n  \"description\": \"Number of edges per node in the index graph...\",\n  \"type\": \"integer\",\n  \"format\": \"uint\",\n  \"minimum\": 0\n}\n\nFile: lib/segment/src/index/hnsw_index/config.rs, Lines 11-18\n#[derive(Debug, Deserialize, Serialize, Copy, Clone, PartialEq, Eq)]\npub struct HnswGraphConfig {\n    pub m: usize,\n    pub m0: usize,\n    pub ef_construct: usize,\n    ...\n}",
+      "call_chain_traced": "OpenAPI schema defines minimum:0 for m. No explicit validation enforcing m>=2 found in API layer. HnswGraphConfig struct accepts m as usize (unsigned, min 0 effectively). Validation relies on OpenAPI schema which has wrong minimum.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "payload_mismatch"],
+      "surviving": "m=1 is definitively outside [2,100] range per contract, yet accepted by API. No by-design logic found accepting m=1. OpenAPI schema minimum:0 is inconsistent with documented constraint m>=2."
+    }
+  }
+}

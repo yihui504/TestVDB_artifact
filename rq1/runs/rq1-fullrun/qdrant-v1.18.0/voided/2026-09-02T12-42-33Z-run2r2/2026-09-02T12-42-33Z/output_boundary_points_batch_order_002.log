@@ -1,0 +1,26 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+batch S seed (3 ops) -> status=200
+raw: {"result":[{"operation_id":1,"status":"completed"},{"operation_id":2,"status":"completed"},{"operation_id":3,"status":"completed"}],"status":"ok","time":0.013620656}
+batch S seed: envelope OK (3 entries, statuses ['completed', 'completed', 'completed'])
+
+batch X delete-then-upsert (2 ops) -> status=200
+raw: {"result":[{"operation_id":4,"status":"completed"},{"operation_id":5,"status":"completed"}],"status":"ok","time":0.009493505}
+batch X delete-then-upsert: envelope OK (2 entries, statuses ['completed', 'completed'])
+X readback: p8 present=yes, payload={"stage": "reborn"}
+
+batch Y upsert-then-delete (2 ops) -> status=200
+raw: {"result":[{"operation_id":6,"status":"completed"},{"operation_id":7,"status":"completed"}],"status":"ok","time":0.006201871}
+batch Y upsert-then-delete: envelope OK (2 entries, statuses ['completed', 'completed'])
+Y readback: point+get p9 -> status=404 (raw: {"status":{"error":"Not found: Point with id 9 does not exists!"},"time":0.000180154})
+
+batch Z update_vectors (1 ops) -> status=200
+raw: {"result":[{"operation_id":8,"status":"completed"}],"status":"ok","time":0.004162417}
+batch Z update_vectors: envelope OK (1 entries, statuses ['completed'])
+Z readback: p10 vector=[0.9819805, 0.10910895, 0.10910895, 0.10910895] (expected direction [0.982, 0.1091, 0.1091, 0.1091])
+
+batch W upsert-then-delete_vectors (2 ops) -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [operations[1].delete_vectors.vector: must specify vector names to delete]"},"time":0.0}
+NOTE: batch W rejected with 4xx — delete_vectors with vector=[] on the unnamed default vector is not pinned by this chunk's assertions; recorded for the judge (clean rejection)
+VERDICT: NO_DEFECT

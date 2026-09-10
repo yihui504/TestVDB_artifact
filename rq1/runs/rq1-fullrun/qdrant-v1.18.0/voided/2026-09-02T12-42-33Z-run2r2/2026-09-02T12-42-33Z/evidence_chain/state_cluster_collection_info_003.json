@@ -1,0 +1,98 @@
+{
+  "defect_id": "state_cluster_collection_info_003",
+  "endpoint": "cluster+collection+info (GET /collections/{collection_name}/cluster)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: WebFetch to https://api.qdrant.tech/v-1-18-x/api-reference/distributed/collection-cluster-info was blocked by the environment's domain-safety check; the web-reader fallback retrieved the full page content, so the doc was actually fetched and verified (channel disclosed; not domain_blocked-in-principle). No doc_preflight.json exists anywhere in the plugin tree, contract sidecar field source_status='reachable' was the prior record. Version: page banner 'v1.18.x' + URL segment v-1-18-x vs target v1.18.0 — major.minor match. Content: the page's 200 response example includes in result all six members, explicitly \"resharding_operations\": [{direction, shard_id, peer_id, shard_key}] — the contract assertion mirrors the doc example. Nuance recorded honestly: the vendor's repo-shipped OpenAPI schema (docs/redoc/v1.18.x/openapi.json, generated from the same Rust structs) lists resharding_operations as an optional nullable property (required = [local_shards, peer_id, remote_shards, shard_count, shard_transfers]) while the rendered doc example shows it — doc-example vs normative-schema tension is real and belongs to the auditor. Endpoint precision: registry 'cluster+collection+info' GET ↔ doc path GET /collections/:collection_name/cluster ↔ script runtime PATHS 'collection_cluster': '/collections/{name}/cluster' ↔ server route #[get(\"/collections/{collection_name}/cluster\")] (src/actix/api/collections_api.rs:198) — all four agree. REST API reference page (gRPC is a separate doc surface); no SDK/REST confusion.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "DEFECT: cluster info 200 after recreate but shape broken: ['resharding_operations'] — Type4_StateLogicViolation",
+      "secondary_observations": [
+        "raw response of the primary observation: [post-recreate] status=200 raw={\"result\":{\"peer_id\":285485119185529,\"shard_count\":1,\"local_shards\":[{\"shard_id\":0,\"points_count\":0,\"state\":\"Active\"}],\"remote_shards\":[],\"shard_transfers\":[]},\"status\":\"ok\",\"time\":0.000146718}  (the resharding_operations key is absent; quiescent, deterministic — not a race artifact)",
+        "DEFECT: race window: 16 x shape on cluster-info reads while the collection lifecycle interleaved (graceful 404/200-with-shape expected) — Type4_StateLogicViolation — samples: [\"R#0: 200 missing fields ['resharding_operations']\", \"R#1: 200 missing fields ['resharding_operations']\", \"R#2: 200 missing fields ['resharding_operations']\"]",
+        "behavioral 404 clause honored (not the violated clause): [post-race absent] status=404 raw={\"status\":{\"error\":\"Not found: Collection `scci3_1788370006_19648_col` doesn't exist!\"},\"time\":7.305e-6}",
+        "comparative same-response (rest, same type domain, line-level): in the very same 200 body \"remote_shards\":[] and \"shard_transfers\":[] are serialized as present-empty arrays, while the documented sibling member resharding_operations is omitted entirely on an idle collection — present-empty vs skipped within one response",
+        "comparative face (grpc, source-derived, no live probe — runtime PATHS exposes REST only, face_unavailable live): lib/collection/src/operations/conversions.rs:1559-1563 flattens Option into a proto3 repeated field, which is likewise absent from the wire when empty — parity of omission across faces by construction",
+        "sibling repro (state_cluster_collection_info_001): [B existing] status=200 raw={\"result\":{\"peer_id\":285485119185529,\"shard_count\":1,\"local_shards\":[{\"shard_id\":0,\"points_count\":0,\"state\":\"Active\"}],\"remote_shards\":[],\"shard_transfers\":[]},\"status\":\"ok\",\"time\":0.000093078} / DEFECT: (B) 200 but documented fields missing from CollectionClusterInfo: ['resharding_operations'] — Type4_StateLogicViolation",
+        "sibling repro (state_cluster_collection_info_002, quiescent sharded collection): DEFECT: documented fields missing: ['resharding_operations'] — Type4_StateLogicViolation",
+        "sibling repro (state_cluster_collection_info_004, under concurrent writes): DEFECT: 2 x degraded shape on cluster-info 200s during writes — Type4_StateLogicViolation — samples: [\"200 missing ['resharding_operations']\", \"200 missing ['resharding_operations']\"]",
+        "sibling repro (semantic_cluster_collection_info_002, idle single read): VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — documented member 'resharding_operations' absent from the 200 payload of an idle collection"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No client-error-disposition question arises: the violated clause is the success-response shape (200 ok with documented members). The request-side-decidable error branch that was probed (absent collection) returned a proper HTTP 404, not 2xx."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_cluster_collection_info_003",
+        "state_cluster_collection_info_001",
+        "state_cluster_collection_info_002",
+        "state_cluster_collection_info_004",
+        "semantic_cluster_collection_info_002"
+      ],
+      "detail": "Five independent scripts hit GET /collections/{name}/cluster and all observed the identical pattern (resharding_operations key absent from every 200 body), across quiescent idle reads, post-recreate reads, CRUD-phase reads, concurrent writes, and a create/drop race — the omission is deterministic, not timing-dependent. Preverify recorded a WARN (oracle_degenerate, D3b-R4.0) about the docstring Oracle line's style; the executed oracle was nonetheless concrete (six REQUIRED_FIELDS by name, >=2-occurrence rule, explicit status dispositions) and the run completed cleanly (exit 1 = judged DEFECT_FOUND; no SCRIPT_ERROR/TypeError markers). meta.json expected_defect_type was Type3 (5xx during race); zero 5xx occurred, the judged DEFECT is the Type4 shape face — recorded as observed.",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_cluster_collection_info_001",
+      "assertion_text_quoted": "response contains peer_id, shard_count (minimum 0), local_shards, remote_shards, shard_transfers, resharding_operations",
+      "api_violates_assertion": true,
+      "note": "Violates-declaration self-check: the claim's phenomenon is a documented member absent from a success response (200 + status ok), and the quoted assertion is a 'response contains' claim over exactly that member set — the observation is inside the quote's constraint domain and the value (absent) is non-compliant, so violates=true is the honest declaration. The violated clause is the shape clause; the co-cited behavioral clause 'existing collection: HTTP 200 with cluster info; unknown collection: HTTP 404' had its 404 branch honored. Dispatch note: candidates.jsonl constraint_id is empty — grounding uses the script header's dual citation qdrant_behavioral_cluster_collection_info_001 (assertions[]: 'returns 200 with CollectionClusterInfo; 404 for an unknown collection') + qdrant_type_cluster_collection_info_001 (constraints.type_constraints, quoted above); both exist in structured_contract.json and share source_url .../collection-cluster-info.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: candidates.jsonl constraint_id=\"\" (mechanical extraction dropped the dual citation); script header line 6 cites qdrant_behavioral_cluster_collection_info_001 + qdrant_type_cluster_collection_info_001, both present in structured_contract.json (assertions[] / constraints.type_constraints), both citing source_url https://api.qdrant.tech/v-1-18-x/api-reference/distributed/collection-cluster-info",
+        "doc: v1.18.x page fetched (web-reader fallback after WebFetch domain block); 200 example result contains all six CollectionClusterInfo members including resharding_operations; repo-shipped docs/redoc/v1.18.x/openapi.json marks that member optional+nullable (not in required) — tension recorded",
+        "script: state_cluster_collection_info_003.py sends GET /collections/{scci3_1788370006_19648_col}/cluster via runtime PATHS 'collection_cluster'; REQUIRED_FIELDS at line 90-91 matches the documented member set verbatim; lifecycle thread cycles create/drop x8 while reader thread probes",
+        "log: [post-recreate] status=200 with result carrying peer_id/shard_count/local_shards/remote_shards/shard_transfers and NO resharding_operations key -> DEFECT ... Type4_StateLogicViolation; 16x same omission during race; [post-race absent] correctly 404"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The dispatch record's constraint_id field is empty (candidates.jsonl line 24: constraint_id:\"\") — the mechanical extractor dropped the script header's dual constraint citation. Both script-cited ids DO exist in the contract and share the same source_url, so the semantic contract->doc link is recoverable and was reconstructed above; flagged as a break of the dispatch join, severity for the auditor to weigh. The doc->script->log links are intact and mutually consistent.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "resharding_operations (22 files hit)",
+        "CollectionClusterInfo (30+ files hit)",
+        "cluster/collection | collection_cluster route registration (src/)",
+        "CollectionClusterInfo required-fields lookup in docs/redoc/v1.18.x/openapi.json"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/types.rs (lines 326-343: struct definition + serde skip + TODO comment)",
+        "lib/collection/src/shards/shard_holder/mod.rs (lines 534-554: get_resharding_operations_info returns None when idle)",
+        "lib/collection/src/collection/collection_ops.rs (lines 440-468: cluster_info construction site)",
+        "lib/collection/src/operations/conversions.rs (lines 1537-1566: gRPC conversion flattening Option)",
+        "src/actix/api/collections_api.rs (lines 198-213, 332-338: REST route + service registration)",
+        "docs/redoc/v1.18.x/openapi.json (CollectionClusterInfo schema: required list excludes resharding_operations; property nullable)",
+        "scripts/runtime/qdrant.py (line 44: 'collection_cluster': '/collections/{name}/cluster' — harness-side path mapping)"
+      ],
+      "source_excerpt": "lib/collection/src/operations/types.rs:326-343 —\n/// Current clustering distribution for the collection\n#[derive(Debug, Serialize, JsonSchema)]\npub struct CollectionClusterInfo {\n    /// ID of this peer\n    pub peer_id: PeerId,\n    /// Total number of shards\n    pub shard_count: usize,\n    /// Local shards\n    pub local_shards: Vec<LocalShardInfo>,\n    /// Remote shards\n    pub remote_shards: Vec<RemoteShardInfo>,\n    /// Shard transfers\n    pub shard_transfers: Vec<ShardTransferInfo>,\n    /// Resharding operations\n    // TODO(resharding): remove this skip when releasing resharding\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub resharding_operations: Option<Vec<ReshardingInfo>>,\n}\n\nlib/collection/src/shards/shard_holder/mod.rs:534-541 —\npub fn get_resharding_operations_info(&self) -> Option<Vec<ReshardingInfo>> {\n    let mut resharding_operations = vec![];\n    // We eventually expect to extend this to multiple concurrent operations, which is why\n    // we're using a list here\n    let Some(resharding_state) = &*self.resharding_state.read() else {\n        return None;\n    };\n\nlib/collection/src/collection/collection_ops.rs:454,460-467 —\nlet resharding_operations = shards_holder.get_resharding_operations_info();\n...\nlet info = CollectionClusterInfo { peer_id, shard_count, local_shards, remote_shards, shard_transfers, resharding_operations };\n\nlib/collection/src/operations/conversions.rs:1559-1563 (gRPC face) —\nresharding_operations: resharding_operations\n    .into_iter()\n    .flatten()\n    .map(ReshardingInfo::into)\n    .collect(),\n\ndocs/redoc/v1.18.x/openapi.json CollectionClusterInfo —\nrequired: ['local_shards','peer_id','remote_shards','shard_count','shard_transfers']  (resharding_operations NOT required; property: {\"description\":\"Resharding operations\",\"type\":\"array\",\"nullable\":true})",
+      "call_chain_traced": "actix route #[get(\"/collections/{collection_name}/cluster\")] get_cluster_info (src/actix/api/collections_api.rs:198) -> do_get_collection_cluster (src/common/collections.rs) -> Collection::cluster_info (lib/collection/src/collection/collection_ops.rs:460) -> ShardHolder::get_resharding_operations_info (shard_holder/mod.rs:534): returns None when self.resharding_state is None — the steady state of any collection with no resharding in flight (single-node sandbox and any idle collection) -> CollectionClusterInfo.resharding_operations = None -> serde skip_serializing_if omits the key from the REST JSON, exactly matching the observed bodies (five members present, key absent; sibling lists remote_shards/shard_transfers serialize as present-empty because they are non-Option Vec). gRPC face flattens the Option into a proto3 repeated field, which is also absent from the wire when empty — omission parity across both faces by construction.",
+      "verification_outcome": "by_design_in_source",
+      "detail": "The omission is annotated with explicit maintainer intent at types.rs:340 — '// TODO(resharding): remove this skip when releasing resharding' directly above the #[serde(skip_serializing_if)] attribute: a deliberate, conscious serialization skip, not unannotated silent behavior. Honest nuances for the auditor: (1) the TODO's trigger condition has already arrived — resharding is a shipped feature in v1.18.0 (resharding operations, endpoints and consensus tests are in-tree), yet the skip persists, i.e. the promised cleanup was never executed; (2) the vendor's own shipped OpenAPI schema is internally consistent with the skip (field optional+nullable, not required), while the rendered doc example — from which the extracted assertion's 'response contains' reading derives — presents the member as present; (3) the doc-example/serialization divergence is real, deterministic, and reproduced by five scripts; downstream spec-generated clients that dereference the documented field break on the common idle case. sufficiency_check: grep_hit_pursued — claim keywords resharding_operations (22 files) and CollectionClusterInfo (30+ files) were greped across the clone and every load-bearing hit file was read before fixing this outcome.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env/service health: healthz-gated script, the 404 branch behaved correctly in the same run, exit 1 is the judged DEFECT not a crash",
+        "concurrency race: the omission also occurs in quiescent single-threaded reads (post-recreate probe here, probe B of state_001, idle read of semantic_002) — not timing-dependent",
+        "cache/settlement delay: omission is immediate and deterministic on a freshly recreated collection within the same run",
+        "request-parameter typo: script REQUIRED_FIELDS spelling matches the documented member verbatim; the other five members appear in the raw body"
+      ],
+      "surviving": "Documentation-internal ambiguity: the vendor's own normative schema (docs/redoc/v1.18.x/openapi.json) marks resharding_operations optional+nullable while the rendered doc example and the extracted contract assertion present it as contained in every 200 — the 'response contains' reading exceeds the schema's required set, and the source carries an explicit TODO-marked deliberate skip; whether this doc-example-vs-schema-vs-behavior triangle counts as a reportable defect is the auditor's call."
+    }
+  }
+}

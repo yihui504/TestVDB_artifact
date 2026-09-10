@@ -1,0 +1,70 @@
+{
+  "defect_id": "boundary_hnsw_EF_006",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "无专属 constraint_id；以 hnsw config.go（004/005 同源 source_url）为契约锚。源码已核对：EF 无任何校验且大写键 'EF' 不在 OptionalIntFromMap 的 json 小写键列表中——与 log 的 silent-drop 为小写 ef 观测一致",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[ctrl] EF=64 -> create=200 persisted_ef=-1 / [neg] EF=-1 -> create=200 persisted_ef=-1 / DEFECT: negative EF accepted, silent-dropped on readback",
+      "secondary_observations": [
+        "[zero] EF=0 -> create=200 persisted_ef=-1  Type1 candidate: EF=0 accepted (no 4xx)",
+        "[huge] EF=1000000000 -> create=200 persisted_ef=-1  Type1 candidate: EF=1000000000 accepted (no 4xx)",
+        "注意：ctrl 组 EF=64 也被 silent-drop（persisted_ef=-1）——大小写键不匹配使一切 'EF' 大写输入失效"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "非法值(-1/0/10^9) 200 接受；更严重的是合法值(64)也被静默丢弃——键名大小写敏感导致用户意图全面丢失"
+      },
+      "reproducibility": "单脚本（4 组值全部一致）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_hnsw_EF_006.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_type_create_collection_001",
+      "assertion_text_quoted": "dynamicEfMin must be integer type（同族 hnsw 配置类型约束，本候选以同文件 EF 字段为对象）",
+      "api_violates_assertion": true,
+      "note": "严格说 EF 无专属 constraint；按同源 hnsw UserConfig 类型约束族判定：EF=-1/0/10^9 被接受且读回为小写 ef 默认 -1，约束域覆盖（int 类型但值域/键名行为违反应有校验），violates=True 供 auditor 复核 constraint 绑定",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: hnsw config.go 类型约束族（inferred）",
+        "doc: source_url=entities/vectorindex/hnsw/config.go（本地核对 EF 无校验）",
+        "script: boundary_hnsw_EF_006.py 4 组 EF 变体",
+        "log: 全部 200 + persisted_ef=-1（silent-drop 含合法值 64）"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "EF 无专属 constraint_id（契约仅含 dynamicEfMin/Max/flatSearchCutoff/replicationFactor 四条），contract 环以同族锚替代——链在 contract 环为弱锚，需 auditor 判定可否归族",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["OptionalIntFromMap(asMap, \\\"ef\\\"", "\"EF\""],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\entities\\vectorindex\\hnsw\\config.go (L53, L171-175, L260-323)"
+      ],
+      "source_excerpt": "entities/vectorindex/hnsw/config.go L171-175:\n\tif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"ef\", func(v int) {\n\t\tuc.EF = v\n\t}); err != nil { return uc, err }\nL29: DefaultEF = -1 // indicates \"let Weaviate pick\"\nL53: EF int `json:\"ef\"`（序列化键为小写 ef）\nvalidate() L260-323 对 EF 无任何校验。大写 'EF' 键不匹配 \"ef\" → 输入被丢弃 → persisted 恒为默认 -1",
+      "call_chain_traced": "POST /schema (大写 EF) → ParseAndValidateConfig 只查小写 \"ef\" 键 → 大写键被忽略 → EF=DefaultEF(-1) 持久化 → 读回小写 ef=-1",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["请求参数笔误（大写 EF 为文档常见写法，且 -1/0 小写路径同样无校验）"],
+      "surviving": "大写键失效可能被辩为 JSON 键大小写敏感 by-design；但负值/0 经小写键同样 200 无校验（与 004/005 同一 validate() 缺失），校验缺失本身 surviving"
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "defect_id": "boundary_schema_distance_empty_009",
+  "endpoint": "POST /schema",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Distance parameter documented with 5-value enum in OpenAPI spec (v1.38.0): cosine, l2-squared, dot, manhattan, hamming. Empty string is not enum member.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: POST /schema with vectorIndexConfig.distance='' (empty string) → HTTP 200 OK, collection created with distance='cosine' (default applied)",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business success",
+        "note": "Target accepted empty string and defaulted to cosine"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_schema_distance_empty_009"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vectorIndexConfig.distance",
+      "assertion_text_quoted": "distance enum: [cosine, l2-squared, dot, manhattan, hamming]",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: distance enum (5 values, empty string NOT member)",
+        "doc: OpenAPI spec v1.38.0 explicitly lists 5 enum values",
+        "script: POST /schema with distance=''",
+        "log: HTTP 200, collection created with distance='cosine' (default)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["DefaultDistanceMetric", "distance.*cosine", "vectorIndex.*config"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1380\\entities\\vectorindex\\common\\config.go"
+      ],
+      "source_excerpt": "Line 31 in config.go:\nDefaultDistanceMetric = DistanceCosine\n\nSource shows distance defaults to 'cosine' when not specified. No explicit enum validation found for distance field in schema creation path.",
+      "call_chain_traced": "vectorIndexConfig initialization → DefaultDistanceMetric applied",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Empty string treated as 'not specified', triggering default behavior. Violates documented enum constraint."
+    }
+  }
+}

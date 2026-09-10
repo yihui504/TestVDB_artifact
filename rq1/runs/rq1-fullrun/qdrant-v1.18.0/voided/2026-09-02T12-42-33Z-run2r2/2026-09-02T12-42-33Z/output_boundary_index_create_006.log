@@ -1,0 +1,16 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[control keyword] PUT index mf_ctrl -> status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.449369064}
+OK(control): valid keyword index accepted
+[probe field_name with escaped NUL a\u0000b] -> status=400 raw={"status":{"error":"Format error in JSON body: Invalid json path: 'a\u0000b' at line 1 column 25"},"time":0.0}
+  OK(reject): 'field_name with escaped NUL a\u0000b' -> 400 (encoding boundary refused)
+[probe field_name with lone surrogate \ud800] -> status=400 raw={"status":{"error":"Format error in JSON body: unexpected end of hex escape at line 1 column 27"},"time":0.0}
+  OK(reject): 'field_name with lone surrogate \ud800' -> 400 (encoding boundary refused)
+[probe truncated JSON (cut mid-object)] raw body 41B -> status=400 raw={"status":{"error":"Format error in JSON body: EOF while parsing an object at line 1 column 41"},"time":0.0}
+  OK(reject): 'truncated JSON (cut mid-object)' -> 400 (malformed JSON refused)
+[probe trailing comma after object member] raw body 64B -> status=400 raw={"status":{"error":"Format error in JSON body: trailing comma at line 1 column 64"},"time":0.0}
+  OK(reject): 'trailing comma after object member' -> 400 (malformed JSON refused)
+[probe bare NUL byte inside JSON string value] raw body 58B -> status=400 raw={"status":{"error":"Format error in JSON body: control character (\\u0000-\\u001F) found while parsing a string at line 1 column 18"},"time":0.0}
+  OK(reject): 'bare NUL byte inside JSON string value' -> 400 (malformed JSON refused)
+OK: control accepted; NUL/surrogate refused or measured; 3/3 malformed JSON bodies rejected 4xx
+VERDICT: NO_DEFECT

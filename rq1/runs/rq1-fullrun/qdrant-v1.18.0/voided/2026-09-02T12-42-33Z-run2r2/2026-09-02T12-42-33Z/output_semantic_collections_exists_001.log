@@ -1,0 +1,23 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] collection_exists = /collections/{collection_name}/exists (raw_knowledge api_endpoints[collections+exists].url)
+ownership prefix: sce0147ed16
+[assertion quote] HTTP 200 with result being an object of shape {exists: bool}; a missing collection yields result.exists=false with HTTP 200 (never 404)
+[pre-probe] /healthz status=200 raw=healthz check passed
+[create sce0147ed16_live] status=200 raw={"result":true,"status":"ok","time":0.297084216}
+[envelope note] status='ok' (str) time=7.321e-06 (float)
+[leg A live collection] name='sce0147ed16_live' status=200 result={'exists': True} exists=True notes=[] raw={"result":{"exists":true},"status":"ok","time":7.321e-6}
+[conform] leg A live collection: 200 with result.exists=True (object grid)
+[envelope note] status='ok' (str) time=2.4108e-05 (float)
+[leg B never-created] name='sce0147ed16_never' status=200 result={'exists': False} exists=False notes=[] raw={"result":{"exists":false},"status":"ok","time":0.000024108}
+[conform] leg B never-created: 200 with result.exists=False (object grid)
+[envelope note] status='ok' (str) time=2.8781e-05 (float)
+[leg B2 re-probe stability] name='sce0147ed16_never' status=200 result={'exists': False} exists=False notes=[] raw={"result":{"exists":false},"status":"ok","time":0.000028781}
+[conform] leg B2 re-probe stability: 200 with result.exists=False (object grid)
+[conform] re-probe stable (same status and value)
+[delete sce0147ed16_live] status=200 raw={"result":true,"status":"ok","time":0.012454119}
+[envelope note] status='ok' (str) time=5.189e-06 (float)
+[leg C post-delete] name='sce0147ed16_live' status=200 result={'exists': False} exists=False notes=[] raw={"result":{"exists":false},"status":"ok","time":5.189e-6}
+[conform] leg C post-delete: 200 with result.exists=False (object grid)
+OK: exists answers 200 in-body for live (true), never-created (false, stable) and just-deleted (false) names, with result an object and result.exists a real boolean (response-shape grid)
+VERDICT: NO_DEFECT

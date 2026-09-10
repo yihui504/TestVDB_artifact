@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_payload_overwrite_005",
+  "endpoint": "payload+overwrite",
+  "param": "collection_name",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "delete_consistency",
+  "oracle": {
+    "statement": "valid body on a never-created collection -> HTTP 404 exactly; on a live collection each invalid body (missing payload / payload as string / payload null / no selector) -> 4xx rejection with state unchanged; valid body -> HTTP 200 with both readback payloads EXACTLY {\"c\":3}; after a confirmed collection delete the same valid body -> HTTP 404 again",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

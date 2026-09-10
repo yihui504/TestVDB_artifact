@@ -1,0 +1,76 @@
+{
+  "defect_id": "boundary_collections_create_008",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Domain api.qdrant.tech blocked by network security policies; constraint assertion verified from structured_contract.json (assertion: hnsw_config.ef_construct >= 10 AND hnsw_config.ef_construct <= 1000, evidence_tier: explicit, source_url: https://api.qdrant.tech/api-reference/collections/create-collection, source_verified: true)",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Status: 200, Body: {\"result\":true,\"status\":\"ok\",\"time\":0.364588452}",
+      "secondary_observations": [
+        "output_boundary_collections_create_007.log: Status: 200, Body: {\"result\":true,\"status\":\"ok\",\"time\":0.342377604} (ef_construct=9, below minimum 10, also accepted)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Target returned HTTP 200 with status:'ok' and result:true, indicating successful acceptance of invalid parameter ef_construct=1001 (should be rejected per constraint)"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_collections_create_007",
+        "boundary_collections_create_008"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_002",
+      "assertion_text_quoted": "hnsw_config.ef_construct >= 10 AND hnsw_config.ef_construct <= 1000",
+      "api_violates_assertion": true,
+      "note": "ef_construct=1001 exceeds maximum 1000, yet API returns HTTP 200 OK with result:true (silent acceptance)",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_002 (assertion: ef_construct ∈ [10,1000])",
+        "doc:https://api.qdrant.tech/api-reference/collections/create-collection (verified in contract, source_verified:true)",
+        "script:PUT /collections/{collection_name} with hnsw_config.ef_construct=1001",
+        "log:HTTP 200, Body:{\"result\":true,\"status\":\"ok\"}"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Log shows HTTP 200 OK with result:true for ef_construct=1001, which violates the constraint ef_construct <= 1000. The API should have rejected this with HTTP 400 Bad Request or returned an error code, but instead silently accepted the invalid value.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "ef_construct",
+        "hnsw_config",
+        "validation",
+        "ef_construct.*1000",
+        "range.*check"
+      ],
+      "files_examined": [],
+      "source_excerpt": "",
+      "call_chain_traced": "Source code not accessible (TESTVDB_SRC_DIR not set, no .srcdir file). WebFetch to https://api.qdrant.tech blocked by network security policies. Unable to perform source code verification.",
+      "verification_outcome": "not_found_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency"
+      ],
+      "surviving": null
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "defect_id": "boundary_payload_set_003",
+  "endpoint": "payload+set (POST /collections/{collection_name}/points/payload) with lazy aggravator via points+scroll filter (POST /collections/{collection_name}/points/scroll)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: PARTIAL — no doc_preflight.json sidecar exists anywhere in the plugin tree (searched); direct WebFetch of https://qdrant.tech/documentation/manage-data/payload/ was domain_blocked by the environment, but the page was fully retrieved via the alternate web reader (title 'Payload - Qdrant', canonical URL confirmed) — page is live; recorded PARTIAL because one fetch channel was blocked, not because the page is dead. Version: PARTIAL — page is the site-current concept doc with no version routing (contract itself records 'current (site latest; no version archive)'; no_version_in_url), which is normal for qdrant.tech concept pages. Content consistency: PARTIAL — the literal-format prose the constraint paraphrases does exist on the page (uuid section: 'In addition to the basic `keyword` type, Qdrant supports `uuid` type for storing UUID values. Functionally, it works the same as `keyword`, internally stores parsed UUID values.' with canonical 550e8400-... example literals; datetime section lists RFC 3339 formats; geo section specifies {lon, lat} objects; arrays: 'However, arrays (multiple values of the same type) are treated a little bit different...'), BUT the same page frames payload as free JSON ('Qdrant allows you to store any information that can be represented using JSON.') and defines typing as a filter/index concern ('During the filtering, Qdrant will check the conditions over those values that match the type of the filtering condition. If the stored value type does not fit the filtering condition - it will be considered not satisfied.') — there is NO ingestion-time validation promise for uuid literals, and the uuid type is opt-in per field via payload indexing, not tied to field names. Endpoint precision: PASS — payload+set is in the contract endpoint_registry (POST, source_url https://api.qdrant.tech/v-1-18-x/api-reference/points/set-payload, reachable, 1.18.x) and the script used exactly POST /collections/{coll}/points/payload with wait as a query parameter.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "lazy match channel on field 'uid' matched ids=[1] (well-formed control ids=[7])",
+      "secondary_observations": [
+        "face u1 non-uuid string (point 1) -> status=200",
+        "raw: {\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.004731113}",
+        "face u1 non-uuid string 200-accepted, persisted byte-equal — running lazy typed-validation aggravators",
+        "VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — accepted malformed literal (face u1 non-uuid string) is silently interpreted by the match channel: matched [1] where the well-formed control matches [7]",
+        "baseline: 7 payloads visible via scroll",
+        "comparative (sibling script, same constraint qdrant_type_payload_set_001, geo face g1 string-lon, rest face): output_boundary_payload_set_002.log:8 'lazy filter channel on field 'loc' matched ids=[8] (well-formed control ids=[8])' — control-consistent, judged defensible lazy validation (NOTE), and output_boundary_payload_set_002.log:10 'typed index create (loc: geo) -> status=200' — the geo typed index build over a malformed literal succeeded; contrast: in _003 the match set diverged from control ([1] vs [7]) which flipped the sub-judgement to Type4",
+        "face_unavailable: the typed uuid index channel (PUT /collections/{c}/index field_schema type uuid) was NEVER exercised — the script's lazy_typed_probe returns at the Type4 print (script line 189-190) before the index+create call (script line 193-196); grpc/sdk faces also unavailable (run was REST-only via python requests)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Stronger form than the enum label: the set-payload ingestion of the malformed literal returned HTTP 200 with a clean success envelope ({\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\"}) — no business error code at all, the request-side-decidable 'illegal' literal was accepted as full success; the follow-up match-filter scroll also returned 200 with the matching result."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_payload_set_003"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_payload_set_001",
+      "assertion_text_quoted": "payload/filter literal formats: geo point = {lon, lat}; datetime = RFC 3339 string; uuid = uuid string; arrays are same-typed",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check applied: the observation (200 + status ok on face u1) is an accepted value, so false must be justified as either outside-domain or compliant — it is OUTSIDE THE QUOTED CONSTRAINT'S DOMAIN: the uuid clause ('uuid = uuid string') governs uuid-typed values, and in qdrant payload typing is opt-in per field via payload index creation (PayloadSchemaType::Uuid); the tested field 'uid' had no payload index of any kind (never created in this script run), so it was an untyped JSON string field, and the matching filter {key:'uid', match:{value:'not-a-uuid'}} used the documented keyword string-equality channel (MatchValue::String vs stored Value::String). Neither the doc page nor the source ties uuid literal semantics to a field name. For the uuid clause to bind, the test would need a uuid-indexed field (or a uuid-typed filter face) — the citation as applied to an untyped field does not bind, hence no violation of the assertion as documented. The sibling facts remain recorded for the auditor: ingestion performs no literal-format validation at all (free-JSON storage, byte-equal persist), which the doc explicitly permits.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_payload_set_001 found at results/qdrant/v1.18.0/structured_contract.json:6079 (type_constraint, level endpoint, evidence_tier explicit, source_url https://qdrant.tech/documentation/manage-data/payload/, source_status degraded, source_verified false) — CAVEAT: the candidates.jsonl dispatch row carries constraint_id:\"\" (empty); the id was recovered from the attack string and the script header comment (constraint_ids: qdrant_type_payload_set_001), and the id resolves unambiguously in the contract, so the link substantively holds",
+        "doc: source_url page live (retrieved via web reader after direct WebFetch domain_blocked); contains the literal-format prose (uuid type 'for storing UUID values' / RFC 3339 datetime formats / geo {lon,lat} / arrays 'multiple values of the same type') scoped to filter/index semantics over free-JSON payload — no ingestion-validation promise",
+        "script: debate_logs/boundary_payload_set_003.py — raw attack request at lines 278-281 (POST /collections/{coll}/points/payload, json={\"points\":[1],\"payload\":{\"uid\":\"not-a-uuid\"}}, params wait=true); lazy aggravator filter at lines 224-225/169-184 ({must:[{key:'uid',match:{value:'not-a-uuid'}}]} via scroll); control point 7 uid='6f9619ff-8b86-d011-b42d-00c04fc964ff' at line 221/249",
+        "log: output_boundary_payload_set_003.log lines 5-9 — 200-accept with success envelope, byte-equal persist, match channel matched [1] vs well-formed control [7], verdict DEFECT_FOUND Type4_StateLogicViolation; verdict pattern matches the raw observations (no summary-word drift)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "PayloadVariant",
+        "PayloadIndexInfo|PayloadIndexSchema",
+        "uuid|Uuid (lib/segment/src/index/field_index/map_index/mod.rs)",
+        "match_payload|check_condition|ConditionChecker",
+        "pub struct SetPayload|validate",
+        "enum PayloadVariant|enum Match|enum PayloadSchemaType|Uuid (lib/segment/src/types.rs)",
+        "Match::Value (condition_checker.rs, via full-file read)",
+        "manage-data/payload + uuid strings|same-type|RFC 3339 (raw_knowledge.json, claim-side keywords)"
+      ],
+      "files_examined": [
+        "lib/segment/src/payload_storage/query_checker.rs",
+        "lib/segment/src/payload_storage/condition_checker.rs",
+        "lib/segment/src/types.rs (Match/MatchInterface/PayloadSchemaType/PayloadVariant regions, lines 2145-2270 and 2560-2680)",
+        "lib/segment/src/index/field_index/map_index/mod.rs (lines 872-1060, 1344-1371)",
+        "lib/shard/src/operations/payload_ops.rs (lines 55-105)"
+      ],
+      "source_excerpt": "[1] lib/shard/src/operations/payload_ops.rs:63-78 — API ingestion struct, NO literal-format validation on payload values:\n    /// This data structure is used in API interface and applied across multiple shards\n    #[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone)]\n    #[serde(try_from = \"SetPayloadShadow\")]\n    pub struct SetPayload {\n        pub payload: Payload,\n        /// Assigns payload to each point in this list\n        pub points: Option<Vec<PointIdType>>,\n        /// Assigns payload to each point that satisfy this filter condition\n        #[validate(nested)]\n        pub filter: Option<Filter>,\n        ...\n        pub key: Option<JsonPath>,\n    }\n(Payload is the raw JSON map type; the only #[validate] is nested on filter — payload values are stored as-is, which matches the log's byte-equal persist.)\n\n[2] lib/segment/src/payload_storage/query_checker.rs:189-236 — condition routing for the unindexed 'uid' field:\n    pub fn check_field_condition<R>(...) -> OperationResult<bool> ... {\n        let field_values = payload.get_value(&field_condition.key);\n        let field_indexes = field_indexes.get(&field_condition.key);\n        if field_values.is_empty() { return Ok(field_condition.check_empty()); }\n        // This covers a case, when a field index affects the result of the condition.\n        if let Some(field_indexes) = field_indexes { ... }\n        else {\n            // Fallback to regular condition check if there are no indexes for the field\n            Ok(field_values.into_iter().any(|p| field_condition.check(p)))\n        }\n    }\n('uid' had no field index in this run, so the fallback branch executed — the stored JSON value is checked directly.)\n\n[3] lib/segment/src/payload_storage/condition_checker.rs:152-162 — the exact match that produced ids=[1]:\n    impl ValueChecker for Match {\n        fn check_match(&self, payload: &Value) -> bool {\n            match self {\n                Match::Value(MatchValue { value }) => match (payload, value) {\n                    (Value::Bool(stored), ValueVariants::Bool(val)) => stored == val,\n                    (Value::String(stored), ValueVariants::String(val)) => stored == val,\n                    (Value::Number(stored), ValueVariants::Integer(val)) => {\n                        stored.as_i64().is_some_and(|num| num == *val)\n                    }\n                    _ => false,\n                },\n\n(Plain string equality — \"not-a-uuid\" == \"not-a-uuid\" matches point 1; ValueVariants has NO uuid variant at all; uuid syntax is never consulted on this path.)\n\n[4] lib/segment/src/index/field_index/map_index/mod.rs:1344-1366 — typed uuid index channel (NEVER engaged by this run), silently SKIPS non-uuid values at index build:\n    impl ValueIndexer for MapIndex<UuidIntType> {\n        type ValueType = UuidIntType;\n        ...\n        fn get_value(value: &Value) -> Option<Self::ValueType> {\n            Some(Uuid::parse_str(value.as_str()?).ok()?.as_u128())\n        }\n\n[5] lib/segment/src/index/field_index/map_index/mod.rs:900-909 — same channel, query side silently returns no iterator for a non-uuid match string:\n                Some(Match::Value(MatchValue { value })) => match value {\n                    ValueVariants::String(uuid_string) => {\n                        let Ok(uuid) = Uuid::from_str(uuid_string) else {\n                            return Ok(None);\n                        };\n                        Some(Box::new(self.get_iterator(&uuid.as_u128(), hw_counter)))\n                    }\n                    ValueVariants::Integer(_) => None,\n                    ValueVariants::Bool(_) => None,\n                },",
+      "call_chain_traced": "REST POST /collections/{c}/points/payload {points:[1], payload:{uid:'not-a-uuid'}} -> lib/shard/src/operations/payload_ops.rs SetPayload {payload: Payload (arbitrary JSON; only filter has nested validation)} -> segment payload assign, stored byte-equal (no literal-format validation anywhere in the ingestion path) -> later scroll {must:[{key:'uid',match:{value:'not-a-uuid'}}]} -> query_checker::check_field_condition: no field index registered on 'uid' -> fallback branch (query_checker.rs:232-235 'Fallback to regular condition check if there are no indexes for the field') -> ValueChecker for Match -> Match::Value(ValueVariants::String) vs stored Value::String -> stored == val (condition_checker.rs:155-162) -> point 1 matches, control filter (value='6f9619ff-8b86-d011-b42d-00c04fc964ff') matches point 7. The typed-uuid alternative channel (MapIndex<UuidIntType>, the only place uuid syntax is parsed in the filtering pipeline) was never created on this field by the script; had it been, non-uuid values would be silently skipped on both build (mod.rs:1364-1366 get_value -> None) and query (mod.rs:900-909 -> Ok(None)) sides rather than rejected.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "validation_absent is scoped to the faces the chain actually exercised: the ingestion face (payload+set) performs NO literal-format validation of payload values (free-JSON storage), and the unindexed-field match face performs type-blind string equality with no uuid parsing. Where uuid syntax IS validated (MapIndex<UuidIntType>, the opt-in uuid payload index), parse failures are silently skipped, never rejected. No code comment or docstring in the examined files explicitly declares lenient acceptance of malformed uuid literals as intended (the fallback comment at query_checker.rs:233 documents the unindexed-field mechanism, not a decision about malformed literals), so by_design_in_source is not available under the tightened rule — the by-design mitigation ('payload is arbitrary JSON', 'uuid type works the same as keyword') lives in the DOC layer, not in source intent annotations.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — server healthy throughout, deterministic 200 success envelopes, no 5xx, no transport failures",
+        "concurrency — single-threaded sequential script, wait=true on all mutations, baseline readback verified before the attack",
+        "request-parameter typo — the exact request bodies are in the script source and the readback persisted byte-equal, so the server received and stored precisely {uid: 'not-a-uuid'}"
+      ],
+      "surviving": "by-design-family interpretive defense (not environmental): qdrant payload fields are untyped JSON at ingestion and per-field typing (uuid) is opt-in via payload index creation; the doc explicitly permits storing any JSON and describes string-match semantics, so 'accepted + keyword-matched a non-uuid string in an untyped field' may be read as documented free-JSON/keyword behavior rather than a state-logic violation — this survives for the auditor to weigh against the constraint's literal-format phrasing"
+    }
+  }
+}

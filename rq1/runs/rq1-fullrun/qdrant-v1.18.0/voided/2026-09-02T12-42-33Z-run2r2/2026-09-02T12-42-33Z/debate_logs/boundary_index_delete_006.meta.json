@@ -1,0 +1,15 @@
+{
+ "defect_id": "boundary_index_delete_006",
+ "endpoint": "index+delete",
+ "param": "field_name",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "strategy6_resource_limit_path_length",
+ "constraint_ids": [
+  "qdrant_behavioral_index_delete_001",
+  "qdrant_state_index_delete_001"
+ ],
+ "oracle": {
+  "statement": "control leg (field_name 'a'*8 on a live never-indexed bidl6_* collection) returns exactly 200 (gate, else SCRIPT_ERROR); resource legs (grammar-legal 'a'*1e4/1e5/1e6 field_name on the live collection) accept 200 or any clean 4xx incl. 413/414 explicit length bound (measured-only, strategy-6 no-crash oracle); ghost-collection legs ('z'*1e4/1e5 never-created collection_name) accept 404 per the missing-collection promise or 413/414 clean length rejection; ANY 5xx = Type3_RuntimeFailure with /healthz re-check; timeout-class transport failure while /healthz alive = server-side hang = Type3_RuntimeFailure; /healthz down = SCRIPT_ERROR; after all legs collections+get result.payload_schema is still empty (phantom entry = Type4_StateLogicViolation)",
+  "source": "docstring"
+ }
+}

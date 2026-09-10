@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_points_query_batch_point_delete_003",
+  "endpoint": "points+query+batch",
+  "param": "searches",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "delete_consistency",
+  "oracle": {
+    "statement": "all-live by-id batch -> 200 len(result)==4 each entry contains its id; delete {12,13} wait=true -> count 4->2 and GET 12 -> 404; mixed [10,12,11] batch: whole 4xx accepted OR 200 len==3 with entry1 free of deleted id 12 (served = ghost read Type4) and survivors present; survivor batch 200 both served; final count == 2; 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

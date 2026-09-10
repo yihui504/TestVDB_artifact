@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_global_002",
+ "endpoint": "global",
+ "param": null,
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "concurrent",
+ "constraint_ids": [
+  "qdrant_inv_lock_blocks_mutations_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/post-locks",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "live /locks: while a thread toggles write lock on (with error_message=<token>) / off, every wait=true upsert response must be either 2xx or non-2xx carrying <token> (zero transport/5xx/foreign-4xx), final exact count == 20 seeds + n_2xx, every refused id absent and every 2xx id present, and GET /locks agrees with each successful set — any deviation = Type3_RuntimeFailure / Type4_StateLogicViolation; if GET+POST /locks both answer 404, NO_DEFECT with endpoint-absence evidence (invariant not actuable)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

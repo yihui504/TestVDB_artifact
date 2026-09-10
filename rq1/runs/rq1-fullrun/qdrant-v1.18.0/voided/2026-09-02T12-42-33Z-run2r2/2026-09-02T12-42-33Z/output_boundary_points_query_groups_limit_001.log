@@ -1,0 +1,28 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+setup payload index on 'grp': status=200 (best-effort, non-fatal)
+
+leg L1 limit=1 -> status=200
+raw: {"result":{"groups":[{"hits":[{"id":1,"version":1,"score":0.0057622097}],"id":"g01"}]},"status":"ok","time":0.002968807}
+leg L1 limit=1 OK: exactly 1 groups (envelope result.groups)
+
+leg L2 limit=2 -> status=200
+raw: {"result":{"groups":[{"hits":[{"id":1,"version":1,"score":0.0057622097}],"id":"g01"},{"hits":[{"id":2,"version":1,"score":0.011524419}],"id":"g02"}]},"status":"ok","time":0.002453715}
+leg L2 limit=2 OK: exactly 2 groups (envelope result.groups)
+
+leg Ldef limit-omitted -> status=200
+raw: {"result":{"groups":[{"hits":[{"id":1,"version":1,"score":0.0057622097}],"id":"g01"},{"hits":[{"id":2,"version":1,"score":0.011524419}],"id":"g02"},{"hits":[{"id":3,"version":1,"score":0.01728663}],"id":"g03"},{"hits":[{"id":4,"version":1,"score":0.023048839}],"id":"g04"},{"hits":[{"id":5,"version":1,"score":0.028811049}],"id":"g05"},{"hits":[{"id":6,"version":1,"score":0.03457326}],"id":"g06"},{"
+leg Ldef limit-omitted OK: exactly 10 groups (envelope result.groups)
+
+leg L0 limit=0 -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [search_group_request.group_request.limit: value 0 invalid, must be 1 or larger]"},"time":0.0}
+leg L0 limit=0 OK: rejected with 422 (error names 'limit': True)
+
+leg Lneg limit=-1 -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 99"},"time":0.0}
+leg Lneg limit=-1 OK: rejected with 400 (error names 'limit': False)
+
+leg Ltype limit='10' -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"10\", expected usize at line 1 column 101"},"time":0.0}
+leg Ltype limit='10' OK: rejected with 400 (error names 'limit': False)
+VERDICT: NO_DEFECT

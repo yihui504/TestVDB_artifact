@@ -1,0 +1,311 @@
+{
+ "auditor": "chain-auditor",
+ "target": "milvus",
+ "version": "v2.6.12",
+ "self_check": "PASS",
+ "verdicts": [
+  {
+   "defect_id": "boundary_s04_warmup_family",
+   "verdict": "NEEDS_MORE_EVIDENCE",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "A=NEUTRAL(quote_mismatch)→GREY_ZONE; 机械B=NOT_TRIGGERED; LLM B=NEUTRAL; D=NO_SIGNAL; C≠REFUTED→保守NEEDS_MORE_EVIDENCE"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "契约 create_008 原文即以 KNOWN GAP 收录 bare warmup pass-through（live-confirmed code 0），静默丢弃部分无断言；但链内引文为意译非原文子串，机械 A 退化为 quote_mismatch，需重引原文定案。",
+   "rework_order": {
+    "type": "EVIDENCE_GAP",
+    "claim": "裸 warmup+嵌套形式 code:0 后 describe 无属性（静默丢弃）",
+    "chain_covered": "同一现象，execution_evidence 完整（grade A 多脚本）",
+    "drift_point": "assertion_text_quoted 与 create_008 契约原文不逐字一致（意译），机械判定 quote_mismatch",
+    "targeted_instruction": "逐字转抄 create_008 原文（'KNOWN GAP (attack-verify target): bare warmup key ... passed through WITHOUT validation ... code 0'）并给出 api_violates_assertion 二值；勿改 execution_evidence。"
+   }
+  },
+  {
+   "defect_id": "boundary_s05_search_metric_mismatch",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE; 机械脚本 verdict_B=CONFIRMED(HTTP语义恒真)→采信，final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "顶层 metricType=IP/COSINE/BOGUS/42 对 L2 集合全 code:0 且结果与不传逐字节相同（accept-and-ignore），同参数面 searchParams 路径同类冲突以 65535 拒绝——请求侧可判定的参数冲突静默接受，Type1/Type2 混合缺陷。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_s10_quick_full_conflict",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "互斥参数"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "机械 A=CONFIRMED(id+quote_ok, violates=true) → implied_verdict=DEFECT，final=DEFECT"
+   },
+   "chain_broken_at": "log",
+   "root_cause_if_fp": null,
+   "rationale": "schema+dimension 同传 code:0 直接违反契约 create_003 'NOT(dimension set AND schema set) else 1100'；源码 handler_v2.go 证实互斥校验 absent，与 2.6.10 #9 同款跨版本重现。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_s11_consistency_level",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "source",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE; 机械B=NOT_TRIGGERED; LLM B=NEUTRAL; D=NO_SIGNAL; C=REFUTED(源码 by_design)→NOT_DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": "approximate_by_design",
+   "rationale": "utils.go:1729 convertConsistencyLevel 显式 if !=\"\" 短路回退 Bounded（带 PyMilvus 默认注释）——空串等价于省略是源码 by-design；契约引文意译致机械 quote_mismatch 不影响方向。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_s12_sparse_format",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "source",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "REFUTED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "机械 A=REFUTED → implied_verdict=NOT_DEFECT，final=NOT_DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": "approximate_by_design",
+   "rationale": "schema.go:2271 注释 'for empty json input, return empty sparse row' + SparseFloatRowDim 注释 'for an empty row, dim is 0'——空稀疏行是显式 by-design；契约 create_004 仅为正向能力声明无禁止域。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "semantic_default_value_fill_003",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "类型恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE; 机械B=NOT_TRIGGERED; LLM B=CONFIRMED(类型恒真: Int32 字段 default_value 字符串 '77' 被 create 接受)→final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "Int32 字段接受字符串 default_value='77' 且 create code:0——类型恒真违规不需契约背书；后果 insert 1804 'unable to cast \"\" of type string to int32' 证明默认值从未生效，convertDefaultValue 的类型拒绝路径被 create 绕过。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "semantic_search_ids_mode_002",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "类型恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE; 机械B=NOT_TRIGGERED; LLM B=CONFIRMED(VarChar PK ids 接受任意数值类型静默 %v 转换，与 Int64 侧 search_003 1100 严格性不对称)→final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "VarChar PK ids:[42.0] 经 fmt %v 静默命中 pk \"42\"（utils.go:219-231），契约 search_003 证明 Int64 侧小数 id 被 1100 强制——同 API 两侧类型严格性不对称，且 ids/data 模式同 pk 距离不一致加重语义混淆。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "state_alter_props_loaded_003",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "枚举闭集"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE; 机械B=NOT_TRIGGERED; LLM B=CONFIRMED(枚举闭集: warmup 值域 {disable,sync}，ASYNC 被接受)→final=DEFECT"
+   },
+   "chain_broken_at": "log",
+   "root_cause_if_fp": null,
+   "rationale": "create 路径 warmup.vectorIndex=ASYNC code:0 违反枚举闭集 {disable,sync}（ValidateWarmupPolicy 值域），alter 同值 1100、field 级 BOGUS 1100 双对照证明观测有效；task.go:459 校验仅在 alter 链生效。机械 A quote_mismatch 系引文意译，语义与契约原文一致（原文 'values restricted to disable|sync'）。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_ids_conversion_chain_002",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "类型恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE; 机械B=NOT_TRIGGERED; LLM B=CONFIRMED(类型恒真: 42/42.5/42.0 数值 id 对 VarChar PK 全静默命中)→final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "E 案 42.0→'42'（非 '42.0'）证明 fmt %v 宽松格式化而非精确转换，数值/浮点 id 全类型静默命中字符串 PK——类型恒真违规不需契约背书；与 semantic_search_ids_mode_002 同根因独立取证。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_warmup_bare_key_001",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "枚举闭集"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "机械 A=CONFIRMED(id+quote_ok, warmup.vectorIndex=ASYNC violates create_007) → implied_verdict=DEFECT，final=DEFECT"
+   },
+   "chain_broken_at": "log",
+   "root_cause_if_fp": null,
+   "rationale": "create warmup.vectorIndex=ASYNC code:0 直接违反 create_007 'values restricted to disable|sync'（引文逐字一致）；field 级 BOGUS 1100 对照证明校验存在但 create 集合级路径未调用。",
+   "rework_order": null
+  }
+ ],
+ "summary": {
+  "total": 10,
+  "defect": 7,
+  "not_defect": 2,
+  "needs_more_evidence": 1,
+  "fp_evidence_source_distribution": {
+   "doc": 0,
+   "source": 2,
+   "both": 0,
+   "behavior": 0
+  },
+  "root_cause_distribution": {
+   "approximate_by_design": 2
+  },
+  "note": "VOIDED 2026-08-22: 见版本根 VOIDED.md"
+ },
+ "total_chains": 10
+}

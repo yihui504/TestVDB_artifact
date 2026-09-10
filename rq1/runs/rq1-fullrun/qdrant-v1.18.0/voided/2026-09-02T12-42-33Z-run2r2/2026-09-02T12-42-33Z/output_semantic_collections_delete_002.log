@@ -1,0 +1,28 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] drop_collection = /collections/{name} (raw_knowledge api_endpoints[collections+delete].url); collection_exists = /collections/{collection_name}/exists (api_endpoints[collections+exists].url)
+ownership prefix: scd021197f3
+[pre-probe] /healthz status=200 raw=healthz check passed
+[create scd021197f3_plain] status=200 raw={"result":true,"status":"ok","time":0.291288005}
+[premise exists scd021197f3_plain] status=200 result.exists=True
+[leg1 plain delete] status=200 raw={"result":true,"status":"ok","time":0.00812269}
+[conform] leg1 plain delete: 200 with result=true
+[create scd021197f3_tmo] status=200 raw={"result":true,"status":"ok","time":0.294121236}
+[premise exists scd021197f3_tmo] status=200 result.exists=True
+[leg2 delete ?timeout=5] status=200 raw={"result":true,"status":"ok","time":0.009114631}
+[conform] leg2 delete ?timeout=5 (documented optional query, integer min 1): 200 with result=true
+[create scd021197f3_data] status=200 raw={"result":true,"status":"ok","time":0.277986713}
+[leg3 upsert 3 points] status=200 raw={"result":{"operation_id":1,"status":"acknowledged"},"status":"ok","time":0.000354884}
+[leg3 delete data-bearing] status=200 raw={"result":true,"status":"ok","time":0.007304543}
+[conform] leg3 delete of a collection holding 3 points (primary use case): 200 with result=true
+[create scd021197f3_t0] status=200 raw={"result":true,"status":"ok","time":0.339291399}
+[premise exists scd021197f3_t0] status=200 result.exists=True
+[leg4 t0-immediate delete] status=200 raw={"result":true,"status":"ok","time":0.006862726}
+[conform] leg4 delete issued with zero settle delay after a 200 create and exists=true (no documented grace period): 200 with result=true
+[create scd021197f3_reuse] status=200 raw={"result":true,"status":"ok","time":0.248793832}
+[leg5 first delete] status=200 raw={"result":true,"status":"ok","time":0.006328173}
+[conform] leg5 first delete: 200 with result=true
+[create scd021197f3_reuse] status=200 raw={"result":true,"status":"ok","time":0.2405611}
+[conform] leg5 re-create of the SAME name after a 200 delete (stale tombstone would block legal reuse): 200 with result=true
+OK: legal delete family (plain / timeout=5 query / data-bearing / t0-immediate / name-reuse) all accepted with 200 result=true
+VERDICT: NO_DEFECT

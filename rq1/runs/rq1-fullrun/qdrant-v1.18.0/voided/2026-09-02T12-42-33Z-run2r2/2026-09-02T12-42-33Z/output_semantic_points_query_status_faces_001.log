@@ -1,0 +1,15 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+F1 valid query -> status=200
+raw: {"result":{"points":[{"id":42,"version":1,"score":0.0},{"id":43,"version":1,"score":1.0},{"id":41,"version":1,"score":1.0}]},"status":"ok","time":0.000503149}
+F1 OK: 200 with result.points list of ScoredPoints
+F2 wrong-dim vector -> status=400
+raw: {"status":{"error":"Wrong input: Vector dimension error: expected dim: 4, got 3"},"time":0.000272851}
+F2 OK: invalid query rejected with 400; rubric score=2/3
+F3 malformed filter -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"not-a-list\", expected null, array or map at line 1 column 90"},"time":0.0}
+F3 OK: malformed filter rejected with 400; rubric score=1/3
+F4 missing collection -> status=404
+raw: {"status":{"error":"Not found: Collection `spqNOPE93b267ec` doesn't exist!"},"time":0.000011151}
+F4 OK: missing collection -> 404; rubric score=3/3
+VERDICT: NO_DEFECT

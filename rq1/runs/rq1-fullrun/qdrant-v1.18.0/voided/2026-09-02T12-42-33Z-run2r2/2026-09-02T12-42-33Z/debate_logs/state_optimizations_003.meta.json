@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_optimizations_003",
+ "endpoint": "collections+optimizations",
+ "param": "summary.queued_points / describe points_count (duplicate-id replay idempotence readout)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "upsert_idempotence",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_optimizations_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-optimizations",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "after each wait=true stage (first write of K=120 ids, then duplicate replay of the same ids) the optimizations face drains to 3 consecutive idle reads (queued_points == 0, queued_optimizations == 0) within a 75s budget, and after the replay describe reports points_count == 120 (an integer 240 = Type4 duplicated store/double-counted readout); never-drained or phantom re-queue = Type4; present groups typed against the spec wrongly = Type4 shape conflict; 5xx/non-200 with /healthz alive = Type3/Type4 per class",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

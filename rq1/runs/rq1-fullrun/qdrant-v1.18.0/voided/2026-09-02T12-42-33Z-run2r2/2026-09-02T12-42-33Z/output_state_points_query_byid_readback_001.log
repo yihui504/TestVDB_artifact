@@ -1,0 +1,16 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['count', 'get_points_by_ids', 'query', 'upsert_points']
+[upsert 5 pts] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.003737358}
+[seed count] status=200 raw={"result":{"count":5},"status":"ok","time":0.000368944}
+[B-baseline by-id query 100] status=200 raw={"result":{"points":[{"id":201,"version":1,"score":0.9986294},{"id":202,"version":1,"score":0.99452174},{"id":302,"version":1,"score":0.10453018},{"id":301,"version":1,"score":0.05233997}]},"status":"ok","time":0.000463113}
+[B] OK: baseline top neighbour is 201 (V1 cluster)
+[upsert 1 pts] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.004947649}
+[O count] status=200 raw={"result":{"count":5},"status":"ok","time":0.000092848}
+[O] OK: count stays 5 after overwrite (id reuse)
+[O-readback batch-get 100 with_vector] status=200 raw={"result":[{"id":100,"vector":[0.0,1.0,0.0,0.0]}],"status":"ok","time":0.000142458}
+[O-readback] cos(stored,V2)=1.0 cos(stored,V1)=0.0
+[O-readback] OK: stored vector matches V2
+[R-flip by-id query 100] status=200 raw={"result":{"points":[{"id":301,"version":1,"score":0.9986294},{"id":302,"version":1,"score":0.99452174},{"id":202,"version":1,"score":0.10453018},{"id":201,"version":1,"score":0.05233997}]},"status":"ok","time":0.000421341}
+[R] OK: post-overwrite top neighbour is 301 (V2 cluster)
+VERDICT: NO_DEFECT

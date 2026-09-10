@@ -1,0 +1,89 @@
+{
+  "defect_id": "semantic_index_create_002",
+  "endpoint": "index+create (PUT /collections/{collection_name}/index)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: WebFetch to api.qdrant.tech was blocked by the sandbox domain policy, but a live fetch via the web-reader tool returned the full page (canonical URL https://api.qdrant.tech/v-1-18-x/api-reference/indexes/create-field-index, Fern-rendered, fetched 2026-09-03) — recorded as PASS, not domain_blocked, because content was actually retrieved. Version: page route v-1-18-x and selector show v1.18.x, matching target 1.18.0 (major.minor equal). Content: the page Body declares 'field_schema (enum or object or object or object or object or object or object or object or object or any, optional)' — a union of one string-enum and 9 object variants plus a rendering-artifact 'any'; NO sequence/array form is declared anywhere on the page, and the page's own cURL example uses the string form \"field_schema\": \"keyword\". Nuance: the Fern page collapses the enum member list inline; the assertion's 8 members {keyword, integer, float, geo, text, bool, datetime, uuid} match the source enum PayloadSchemaType (lib/segment/src/types.rs:2155-2164) exactly. Endpoint: endpoint_registry entry 'index+create PUT' with this exact source_url; the doc page is 'Create payload index' PUT /collections/{collection_name}/index; the tested request used that same face (field_name in body). Page is the REST API reference (SDK snippets only demonstrate the string form), so no SDK/REST confusion.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[PUT index sic025ff4dd_live/h_arr] schema=[\"keyword\"] -> status=200 raw={\"result\":{\"operation_id\":4,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.325890991}",
+      "secondary_observations": [
+        "rest same-parameter control (output_semantic_index_create_002.log:6): [PUT index sic025ff4dd_live/ctrl_ok] schema=\"keyword\" -> status=200 raw={\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.3236951} — positive face healthy (G4 ground)",
+        "rest same-parameter contrast (output_semantic_index_create_002.log:7): [PUT index sic025ff4dd_live/h_int] schema=123 -> status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 44\"},\"time\":0.0} — scalar shape rejected",
+        "rest same-parameter contrast (output_semantic_index_create_002.log:8): [PUT index sic025ff4dd_live/h_bool] schema=true -> status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 46\"},\"time\":0.0} — boolean shape rejected",
+        "rest same-parameter array-length contrast, cross-script (output_boundary_index_create_004.log:11): [probe field_schema [] (array shape)] body={\"field_name\": \"m_arr_schema\", \"field_schema\": []} -> status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 50\"},\"time\":0.0} — EMPTY array rejected while the 1-element array [\"keyword\"] was accepted: the positional-seq signature, not blanket array leniency",
+        "rest same-family parameter (untagged-enum leniency family, output_boundary_aliases_update_002.log:36-37): probe[double-key-element] -> status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.015951735} — a different serde untagged enum (AliasOperations) silently accepting an invalid element shape in the same run; distinct defect_id, cited as family context",
+        "grpc face (source-grounded, not live-probed — live cross-face probe unobtainable: sandbox exposes REST only, face_unavailable recorded): lib/api/src/grpc/qdrant.rs:5528 declares field_type: Option<i32> #[prost(enumeration = \"FieldType\")] — the gRPC face is a plain protobuf enum and structurally cannot carry a JSON array, so this acceptance is REST/serde-specific"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "A request-side-decidable type error (field_schema as JSON array, a shape outside the documented union) was answered HTTP 200 with a full success envelope ({\"result\":{\"operation_id\":4,\"status\":\"completed\"},\"status\":\"ok\"}) — not merely a 2xx with an error code but a pure success acknowledgment, i.e. complete silent acceptance; sibling shapes 123/true/[] show the server DOES use 400 + serde diagnostic for the same parameter, so the 200 is not a blanket 2xx policy"
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["semantic_index_create_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_index_create_001",
+      "assertion_text_quoted": "field_schema IN {keyword, integer, float, geo, text, bool, datetime, uuid}; text tokenizer IN {prefix, whitespace, word, multilingual}",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "The observed parameter IS field_schema and the observed value [\"keyword\"] is a JSON array — not a member of the asserted string-enum domain, and not the object-with-type branch either (endpoint request_required_paths = [field_name, field_schema.type]). The semantic value ('keyword') being legal does not cure the violation: the doc declares only enum/object wire shapes for field_schema, and the undocumented array form was silently coerced into the object branch (source shows it deserializes positionally into KeywordIndexParams). Violates-declaration self-check resolved as 'genuinely a domain violation' — the constraint citation is the correct one."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_index_create_001 exists in structured_contract.json type_constraints (endpoint index+create, evidence_tier explicit, source_url https://api.qdrant.tech/v-1-18-x/api-reference/indexes/create-field-index); request_required_paths=[field_name, field_schema.type]",
+        "doc: live-fetched v-1-18-x create-field-index page declares field_schema as enum-or-objects union with no array form; cURL example uses string form \"keyword\"",
+        "script: semantic_index_create_002.py put_index() sends body {\"field_name\": \"h_arr\", \"field_schema\": [\"keyword\"]} via runtime path_key create_index with wait=true — raw request targets exactly the constraint's parameter",
+        "log: output_semantic_index_create_002.log:9 records schema=[\"keyword\"] -> status=200 with completed operation envelope; control \"keyword\"->200 and 123/true->400 bracket the behavior; VERDICT line 10-11 matches the raw response"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior",
+      "note": "Minor dispatch-metadata gap, not a chain break: the candidates.jsonl entry for this defect_id carries constraint_id=\"\" (truncated attack string), but the attack string names constraints::qdrant_type_index_create_001 and the executed script header declares '# constraint_ids: qdrant_type_index_create_001'; the id resolves uniquely in structured_contract.json."
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "enum PayloadFieldSchema",
+        "struct PayloadSchemaParams",
+        "struct KeywordIndexParams",
+        "enum KeyType",
+        "fn create_field_index",
+        "struct CreateFieldIndex"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs (lines 2140-2330: PayloadSchemaType / PayloadSchemaParams / PayloadFieldSchema; lines 4995-5025: test_payload_parsing)",
+        "lib/segment/src/data_types/index.rs (lines 1-120: KeywordIndexParams / IntegerIndexParams / UuidIndexParams)",
+        "src/actix/api/update_api.rs (lines 366-409: route + create_field_index handler)",
+        "src/common/update.rs (lines 270-309: REST DTO CreateFieldIndex)",
+        "lib/api/src/grpc/qdrant.rs (lines 5504-5537: gRPC CreateFieldIndexCollection)"
+      ],
+      "source_excerpt": "1) src/common/update.rs:303-309 (REST DTO, actix Json extractor target):\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate)]\npub struct CreateFieldIndex {\n    pub field_name: PayloadKeyType,\n    #[serde(alias = \"field_type\")]\n    #[validate(nested)]\n    pub field_schema: Option<PayloadFieldSchema>,\n}\n\n2) lib/segment/src/types.rs:2275-2280 (the untagged wire enum):\n#[derive(Clone, Debug, Eq, Deserialize, Serialize, JsonSchema)]\n#[serde(untagged, rename_all = \"snake_case\")]\npub enum PayloadFieldSchema {\n    FieldType(PayloadSchemaType),\n    FieldParams(PayloadSchemaParams),\n}\n\n3) lib/segment/src/types.rs:2186-2199 (PayloadSchemaParams is itself untagged, all-struct variants):\n#[serde(untagged, rename_all = \"snake_case\")]\npub enum PayloadSchemaParams {\n    Keyword(KeywordIndexParams), Integer(IntegerIndexParams), Float(FloatIndexParams),\n    Geo(GeoIndexParams), Text(TextIndexParams), Bool(BoolIndexParams),\n    Datetime(DatetimeIndexParams), Uuid(UuidIndexParams),\n}\n\n4) lib/segment/src/data_types/index.rs:11-37 (the accepting struct — field 0 is `type`, ALL trailing fields #[serde(default)]):\n#[derive(Default, Debug, Deserialize, Serialize, JsonSchema, Clone, PartialEq, Hash, Eq)]\n#[serde(rename_all = \"snake_case\")]\npub enum KeywordIndexType { #[default] Keyword }\n\n#[derive(Debug, Default, Deserialize, Serialize, JsonSchema, Clone, PartialEq, Hash, Eq)]\n#[serde(rename_all = \"snake_case\")]\npub struct KeywordIndexParams {\n    // Required for OpenAPI schema without anonymous types, versus #[serde(tag = \"type\")]\n    pub r#type: KeywordIndexType,\n    /// If true - used for tenant optimization. Default: false.\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub is_tenant: Option<bool>,\n    /// If true, store the index on disk. Default: false.\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub on_disk: Option<bool>,\n    /// Enable HNSW graph building for this payload field.\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub enable_hnsw: Option<bool>,\n}\n\n5) src/actix/api/update_api.rs:374-379 (route + extractor):\n#[put(\"/collections/{collection_name}/index\")]\nasync fn create_field_index(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    operation: Json<CreateFieldIndex>,\n\n6) lib/segment/src/types.rs:2302-2310 (post-deserialization validation cannot catch it):\nimpl Validate for PayloadFieldSchema {\n    fn validate(&self) -> Result<(), ValidationErrors> {\n        match self {\n            PayloadFieldSchema::FieldType(_) => Ok(()), // nothing to validate\n            PayloadFieldSchema::FieldParams(payload_schema_params) => payload_schema_params.validate(), // Keyword(_) => Ok(())",
+      "call_chain_traced": "PUT /collections/{name}/index (update_api.rs:374) -> Json<CreateFieldIndex> (update.rs:303) -> field_schema: Option<PayloadFieldSchema>, untagged (types.rs:2276) -> variant FieldParams(PayloadSchemaParams), untagged (types.rs:2188) -> Keyword(KeywordIndexParams) — serde's derived struct deserializer accepts the JSON SEQUENCE form positionally (visit_seq): [\"keyword\"] fills field 0 r#type=KeywordIndexType::Keyword and #[serde(default)] fills is_tenant/on_disk/enable_hnsw, so the array silently deserializes into the object branch; Validate (types.rs:2302) then passes trivially. The empty array [] fails because field 0 has no default (invalid_length), producing the observed 400 in boundary_index_create_004 — the positional-seq signature. Scalars 123/true match neither variant (not a string, not a map/seq) -> the observed untagged-enum 400s. No comment, doc line, or test declares array acceptance: test_payload_parsing (types.rs:5012-5025) covers only the string form and object serialization; the line-21 comment in index.rs explains the type-field design was chosen 'for OpenAPI schema without anonymous types, versus #[serde(tag = \"type\")]' — an OpenAPI-schema motive, not an intent to accept arrays.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "validation_absent (not by_design_in_source): the contract-required shape validation — field_schema must arrive as the documented string-enum or object-with-type form — is not enforced on the REST face; the array acceptance is an unannotated side effect of serde's positional struct deserialization interacting with the untagged enums and #[serde(default)] trailing fields. Bare silent behavior with no explicit design declaration cannot be marked by_design per the v3.4 tightening; the only design comment found (index.rs:21) concerns OpenAPI schema shape, not input leniency. The gRPC face (prost enum, qdrant.rs:5528) structurally cannot accept an array, so the leniency is REST-specific."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "request-parameter typo / client-side marshalling (the runtime printed the exact body it sent — json.dumps of the same variable put into the request; the sibling 400s returned serde errors at columns 44/46 that byte-match the sent bodies {\"field_name\": \"h_int\", \"field_schema\": 123} / {\"field_name\": \"h_bool\", \"field_schema\": true}, proving faithful transport)",
+        "environment problem (control leg 200 with completed operation; deterministic deserialization-layer behavior, not infra flakiness)",
+        "concurrency / cache delay (single-threaded request sequence; the phenomenon is request-shape-decidable and reproduces the source-predicted split: [] rejected vs [\"keyword\"] accepted across two independent scripts in the same session)"
+      ],
+      "surviving": null
+    }
+  }
+}

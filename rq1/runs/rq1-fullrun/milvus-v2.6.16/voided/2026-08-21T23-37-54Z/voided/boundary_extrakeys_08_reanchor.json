@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_extrakeys_08",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "reanchor_note": "R1 NME 复审：原链约束引用错位（constraint_id='boundary' 泛型）。本链为重锚评估补证，非新观测。",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "可达性/版本 PASS（引用本地 clone request_v2.go，存在）。内容一致性 PASS：契约 milvus_type_collections_create_010 与 api_endpoints collections+create.searchParams（L182-186）均如实记载 create 接受 searchParams:{nprobe:0} -> code 0 未验证透传（'Unvalidated pass-through body key at create... Same family as 2.6.12 bare-warmup create gap. GT surface (B7)'）。端点精确 PASS。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "create Status: 200 | Raw: {\"code\":0,\"data\":{}} (output_boundary_extrakeys_08.log L1-L2, 请求含 searchParams.nprobe=0 / params.nprobe=-5 / params.warmup bogus 额外键)",
+      "secondary_observations": [
+        "L3: VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — create accepted extra illegal keys unvalidated（R1 脚本自判）",
+        "L4-L5: describe Status: 200 code:0 返回完整 schema（bnd_ex_08, dim=8, FloatVector）—— 额外键未影响建表结果，静默丢弃/忽略的直接后果证据"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + code:0（含 bogus 值的额外键以成功码接受）", "note": "违反直觉点在 params.warmup:'bogus'：契约 create_007 记载 warmup.* 子键值非法应 1100，但裸 params.warmup 顶层键走 create_008 记载的未验证透传路径 -> code:0"},
+      "reproducibility": "多脚本稳定触发（boundary_extrakeys_08 + boundary_extrakeys_15 同族；契约 create_010/milvus_behavioral_collections_create_011 均为 live-confirmed 记录）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_extrakeys_08.py", "debate_logs/boundary_extrakeys_15.py (同族)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "重锚结论: 可锚，且有两个互补锚 —— (1) milvus_type_collections_create_010（type_constraints, 'KNOWN GAP/attack-verify target' 记法）+ (2) milvus_behavioral_collections_create_011（assertions, expected_behavior: create with searchParams:{nprobe:0} or params:{nprobe:-1} -> code 0 by-design pass-through）。注意与 create_008（bare warmup gap）同族。",
+      "assertion_text_quoted": "create_010: \"collections+create body containing searchParams/params extras => code 0 (no REST-side validation of those keys)\" (L2744)；behavioral_create_011: \"create with searchParams:{nprobe:0} or params:{nprobe:-1} -> code 0 (by-design; keys forwarded or dropped without REST validation)\" (L3189)",
+      "api_violates_assertion": false,
+      "note": "重锚评估结论（一句话）：现象真实且可锚——但两个可用锚均把观测行为断言为 expected（code 0 pass-through / GT surface），即契约自记 gap-by-design 现状，因此 violates=False：API 行为与锚断言一致。R1 NME 的根源是锚引用错位（泛 'boundary'），而非无锚可引。若 auditor 走规范视角（额外非法键应拒绝），需先在契约中增补对抗性断言，现状下维持 NME→重锚-不违反 的处置建议。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: create_010 + behavioral_create_011 + api_endpoints searchParams 记载（三处一致）—— 修复了 R1 断链",
+        "doc: source_url 本地 clone request_v2.go（存在）",
+        "script: boundary_extrakeys_08.py create 带 searchParams.nprobe=0 / params.nprobe=-5 / params.warmup:'bogus'",
+        "log: L1-L2 code:0 data:{} + describe 证实建表成功 —— 与锚断言一致"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "R1 断链（constraint_id='boundary' 错位）已修复：重锚 create_010/behavioral_create_011。四环现齐全一致。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["CollectionReq", "searchParams", "warmup", "binding:\"required\""],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/request_v2.go (L644-659 CollectionReq)",
+        "internal/distributed/proxy/httpserver/handler_v2.go (createCollection 路由消费侧)"
+      ],
+      "source_excerpt": "request_v2.go L644-659: type CollectionReq struct { DbName string `json:\"dbName\"`; CollectionName string `json:\"collectionName\" binding:\"required\"`; Schema *schemapb.CollectionSchema `json:\"schema\"`; ... Properties map[string]interface{} `json:\"properties\"` } —— struct 中不存在 searchParams / nprobe / warmup 顶层字段，gin JSON 绑定对未声明键默认静默忽略（无 DisallowUnknownFields），这是 code:0 透传的结构性根因。params 内键（warmup 等）仅在 alter 路径被 common.go 校验（契约 create_007/008 记载的分界），create 路径的 params 转发不经过该白名单。",
+      "call_chain_traced": "REST body 额外键（searchParams/params.nprobe/params.warmup）-> CollectionReq 无对应字段（gin 静默忽略/params 原样转发）-> proxy createCollection -> code 0",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued（CollectionReq struct 已读；与 R2-nprobe 链共享 generateSearchParams 搜证）",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（describe 证实建表成功完整）", "请求笔误（脚本明确注入三个额外键，log 自述清楚）"],
+      "surviving": "by-design 透传（gin 默认忽略未知键 + params 转发无白名单）在源码与契约双侧均有记载；'额外非法键应拒绝'的规范期待缺契约断言支撑——维持非违反。"
+    },
+    "evidence_summary": {
+      "A_contract": "强锚（修复 R1 错位）——create_010 + behavioral_create_011 双锚，均为'如实记录现状'型",
+      "B_log": "create code:0 + describe 完整 schema 后果证据",
+      "C_control": "弱——本 log 无显式对照组（R1 链；契约 live-confirmed 记载充当旁证）",
+      "D_source": "CollectionReq 无 searchParams 字段 + gin 静默忽略未知键（结构性根因）",
+      "evidence_weight": "medium（链四环齐全、源码根因明确；但锚为 by-design 记法型，violates=False——补证结论：重锚成功、保持'现象真实但契约未断言为违规'的 NME 处置建议）"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "defect_id": "state_collections_get_003",
+  "endpoint": "collections+get (GET /collections/{collection_name}, describe face)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No doc_preflight.json sidecar exists in the contract dir (results/qdrant/v1.18.0/), so fallback live verification was used. Reachability: WebFetch was domain-blocked for api.qdrant.tech; the alternate web reader fetched the live page successfully (title 'Get collection details | Qdrant | API Reference'), corroborating the contract's own source_status=reachable (verified_at 2026-09-02T12:34:08Z) — PASS with tool-level block recorded. Version: URL/canonical carry the versioned route v-1-18-x matching target v1.18.0. Content: the doc's 200-response example contains result.status ('green'), result.config.{params,hnsw_config,optimizer_config,wal_config,quantization_config,...}, points_count, indexed_vectors_count, exactly the assertion's full-config promise; the 404-on-missing clause is runtime-anchored in the contract (parenthetical 'runtime verified') and is behaviorally confirmed by this log's settled readout — the fetched excerpt itself does not show the 404 branch (Fern page excerpt shows only the 200 body). Endpoint: endpoint_registry entry 'collections+get' GET /collections/{collection_name} (raw_knowledge url) matches the script's runtime path key describe_collection and the doc source_url exactly.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "DEFECT: churn window: 48 x 5xx answers on describe while the lifecycle churned (graceful 200-config or 404 was expected) — Type3_RuntimeFailure — samples: ['R6: 500 raw={\"status\":{\"error\":\"Service internal error: 0 of 0 read operations failed\"},\"time\":0.027087985}', 'R5: 500 raw={\"status\":{\"error\":\"Service internal error: 0 of 0 read operations failed\"},\"time\":0.027133195}', 'R8: 500 raw={\"status\":{\"error\":\"Service internal error: 0 of 0 read operations failed\"},\"time\":0.027592671}']",
+      "secondary_observations": [
+        "[churn stats] well-formed 200=205, 404-with-message=1097; malformed200=0; 5xx=48; bare404=0; odd4xx=0; transport=0",
+        "[quiescence] describe(scg3_1788403855_40596_col) -> 404? True",
+        "[settled describe] status=404 raw={\"status\":{\"error\":\"Not found: Collection `scg3_1788403855_40596_col` doesn't exist!\"},\"time\":6.003e-6}",
+        "[healthz] status=200 raw=healthz check passed",
+        "comparative (rest exists face, same lifecycle-churn attack, state_collections_exists_005): [churn stats] well-formed 200 answers: 1244 (true=240, false=1004); non-200=0; 5xx/malformed=0; transport=0 -> VERDICT: NO_DEFECT",
+        "comparative (rest cluster-info face, same churn, state_cluster_collection_info_003): DEFECT: race window: 16 x shape on cluster-info reads while the collection lifecycle interleaved (graceful 404/200-with-shape expected) — Type4_StateLogicViolation — no 5xx observed on that face"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No client-side-decidable error was involved: the failing request was a fully legal GET /collections/{name} on a name that existed moments earlier; the 500 is a server-internal error (StorageError::ServiceError), so the 2xx-vs-4xx business-code criterion does not apply."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_collections_get_003"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_collections_get_001",
+      "assertion_text_quoted": "returns 200 with full config (params, hnsw_config, optimizer_config, wal_config, quantization_config), status (green|yellow|red), points_count, indexed_vectors_counts",
+      "api_violates_assertion": true,
+      "note": "48 describe answers were HTTP 500 with 'Service internal error: 0 of 0 read operations failed' — neither of the two dispositions the assertion pins (200-with-config for existing, 404-with-message for missing) — while /healthz was 200 and the same request shape concurrently produced 205 well-formed 200s and 1097 404-with-message answers. violates-declaration self-check: the observed phenomenon is an out-of-contract third disposition on a legal request, not a value outside the quote's constraint domain, so violates=true is the honest reading (not conservatism). Nuance for the auditor: the assertion text speaks of steady states (existing/missing); mid-churn the ground truth flips and the script's pre-registered oracle (script docstring) pinned {well-formed 200, 404-with-message} as the only legal churn-window answers, with >=2 x 5xx + /healthz alive adjudicated Type3 — 48 occurrences satisfied that rule. candidates.jsonl carried an empty constraint_id; the binding was taken from the script's own constraint_ids header (state_collections_get_003.py line 6) and confirmed present in structured_contract.json assertions.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_collections_get_001 present in results/qdrant/v1.18.0/structured_contract.json assertions[] (endpoint collections+get, evidence_tier explicit, source_status reachable); candidates.jsonl constraint_id was empty, binding recovered from script header line 6 — present, not broken",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-collection fetched live via web reader (WebFetch domain-blocked); 200-response example matches the assertion's full-config promise field-for-field; doc pins only 200/404 dispositions, no 500-graceful behavior documented — link present",
+        "script: state_collections_get_003.py — lifecycle thread 8x create(rt.setup_default 4-dim Cosine)+DELETE drop_collection on scg3_1788403855_40596_col, 9 reader threads GET describe_collection -> /collections/{collection_name} every 20ms; oracle pre-registered in docstring — matches the constraint's endpoint and dispositions",
+        "log: output_state_collections_get_003.log — DEFECT line quotes raw 500 bodies verbatim ('R6: 500 raw={...0 of 0 read operations failed...}'), [healthz] status=200, settled 404 matches the assertion's 404 branch, churn stats consistent (205+1097+48 answers) — verdict pattern matches raw responses"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "read operations failed",
+        "of .* operations failed",
+        "execute_read_operation(",
+        "fn peer_is_readable",
+        "fn remove_local",
+        "fn collection_exists",
+        "pub fn is_readable",
+        "fn is_transient",
+        "pub fn service_error",
+        "Service internal error"
+      ],
+      "files_examined": [
+        "lib/collection/src/shards/replica_set/execute_read_operation.rs",
+        "lib/collection/src/shards/replica_set/read_ops.rs",
+        "lib/collection/src/collection/collection_ops.rs",
+        "lib/collection/src/shards/shard_holder/mod.rs",
+        "lib/collection/src/shards/replica_set/mod.rs",
+        "lib/collection/src/shards/replica_set/replica_set_state.rs",
+        "lib/collection/src/operations/types.rs",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs",
+        "lib/storage/src/content_manager/toc/mod.rs",
+        "lib/storage/src/content_manager/collections_ops.rs",
+        "lib/storage/src/content_manager/errors.rs"
+      ],
+      "source_excerpt": "lib/collection/src/shards/replica_set/execute_read_operation.rs:282-296 (empty operations stream -> immediate break):\n  282  tokio::select! {\n  283      operation_result = pending_operations.next() => {\n  284          let Some(operation_result) = operation_result else {\n  285              break;\n  286          };\n  ... (loop body classifies Ok into responses, transient Err into errors)\n\nlib/collection/src/shards/replica_set/execute_read_operation.rs:335-351 (the observed message is constructed from counts that can both be zero):\n  335  if responses.len() >= required_successful_results {\n  336      Ok(responses)\n  337  } else {\n  338      let errors_count = errors.len();\n  339      let operations_count = responses.len() + errors.len();\n  340      let errors_separator = if !errors.is_empty() { \":\" } else { \"\" };\n  341\n  342      let mut message = format!(\n  343          \"{errors_count} of {operations_count} read operations failed{errors_separator}\"\n  344      );\n  345\n  346      for error in errors {\n  347          write!(&mut message, \"\\n  {error}\").expect(\"writing into String always succeeds\");\n  348      }\n  349\n  350      Err(CollectionError::service_error(message))\n  351  }\n\nsupporting: lib/collection/src/shards/replica_set/mod.rs:652-656 (remove_local during teardown deletes this peer's state -> peer_is_readable=false): rs.is_local = false; rs.remove_peer_state(this_peer_id); — and lib/collection/src/shards/replica_set/replica_set_state.rs:156-168 (is_readable true only for Active/ReshardingScaleDown/ActiveRead; Initializing/Listener/Dead/Partial/... false — the create-leg window). lib/collection/src/operations/types.rs:960-965 service_error -> lib/storage/src/content_manager/errors.rs:21 #[error(\"Service internal error: {description}\")] -> HTTP 500. lib/storage/src/content_manager/collections_ops.rs:36-38 collection_exists = pure map contains_key (the clean exists face).",
+      "call_chain_traced": "REST GET /collections/{name} -> toc/mod.rs:383 get_collection (collections map lookup; absent -> StorageError::not_found \"Collection `X` doesn't exist!\" -> the clean 404) -> collection_ops.rs:329 Collection::info -> shard_holder select -> read_ops.rs:201-207 ShardReplicaSet::info(local_only=false) -> execute_read_operation.rs:23 execute_read_operation(.., false) -> execute_cluster_read_operation(required=1). There, operations = local_operation ONLY IF peer_is_readable(this_peer_id), chained with readable remotes; on this single-node deployment remotes is always empty, so when the local peer state is not readable — removed by remove_local (mod.rs:652-656) during the drop leg, or Initializing/Listener (replica_set_state.rs:156-168) during the create leg — the operations stream is EMPTY, pending_operations.next() returns None immediately (execute_read_operation.rs:283-285 -> break), leaving responses=0 and errors=0, which fails the required>=1 check and formats '0 of 0 read operations failed' -> CollectionError::service_error -> StorageError 'Service internal error: ...' -> HTTP 500. The describe path via execute_read_operation skips even the 'does not have enough active replicas' pre-check that exists on the execute_and_resolve_read_operation path (lines 96-102), which itself would also return a 500-class service error. Comparative confirmation: the exists endpoint is a pure map contains_key (collections_ops.rs:36-38) and never enters the replica-set read — matching its 0-non-200 record under the identical churn (output_state_collections_exists_005.log).",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "No graceful-degradation handling exists for the no-readable-replica-yet window on the describe path: the code neither retries, nor falls back, nor maps the empty-operations case to a 404/200 — it fabricates a vacuous error message ('0 of 0 read operations failed': zero operations attempted, zero failed) and returns service_error while the collection is still resolvable in the map (so the clean 404 branch is not reached either). No comment/docstring marks this intentional; the unrelated 'does not have enough active replicas' sibling check shows awareness of replica-availability failures but still chooses a 500-class service error. by_design_in_source is therefore not available (no explicit intent evidence).",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — /healthz 200 at adjudication, 0 transport failures, concurrent well-formed 200s (205) and 404s-with-message (1097) on the identical request, settled post-delete readout exactly 404-with-message",
+        "cache-delay — no stale-read signature: the failures are 500 internal errors, not stale 200-config bodies; the settled ghost-200 case never occurred",
+        "request-parameter-typo — one fixed legal name used by all threads; the same request shape produced both legal dispositions and the 500s within the same window"
+      ],
+      "surviving": "concurrency-race is the trigger by design (BS-03 lifecycle churn: create/drop on one name while readers describe), but the race does not absorb the signal: the legal churn outcomes (200-config / 404-with-message) were both observed alongside, and the 48 x 500 'Service internal error: 0 of 0 read operations failed' is a distinct third disposition with a vacuous message, unavailable on the exists face under the identical churn — the non-graceful degradation itself survives as the defect signal for the auditor to weigh"
+    }
+  }
+}

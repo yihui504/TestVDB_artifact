@@ -1,0 +1,81 @@
+{
+  "defect_id": "semantic_collections_create_007",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation source url (https://api.qdrant.tech/api-reference/collections/create-collection) is network-restricted (domain_blocked) - verification relies on cached structured_contract.json which explicitly states hnsw_config.m range [2, 100]. Constraint qdrant_range_create_collection_001 is present in structured_contract.json with assertion 'hnsw_config.m >= 2 AND hnsw_config.m <= 100', source_status: reachable. Version match confirmed: doc_version 1.19.x vs target v1.18.2 (major.minor matched). Content consistency verified: structured_contract contains explicit range constraint. Endpoint precision: collections+create endpoint verified in endpoint_registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Line 7: Test: m=1 - m=1 (below min 2); Line 8: Status: 200; Line 10: VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) - Invalid m=1 was incorrectly accepted",
+      "secondary_observations": [
+        "Line 4: ============================================================ Testing HNSW m parameter range [2, 100]"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A (HTTP 200 with body: {\"result\":true,\"status\":\"ok\",\"time\":0.384307624})",
+        "note": "Target API returned HTTP 200 OK with success status, despite receiving invalid hnsw_config.m=1 (below contract minimum of 2). This is Type1_IllegalSuccess pattern - illegal value accepted as successful operation."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_collections_create_007",
+        "boundary_collections_create_005",
+        "boundary_collections_create_006"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_001",
+      "assertion_text_quoted": "hnsw_config.m >= 2 AND hnsw_config.m <= 100",
+      "api_violates_assertion": true,
+      "note": "Constraint from structured_contract.json (line 443-453): qdrant_range_create_collection_001 states 'hnsw_config.m (max connections per node) ∈ [2, 100]'. Execution evidence shows API accepted m=1, which violates the lower bound (m >= 2). This is a Type1_IllegalSuccess - API accepts values outside documented range without rejection.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_range_create_collection_001 asserts hnsw_config.m ∈ [2, 100]",
+        "doc: structured_contract.json contains explicit range constraint with source_url=https://api.qdrant.tech/api-reference/collections/create-collection (network-restricted)",
+        "script: semantic_collections_create_007 generates PUT /collections/{collection_name} with hnsw_config.m=1",
+        "log: Status: 200, body={\"result\":true,\"status\":\"ok\"} - DEFECT_FOUND (Type1_IllegalSuccess)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Chain breaks at log layer - raw HTTP response shows 200 OK with success status despite contract (doc) and script both indicating m=1 should be rejected. The target API violated the documented constraint by accepting invalid value without returning 400 Bad Request.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "hnsw_config",
+        "m parameter",
+        "range validation",
+        "max_connections",
+        "HNSW"
+      ],
+      "files_examined": [],
+      "source_excerpt": "",
+      "call_chain_traced": "webfetch_shallow",
+      "verification_outcome": "webfetch_shallow",
+      "note": "Source code verification not performed - TESTVDB_SRC_DIR environment variable not set in session. Network restriction prevented WebFetch of https://api.qdrant.tech/api-reference/collections/create-collection (domain_blocked). Source grounding limited to structured_contract.json cached content. Without source clone access, cannot verify whether validation_absent or by_design_in_source applies. Grep queries not executed due to missing source directory.",
+      "sufficiency_check": "not_applicable",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "cache",
+        "race"
+      ],
+      "surviving": "Type1_IllegalSuccess: The API endpoint /collections/{collection_name} accepted hnsw_config.m=1 (value below documented minimum of 2) and returned HTTP 200 OK with success status. This is a clear violation of the documented range constraint. No environmental, concurrency, caching, or race condition explanation applies - the API incorrectly processed an invalid parameter as valid. The defect persists across multiple scripts (semantic_collections_create_007, boundary_collections_create_005, boundary_collections_create_006) confirming it is a systematic validation failure in the target implementation."
+    }
+  }
+}

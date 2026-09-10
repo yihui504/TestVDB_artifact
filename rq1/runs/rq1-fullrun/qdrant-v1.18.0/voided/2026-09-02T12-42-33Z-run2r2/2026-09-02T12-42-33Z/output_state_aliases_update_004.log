@@ -1,0 +1,22 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[seed sau4_1788365155_37660_colA x5] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.003079184}
+[seed sau4_1788365155_37660_colB x9] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.006841261}
+[create sau4_1788365155_37660_al->sau4_1788365155_37660_colA] status=200 raw={"result":true,"status":"ok","time":0.016290567}
+[stage1 direct A] via=sau4_1788365155_37660_colA status=200 count=5 raw={"result":{"count":5},"status":"ok","time":0.00030867}
+[stage1 via alias] via=sau4_1788365155_37660_al status=200 count=5 raw={"result":{"count":5},"status":"ok","time":0.000131708}
+[rename sau4_1788365155_37660_al->sau4_1788365155_37660_al2] status=200 raw={"result":true,"status":"ok","time":0.015310343}
+[stage2 via new name (target preserved)] via=sau4_1788365155_37660_al2 status=200 count=5 raw={"result":{"count":5},"status":"ok","time":0.000180504}
+[stage2 via old name (must stop resolving)] via=sau4_1788365155_37660_al status=404 count=None raw={"status":{"error":"Not found: Collection `sau4_1788365155_37660_al` doesn't exist!"},"time":2.427e-6}
+[list_aliases] status=200 raw={"result":{"aliases":[{"alias_name":"sau4_1788365155_37660_al2","collection_name":"sau4_1788365155_37660_colA"}]},"status":"ok","time":8.174e-6}
+stage2 OK: rename sau4_1788365155_37660_al->sau4_1788365155_37660_al2 preserved target sau4_1788365155_37660_colA
+[atomic switch sau4_1788365155_37660_al2: sau4_1788365155_37660_colA->sau4_1788365155_37660_colB] status=200 raw={"result":true,"status":"ok","time":0.037840514}
+[stage3 via alias after 200 switch] via=sau4_1788365155_37660_al2 status=200 count=9 raw={"result":{"count":9},"status":"ok","time":0.000150611}
+[list_aliases] status=200 raw={"result":{"aliases":[{"alias_name":"sau4_1788365155_37660_al2","collection_name":"sau4_1788365155_37660_colB"}]},"status":"ok","time":9.638e-6}
+[delete sau4_1788365155_37660_al2] status=200 raw={"result":true,"status":"ok","time":0.016262162}
+[stage4 via deleted alias] via=sau4_1788365155_37660_al2 status=404 count=None raw={"status":{"error":"Not found: Collection `sau4_1788365155_37660_al2` doesn't exist!"},"time":2.126e-6}
+[list_aliases] status=200 raw={"result":{"aliases":[]},"status":"ok","time":7.73e-6}
+stage4 OK: deleted alias row gone from the listing
+[final direct A] via=sau4_1788365155_37660_colA status=200 count=5 raw={"result":{"count":5},"status":"ok","time":0.000133362}
+[final direct B] via=sau4_1788365155_37660_colB status=200 count=9 raw={"result":{"count":9},"status":"ok","time":0.00014125}
+VERDICT: NO_DEFECT

@@ -1,0 +1,15 @@
+{
+  "defect_id": "semantic_collections_delete_004",
+  "endpoint": "collections+delete",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "metamorphic",
+  "constraint_ids": [
+    "qdrant_bc_delete_invisibility_001"
+  ],
+  "oracle": {
+    "statement": "MR1: at each of five samplings (t0 after create, t1 zero-delay after delete-ACK, t2 settled, t3 after recreate, t4 zero-delay after second delete-ACK) the three read faces (list result.collections[].name / GET 404-or-200 / exists result.exists) agree on existence - any within-sample disagreement = Type4_StateLogicViolation; MR2: lifecycle symmetry t0==t3 (all-present) and t1==t4 (all-absent), asymmetry = Type4; exists-face 404 counted absent-consistent (docs declare only 200 for that face)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "defect_id": "boundary_cluster_telemetry_003",
+  "endpoint": "cluster+telemetry (GET /cluster/telemetry)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: page live (WebFetch domain-blocked in this sandbox; retrieved via web reader — full page content returned, canonical URL confirms https://api.qdrant.tech/v-1-18-x/api-reference/distributed/cluster-telemetry). Version: URL path v-1-18-x and page header 'v1.18.x' match target v1.18.0 (same 1.18 series). Content: doc documents verbatim 'timeout integer Optional >=1 Defaults to 60' — exactly the range constraint's assertion 'timeout default 60, minimum 1'; only documented response is 200 'Retrieved' with the telemetry payload (example body shows result.cluster.enabled=true, number_of_peers=1 — i.e. even a single-peer deployment is documented to return 200); no 4xx/5xx and no distributed-mode/cluster-enabled precondition is documented anywhere on the page. Endpoint: GET /cluster/telemetry under the Distributed tag — matches contract endpoint_registry path 'cluster+telemetry' and the raw_knowledge-derived URL used by the script. This is REST API reference (curl examples), not SDK documentation.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[resource timeout=1000000] status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000140954}",
+      "secondary_observations": [
+        "[healthz attempt 1] status=200 raw=healthz check passed  (log:7 — server alive after the 500; not a process crash)",
+        "[resource timeout=2147483647 (i32 max)] status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000157272}  (log:8)",
+        "[resource timeout=18446744073709551615 (u64 max, spec-legal: no maximum)] status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000154979}  (log:10)",
+        "[overflow timeout=18446744073709551616 (u64 max+1, parse overflow)] status=400 raw={\"status\":{\"error\":\"Deserialize error in query parameters: number too large to fit in target type\"},\"time\":0.0}  (log:12 — clean parse rejection, conforms)",
+        "[malformed timeout='9'*4000 (overlong digit stream)] status=400 raw={\"status\":{\"error\":\"Deserialize error in query parameters: number too large to fit in target type\"},\"time\":0.0}  (log:14 — conforms)",
+        "[malformed timeout='a\\x00b' (NUL byte in query value)] status=400 raw={\"status\":{\"error\":\"Deserialize error in query parameters: invalid digit found in string\"},\"time\":0.0}  (log:16 — conforms)",
+        "[malformed timeout=Arabic-Indic digits (non-ASCII numerals)] status=400 raw={\"status\":{\"error\":\"Deserialize error in query parameters: invalid digit found in string\"},\"time\":0.0}  (log:18 — conforms)",
+        "comparative (rest face, same endpoint, other values — sibling output_boundary_cluster_telemetry_001.log:7): [timeout omitted (default-60 form)] params=None status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.003408097} — the SAME 500 with no timeout at all, proving input-independence of the 500",
+        "comparative (rest face — sibling telemetry_001.log:9,13): [timeout=1 (min closure)] status=500 … [timeout=60 (documented default value)] status=500 — same error body both times",
+        "comparative (rest face — sibling telemetry_001.log:15): [timeout=0 (min-1)] params={'timeout': 0} status=422 raw={\"status\":{\"error\":\"Validation error in query parameters: [timeout: value 0 invalid, must be 1 or larger]\"},\"time\":0.0} — disposition difference WITHIN the same parameter: in-domain values (>=1) get 500, out-of-domain (0) gets a clean 422",
+        "comparative (same-family parameter, rest face — sibling boundary_cluster_telemetry_005): details_level=0 on the same endpoint -> same 500 'Could not get telemetry from cluster' — the failure is endpoint-wide, not timeout-specific",
+        "comparative face note: internal gRPC face (QdrantInternal/get_telemetry) is not reachable from this sandbox (with_qdrant_client is an intra-cluster pooled channel) — face_unavailable for direct grpc probing; comparison obtained only across parameter values/families on the rest face"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "No 2xx-with-business-code on the client-error face: malformed byte streams and u64-overflow get clean 400 with serde diagnostics, timeout=0 gets 422 with the validator message. The flagged leg is the opposite direction: a spec-legal in-domain value (1000000) receives 500 on the documented-200 endpoint."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_cluster_telemetry_003 (primary: timeout=1000000/2147483647/18446744073709551615 legs)",
+        "reproducing the identical endpoint 500 pattern: boundary_cluster_telemetry_001, boundary_cluster_telemetry_002, boundary_cluster_telemetry_004, boundary_cluster_telemetry_005, semantic_cluster_telemetry_001, semantic_cluster_telemetry_002, semantic_cluster_telemetry_003, semantic_cluster_telemetry_004, state_cluster_telemetry_001, state_cluster_telemetry_002, state_cluster_telemetry_003, state_cluster_telemetry_004 (13 scripts, 28 occurrences of 'Could not get telemetry from cluster')"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_telemetry_001",
+      "assertion_text_quoted": "HTTP 200 with telemetry payload (id, app, collections, cluster, requests, memory, hardware, search_pool, quota)",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "Binding provenance (moved out of the constraint_id field so it stays a bare ID): qdrant_behavioral_cluster_telemetry_001 is the violated face; the dispatched candidates.jsonl row carried constraint_id=\"\" and the script docstring declared qdrant_range_cluster_telemetry_001 as the targeting constraint — its value-side is compliant. Violates-declaration self-check applied honestly with a constraint-citation change: w.r.t. the script's declared range constraint (verbatim assertion: \"timeout default 60, minimum 1\") the attack value is genuinely COMPLIANT (1000000 >= 1; the OpenAPI schema at openapi/openapi-cluster.ytt.yaml:28-35 and the live doc both specify minimum 1 and NO maximum), so the range assertion is not violated. The violated constraint is the behavioral 200-promise: a legal request to GET /cluster/telemetry returned HTTP 500 with body {\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"}} instead of the documented 200 — the doc page documents ONLY the 200 'Retrieved' response, with an example showing number_of_peers=1. Caveat for the auditor: per sibling log boundary_cluster_telemetry_001 the 500 occurs identically for omitted/default/min timeout, so the violation is deployment-conditional (standalone) and input-independent — it is NOT triggered by timeout=1000000 specifically; the verdict line's causal framing ('timeout=1000000 -> crash marker') is a misattribution, and the 'internal error' crash-marker hit is a substring of Qdrant's ordinary handled-500 envelope ('Service internal error: {description}', lib/storage/src/content_manager/errors.rs:21), not a panic/OOM signature. Behavioral description field verbatim: \"returns 200 TelemetryData; internal/ops-oriented endpoint\"."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: candidates.jsonl row 20 carries constraint_id=\"\" (empty — mechanical dispatch break); both matching constraints DO exist in structured_contract.json — qdrant_range_cluster_telemetry_001 (lines 6458-6468, assertion \"timeout default 60, minimum 1\", source_status reachable) and qdrant_behavioral_cluster_telemetry_001 (lines 7621-7631, expected 200 TelemetryData); recovered via the script docstring (line 34: 'Constraint: qdrant_range_cluster_telemetry_001') plus endpoint lookup",
+        "doc: source_url https://api.qdrant.tech/v-1-18-x/api-reference/distributed/cluster-telemetry live, v1.18.x, documents timeout >=1 default 60 verbatim and only a 200 response — consistent with both constraints and with the script's constraint quote (log:5)",
+        "script: boundary_cluster_telemetry_003.py lines 148-156 send GET /cluster/telemetry (URL derived from raw_knowledge api_endpoints, log:3) with params timeout=1000000 / 2147483647 / 18446744073709551615 / 18446744073709551616 / '9'*4000 / 'a\\x00b' / Arabic-Indic digits — raw requests match the dispatched attack description (strategy6 resource-limit + strategy7 malformed-input)",
+        "log: output_boundary_cluster_telemetry_003.log lines 6-18 record status+raw body per leg; line 20 VERDICT DEFECT_FOUND Type3 quotes the line-6 observation verbatim — the verdict pattern is consistent with the raw response it cites (no fabrication)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "Break 1 (recorded, mechanical): the dispatched candidates.jsonl row for boundary_cluster_telemetry_003 carries constraint_id=\"\" — the dispatch metadata failed to bind the constraint (it exists in structured_contract.json; the script itself declares it in its docstring). Break 2 (attribution, for the auditor): the verdict line attributes the 500 to the resource-limit value timeout=1000000 and calls the body text a 'crash marker', but sibling log boundary_cluster_telemetry_001 shows the identical 500 for omitted/default/min timeout — the value is not causal and the marker is the ordinary handled-error envelope; the underlying phenomenon (GET /cluster/telemetry unconditionally 500 in standalone) is real, stable across 13 scripts, and contradicts the documented 200-only contract.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Could not get telemetry from cluster",
+        "cluster/telemetry",
+        "GetTelemetryRequest",
+        "resolve_telemetries|newest_telemetry",
+        "DEFAULT_GRPC_TIMEOUT",
+        "id_to_address",
+        "pub struct ChannelService",
+        "is_distributed_deployment",
+        "fn prepare_data",
+        "Service internal error"
+      ],
+      "files_examined": [
+        "src/actix/api/cluster_api.rs",
+        "src/common/telemetry_ops/distributed_telemetry.rs",
+        "src/tonic/api/qdrant_internal_api.rs",
+        "src/common/telemetry.rs",
+        "src/main.rs",
+        "lib/collection/src/shards/channel_service.rs",
+        "openapi/openapi-cluster.ytt.yaml",
+        "lib/storage/src/content_manager/errors.rs (grep-verified), lib/api/src/grpc/transport_channel_pool.rs (grep-verified)"
+      ],
+      "source_excerpt": "src/actix/api/cluster_api.rs:42-47 — #[derive(Deserialize, JsonSchema, Validate)] pub struct ClusterTelemetryParams { details_level: Option<u32>, #[validate(range(min = 1))] timeout: Option<u64> }  // min-1 validation PRESENT; applied because the handler takes actix_web_validator::Query<ClusterTelemetryParams> (line 4 import, line 207 signature) — observed live in sibling log as 422 'timeout: value 0 invalid, must be 1 or larger'\n\nsrc/actix/api/cluster_api.rs:236-262 (get_cluster_telemetry) — let timeout = params.timeout.unwrap_or(DEFAULT_GRPC_TIMEOUT.as_secs()); // :236 default 60 (lib/api/src/grpc/transport_channel_pool.rs:25 pub const DEFAULT_GRPC_TIMEOUT: Duration = Duration::from_secs(60)) \n let all_peers: Vec<_> = channel_service.id_to_address.read().keys().copied().collect(); // :238-243 \n ... grpc::GetTelemetryRequest { collections_selector: ..., details_level, timeout } // :250-254 — timeout is only FORWARDED as a per-peer wait budget \n let mut telemetries = Vec::with_capacity(futures.len()); ... // :262 \n DistributedTelemetryData::resolve_telemetries(access, telemetries, missing_peers)? // :284-285\n\nsrc/tonic/api/qdrant_internal_api.rs:107-113 — let timing = Instant::now(); let timeout = Duration::from_secs(timeout); telemetry_collector.prepare_data(&auth, detail, only_collections, Some(timeout)).await?  // timeout becomes a wait budget only\n\nsrc/common/telemetry.rs:127-129 — let collections_telemetry = tokio::time::timeout(timeout, collections_telemetry_handle).await.map_err(|_: Elapsed| StorageError::timeout(timeout, \"collections telemetry\"))?  // large timeout => larger allowed wait, cannot crash\n\nsrc/common/telemetry_ops/distributed_telemetry.rs:156-158 — let base_telemetry = newest_telemetry(&telemetries).ok_or_else(|| StorageError::service_error(\"Could not get telemetry from cluster\"))?;  // THE observed 500 originates here: explicit handled error when the telemetries vec is empty \n :552-560 — fn newest_telemetry(telemetries: &[TelemetryData]) -> Option<&TelemetryData> { telemetries.iter().max_by_key(...) }  // returns None on an EMPTY slice\n\nsrc/main.rs:282-316 (init_channel_service) — doc comment: 'In single-node mode a default-configured service is returned. In distributed mode the service is populated...' \n if is_distributed_deployment { // :299 ... channel_service.id_to_address = persistent_consensus_state.peer_address_by_id.clone(); // :314 }  // standalone: id_to_address never populated \n src/main.rs:479 — let is_distributed_deployment = settings.cluster.enabled;  // this sandbox runs standalone (corroborated live by sibling recover log: 'Qdrant is running in standalone mode')\n\nlib/collection/src/shards/channel_service.rs:40-48 — pub fn new(...) -> Self { Self { id_to_address: Default::default(), id_to_metadata: Default::default(), ... } }  // empty HashMap by default\n\nlib/storage/src/content_manager/errors.rs:21 — #[error(\"Service internal error: {description}\")]  // the standard handled-500 envelope; the script's CRASH_MARKERS entry 'internal error' is a substring of this ORDINARY envelope, not a panic signature",
+      "call_chain_traced": "GET /cluster/telemetry -> actix get_cluster_telemetry (cluster_api.rs:203) -> actix_web_validator Query<ClusterTelemetryParams> [range(min=1) on timeout: line 45 — 0 => 422, non-digit/overflow => serde 400 'Deserialize error in query parameters'] -> default unwrap_or(60s) (:236) -> all_peers = keys(channel_service.id_to_address) (:238-243) -> per-peer gRPC GetTelemetryRequest{timeout} (:250-256) -> internal get_telemetry converts timeout to Duration wait budget (qdrant_internal_api.rs:108, telemetry.rs:127 tokio::time::timeout — a wait budget cannot crash and the observed failure was instant) -> standalone deployment (settings.cluster.enabled=false, main.rs:479) means init_channel_service (main.rs:299) never populates id_to_address (ChannelService::new default empty, channel_service.rs:47) -> all_peers empty -> zero futures -> telemetries empty -> resolve_telemetries -> newest_telemetry(&[]) = None -> StorageError::service_error('Could not get telemetry from cluster') (distributed_telemetry.rs:157-158) -> rendered as 500 'Service internal error: ...' (errors.rs:21). Deterministic, instant (~0.14ms), input-independent on any standalone deployment; the timeout value plays no role in this path.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "The contract-required input validation IS present in source: min 1 via #[validate(range(min = 1))] (live-confirmed by sibling 422 for timeout=0), default 60 via unwrap_or(DEFAULT_GRPC_TIMEOUT=60s), and all malformed/overflow streams cleanly 400'd in this very log. So the observed 500 is NOT a missing-validation defect and NOT a crash: it is an explicitly constructed handled service error on the empty-telemetries path, reached unconditionally in standalone deployments (empty id_to_address). by_design_in_source is NOT justified: no comment/docstring declares standalone-unsupported for telemetry — the only related annotation is the TODO at cluster_api.rs:24 ('TODO(cluster telemetry): Handle lower levels', about details_level) and the main.rs:284 doc comment describing the single-node channel-service shape, neither of which declares the 500 intended. The residual genuine signal: the doc (and the repo's own openapi/openapi-cluster.ytt.yaml:13-36, which documents only the 200 DistributedTelemetryData response with timeout minimum 1 default 60) promises 200 with no distributed-mode precondition, while the implementation structurally 500s on every standalone deployment — a deployment-conditional doc/impl gap, input-independent, NOT the value-triggered runtime crash the verdict claims."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "concurrency race (deterministic instant ~0.14ms response, identical across 13 scripts and all parameter values)",
+        "cache delay / stale state (fresh values per leg, identical outcome each time)",
+        "script_error (clean run, no SCRIPT_ERROR/TypeError markers; only a benign requests-library version warning)",
+        "request-parameter typo (URL derived from raw_knowledge api_endpoints registry; params echoed in the log per leg)"
+      ],
+      "surviving": "deployment topology (standalone, settings.cluster.enabled=false): empty channel_service.id_to_address -> empty telemetries -> unconditional handled 500 on GET /cluster/telemetry for ANY input including omitted/default/min timeout (sibling-proven) — the attack value timeout=1000000 is not causal, and the 'crash marker' is Qdrant's ordinary handled-500 envelope text. What survives as a genuine defect signal is only the deployment-conditional 500 vs the documented unconditional 200 (behavioral assertion), not a resource-limit-triggered crash. The sandbox is REST-only, so the internal gRPC face could not be probed directly (face_unavailable)."
+    }
+  }
+}

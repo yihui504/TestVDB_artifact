@@ -1,0 +1,84 @@
+{
+  "defect_id": "state_r2_insert_search_visibility_005",
+  "endpoint": "v2/vectordb/collections/get_stats (+ v2/vectordb/entities/search, insert)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "evidence_weight": "high_four_way_repro",
+  "weight_note": "与 R1 三链（vein_stats_rowcount_001 / semantic_visibility_04 / boundary_stats_rowcount_016）四方独立复现同根因；R2 链新增维度：Bounded 一致性下 insert 后 search 立即可见（hits=10）而 get_stats rowCount 恒 0，且 6s 等待后仍 0——排除短暂传播延迟",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "endpoint_registry: v2/vectordb/collections/get_stats -> handler_v2.go v2.3.22 doc_quote 'data {rowCount}'；state_invariant milvus_inv_count_consistency 断言 insert N 后 rowCount==N；source_url github v2.3.22 精确匹配",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "batch0: insert_code=200 | search_code=200 hits=10 | query_code=200 qhits=1 | rowCount=0 (expected_total=10)",
+      "secondary_observations": [
+        "batch1-4: insert_code=200 | search hits=10 | rowCount=0 (expected_total=20/30/40/50) — 每批一致",
+        "final (after 6s): search hits=50 rowCount=0 expected=50 — 6s 延迟后 rowCount 仍 0，排除短窗传播",
+        "SUSPECT: ('final', 'post-bounded-window inconsistency', 50, 0, 50); VERDICT: DEFECT_FOUND",
+        "R1 三链交叉印证（四方同根因）: vein_stats_rowcount_001 (rowCount=0 while count(*)=10, 10-30s+release/reload 持续); semantic_visibility_04; boundary_stats_rowcount_016 log:2-3 \"[get_stats] http=200 body={\\\"code\\\":200,\\\"data\\\":{\\\"rowCount\\\":0}}\" / \"rowCount 0 (expect >=5)\""
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "无请求侧错误：insert/search/query 全 200 成功；缺陷是 get_stats 返回值与可搜数据集的语义不一致（Type4），非错误信封问题"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "debate_logs/state_r2_insert_search_visibility_005.py",
+        "vein_scripts/vein_stats_rowcount_001.py",
+        "debate_logs/semantic_visibility_04.py",
+        "debate_logs/boundary_stats_rowcount_016.py"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_inv_count_consistency",
+      "assertion_text_quoted": "milvus_inv_count_consistency: insert N entities -> rowCount == N (get_stats). assertion: after inserting N rows, collections/get_stats data.rowCount == N. scope: per_collection. source_url: handler_v2.go v2.3.22",
+      "api_violates_assertion": true,
+      "note": "violates=True 理由：insert 50 行全部成功（insert_code=200 x5 批）且 Bounded 一致性下 search 立即命中全部 50 行（hits=50），6s 后 get_stats 仍返回 rowCount=0 —— 断言 'after inserting N rows rowCount == N' 被直接违反，无值域/域外抗辩空间",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_inv_count_consistency (structured_contract.json state_invariants[2], handler_v2.go v2.3.22)",
+        "doc: endpoint_registry v2/vectordb/collections/get_stats 'data {rowCount}' (v2.3.22)",
+        "script: state_r2_insert_search_visibility_005.py — 5x(insert 10 + Bounded search + query + get_stats) + 6s 后 final 校验 (log 全文 9 行已读)",
+        "log: batch0-4 rowCount=0 while hits=10/批; final hits=50 rowCount=0 — 主观测逐字在 log:2-8"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "getCollectionStats / getCollectionStatistics (handler_v2.go)",
+        "GetCollectionStatistics (internal/datacoord/services.go)",
+        "GetNumRowsOfCollection (internal/datacoord/meta.go)"
+      ],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go:417-430",
+        "internal/datacoord/services.go:340-360",
+        "internal/datacoord/meta.go:265-274"
+      ],
+      "source_excerpt": "handler_v2.go:417-427:  func (h *HandlersV2) getCollectionStats(...) { req := &milvuspb.GetCollectionStatisticsRequest{...}; resp, err := wrapperProxy(ctx, c, req, ..., \"/milvus.proto.milvus.MilvusService/GetCollectionStatistics\", func(...) { return h.proxy.GetCollectionStatistics(...) }); if err == nil { c.JSON(http.StatusOK, wrapperReturnRowCount(resp.(*milvuspb.GetCollectionStatisticsResponse).Stats)) } }\ndatacoord/services.go:356-357:  nums := s.meta.GetNumRowsOfCollection(req.CollectionID); resp.Stats = append(resp.Stats, &commonpb.KeyValuePair{Key: \"row_count\", Value: strconv.FormatInt(nums, 10)})\ndatacoord/meta.go:265-271:  func (m *meta) GetNumRowsOfCollection(collectionID UniqueID) int64 { m.RLock(); defer m.RUnlock(); return m.getNumRowsOfCollectionUnsafe(collectionID) }",
+      "call_chain_traced": "REST get_stats -> proxy GetCollectionStatistics -> rootcoord -> datacoord/services.go:342 -> meta.GetNumRowsOfCollection (meta.go:265) -> 汇总 segment 元数据中的 num_rows（仅含已 flush/已登记 binlog 的 segment）；growing segment（未 flush 的 insert，即可搜的那 50 行）不计入 —— rowCount 与搜索可见数据集来自两个不同子系统（datacoord 元数据 vs querynode growing segment），天然不一致窗口",
+      "verification_outcome": "by_design_in_source",
+      "verification_note": "源码显示 rowCount 来自 datacoord segment 元数据（flush 语义），非实时计数——与 R1 vein_stats_rowcount_001 的 source_loc 结论一致。by_design 抗辩（'flush 才更新 stats'）在源码有依据，但是否免除对外契约违反（rowCount==N 断言、且文档未披露该延迟语义）留 auditor 裁量",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency (单线程顺序脚本)", "cache_delay (6s 后仍 0，R1 链 10-30s+release/reload 后仍 0)", "request_typo"],
+      "surviving": "flush_semantics_by_design（源码级 by-design 抗辩，留 auditor）"
+    }
+  }
+}

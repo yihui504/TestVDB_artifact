@@ -1,0 +1,28 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+seed baseline: exact count == 9
+
+G guard valid context -> status=200
+raw: {"result":[{"id":3,"version":1,"score":1.8554914},{"id":2,"version":1,"score":1.8546512},{"id":7,"version":1,"score":-0.5}],"status":"ok","time":0.000783719}
+G: 200, result array len=3 (guard live)
+
+T1 context as STRING -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"text\", expected a sequence at line 1 column 109"},"time":0.0}
+T1 context as STRING: 400 clean rejection; NOTE (strategy5): rejection text names no context-family token — diagnostics gap recorded for the judge
+
+T2 context as OBJECT -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: map, expected a sequence at line 1 column 133"},"time":0.0}
+T2 context as OBJECT: 400 clean rejection; NOTE (strategy5): rejection text names no context-family token — diagnostics gap recorded for the judge
+
+T3 pair-less pair [{}] -> status=400
+raw: {"status":{"error":"Format error in JSON body: missing field `positive` at line 1 column 107"},"time":0.0}
+T3 pair-less pair [{}]: 400 clean rejection; diagnostics name the context construct
+
+T4 null example -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum RecommendExample at line 1 column 138"},"time":0.0}
+T4 null example: 400 clean rejection; diagnostics name the context construct
+
+T5 pair as ARRAY -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid length 0, expected struct ContextExamplePair with 2 elements at line 1 column 107"},"time":0.0}
+T5 pair as ARRAY: 400 clean rejection; diagnostics name the context construct
+VERDICT: NO_DEFECT

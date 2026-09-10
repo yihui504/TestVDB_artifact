@@ -1,0 +1,69 @@
+{
+  "defect_id": "semantic_points_search_hnsw_ef_001",
+  "endpoint": "points+search",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation partially accessible: api.qdrant.tech domain blocked, but structured_contract confirms hnsw_ef exists as Option<usize> without documented range constraints for search-time values (only ef_construct range [10, 1000] documented at collection creation). No explicit validation mentioned for hnsw_ef in search params.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Error quality for negative hnsw_ef: 1/3 — raw={\"status\":{\"error\":\"Format error in JSON body: invalid value: integer `-10`, expected usize at line 1 column 705\"} | DEFECT_FOUND (Type1_IllegalSuccess) — Zero hnsw_ef=0 accepted",
+      "secondary_observations": ["INFO: Null hnsw_ef accepted (uses default)"],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Negative hnsw_ef rejected with 200 OK + error field (valid usize constraint), zero hnsw_ef accepted with 200 OK + success (Type1_IllegalSuccess)"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_points_search_hnsw_ef_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_search_points_001",
+      "assertion_text_quoted": "len(vector) = collection.vectors.size",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_type_search_points_001 (vector dimension matching)",
+        "doc:api.qdrant.tech (hnsw_ef as Option<usize>, no search-time range docs)",
+        "script:semantic_points_search_hnsw_ef_001 (hnsw_ef=-10, 0, null tests)",
+        "log:negative rejected with error 1/3 quality, zero accepted (Type1)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Chain broken at doc: No documented behavioral contract for hnsw_ef range validation at search time. Contract only specifies vector dimension constraint (qdrant_type_search_points_001), not parameter validation. Zero value accepted despite being logically invalid for beam search.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "pub struct SearchParams",
+        "hnsw_ef",
+        "search_max_hnsw_ef"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs",
+        "lib/collection/src/operations/types.rs",
+        "lib/collection/src/operations/config_diff.rs"
+      ],
+      "source_excerpt": "/// Additional parameters of the search\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Copy, Clone, PartialEq, Default, Hash)]\n#[serde(rename_all = \"snake_case\")]\npub struct SearchParams {\n    /// Params relevant to HNSW index\n    /// Size of the beam in a beam-search. Larger the value - more accurate the result, more time required for search.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub hnsw_ef: Option<usize>,\n\n    /// Search without approximation. If set to true, search may run long but with exact results.\n    #[serde(default)]\n    pub exact: bool,\n    ...\n}\n\n...\n\n/// Max HNSW ef value allowed in search parameters.\n#[serde(skip_serializing_if = \"Option::is_none\")]\npub search_max_hnsw_ef: Option<usize>,",
+      "call_chain_traced": "SearchParams definition (types.rs) → no validation attribute on hnsw_ef field → CollectionParams.search_max_hnsw_ef optional cap (not enforced by default) → API accepts any usize value including 0",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env"],
+      "surviving": "Zero hnsw_ef accepted by design (documented as Option<usize> with no minimum), but logically meaningless for beam search - should have minimum validation (ef >= 1)"
+    }
+  }
+}

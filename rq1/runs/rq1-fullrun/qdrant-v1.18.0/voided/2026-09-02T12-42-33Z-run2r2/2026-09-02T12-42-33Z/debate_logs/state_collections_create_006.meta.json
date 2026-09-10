@@ -1,0 +1,12 @@
+{
+ "defect_id": "state_collections_create_006",
+ "endpoint": "collections+create",
+ "param": "quantization_config.scalar",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "oracle": {
+  "statement": "scalar int8/quantile 0.99 create -> 200/201 with readback result.config.quantization_config.scalar.type==int8 and .quantile==0.99; quantile 0.5 and 1.0 -> 200/201; quantile 0.49/1.01, compression x3, encoding three_bits -> 400/422 + describe 404",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,95 @@
+{
+  "defect_id": "state_aliases_collection_list_003",
+  "endpoint": "aliases+collection+list",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists anywhere under results/qdrant/v1.18.0 (checked 2026-09-02), and live WebFetch of https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases was blocked by the environment ('Unable to verify if domain api.qdrant.tech is safe to fetch') -> domain_blocked recorded PARTIAL (not FAIL); same-day preflight-grade artifacts attest reachability at contract build (raw_knowledge.json document_sources fetched_at 2026-09-02T11:45:00Z; endpoint_registry entry doc_quote verified_at 2026-09-02T12:34:08Z; structured_contract.json source_status 'reachable'). Version: URL slug v-1-18-x and doc_version '1.18.x (versioned v-1-18-x api-reference)' match target v1.18.0; raw_knowledge version_match 'matched' -> PASS. Content: offline raw_knowledge.json api_endpoints for this endpoint carries behavioral text '200 list of {alias, collection_name}; 404 unknown collection' and expected_responses {200: ok, 404: not found}, i.e. the doc corpus states exactly the assertion's semantics; the doc also records the global face the DEFECT fired on (List All Aliases GET /aliases) as '200 list of {alias, collection_name} across all collections' — the global listing is documented as a union across ALL collections, so a foreign existing collection's alias row in GET /aliases output is doc-conformant -> PASS. Endpoint: endpoint_registry contains the exact entry aliases+collection+list (GET, /collections/{collection_name}/aliases, collection_name required path param, same source_url) and the script's cross-face anchor aliases+list (GET /aliases) — both match the routes the script exercised via the contract-derived REST fallback -> PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "D",
+      "log_pattern": "DEFECT: final-state mismatch on face global: listing={'salc_cc_live_1788354860': 'salc_cc_a_1788354860', 'sem_gdc1_al_1929a5ad': 'sem_gdc1_81ce0571'} expected={'salc_cc_live_1788354860': 'salc_cc_a_1788354860'} — Type4_StateLogicViolation (alias switch churn left unreconciled state)",
+      "secondary_observations": [
+        "churn_done writer_ok=16/16 reader_reads=99 reader_anomalies=[] (the 16 alias-switch writes and 99 concurrent listing reads produced zero status/duplicate anomalies)",
+        "[final:A] status=200 raw={\"result\":{\"aliases\":[{\"alias_name\":\"salc_cc_live_1788354860\",\"collection_name\":\"salc_cc_a_1788354860\"}]},\"status\":\"ok\",\"time\":6.653e-6} (per-collection face A exactly equals expected {LIVE: A} — the unit under the cited assertion passes)",
+        "[final:B] status=200 raw={\"result\":{\"aliases\":[]},\"status\":\"ok\",\"time\":6.455e-6} (per-collection face B exactly equals expected {})",
+        "seed_live status=200 raw={\"result\":true,\"status\":\"ok\",...} (seed alias creation OK)",
+        "[final:global] status=200 raw={\"result\":{\"aliases\":[{\"alias_name\":\"salc_cc_live_1788354860\",\"collection_name\":\"salc_cc_a_1788354860\"},{\"alias_name\":\"sem_gdc1_al_1929a5ad\",\"collection_name\":\"sem_gdc1_81ce0571\"}]},\"status\":\"ok\",\"time\":0.000022801} (raw line behind the DEFECT: the ONLY extra row vs expected is sem_gdc1_al_1929a5ad -> sem_gdc1_81ce0571)",
+        "cross-script (rest:global): sibling logs of the same session show the identical constant row — output_state_aliases_collection_list_004.log [face:global] ... 'sem_gdc1_al_1929a5ad' -> 'sem_gdc1_81ce0571' present in every phase (its DEFECT S1-S5 all cite it), and output_state_aliases_collection_list_002.log [face:global] shows the same row; no script archived in debate_logs/ of this session ever creates a sem_gdc1_* alias",
+        "cross-session (evidence of pre-existence): results/session_execution_log.jsonl hygiene records of 2026-08-27T20:42:55Z and 2026-08-28T10:36:12Z (plugin 2.3.0, same qdrant v1.18.0 instance at 127.0.0.1:6333) list collection sem_gdc1_81ce0571 as ALREADY pre-existing leftover state on those days",
+        "comparative live probe 2026-09-02 (rest:global): GET /aliases on the shared instance now returns exactly one row {\"alias_name\":\"sem_gdc1_al_1929a5ad\",\"collection_name\":\"sem_gdc1_81ce0571\"}; GET /collections/sem_gdc1_81ce0571/aliases (rest:per-collection) returns the same single row — the foreign alias's own collection exists and lists it, i.e. global and per-collection faces AGREE on that row (no dangling alias, no drift); the row outlived this script's cleanup because it was never this script's",
+        "VERDICT: DEFECT_FOUND / exit_code_state_aliases_collection_list_003.txt = 1"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No request-side-decidable error exists in this run: every request was well-formed and returned HTTP 200 with status ok. The DEFECT is an expectation mismatch between the script's exact-set oracle for the global face and the actual documented content of GET /aliases (union across all collections) — not a client error surfaced as 2xx."
+      },
+      "reproducibility": "environment problem",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_aliases_collection_list_003",
+        "state_aliases_collection_list_004",
+        "state_aliases_collection_list_002"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_aliases_collection_list_001",
+      "assertion_text_quoted": "returns 200 with a list of {alias, collection_name}; 404 for an unknown collection",
+      "api_violates_assertion": false,
+      "note": "violates=False because the observation is outside the quoted assertion's domain: the constraint governs the per-collection face (GET /collections/{collection_name}/aliases), and both per-collection observations in this log are exactly compliant (face A = existing collection created by the script -> 200 with its one alias row {LIVE: A}; face B = existing empty collection -> 200 with []). The DEFECT fired on the DIFFERENT global face (GET /aliases), whose own documented semantics is 'list of {alias, collection_name} across all collections'; its extra row sem_gdc1_al_1929a5ad belongs to an existing collection (sem_gdc1_81ce0571) that no script of this session created — shared-instance leftover state. The negative branch of the assertion (unknown collection -> 404) was never exercised by this script, so no 404-promise breach is in evidence either.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: assertion qdrant_behavioral_aliases_collection_list_001 exists in structured_contract.json assertions[] (87 assertions) and is cited by the script header (constraint_ids: qdrant_behavioral_aliases_collection_list_001) and the attack string; the candidates.jsonl dispatch row itself carries an EMPTY constraint_id for this candidate",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases (per-collection '200 list of {alias, collection_name}; 404 unknown collection') and https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collections-aliases (global 'across all collections'); offline raw_knowledge corpus v-1-18-x, version_match matched; live fetch domain_blocked",
+        "script: state_aliases_collection_list_003.py — concurrent alias-switch churn attack (writer rebinds LIVE A<->B 16x, 2 readers poll per-collection faces A/B + global face ~99 reads) with final-state oracle: A={LIVE:A}, B={}, global={LIVE:A}",
+        "log: output_state_aliases_collection_list_003.log — VERDICT DEFECT_FOUND via one DEFECT line: final global listing had one row beyond expected, sem_gdc1_al_1929a5ad -> sem_gdc1_81ce0571"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "The verdict does not follow from the raw responses: (a) the churn itself was clean — writer_ok=16/16, reader_reads=99 with zero anomalies, final per-collection faces A and B exactly matched expectation, and the global face agreed with A on the LIVE row; (b) the ONLY difference between 'listing' and 'expected' on the global face is the row sem_gdc1_al_1929a5ad -> sem_gdc1_81ce0571, an alias on a collection this script never created, never bound LIVE to, and never deleted; (c) that collection pre-existed as leftover on the shared qdrant instance since at least 2026-08-27 (results/session_execution_log.jsonl hygiene records) and still exists at live probe time, where its per-collection listing agrees with the global listing — i.e. the extra row is legitimate, self-consistent server state; (d) GET /aliases is documented and implemented (toc/mod.rs list_aliases, docstring 'List of all aliases across all collections') as a union over all existing collections, so the response was correct. The script's oracle (global table == this script's own aliases only) is not entailed by the cited assertion (which governs only the per-collection face) nor by the doc, so the log's inference 'alias switch churn left unreconciled state' is unsupported — the churn left no unreconciled state.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "list_aliases|aliases_handler|get_collection_aliases|ListAliases (whole tree)",
+        "alias|Alias in src/actix/api/collections_api.rs",
+        "fn list_aliases|fn get_collection_aliases|fn collection_aliases|alias in lib/storage/src/content_manager/toc/mod.rs",
+        "create_alias|fn insert|fn remove_collection|fn collection_aliases in lib/storage/src/content_manager/alias_mapping.rs",
+        "aliases in docs/redoc/v1.18.x/openapi.json paths"
+      ],
+      "files_examined": [
+        "src/actix/api/collections_api.rs",
+        "src/common/collections.rs",
+        "lib/storage/src/content_manager/toc/mod.rs",
+        "lib/storage/src/content_manager/alias_mapping.rs",
+        "docs/redoc/v1.18.x/openapi.json"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/alias_mapping.rs:15-16: pub struct AliasMapping(HashMap<Alias, CollectionId>) (single instance-wide alias->collection map, one row per alias name); :66-70 pub fn insert(&mut self, alias: String, collection_name: String) -> Result<(), StorageError> { self.alias_mapping.0.insert(alias, collection_name); self.alias_mapping.save(&self.data_path)?; Ok(()) } — plain HashMap overwrite: create_alias over an existing alias name atomically REPLACES the single row, so 16 A<->B rebinds of LIVE cannot leave residual LIVE rows; :83-93 pub fn remove_collection(&mut self, collection_name: &str) { ... self.alias_mapping.0.retain(|_, v| v != collection_name); ... } — dropping a collection removes its rows. lib/storage/src/content_manager/toc/mod.rs:452-468: /// List of all aliases across all collections; pub async fn list_aliases(&self, access: &Access) -> Result<Vec<AliasDescription>, StorageError> { let all_collections = self.all_collections(access).await; let mut aliases: Vec<AliasDescription> = Default::default(); for collection_pass in &all_collections { for alias in self.collection_aliases(collection_pass, access).await? { aliases.push(AliasDescription { alias_name: alias.clone(), collection_name: collection_pass.to_string() }); } } Ok(aliases) } — GET /aliases iterates EVERY existing collection and unions their rows: any existing foreign collection's alias (sem_gdc1_al_1929a5ad on the existing sem_gdc1_81ce0571) necessarily appears; the docstring is the explicit design statement. src/common/collections.rs:167-188 do_list_collection_aliases: first auth.check_collection_access(collection_name, ...) (404 CollectionDoesNotExist path for unknown collections — the assertion's negative branch is implemented), then maps toc.collection_aliases(&collection_pass) -> CollectionsAliasesResponse { aliases } with collection_name = the queried collection (a per-collection face can never contain a foreign row). docs/redoc/v1.18.x/openapi.json: GET /aliases description 'Get list of all existing collections aliases'; GET /collections/{collection_name}/aliases 'List aliases for collection | Get list of all aliases for a collection'.",
+      "call_chain_traced": "REST GET /collections/{collection_name}/aliases -> actix get_collection_aliases (collections_api.rs:94-109) -> do_list_collection_aliases (common/collections.rs:167-188; 404 for unknown collection via check_collection_access) -> toc.collection_aliases (toc/mod.rs:434-450) -> AliasPersistence.collection_aliases rows whose target equals the queried collection (alias_mapping.rs:114-122). REST GET /aliases -> actix get_aliases (collections_api.rs:48-57) -> do_list_aliases (common/collections.rs:190-196) -> toc.list_aliases (toc/mod.rs:452-468) = union over all_collections. Alias writes POST /collections/aliases -> update_aliases -> alias_mapping insert/remove on the single global HashMap (alias_mapping.rs:66-93). Conclusion: (1) the churn mechanism (create_alias same-name rebind) is a per-name row replace — no unreconciled/residual-row state is reachable; (2) the global listing showing a legitimately-existing foreign collection's alias is the declared design ('across all collections', docstring toc/mod.rs:452); (3) per-collection listings (the asserted face) returned exactly the rows bound to the queried collection in every observed response. No code path produces the anomaly the verdict asserts.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "concurrency race (churn clean under 99 concurrent reads: writer_ok=16/16, reader_anomalies=[])",
+        "cache delay (AliasPersistence saves synchronously to storage_path/aliases on every insert/remove; no caching layer between write and read faces)",
+        "request-parameter typo (paths and parameters match the endpoint_registry entries; all 200s confirm correct routing)"
+      ],
+      "surviving": [
+        "environment: the extra global row is a pre-existing leftover alias (sem_gdc1_al_1929a5ad -> sem_gdc1_81ce0571) of an existing leftover collection on the shared/persistent qdrant instance — pre-existing since at least 2026-08-27 per results/session_execution_log.jsonl hygiene records, untouched by any script of this session, still present at live probe 2026-09-02 with per-collection and global faces agreeing; GET /aliases returns it by documented design ('across all collections'), and the script's exact-set global oracle (global == own aliases only) did not account for shared-sandbox state, so the DEFECT firing is fully explained by environment plus the oracle assumption."
+      ]
+    }
+  }
+}

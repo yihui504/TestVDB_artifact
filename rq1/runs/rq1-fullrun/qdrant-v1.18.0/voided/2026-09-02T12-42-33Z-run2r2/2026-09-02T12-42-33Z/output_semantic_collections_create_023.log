@@ -1,0 +1,10 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] create_collection/describe_collection/list_collections = /collections[/{name}] (raw_knowledge api_endpoints[].url); exists face = /collections/{collection_name}/exists (raw_knowledge api_endpoints[collections+exists].url)
+[pre-probe] /healthz status=200 raw=healthz check passed
+[create scc023_1788393553_vis] status=200 raw={"result":true,"status":"ok","time":0.298110102}
+[create] 200 - visibility clock starts NOW (no sleep before the faces)
+[list] status=200 raw={"result":{"collections":[{"name":"bcc139b6a8bp2"},{"name":"bcc139bc7c6p2"},{"name":"scc023_1788393553_vis"},{"name":"scc2a_1788393513_35968_shmin"}]},"status":"ok","time":9.587e-6}
+[list] 0 collections; membership pos=False neg=False
+VERDICT: DEFECT_FOUND (Type4_StateLogicViolation)
+collection scc023_1788393553_vis returned 200 on create but is ABSENT from the collections list queried immediately after - the immediate-listable promise of qdrant_bc_create_visibility_001 is violated (expected vs actual: listed vs absent); list head=[]

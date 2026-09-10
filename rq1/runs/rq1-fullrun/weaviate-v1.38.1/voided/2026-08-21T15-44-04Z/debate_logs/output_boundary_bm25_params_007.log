@@ -1,0 +1,13 @@
+[ctrl] iic={'cleanupIntervalSeconds': 60, 'bm25': {'b': 0.75, 'k1': 1.2}} -> create=200 persisted(cleanup=60,bm25={"b": 0.75, "k1": 1.2})
+[b_neg] iic={'bm25': {'b': -0.5, 'k1': 1.2}} -> create=422 persisted(cleanup=None,bm25=null) err={"allowed":null,"error":[{"message":"BM25.b must be >= 0 and <= 1"}]}
+
+[b_gt1] iic={'bm25': {'b': 1.5, 'k1': 1.2}} -> create=422 persisted(cleanup=None,bm25=null) err={"allowed":null,"error":[{"message":"BM25.b must be >= 0 and <= 1"}]}
+
+[k1_neg] iic={'bm25': {'b': 0.75, 'k1': -1.2}} -> create=422 persisted(cleanup=None,bm25=null) err={"allowed":null,"error":[{"message":"BM25.k1 must be >= 0"}]}
+
+[cleanup_zero] iic={'cleanupIntervalSeconds': 0} -> create=200 persisted(cleanup=60,bm25={"b": 0.75, "k1": 1.2})
+[cleanup_huge] iic={'cleanupIntervalSeconds': 1000000000000} -> create=200 persisted(cleanup=1000000000000,bm25={"b": 0.75, "k1": 1.2})
+[cleanup_neg] iic={'cleanupIntervalSeconds': -1} -> create=422 persisted(cleanup=None,bm25=null) err={"allowed":null,"error":[{"message":"cleanup interval seconds must be > 0"}]}
+
+DEFECT[cleanup_huge] Type1_IllegalSuccess: 10^12 seconds persisted verbatim (~31000 years, no sanity cap)
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)

@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_collections_exists_005",
+ "endpoint": "collections+exists",
+ "param": null,
+ "expected_defect_type": "Type1_IllegalRejection",
+ "strategy": "strategy1_lifecycle_flip",
+ "oracle": {
+  "statement": "every exists probe returns HTTP 200 with result.exists exactly bool (never 404 - \"existence is never expressed as HTTP 404\" applies most sharply right after DELETE, where REST frameworks default to not-found); flip to true within 2.5s after create, to false within 5s after delete, back to true within 2.5s after recreate; a 404 at any point = Type1_IllegalRejection, a stuck exists=true after delete (5s window) = Type4_StateLogicViolation (stale existence), 5xx = Type3_RuntimeFailure",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

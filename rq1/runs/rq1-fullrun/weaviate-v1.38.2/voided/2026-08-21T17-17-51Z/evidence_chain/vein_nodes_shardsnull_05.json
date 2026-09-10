@@ -1,0 +1,72 @@
+{
+  "defect_id": "vein_nodes_shardsnull_05",
+  "endpoint": "GET /v1/nodes/{className}",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraint_id vein_state_echo_missing 为 vein 探索性约束；OpenAPI embedded_spec 明确 nodes 响应含 shards[]（name/status/vectorQueueSize，spec L10289/L21730 有 vectorQueueSize 字段定义）；endpoint_registry 含 GET /nodes/{className}",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "nodes/{cls} shards: None",
+      "secondary_observations": [
+        "nodes shards: None",
+        "schema shards: [{'name': 'o9bQH7Tqdj8H', 'status': 'READY', 'vectorQueueSize': 0}]"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "非错误通道问题；请求合法且 200，但响应负载与文档 schema 不符（shards 恒 null）"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_nodes_shardsnull_05.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_state_echo_missing",
+      "assertion_text_quoted": "GET /v1/nodes/{className} 应返回该类各 shard 的 name/status/vectorQueueSize（OpenAPI nodes 响应 schema 定义 shards 数组）",
+      "api_violates_assertion": true,
+      "note": "有数据类返回 shards:null，与 OpenAPI 响应 schema（shards 数组）及 /schema/{c}/shards 对照（READY shard 存在）不符，violates=True",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:vein_state_echo_missing（推断性）",
+        "doc:embedded_spec nodes 响应含 shards[] 与 vectorQueueSize 字段",
+        "script:vein_nodes_shardsnull_05.py 5 对象类 + GET /nodes/{cls} + GET /nodes + GET /schema/{c}/shards 三面对照",
+        "log:nodes shards None ×2 / schema shards READY ×1"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["localNodeShardStats", "OutputVerbose", "ParseOutput", "vectorQueueSize"],
+      "files_examined": [
+        "adapters/repos/db/nodes.go (L29-151)",
+        "usecases/nodes/handler.go (L51-88)",
+        "entities/verbosity/verbosity.go (L23-34)",
+        "adapters/handlers/rest/operations/nodes/nodes_get_class_parameters.go (L57)"
+      ],
+      "source_excerpt": "adapters/repos/db/nodes.go L91-103:\nfunc (db *DB) LocalNodeStatus(...) *models.NodeStatus {\n\tif className != \"\" && db.GetIndex(...) == nil { return &models.NodeStatus{} }\n\tvar (shards []*models.NodeShardStatus; nodeStats *models.NodeStats)\n\tif output == verbosity.OutputVerbose {\n\t\tnodeStats = db.localNodeShardStats(ctx, &shards, className, shardName)\n\t}\n\tstatus := models.NodeStatus{... Shards: shards, ...}  // 未 verbose 时 shards 为 nil → JSON null\nentities/verbosity/verbosity.go L23-33: ParseOutput(nil) → OutputMinimal（默认 minimal）。\noperations/nodes/nodes_get_class_parameters.go L57: 'Defaults to `minimal`.'",
+      "call_chain_traced": "GET /v1/nodes/{className} 未带 output=verbose → ParseOutput 默认 minimal → LocalNodeStatus 跳过 localNodeShardStats → shards=nil → JSON null。加 ?output=verbose 时 shards 才会填充（脚本未测 verbose 变体——潜在翻案点，auditor 注意）",
+      "verification_outcome": "by_design_in_source",
+      "note": "shards:null 是 verbosity 默认值的直接结果：minimal 模式按设计省略 shard 详情，OpenAPI 参数文档明示 'Defaults to minimal'。脚本既未传 output=verbose 也未核对参数文档，将其判为缺陷的证据不完备；但响应 schema 中 shards 非可选标注与默认 minimal 的组合确有文档-实现张力。翻案风险高",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay"],
+      "surviving": "verbosity 默认 minimal 为文档化设计 —— mundane 解释基本成立，除非 verbose 请求也返回 null（未测）"
+    }
+  }
+}

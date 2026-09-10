@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_peer_delete_003",
+  "endpoint": "cluster+peer+delete",
+  "param": "peer_id",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "type_coercion",
+  "oracle": {
+    "statement": "every type-confused peer_id path form (alpha/float/negative/plus-signed/zero-padded/scientific/hex/boolean-word/whitespace/u64+1/far-overflow) and every non-boolean force query value (\"1\"/\"0\"/\"yes\"/\"TRUE\"/\"null\"/empty) -> HTTP 4xx on DELETE /cluster/peer/{peer_id}; any 2xx = Type1_IllegalSuccess (coerced acceptance of the destructive force flag or a malformed u64 slot), 5xx with /healthz alive = Type3, status 0 = SCRIPT_ERROR after inline /healthz probe (assertion qdrant_behavioral_cluster_peer_delete_001 + constraint qdrant_state_cluster_peer_delete_001)",
+    "source": "docstring"
+  }
+}

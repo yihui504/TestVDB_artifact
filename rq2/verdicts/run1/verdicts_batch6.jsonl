@@ -1,0 +1,11 @@
+{"defect_id": "qdrant_028", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "strict_mode(max_query_limit=10)下 scroll limit=100 被明确 400 拒绝、limit=5 正常 200，行为与契约 limit default=10 (adjustable) 一致，无违反。"}
+{"defect_id": "weaviate_001", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "包内 8 条契约均无 dynamicEfMin/dynamicEfMax 顺序或范围断言，dynamicEfMin=500>Max=10 被存储虽可疑，但无契约依据支持『违反契约』判定。"}
+{"defect_id": "weaviate_002", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "契约包内无 flatSearchCutoff 非负断言，-100 被存储不违反包内任何契约条目，证据不足。"}
+{"defect_id": "weaviate_003", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "请求 factor=-1 未被采纳，响应与 GET 均显示归一为默认 factor=1，最终状态满足契约 replicationConfig.factor >= 1，无可观察违反。"}
+{"defect_id": "weaviate_004", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "ef=-1 恰为 weaviate 默认表示（各默认响应同样显示 ef=-1），且契约包内无 ef 范围断言，不构成违反。"}
+{"defect_id": "weaviate_005", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约包内无 shardingConfig.desiredCount 任何断言；desiredCount=0→422 与 -1→200 的校验不一致虽可疑，但包内缺乏支持『违反契约』的依据。"}
+{"defect_id": "weaviate_006", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "tokenization=\"\" 虽不在枚举内，但响应显示被归一为合法默认 word，最终存储状态满足 tokenization 枚举断言，无可观察违反。"}
+{"defect_id": "weaviate_007", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "distance=null 按未设置处理并落默认 cosine，属标准缺省语义，契约包内无针对 distance 的约束断言，不构成违反。"}
+{"defect_id": "weaviate_008", "verdict": "CONFIRMED", "confidence": 0.65, "rationale": "契约明确 activityStatus 必须为 ACTIVE|INACTIVE，请求 \"\" 却返回 200 成功建租户，且响应未回显任何合法化后的状态（对照组 ACTIVE 正常回显 HOT），属静默接受被拒值。"}
+{"defect_id": "weaviate_009", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "vector=[] 仍属『array of floats』，且对照组单条 POST /objects 同样接受空 vector，契约包内无要求拒绝空向量的断言，行为一致不违反。"}
+{"defect_id": "weaviate_010", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "系统对缺失 where/class 的 batch delete 明确报错拒绝（500 带清晰错误信息），并非静默接受；契约包内无该场景的状态码断言，证据不足。"}

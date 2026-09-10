@@ -1,0 +1,9 @@
+setup: 0
+capital-F FunctionName (per contract quirk)    -> code=0     {"code":0,"data":{}}
+lowercase functionName                         -> code=0     {"code":0,"data":{}}
+empty FunctionName                             -> code=1802  {"code":1802,"message":"missing required parameters, error: Key: 'CollectionDropFunction.FunctionName' Error:Field validation for 'FunctionN
+missing name key entirely                      -> code=1802  {"code":1802,"message":"missing required parameters, error: Key: 'CollectionDropFunction.FunctionName' Error:Field validation for 'FunctionN
+non-string FunctionName (int)                  -> code=1801  {"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number into Go struct field CollectionDropFunctio
+NOTE: lowercase fieldName behaves same as capital-F (both reach lookup)
+FINDING: drop_function on NONEXISTENT function returns code 0 (silent success, no not-found error)
+VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics)

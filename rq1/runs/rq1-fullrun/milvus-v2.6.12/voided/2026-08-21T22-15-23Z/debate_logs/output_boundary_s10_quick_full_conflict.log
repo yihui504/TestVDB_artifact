@@ -1,0 +1,13 @@
+CASE quick only (dim)               ok=True | {"code":0,"data":{}}
+CASE full only (schema)             ok=True | {"code":0,"data":{}}
+CASE BOTH schema+dimension          ok=True | {"code":0,"data":{}}
+VERDICT_DEFECT 1 s10 BOTH schema+dimension accepted
+CASE quick + idDataType             ok=True | {"code":0,"data":{}}
+CASE full + idDataType conflict     ok=True | {"code":0,"data":{}}
+VERDICT_DEFECT 1 s10 full + idDataType conflict accepted
+CASE quick + metricType             ok=True | {"code":0,"data":{}}
+CASE quick dim=0                    ok=False | {"code":1100,"message":"dimension is required for quickly create collection(default metric type: COSINE): invalid parameter[expected=collect
+CASE quick dim=-4                   ok=False | {"code":65535,"message":"invalid dimension: -4. should be in range 2 ~ 32768"}
+CASE quick dim as str '4'           ok=False | {"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field CollectionReq.dimensi
+CASE no schema no dim               ok=False | {"code":1100,"message":"dimension is required for quickly create collection(default metric type: COSINE): invalid parameter[expected=collect
+VERDICT_DEFECT_FOUND

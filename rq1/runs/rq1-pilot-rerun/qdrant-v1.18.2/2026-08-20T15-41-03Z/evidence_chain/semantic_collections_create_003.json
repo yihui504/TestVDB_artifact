@@ -1,0 +1,65 @@
+{
+  "defect_id": "semantic_collections_create_003",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation at api.qdrant.tech not reachable (domain_blocked). OpenAPI v1.18.x schema defines m with minimum:0. Test probes error message quality for m=1. Expected 400 with validation message; got 200.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "c1: m=1 → HTTP 200, response={\"result\":true,\"status\":\"ok\",\"time\":0.241475533}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A (success: true)",
+        "note": "Expected 400 with validation error message; got 200 OK accepting illegal value. Type1 (poor diagnostics) - no error message generated for constraint violation."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_collections_create_003"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_001",
+      "assertion_text_quoted": "hnsw_config.m >= 2 AND hnsw_config.m <= 100",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_001 (assertion: m >= 2 AND m <= 100)",
+        "doc:OpenAPI v1.18.x schema minimum:0 fails to enforce m>=2",
+        "script:PUT /collections/{name} with hnsw_config.m=1 (test error message quality)",
+        "log:HTTP 200 with success (no validation error, diagnostic quality absent)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "OpenAPI schema minimum:0 permits m=1. No validation layer catches this violation, so no error message generated. Type2_PoorDiagnostics - violation occurs silently.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["hnsw_config.*m", "validate.*hnsw", "validation.*error"],
+      "files_examined": [
+        "lib/segment/src/index/hnsw_index/config.rs",
+        "docs/redoc/v1.18.x/openapi.json",
+        "tests/openapi/test_validation.py"
+      ],
+      "source_excerpt": "File: tests/openapi/test_validation.py, Lines 35-53\ndef test_validation_body_param(collection_name):\n    response = request_with_validation(\n        body={\"hnsw_config\": {\"ef_construct\": 0}}\n    )\n    assert 'hnsw_config.ef_construct' in response.json()[\"status\"][\"error\"]\n\nShows validation SHOULD reject invalid hnsw_config params with error messages.\n\nFile: docs/redoc/v1.18.x/openapi.json, Lines 7896-7900\n\"m\": {\"minimum\": 0}  // Should be 2 per contract",
+      "call_chain_traced": "Test code shows validation framework expects error messages for invalid hnsw_config. But OpenAPI schema minimum:0 fails to trigger validation for m=1. No validation layer adds check for m>=2. Diagnostic path absent.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay"],
+      "surviving": "m=1 violates [2,100] constraint but accepted without error message. Not by-design (test_validation.py shows validation expected). Type2: poor diagnostics - violation occurs silently."
+    }
+  }
+}

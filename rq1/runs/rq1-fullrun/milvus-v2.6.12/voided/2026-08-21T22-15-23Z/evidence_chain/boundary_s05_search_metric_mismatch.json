@@ -1,0 +1,83 @@
+{
+  "defect_id": "boundary_s05_search_metric_mismatch",
+  "endpoint": "entities+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": true,
+      "detail": "契约 33 constraints 无 metricType 冲突断言；语义约定只存在于源码 segcore/plan.go:109（非官方 REST 文档页）。closest constraint milvus_range_entities_search_001 是 limit 范围，不含 metricType。派发单 constraint_id='special_value' 在 structured_contract.json 中不存在对应 constraint_id",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "CASE diff IP                  status=200 ok=True | {\"code\":0,\"cost\":0,\"data\":[{\"distance\":0,\"id\":1}],\"topks\":[1]}（主违规观测；COSINE/BOGUS/42 同形态）",
+      "secondary_observations": [
+        "CASE bogus METRIC             status=200 ok=True | {\"code\":0,...\"topks\":[1]}",
+        "CASE int metric               status=200 ok=True | {\"code\":0,...}（metricType:42 未触发 1801 JSON 反序列化错误——字段为 Go string 类型，整数 42 被 gin/json 宽松解码为字符串）",
+        "CASE lowercase l2             status=200 ok=True | {\"code\":0,...}（l2 也被接受，同样与 L2 index 名不等）",
+        "CASE no metric (default) / matching L2 均 code:0（正常基线）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "若判定为缺陷则是 HTTP 200 + code:0 静默接受；对照组 metric_type_001 中同类冲突以 HTTP 200 + code:65535 返回——同一参数面两种响应形态并存"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_s05_search_metric_mismatch.py"],
+      "cross_script_contradiction": {
+        "conflicting_script": "debate_logs/semantic_search_metric_type_001.py（VERDICT: NO_DEFECT）",
+        "conflicting_observation": "COSINE: {\"code\":65535,...metric type not match: invalid parameter[expected=L2][actual=COSINE]}；IP/l2 同样 65535 拒绝",
+        "request_shape_diff": [
+          "参数位置不同——s05 传顶层字段 metricType（SearchReqV2 顶层 MetricType string，request_v2.go:637 附近）；001 传 searchParams:{metric_type:...}（params KV 对）",
+          "两脚本集合均 create+insert+load（boundary_common.create_float_collection docstring: 'auto-index, then load'；001 显式 collections/load+wait_load）——load 状态不是分歧根源",
+          "两脚本均 data 向量模式（非 ids 模式）——ids/data 模式不是分歧根源",
+          "001 用 dim=4 且距离有区分度(0/1.2/1.2)；s05 用 dim=8 全 [0.1]*8 单点自查询 distance=0"
+        ],
+        "root_cause_hypothesis_for_auditor": "两种传参走不同代码路径：searchParams 内 metric_type 进入 plan 构建被 segcore/plan.go:109 严格比对拒绝（001 观测）；顶层 metricType 字段疑似未被搜索计划采用（值被忽略，任何值 code:0 且结果与不传等价——s05 观测）。即顶层 metricType 可能是无效/未消费字段（accept-and-ignore），而非'校验缺失导致错误距离'。s05 全部 case 返回与 baseline 完全相同的 {distance:0,id:1}，支持'值被忽略'解释",
+        "note": "两面冲突已逐字对比记录，判定权在 chain-auditor"
+      },
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": null,
+      "assertion_text_quoted": "(契约中不存在 metricType 冲突断言；最接近的语义锚点是源码断言：internal/util/segcore/plan.go:109 'if len(metricType) != 0 && metricType != metricTypeInPlan { ... merr.WrapErrParameterInvalid(metricTypeInPlan, metricType, \"metric type not match\") }')",
+      "api_violates_assertion": null,
+      "note": "无契约断言可直接违反。若以 plan.go:109 的行为约定为基准，则 searchParams 路径的 metric_type 冲突【被拒绝】（不违反）；顶层 metricType 路径的观测是【任何值被静默接受且结果与不传相同】，属 accept-and-ignore 现象而非显式违反 must 断言。violates 无法二值判定，留给 auditor。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:无 metricType 冲突 constraint（约束环缺失）",
+        "doc:无 REST 文档页断言（仅源码 plan.go:109 行为约定）",
+        "script:boundary_s05 顶层 metricType=IP/COSINE/BOGUS/42/l2 对 L2 集合 search",
+        "log:全部 http=200 code:0 结果与 baseline 完全相同（值被忽略）"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "constraint 环缺失：契约无 metricType 语义断言；且与 metric_type_001 的 NO_DEFECT 观测在'冲突是否被拒'上相反——分歧根源是传参位置（顶层 metricType vs searchParams.metric_type），已记录于 cross_script_contradiction",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["MetricType request_v2.go", "metric type not match", "GetMetricType"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/request_v2.go",
+        "internal/util/segcore/plan.go"
+      ],
+      "source_excerpt": "internal/util/segcore/plan.go:107-113:\n\tmetricTypeInPlan := plan.GetMetricType()\n\tif len(metricType) != 0 && metricType != metricTypeInPlan {\n\t\tplan.delete()\n\t\treturn nil, merr.WrapErrParameterInvalid(metricTypeInPlan, metricType, \"metric type not match\")\n\t}\n\ninternal/distributed/proxy/httpserver/request_v2.go:637 附近:\n\tMetricType       string                 `json:\"metricType\"`  (SearchReqV2 顶层字段)",
+      "call_chain_traced": "searchParams.metric_type → proxy → segcore NewSearchRequest plan.go:109 严格比对（不匹配即 65535）。顶层 SearchReqV2.MetricType 字段的消费路径未追到比对点——与 s05 观测（任何值 code:0 结果与不传相同）一致的假设是顶层字段未被搜索计划消费",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env"],
+      "surviving": "顶层 metricType 疑似无效透传字段（未消费）——这是现象本身的解释，不是缺陷与否的判定；另 script_error 无、集合 load 正常"
+    }
+  }
+}

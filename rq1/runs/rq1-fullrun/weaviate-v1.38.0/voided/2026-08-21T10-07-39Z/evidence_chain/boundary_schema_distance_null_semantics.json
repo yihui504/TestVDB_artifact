@@ -1,0 +1,64 @@
+{
+  "defect_id": "boundary_schema_distance_null_semantics",
+  "endpoint": "POST /schema",
+  "defect_type": "Type4_StateViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Distance parameter documented with 5-value enum (cosine, l2-squared, dot, manhattan, hamming). Null/omission semantics not explicitly documented. Behavior shows silent default to cosine (GET readback shows cosine, POST response omits distance field)",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "c1: POST /schema with vectorIndexConfig.distance=null → HTTP 200 OK, collection created; response body shows 'distance':'cosine' (default applied). VERDICT from boundary_schema_distance_null_006: NO_DEFECT (null accepted with default)",
+      "secondary_observations": ["GET readback of schema shows distance=cosine", "POST response shows distance field populated with cosine"],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business success with silent default",
+        "note": "Silent default applied - response includes distance='cosine' but client wasn't notified default was applied"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_schema_distance_null_006"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vectorIndexConfig.distance",
+      "assertion_text_quoted": "distance enum: [cosine, l2-squared, dot, manhattan, hamming]",
+      "api_violates_assertion": true,
+      "note": "GT issue (11732) treats silent default as defect: reasonable default but lacks告知性 (readback可见但POST响应无字段提示)",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: distance enum (5 values, null not documented)",
+        "doc: OpenAPI spec shows enum values, null semantics unspecified",
+        "script: POST /schema with distance=null",
+        "log: HTTP 200, response includes 'distance':'cosine' (silent default, no notification)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Documentation lacks null handling semantics; implementation silently defaults without informing client",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["DefaultDistanceMetric", "distance.*default", "vectorIndexConfig.*initialization"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1380\\entities\\vectorindex\\common\\config.go"
+      ],
+      "source_excerpt": "Line 31 in config.go:\nDefaultDistanceMetric = DistanceCosine\n\nSource confirms cosine is default. No explicit validation found for null/empty distance in schema POST path - default applied silently.",
+      "call_chain_traced": "vectorIndexConfig init → DefaultDistanceMetric applied → no explicit null validation",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "By-design silent default (cosine). GT issue 11732 frames this as defect due to poor告知性: GET readback shows cosine but POST response doesn't indicate default was applied. Inconsistency with v1.37.4 replicationFactor precedent (翻案)."
+    }
+  }
+}

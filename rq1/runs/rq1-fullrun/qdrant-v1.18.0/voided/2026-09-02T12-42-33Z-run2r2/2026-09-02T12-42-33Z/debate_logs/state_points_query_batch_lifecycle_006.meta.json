@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_points_query_batch_lifecycle_006",
+  "endpoint": "points+query+batch",
+  "param": "searches",
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "lifecycle_concurrency",
+  "oracle": {
+    "statement": "during drop/create churn every concurrent batch query returns 200 or 404; >=2 distinct 5xx with /healthz alive = Type3 (single = WARN); post-cycle seed of 5 -> count == 5 and batch [by-id 11, nearest] -> 200 len(result)==2 with entry0 containing id 11 (Type4 otherwise)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

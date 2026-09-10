@@ -1,0 +1,74 @@
+{
+  "defect_id": "vein_type_mismatch_schema_ef_pair_1",
+  "endpoint": "POST /v1/schema (create class)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "candidates.jsonl 的 constraint_id 为空串，claim 引用 assertion weaviate_inferred_hnsw_ef_pairing_001（inferred，source_url=github weaviate entities/vectorindex/hnsw/config.go，source_verified=false）。github.com 与 raw.githubusercontent.com 均被网络策略拦截（domain_blocked）→ 可达性 PARTIAL；本地 clone git describe 确认 v1.37.4 → 版本 PASS；Min<=Max pairing 为从字段语义推断的断言（官方文档无此声明，clone 内 config.go 亦无 Min<=Max 原文）→ 内容 PARTIAL；assertion endpoint 'POST /schema' 与脚本实际 POST /v1/schema 一致 → 端点 PASS。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "POST /v1/schema 发送 dynamicEfMax=\"abc\" + flatSearchCutoff=\"xyz\"（dynamicEfMin 未发送）→ http=200；read-back 行: Stored dynamicEfMin=100  dynamicEfMax=0  flatSearchCutoff=0 → VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)",
+      "secondary_observations": [
+        "同机制第二脚本 semantic_schema_typeCoercion: Type-probe[class=SemTypeCoercion dynamicEfMin='250'] status=200，其 log 中 raw 响应含 \"dynamicEfMin\":0（字符串 '250' 同样被静默转为 0）",
+        "对照组 output_boundary_schema_flatSearchCutoff_float.log: Status: 422 raw={\"error\":[{\"message\":\"class.VectorIndexConfig can not parse: parse vector index config: json.Number to int64 for \\\"flatSearchCutoff\\\": strconv.ParseInt: parsing \\\"12345.67\\\": invalid syntax\"}]} —— float 类型被 422 拒绝（证明数值类型校验存在，string 无校验是真实缺口）",
+        "claim 中 'string for replication factor -> 400' 对照组：本会话所有 log 未找到对应日志（docstring 声称，会话内不可复核）；float->422 对照已在上述日志核实"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "严格为纯 200 成功体（连业务错误码都没有）：请求侧可判定的类型错误（string 赋给 int 声明字段）被静默接受并持久化为 0，产生 Min(100)>Max(0) 倒置 pairing；对照组 float->422、replication factor string->400（docstring 声称）证明其他路径拒绝"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_type_mismatch_schema_ef_pair_1", "semantic_schema_typeCoercion"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_inferred_hnsw_ef_pairing_001",
+      "assertion_text_quoted": "inferred: dynamicEfMin and dynamicEfMax represent paired EF parameters where Min <= Max; expected_behavior: dynamicEfMin value should be less than or equal to dynamicEfMax value",
+      "api_violates_assertion": true,
+      "note": "判定理由：violation 落在 assertion 直接管辖的持久化 pairing 状态域——API 接受请求后持久化 Min(100)>Max(0)；'abc' 本身无数值语义，但 API 未拒绝该输入而是生成并持久化了违规 pairing 状态（violates=True，非模糊判定）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_inferred_hnsw_ef_pairing_001（Min<=Max，inferred，source_verified=false）",
+        "doc: https://github.com/weaviate/weaviate entities/vectorindex/hnsw/config.go（domain_blocked，未取到在线原文；本地 clone v1.37.4 同文件已核）",
+        "script: vein_type_mismatch_schema_ef_pair_1.py 发送 dynamicEfMax=\"abc\"、flatSearchCutoff=\"xyz\"，dynamicEfMin 不发送",
+        "log: http=200 + Stored dynamicEfMin=100 dynamicEfMax=0 flatSearchCutoff=0 + VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["OptionalIntFromMap", "dynamicEfMax|dynamicEfMin", "DefaultDynamicEFMin|DefaultDynamicEFMax|DefaultFlatSearchCutoff", "invalid hnsw config", "DynamicEFMax <|DynamicEFMin >|efMax <|efMin >", "can not parse"],
+      "files_examined": [
+        "entities/vectorindex/common/config.go",
+        "entities/vectorindex/hnsw/config.go",
+        "entities/vectorindex/hnsw/config_test.go",
+        "usecases/schema/class.go",
+        "adapters/repos/db/vector/hnsw/search.go",
+        "adapters/repos/db/vector/hnsw/config_update.go"
+      ],
+      "source_excerpt": "entities/vectorindex/common/config.go:45-77 OptionalIntFromMap：'switch typed := value.(type) { case json.Number: asInt64, err = typed.Int64(); case float64: asInt64 = int64(typed) } ... setFn(int(asInt64))' —— type switch 无 string case，string 值 asInt64 保持 0、err 保持 nil，静默 setFn(0)。entities/vectorindex/hnsw/config.go:30-34 默认值 DefaultDynamicEFMin=100、DefaultDynamicEFMax=500、DefaultFlatSearchCutoff=40000。entities/vectorindex/hnsw/config.go:255-290 Validate 仅查 maxConnections/efConstruction/filterStrategy/压缩方法互斥，无任何 dynamicEfMin<=dynamicEfMax 校验（全树 grep 'DynamicEFMax <|DynamicEFMin >' 零命中）。",
+      "call_chain_traced": "POST /v1/schema → usecases/schema/class.go validateVectorSettings(1094-1115) → parser.parseGivenVectorIndexConfig（解析错误才 422 'class.VectorIndexConfig can not parse'）→ entities/vectorindex/hnsw config.go ParseAndValidateConfig → OptionalIntFromMap：json.Number 路径错误（float 12.7 -> ParseInt invalid syntax -> 422，与对照 log 完全一致），string 路径无 case -> 静默 0 + nil err -> HTTP 200 -> 无 pairing 校验 -> 持久化 Min(100)>Max(0)；运行时 adapters/repos/db/vector/hnsw/search.go autoEfFromK(60-74) 以 efMin=100/efMax=0 钳制 ef（k*factor>0 时 ef=0），倒置 pairing 有查询质量影响",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache", "typo"],
+      "surviving": null
+    }
+  }
+}

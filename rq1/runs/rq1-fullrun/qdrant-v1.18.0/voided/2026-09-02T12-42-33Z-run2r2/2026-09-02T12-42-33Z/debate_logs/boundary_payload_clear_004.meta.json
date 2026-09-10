@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_clear_004",
+ "endpoint": "payload+clear",
+ "param": "points",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "clear {\"points\":[1],\"wait\":true} then the IDENTICAL clear again each return 200 with scroll readback showing p1 payload empty after BOTH (resurrected payload = Type4), p2 payload deep-equal baseline throughout, p3 (never had payload) still payload-free with vector intact, exact count stays exactly 3 after every step (drift = Type4_StateLogicViolation); a 4xx on the legal repeat or on clear [3] = Type1_IllegalSuccess (legal targeted clear rejected); 5xx = Type3_RuntimeFailure with /healthz re-check",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

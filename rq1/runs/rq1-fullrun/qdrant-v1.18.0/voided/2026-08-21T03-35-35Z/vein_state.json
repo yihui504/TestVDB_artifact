@@ -1,0 +1,120 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": 3,
+  "session_start": "2026-08-21T03:35:35Z",
+  "round_2_start": "2026-08-21T04:30:00Z",
+  "round_3_start": "2026-08-21T05:00:00Z",
+  "top_endpoints": [
+    "/collections/{collection_name}/points:PUT",
+    "/collections/{collection_name}/points/count:POST",
+    "/collections/{collection_name}/points/scroll:POST",
+    "/collections/{collection_name}/points/{point_id}:GET"
+  ],
+  "richness_scores": {
+    "/collections/{collection_name}/points:PUT": 17.75,
+    "/collections/{collection_name}/points/count:POST": 16.0,
+    "/collections/{collection_name}/points/scroll:POST": 14.875,
+    "/collections/{collection_name}/points/{point_id}:GET": 8.5
+  },
+  "shape_sources": {
+    "/collections/{collection_name}/points:PUT": ["type_mismatch", "numeric_boundary", "wait_semantics"],
+    "/collections/{collection_name}/points/count:POST": ["cardinality_oracle"],
+    "/collections/{collection_name}/points/scroll:POST": ["pagination_cursor", "compound_or", "collection_membership"]
+  },
+  "condition_history": [
+    {
+      "endpoint": "/collections/{collection_name}/points:PUT",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "detail": "Dimension-mismatched vectors silently discarded (3D in 4D collection returns 200 but point not stored)",
+      "inspired_by": "R1 findings"
+    },
+    {
+      "endpoint": "/collections/{collection_name}/points:PUT",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "detail": "Empty vector arrays [] silently discarded (returns 200 but point not stored)",
+      "inspired_by": "type_mismatch"
+    },
+    {
+      "endpoint": "/collections/{collection_name}/points:PUT",
+      "condition_type": "compound_and",
+      "finding": "DEFECT_FOUND",
+      "detail": "Mixed batch non-atomic: valid vectors blocked by invalid vector in same batch (per-point atomicity violated)",
+      "inspired_by": "type_mismatch"
+    },
+    {
+      "endpoint": "/collections/{collection_name}/points/count:POST",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "detail": "Cardinality estimation over-counts on indexed numeric range filter (exact:false=3, exact:true=2, scroll=2)",
+      "inspired_by": "cardinality_oracle"
+    },
+    {
+      "endpoint": "/collections/{collection_name}/points/count:POST",
+      "condition_type": "null_check",
+      "finding": "NO_DEFECT",
+      "detail": "is_null count accurate after index built (divergence before index was by-design fallback)",
+      "inspired_by": "cardinality_oracle"
+    },
+    {
+      "endpoint": "/collections/{collection_name}/points:PUT",
+      "condition_type": "wait_semantics",
+      "finding": "DEFECT_FOUND",
+      "detail": "wait=false/true with invalid input (empty vectors, dimension mismatch) acknowledges without storing (silent failure)",
+      "inspired_by": "R3 write_path_semantics"
+    },
+    {
+      "endpoint": "/collections/{collection_name}/points/scroll:POST",
+      "condition_type": "pagination_cursor",
+      "finding": "NO_DEFECT",
+      "detail": "offset parameter works correctly (0-indexed semantics)",
+      "inspired_by": "R3 untouched_endpoints"
+    },
+    {
+      "endpoint": "/collections/{collection_name}/points/scroll:POST",
+      "condition_type": "compound_or",
+      "finding": "NO_DEFECT",
+      "detail": "should clause (OR filter) returns correct union without duplicates",
+      "inspired_by": "R3 remaining_conditions"
+    },
+    {
+      "endpoint": "/collections/{collection_name}/points/scroll:POST",
+      "condition_type": "collection_membership",
+      "finding": "NO_DEFECT",
+      "detail": "has_id filter correctly handles existing/non-existing IDs and empty lists",
+      "inspired_by": "R3 remaining_conditions"
+    }
+  ],
+  "last_finding": {
+    "endpoint": "/collections/{collection_name}/points:PUT",
+    "condition_type": "wait_semantics",
+    "finding": "DEFECT_FOUND",
+    "detail": "wait parameter bypasses input validation causing silent failures"
+  },
+  "adjacent_pending": [],
+  "scripts_generated": 8,
+  "candidates_found": 5,
+  "by_design_excluded": 4,
+  "current_endpoint_idx": 3,
+  "current_condition_idx": 0,
+  "round_2_coverage": {
+    "upsert_vector_conditions": ["dimension_mismatch", "empty_array", "mixed_batch"],
+    "cardinality_estimation": ["numeric_range", "is_null"],
+    "remaining_conditions": ["wait_semantics", "geo_filter", "pagination_cursor", "compound_or"]
+  },
+  "round_3_coverage": {
+    "write_path_semantics": ["wait_false_invalid_input", "wait_true_invalid_input", "dimension_mismatch_async"],
+    "untouched_endpoints": ["get_point_by_id", "scroll_with_payload"],
+    "remaining_conditions": ["pagination_cursor", "compound_or", "collection_membership"],
+    "not_tested": ["geo_filter"]
+  },
+  "round_3_summary": {
+    "new_defects": 1,
+    "confirmed_no_defects": 3,
+    "total_conditions_tested": 9,
+    "endpoints_covered": 3,
+    "completion_pct": 75
+  }
+}

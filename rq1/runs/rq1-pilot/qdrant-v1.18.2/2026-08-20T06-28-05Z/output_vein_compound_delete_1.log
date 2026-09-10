@@ -1,0 +1,111 @@
+[ATTACK] points+delete with compound filter conditions
+        Testing top-3 rank 2 endpoint (points+delete)
+======================================================================
+
+[TEST] Collection size: 50
+--------------------------------------------------
+
+  Initial count: 0
+
+  [Compound AND] price 200-400 AND category B:
+    HTTP Status: 400
+    Deleted: 0 points
+
+  [Compound OR] price=100 OR category A:
+    HTTP Status: 400
+    Deleted: 50 points
+
+[TEST] Collection size: 200
+--------------------------------------------------
+
+  Initial count: 0
+
+  [Compound AND] price 200-400 AND category B:
+    HTTP Status: 400
+    Deleted: 0 points
+
+  [Compound OR] price=100 OR category A:
+    HTTP Status: 400
+    Deleted: 50 points
+
+[TEST] Collection size: 500
+--------------------------------------------------
+
+  Initial count: 0
+
+  [Compound AND] price 200-400 AND category B:
+    HTTP Status: 400
+    Deleted: 0 points
+
+  [Compound OR] price=100 OR category A:
+    HTTP Status: 400
+    Deleted: 50 points
+
+======================================================================
+[ANALYSIS] Delete compound filter results
+----------------------------------------------------------------------
+[DEFECT_FOUND] Compound filter deletes returned errors
+  Issues: [(50, 'AND', 400), (50, 'OR', 400), (200, 'AND', 400), (200, 'OR', 400), (500, 'AND', 400), (500, 'OR', 400)]
+
+======================================================================
+{
+  "strategy": "vein_compound_delete",
+  "endpoint": "POST /collections/{collection}/points",
+  "condition_type": "compound_and_or",
+  "test_sizes": [
+    50,
+    200,
+    500
+  ],
+  "results": {
+    "size_50": {
+      "initial_count": 0,
+      "compound_and": {
+        "http_status": 400,
+        "deleted_count": 0,
+        "response_excerpt": "{'error': 'HTTP Error 400: Bad Request', 'body': '{\"status\":{\"error\":\"Format error in JSON body: missing field `ids` at line 1 column 121\"},\"time\":0.0}'}"
+      },
+      "compound_or": {
+        "http_status": 400,
+        "deleted_count": 50,
+        "response_excerpt": "{'error': 'HTTP Error 400: Bad Request', 'body': '{\"status\":{\"error\":\"Format error in JSON body: missing field `ids` at line 1 column 113\"},\"time\":0.0}'}"
+      }
+    },
+    "size_200": {
+      "initial_count": 0,
+      "compound_and": {
+        "http_status": 400,
+        "deleted_count": 0,
+        "response_excerpt": "{'error': 'HTTP Error 400: Bad Request', 'body': '{\"status\":{\"error\":\"Format error in JSON body: missing field `ids` at line 1 column 121\"},\"time\":0.0}'}"
+      },
+      "compound_or": {
+        "http_status": 400,
+        "deleted_count": 50,
+        "response_excerpt": "{'error': 'HTTP Error 400: Bad Request', 'body': '{\"status\":{\"error\":\"Format error in JSON body: missing field `ids` at line 1 column 113\"},\"time\":0.0}'}"
+      }
+    },
+    "size_500": {
+      "initial_count": 0,
+      "compound_and": {
+        "http_status": 400,
+        "deleted_count": 0,
+        "response_excerpt": "{'error': 'HTTP Error 400: Bad Request', 'body': '{\"status\":{\"error\":\"Format error in JSON body: missing field `ids` at line 1 column 121\"},\"time\":0.0}'}"
+      },
+      "compound_or": {
+        "http_status": 400,
+        "deleted_count": 50,
+        "response_excerpt": "{'error': 'HTTP Error 400: Bad Request', 'body': '{\"status\":{\"error\":\"Format error in JSON body: missing field `ids` at line 1 column 113\"},\"time\":0.0}'}"
+      }
+    }
+  },
+  "verdict": "DEFECT_FOUND",
+  "threat_model_reference": "BS-01 (Parameter Type Coercion Trust)"
+}
+======================================================================
+
+VERDICT: DEFECT_FOUND
+
+[CLEANUP] Deleting test collections...
+  - DELETE vein_delete_compound_50: 200
+  - DELETE vein_delete_compound_200: 200
+  - DELETE vein_delete_compound_500: 200

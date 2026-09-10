@@ -1,0 +1,17 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: sic0447cedd
+[constraint quote] 'field_schema IN {keyword, integer, float, geo, text, bool, datetime, uuid}; text tokenizer IN {prefix, whitespace, word, multilingual}'
+[setup] created sic0447cedd_live (dim=4)
+[PUT index sic0447cedd_live/ctrl_ok] schema="keyword" -> status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.302227981}
+[PUT index sic0447cedd_live/d_varchar] schema="varchar" -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 54"},"time":0.0}
+[violation unknown enum member (string branch)] refused 400; rubric=2/3 {"c1_param_named": true, "c2_format_range": true, "c3_actionable": false}
+[PUT index sic0447cedd_live/d_int] schema=123 -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 44"},"time":0.0}
+[violation int-shaped field_schema] refused 400; rubric=2/3 {"c1_param_named": true, "c2_format_range": true, "c3_actionable": false}
+[PUT index sic0447cedd_live/d_empty] schema={} -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 45"},"time":0.0}
+[violation empty object (missing field_schema.type)] refused 400; rubric=2/3 {"c1_param_named": true, "c2_format_range": true, "c3_actionable": false}
+[PUT index sic0447cedd_live/d_ngram] schema={"type": "text", "tokenizer": "ngram"} -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 81"},"time":0.0}
+[violation tokenizer outside enum] refused 400; rubric=1/3 {"c1_param_named": false, "c2_format_range": true, "c3_actionable": false}
+[PUT index sic0447cedd_live/ctrl_after] schema="keyword" -> status=200 raw={"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.28989079}
+OK: all 4 violation legs refused 4xx; worst rubric score 2/3 (claim threshold 0/3); control legs 200 before and after
+VERDICT: NO_DEFECT

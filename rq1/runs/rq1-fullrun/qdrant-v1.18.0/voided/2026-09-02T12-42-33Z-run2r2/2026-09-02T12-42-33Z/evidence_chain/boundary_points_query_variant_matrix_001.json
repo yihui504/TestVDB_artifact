@@ -1,0 +1,91 @@
+{
+  "defect_id": "boundary_points_query_variant_matrix_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PARTIAL: no doc_preflight.json sidecar exists anywhere under results/qdrant/v1.18.0; the contract's own build-time record says source_status=reachable (structured_contract.json line 6061/1974), but the mandated re-verification via WebFetch of https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points was network-restricted in this environment (domain_blocked) so live reachability could not be reconfirmed. Version PASS: URL segment v-1-18-x and contract doc_version '1.18.x (versioned v-1-18-x api-reference)' match target 1.18.0. Content PARTIAL: prose could not be re-fetched; the contract description and endpoint_registry doc_quote ('Universal query API: nearest/recommend/discover/context/order_by/fusion/sample...'; '400 on an invalid query') enumerate discover as a domain member, and the [SPEC]-derived schemars schema declares DiscoverInput.context optional (Option type; MaybeOneOrMany's JsonSchema even includes a _None alternative), so the M3 shape is schema-valid per the contract's own evidence tier. Endpoint precision PASS: endpoint_registry entry path=points+query method=POST source_url identical to the script's cited source (structured_contract.json lines 5489-5496).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "leg M3 discover (target by-id) (form 1) -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: Expected some form of vector, id, or a type of query at line 1 column 50\"},\"time\":0.0} | VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — leg [M3 discover (target by-id)]: documented variant shape rejected with 400 (all accepted spellings exhausted)",
+      "secondary_observations": [
+        "[rest/unified-query-face] leg M4 context (pair) (form 1) -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: Expected some form of vector, id, or a type of query at line 1 column 81\"},\"time\":0.0} — script-side spelling error: the script double-nested (sent {\"query\":{\"context\":{\"context\":[{\"positive\":1,\"negative\":2}]}}}); the repo's own conformance test tests/openapi/test_query.py:312 test_basic_context uses single nesting {\"query\":{\"context\":[{\"positive\":2,\"negative\":4}]}} — correct rejection of a malformed shape, not a defect",
+        "[rest/unified-query-face] leg M5 order_by (payload key ts) (form 1) -> status=400 | raw: {\"status\":{\"error\":\"Wrong input: No range index for `order_by` key: `ts`. Please create one to use `order_by`. Check https://qdrant.tech/documentation/concepts/indexing/#payload-index...\"},\"time\":0.000356005} — documented prerequisite (payload range index on ts) was never created by the script — setup gap, correct rejection; the order_by variant itself parsed fine (error is a runtime index check, not a parse error)",
+        "[rest/unified-query-face] legs M1 nearest (named form), M2 recommend (positive by-id [1,2]), M6 fusion rrf (string form), M7 sample (random) all -> status=200 with result.points — the same face, same script, same collection executed the other documented variants, isolating the failure to the discover/context variant handling",
+        "[rest/dedicated-discover-face comparative, mechanical rule 5/6] output_boundary_points_discover_batch_presence_006.log: 'P1 target-only (point id) -> status=200' — the SAME server accepts discover with target by-id and context OMITTED on POST /collections/{c}/points/discover/batch; the same value shape on the unified query face (M3) is rejected 400 — intra-product face inconsistency for the same capability",
+        "[rest/unified-query-face] output_state_points_query_tristatus_004.log: '[400a-bogus-variant] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: Expected some form of vector, id, or a type of query at line 1 column 43\"}}' — the server classifies the schema-minimal discover shape identically to a bogus variant, i.e. the docs-minimal discover never reaches DiscoverInput handling as schema-advertised"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The rejection itself uses the correct status class (400 format error, empty-body envelope with status.error text). The defect direction is the inverse of 2xx-masking: a schema-valid, documented-optional-field-omitted request is WRONGFULLY rejected with 400. Phenomenon is illegal-rejection semantics although the in-log verdict labels it Type1_IllegalSuccess — label/phenomenon mismatch recorded for the auditor. Also note the claim's parenthetical 'all accepted spellings exhausted' is inaccurate: only one spelling was attempted for M3 (no alt form in the script), and per source a context-explicit spelling ({\"discover\":{\"target\":1,\"context\":null}} or with a pair) does parse — the primary observation (documented minimal shape 400) is nonetheless genuine and fully covered by this chain."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["boundary_points_query_variant_matrix_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_points_query_001",
+      "assertion_text_quoted": "query variant domain: nearest | recommend | discover | context | order_by | fusion | sample | neartext | nearimage (oneOf; neartext/nearimage are inference variants)",
+      "api_violates_assertion": true,
+      "note": "The candidates.jsonl constraint_id slot is EMPTY (mechanical extraction gap); the constraint was recovered from the script header '# constraint_ids: qdrant_type_points_query_001' and the attack text, and exists verbatim in structured_contract.json (line 6053, endpoint points+query, evidence_tier explicit, source_url api.qdrant.tech/v-1-18-x/api-reference/query/query-points). violates=true reasoning per the violates-declaration self-check: the observed parameter value (discover variant in its schema-documented minimal shape, context omitted) is INSIDE the assertion's constraint domain (discover is an enumerated oneOf member; the [SPEC] face marks DiscoverInput.context optional), and the API rejected it — the constraint 'domain membership executable' is violated by wrongful rejection, not by acceptance of an out-of-domain value.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_points_query_001 present in structured_contract.json:6053 (type_constraint, endpoint points+query, oneOf domain including discover); NOTE the candidates.jsonl dispatch record's constraint_id field is empty — recovered via script header and attack text",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points — contract build-time source_status=reachable (2026-09-02T12:34:08Z per endpoint_registry verified_at); current re-verification domain_blocked (network-restricted environment)",
+        "script: debate_logs/boundary_points_query_variant_matrix_001.py lines 236-237 — M3 sends json={\"query\": {\"discover\": {\"target\": 1}}, \"limit\": 3} to POST /collections/{coll}/points/query; header cites the same constraint_id and source_url (no boundary_scripts/ copy of this script exists — only the debate_logs copy)",
+        "log: output_boundary_points_query_variant_matrix_001.log lines 12-14 — M3 status=400 with the QueryInterface expecting-message; verdict DEFECT_FOUND; matches the script's leg M3 exactly"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Expected some form of vector, id, or a type of query",
+        "pub struct DiscoverInput",
+        "pub enum VectorInput",
+        "pub struct DiscoverRequest",
+        "MaybeOneOrMany",
+        "discover (tests/openapi)"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs (lines 537-601, 614-731, 755-789, 833-869: VectorInput, QueryRequest, QueryInterface, Query enum, DiscoverQuery/DiscoverInput, ContextQuery/ContextInput/ContextPair, Prefetch)",
+        "lib/segment/src/common/utils.rs (lines 80-194: MaybeOneOrMany deserialize via serde_untagged + unit test covering null/single/array but never the missing-field case)",
+        "lib/collection/src/operations/types.rs (lines 790-859: dedicated-face DiscoverRequest/DiscoverRequestInternal with plain Option target/context)",
+        "lib/segment/src/data_types/vectors.rs (line 261-264: TypedDenseVector<T> = Vec<T> plain alias, so a bare id cannot be swallowed as a dense vector)",
+        "tests/openapi/test_query.py (lines 286-339: test_basic_discover and test_basic_context — query-face discover is only ever tested WITH context)",
+        "tests/openapi/test_query_full.py (lines 801-860, grep: same target+context pattern)",
+        "Cargo.lock (serde/serde_derive 1.0.228) and ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_derive-1.0.228/src/de.rs (lines 789-801: expr_is_missing_fn codegen)"
+      ],
+      "source_excerpt": "ROOT CAUSE ISOLATED (unified query face, tag v1.18.0, commit db3fca3):\n\n// lib/api/src/rest/schema.rs:596-601 — request entry (flatten buffers the whole body; explains the end-of-body error columns 50/81)\npub struct QueryRequest {\n    #[validate(nested)]\n    #[serde(flatten)]\n    pub internal: QueryRequestInternal,\n    pub shard_key: Option<ShardKeySelector>,\n}\n\n// lib/api/src/rest/schema.rs:614-620 — M3's 400 message is emitted by THIS untagged enum when every alternative fails\n#[derive(Debug, Serialize, Deserialize, JsonSchema)]\n#[serde(untagged)]\n#[serde(expecting = \"Expected some form of vector, id, or a type of query\")]\npub enum QueryInterface {\n    Nearest(VectorInput),\n    Query(Query),\n}\n\n// lib/api/src/rest/schema.rs:631-632 — discover IS an implemented member of the Query oneOf domain\n    /// Search for nearest points, but constrain the search space with context\n    Discover(DiscoverQuery),\n\n// lib/api/src/rest/schema.rs:833-844 — THE DEFECT: context carries serde(with) WITHOUT serde(default)\n#[derive(Debug, Serialize, Deserialize, JsonSchema, Validate)]\npub struct DiscoverInput {\n    /// Use this as the primary search objective\n    #[validate(nested)]\n    pub target: VectorInput,\n\n    /// Search space will be constrained by these pairs of vectors\n    #[validate(nested)]\n    #[serde(with = \"MaybeOneOrMany\")]\n    #[schemars(with = \"MaybeOneOrMany<ContextPair>\")]\n    pub context: Option<Vec<ContextPair>>,\n}\n\n// lib/api/src/rest/schema.rs:755-761 — CONTRAST inside the same file: Prefetch.prefetch deliberately carries default+with, which is why prefetch omission parses fine\n    #[validate(nested)]\n    #[serde(default, with = \"MaybeOneOrMany\")]\n    #[schemars(with = \"MaybeOneOrMany<Prefetch>\")]\n    pub prefetch: Option<Vec<Prefetch>>,\n\n// serde_derive-1.0.228/src/de.rs:789-801 (exact version pinned in Cargo.lock) — with-deserializer + no default => hard missing-field error; the Option->None tolerance applies only WITHOUT deserialize_with\n    match field.attrs.deserialize_with() {\n        None => {\n            let func = quote_spanned!(span=> _serde::#private::de::missing_field);\n            quote_expr! {\n                #func(#name)?\n            }\n        }\n        Some(_) => {\n            quote_expr! {\n                return _serde::#private::Err(<__A::Error as _serde::de::Error>::missing_field(#name))\n            }\n        }\n    }\n\n// lib/collection/src/operations/types.rs:801-825 — DEDICATED /points/discover face: plain Option fields, no serde(with) => target-only accepted (matches in-chain P1 = 200)\npub struct DiscoverRequestInternal {\n    #[validate(nested)]\n    pub target: Option<RecommendExample>,\n    #[validate(nested)]\n    pub context: Option<Vec<ContextExamplePair>>,\n    ...\n\n// tests/openapi/test_query.py:300-306 — the repo's own conformance test only ever exercises query-face discover WITH context, so the omission path is untested in-tree\n    query_result = root_and_rescored_query(collection_name,\n        {\n            \"discover\": {\n                \"target\": 2,\n                \"context\": [{\"positive\": 3, \"negative\": 4}],\n            }\n        },\n    )",
+      "call_chain_traced": "POST /collections/{c}/points/query body -> QueryRequest (#[serde(flatten)] internal) -> QueryRequestInternal.query: Option<QueryInterface> -> QueryInterface untagged [Nearest(VectorInput) | Query(Query)] -> Query untagged [.. Discover(DiscoverQuery) ..] -> DiscoverQuery { discover: DiscoverInput } -> DiscoverInput { target: VectorInput (untagged, Id(PointIdType) accepts the bare u64 1 — proven live by M2 positive=[1,2] and byid_lookup's {\"query\": 301} both 200), context: Option<Vec<ContextPair>> } where context's #[serde(with = \"MaybeOneOrMany\")] WITHOUT #[serde(default)] makes the field wire-MANDATORY per serde_derive 1.0.228 expr_is_missing_fn; omitting context therefore fails DiscoverInput deserialization, the untagged Query/QueryInterface layers swallow the inner error and surface the generic expecting-message with HTTP 400. The schemars-generated OpenAPI face still advertises context as optional (Option type; MaybeOneOrMany's JsonSchema OneOrMany enum includes a _None alternative), so docs and parser disagree — the schema-valid minimal discover is treated exactly like a bogus variant. Same-file contrast (Prefetch.prefetch = default+with works when omitted) and cross-face contrast (dedicated DiscoverRequestInternal plain-Option accepts target-only, in-chain 200) show the omission-tolerance was implemented elsewhere deliberately and is missing here.",
+      "verification_outcome": "validation_absent",
+      "outcome_note": "Over-strict deserialization rather than missing validation: the source fails to honor the documented optionality of DiscoverInput.context (serde(with) without serde(default)) on the unified query face, so a schema-valid domain member (discover, target-only) is wrongfully rejected. NOT marked by_design_in_source: no comment/docstring/maintainer marker declares context mandatory on this face (v3.4 decision-2 tightened), the same file shows the authors add #[serde(default)] precisely when omission must work (Prefetch.prefetch, QueryGroupsRequestInternal.prefetch), the dedicated discover face accepts target-only, and no in-tree test covers the omission path — bare 'it behaves this way' is exactly what the rules forbid calling by-design.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (server alive and healthy: the same script's M1/M2/M6/M7 legs returned 200 on the same face, same collection, same run)",
+        "concurrency (single sequential request-response pair, no races)",
+        "request_typo for M3 (the sent spelling {\"query\":{\"discover\":{\"target\":1}}} matches the schemars schema-optional form and the dedicated face's accepted target-only form; root cause located in source at DiscoverInput.context)",
+        "collection-state pollution (fresh prefixed collection bpqM1+tag created and seeded by the script itself; setup legs all 200)"
+      ],
+      "surviving": null,
+      "note": "Script-side issues DO explain the two SECONDARY legs but not the primary: M4 failed because the script double-nested the context variant (correct single-nesting shown in the repo's own test), and M5 failed because the script never created the range index the order_by error message itself documents as required. M3's rejection survives all mundane exclusions and traces to a concrete source-level cause."
+    }
+  }
+}

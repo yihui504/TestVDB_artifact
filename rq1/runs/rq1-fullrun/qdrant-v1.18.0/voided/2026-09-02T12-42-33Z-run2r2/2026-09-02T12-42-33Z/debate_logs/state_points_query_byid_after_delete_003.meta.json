@@ -1,0 +1,12 @@
+{
+ "defect_id": "state_points_query_byid_after_delete_003",
+ "endpoint": "points+query",
+ "param": "query",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "delete_consistency",
+ "oracle": {
+  "statement": "by-id query of deleted id 1 (and never-existing id 777777) returns HTTP 4xx — 200 = ghost vector served (Type4); survivor ids 2/3 return 200 non-empty; exact count drops 3->2; GET id 1 -> 404; 5xx with /healthz alive = Type3",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,76 @@
+{
+  "defect_id": "vein_pagination_cursor_points_scroll_1",
+  "endpoint": "/collections/{collection_name}/points/scroll:POST",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "FAIL",
+      "version_match": "N/A",
+      "content_consistency": "N/A",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url (https://api.qdrant.tech/api-reference/points/scroll-points) unreachable (source_status: unreachable, source_verified: false) - unable to verify documented offset parameter semantics (0-indexed vs 1-indexed) from official docs",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[Test 1] offset=0 (should start at first point): Response status: 200, Returned IDs: [1, 2, 3], Expected: [1, 2, 3], PASS; [Test 2] offset=5 (should skip first 5 points): Response status: 200, Returned IDs: [5, 6, 7], WARNING: offset=5 uses 1-indexed semantics (may be intentional)",
+      "secondary_observations": [
+        "[Test 3] offset=99999 (beyond collection size): Response status: 200, Returned points count: 0, Expected: 0, PASS: offset beyond size returns empty result",
+        "[Test 4] offset=-1 (negative offset): Response status: 400, Response: {...'error': 'Format error in JSON body: value -1 is not a valid point ID...'}, PASS: negative offset rejected with 400"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "Negative offset (-1) correctly returns HTTP 400 with validation error message. Offsets 0, 5, 99999 return HTTP 200 with results. Observed behavior: offset=5 returns [5,6,7] suggesting 1-indexed semantics (offset=5 returns point_id=5 as first result) vs expected 0-indexed (offset=5 should return points 6,7,8)"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_pagination_cursor_points_scroll_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "unconstrained",
+      "assertion_text_quoted": "N/A - No constraint exists for scroll offset semantics (0-indexed vs 1-indexed) in structured_contract.json",
+      "api_violates_assertion": false,
+      "note": "Contract gap: structured_contract.json has no constraint covering scroll endpoint offset parameter indexing semantics. Endpoint_registry shows scroll path exists but no constraint defines whether offset is 0-indexed, 1-indexed, or point_id-based. Observed behavior suggests offset is point_id-based (offset=5 returns point_id 5), not array-index-based.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: N/A - no constraint exists for scroll offset indexing semantics",
+        "doc: source_url unreachable - cannot verify documented offset behavior (0-indexed vs 1-indexed vs point_id-based)",
+        "script: vein_pagination_cursor_points_scroll_1.py (tests scroll offset: 0, 5, 99999, -1 with limit=3)",
+        "log: DEFECT_FOUND - 1 observation: offset=5 returns [5,6,7] instead of expected [6,7,8] suggesting 1-indexed or point_id-based semantics"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "Contract gap: No constraint in structured_contract.json defines scroll offset parameter semantics. Missing constraint: 'scroll offset=0 returns first point, offset=N returns point at position N+1 (0-indexed array semantics) OR offset returns starting point_id=N (point_id-based semantics)'. Observed behavior indicates offset is point_id-based (offset=5 returns point_id=5 first), which contradicts conventional 0-indexed pagination expectation where offset=5 would skip first 5 items.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "scroll.*offset OR offset.*scroll",
+        "PointIdType.*offset OR offset.*PointIdType",
+        "ScrollRequestInternal"
+      ],
+      "files_examined": [
+        "lib/shard/src/scroll.rs",
+        "lib/segment/src/types.rs",
+        "lib/segment/src/segment/read_view/scroll.rs",
+        "lib/collection/src/shards/local_shard/scroll.rs"
+      ],
+      "source_excerpt": "From lib/shard/src/scroll.rs:8-16:\n/// Scroll request - paginate over all points which matches given condition\n#[derive(Clone, Debug, PartialEq, Hash, Deserialize, Serialize, JsonSchema, Validate)]\n#[serde(rename_all = \"snake_case\")]\npub struct ScrollRequestInternal {\n    /// Start ID to read points from.\n    pub offset: Option<PointIdType>,\n\n    /// Page size. Default: 10\n    #[validate(range(min = 1))]\n    pub limit: Option<usize>,\n    /// Look only for points which satisfies this conditions. If not provided - all points.\n    #[validate(nested)]\n    pub filter: Option<Filter>,\n    [...]\n}\n\nFrom lib/segment/src/types.rs:\n/// Type, used for specifying point ID in user interface\n#[derive(Debug, Serialize, Copy, Clone, PartialEq, Eq, Hash, Ord, PartialOrd, JsonSchema)]\n#[serde(untagged)]\npub enum ExtendedPointId {\n    #[schemars(example = \"id_num_example\")]\n    NumId(u64),\n    #[schemars(example = \"id_uuid_example\")]\n    Uuid(Uuid),\n}",
+      "call_chain_traced": "ScrollRequestInternal.offset is Option<PointIdType>, not usize. PointIdType is ExtendedPointId enum (NumId(u64) or Uuid). Comment says 'Start ID to read points from' - this confirms offset is point_id-based (inclusive lower bound), not array index-based. If offset=Some(NumId(5)), scroll starts returning from point_id=5 onward, not skipping first 5 results. Observed behavior (offset=5 returns [5,6,7]) matches source design: offset is point_id inclusive lower bound.",
+      "verification_outcome": "by_design_in_source",
+      "note": "Source code confirms ScrollRequestInternal.offset is Option<PointIdType> with comment 'Start ID to read points from'. PointIdType is ExtendedPointId (NumId(u64) | Uuid). This design means offset is an inclusive lower bound on point_id, not a skip-count. offset=5 means 'start from point_id=5', not 'skip first 5 points'. This is by-design behavior: scroll offset is point_id-based cursor, not array-index-based skip count. The defect report's expectation of 0-indexed array semantics (offset=5 returns [6,7,8]) assumes different design than source implements.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "by_design",
+      "note": "Observed offset behavior (offset=5 returns point_id 5 first) is by-design per source: ScrollRequestInternal.offset is PointIdType (inclusive lower bound), not usize skip count. This is cursor-based pagination where offset specifies starting point_id, not number of items to skip. Not a validation violation but semantic design mismatch between expectation and implementation."
+    }
+  }
+}

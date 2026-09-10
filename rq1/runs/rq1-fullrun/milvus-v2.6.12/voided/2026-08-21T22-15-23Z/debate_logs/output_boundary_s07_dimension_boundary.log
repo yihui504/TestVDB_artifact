@@ -1,0 +1,14 @@
+CASE dim=1          ok=False | {"code":65535,"message":"invalid dimension: 1. should be in range 2 ~ 32768"}
+CASE dim=2          ok=True | {"code":0,"data":{}}
+CASE dim=0          ok=False | {"code":65535,"message":"invalid dimension: 0. should be in range 2 ~ 32768"}
+CASE dim=-8         ok=False | {"code":65535,"message":"invalid dimension: -8. should be in range 2 ~ 32768"}
+CASE dim=32767      ok=True | {"code":0,"data":{}}
+CASE dim=32768      ok=True | {"code":0,"data":{}}
+CASE dim=32769      ok=False | {"code":65535,"message":"invalid dimension: 32769 of field vector. float vector dimension should be in range 2 ~ 32768"}
+CASE dim=100000     ok=False | {"code":65535,"message":"invalid dimension: 100000 of field vector. float vector dimension should be in range 2 ~ 32768"}
+CASE dim=65536      ok=False | {"code":65535,"message":"invalid dimension: 65536 of field vector. float vector dimension should be in range 2 ~ 32768"}
+CASE insert dim=4 (short)   ok=False | {"code":1804,"message":"fail to deal the insert data, error: []float32 size 4 doesn't equal to vector dimension 8 of FloatVector"}
+CASE insert dim=16 (long)   ok=False | {"code":1804,"message":"fail to deal the insert data, error: []float32 size 16 doesn't equal to vector dimension 8 of FloatVector"}
+CASE insert dim=8 (ok)      ok=True | {"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[2]}}
+CASE insert empty vec       ok=False | {"code":1804,"message":"fail to deal the insert data, error: []float32 size 0 doesn't equal to vector dimension 8 of FloatVector"}
+VERDICT_NO_DEFECT

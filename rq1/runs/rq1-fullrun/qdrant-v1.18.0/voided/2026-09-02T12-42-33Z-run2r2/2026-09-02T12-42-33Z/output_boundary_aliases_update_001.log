@@ -1,0 +1,28 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: bau18a651c89
+probe[below-min-zero] timeout=0 -> status=422
+  raw: {"status":{"error":"Validation error in query parameters: [timeout: value 0 invalid, must be 1 or larger]"},"time":0.0}
+  OK: below-min timeout rejected 422 (documented min 1)
+probe[below-min-neg1] timeout=-1 -> status=400
+  raw: {"status":{"error":"Deserialize error in query parameters: invalid digit found in string"},"time":0.0}
+  OK: below-min timeout rejected 400 (documented min 1)
+probe[below-min-neg100] timeout=-100 -> status=400
+  raw: {"status":{"error":"Deserialize error in query parameters: invalid digit found in string"},"time":0.0}
+  OK: below-min timeout rejected 400 (documented min 1)
+probe[min-closure-1] timeout=1 -> status=200
+  raw: {"result":true,"status":"ok","time":0.015756371}
+  OK: 200, applied, envelope result:boolean intact
+probe[min-plus-1] timeout=2 -> status=200
+  raw: {"result":true,"status":"ok","time":0.014615877}
+  OK: 200, applied, envelope result:boolean intact
+probe[mid-5] timeout=5 -> status=200
+  raw: {"result":true,"status":"ok","time":0.014184793}
+  OK: 200, applied, envelope result:boolean intact
+probe[int-max] timeout=2147483647 -> status=200
+  raw: {"result":true,"status":"ok","time":0.018949302}
+  OK: 200, applied, envelope result:boolean intact
+probe[huge-1e9] timeout=1000000000 -> status=200
+  raw: {"result":true,"status":"ok","time":0.021436663}
+  OK: 200, applied, envelope result:boolean intact
+VERDICT: NO_DEFECT

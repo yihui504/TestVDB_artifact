@@ -1,0 +1,14 @@
+create: 200 {"code":0,"data":{}}
+insert: 200 {"code":0,"cost":0,"data":{"insertCount":2,"insertIds":[1,2]}}
+get *: 200 {"code":0,"cost":0,"data":[{"camélia":"unicode-name","category":"A","extra_score":42,"id":1,"meta.details":"dotted-name","ratio":3.14,"vector":[0.1,0.1,0.1,0.1]}]}
+
+query [category]: ok=True got='A' raw={"code":0,"cost":0,"data":[{"category":"A","id":1}]}
+
+query [extra_score]: ok=True got=42 raw={"code":0,"cost":0,"data":[{"extra_score":42,"id":1}]}
+
+query [ratio]: ok=True got=3.14 raw={"code":0,"cost":0,"data":[{"id":1,"ratio":3.14}]}
+
+query [meta.details]: ok=False got=None raw={"code":65535,"message":"parse output field name failed: meta.details"}
+query [camélia]: ok=False got=None raw={"code":65535,"message":"parse output field name failed: camélia"}
+missing in get(*): []
+VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — query cannot reference field 'meta.details' (parse fail: {"code":65535,"message":"parse output field name failed: meta.details"}) while insert accepted it and get(*) returns it; query cannot reference field 'camélia' (parse fail: {"code":65535,"message":"parse output field name failed: camélia"}) while insert accepted it and get(*) returns it

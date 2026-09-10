@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_update_002",
+ "endpoint": "collections+update",
+ "param": "vectors.size / vectors.distance (immutability of vector-space properties under repeated illegal PATCH diffs)",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "upsert_idempotence",
+ "constraint_ids": [
+  "qdrant_state_collections_update_001"
+ ],
+ "source_url": "https://qdrant.tech/documentation/manage-data/collections/",
+ "doc_version": "current (site latest; no version archive)",
+ "oracle": {
+  "statement": "after each repeated illegal PATCH pair (vectors.size / vectors.distance / named-vector variants) on a live collection, describe readback keeps size==4 / distance==Cosine and points_count==seed count — readback showing the requested size/distance applied = Type1_IllegalSuccess (vector-space property altered via update); 5xx = Type3 only with /healthz liveness; 4xx and 200-no-echo faces = NO_DEFECT",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

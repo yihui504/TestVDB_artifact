@@ -1,0 +1,79 @@
+{
+  "defect_id": "state_collections_create_06",
+  "endpoint": "collections+create",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "API documentation domain (api.qdrant.tech) unreachable due to network restrictions - marked as PARTIAL. Contract constraint qdrant_type_create_collection_002 from structured_contract.json explicitly states vectors.distance IN [Cosine, Euclidean, Dot, Manhattan]. Version mismatch detected: contract references doc_version 1.19.x but target is v1.18.2 (minor version drift). Content consistency: constraint assertion explicitly present in contract. Endpoint precision: collections+create endpoint verified in endpoint_registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "state_collections_create_06.py:88-92 → PUT /collections/test_config_euclidean_1 with vectors.distance='Euclidean' → HTTP 400 Bad Request (API rejected the distance value)",
+      "secondary_observations": [
+        "state_collections_create_06.py:88-92 → PUT /collections/test_config_euclidean_64 with vectors.distance='Euclidean' → HTTP 400 Bad Request",
+        "state_collections_create_06.py:88-92 → PUT /collections/test_config_euclidean_128 with vectors.distance='Euclidean' → HTTP 400 Bad Request",
+        "state_collections_create_06.py:88-92 → PUT /collections/test_config_euclidean_256 with vectors.distance='Euclidean' → HTTP 400 Bad Request",
+        "state_collections_create_06.py:88-92 → PUT /collections/test_config_euclidean_1024 with vectors.distance='Euclidean' → HTTP 400 Bad Request",
+        "Log summary: 15 configurations tested, 5 euclidean configs failed with HTTP 400, 10 other configs (cosine/dot/manhattan) succeeded with HTTP 200"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx",
+        "note": "API correctly returned HTTP 400 Bad Request for unsupported distance value 'Euclidean' in v1.18.2. This is semantically correct HTTP behavior - rejecting invalid input with 4xx status code."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_collections_create_06"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_create_collection_002",
+      "assertion_text_quoted": "vectors.distance IN [Cosine, Euclidean, Dot, Manhattan]",
+      "api_violates_assertion": false,
+      "note": "API correctly rejects 'Euclidean' with HTTP 400 in v1.18.2, but contract documentation (1.19.x) claims 'Euclidean' is valid. The API behavior is correct for v1.18.2; the contract documentation is outdated/mismatched. This is a documentation defect (Type4_StateLogicViolation - contract-documentation-state-inconsistency), not an API validation defect.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_type_create_collection_002 (assertion: vectors.distance IN [Cosine, Euclidean, Dot, Manhattan], doc_version: 1.19.x)",
+        "doc:https://api.qdrant.tech/api-reference/collections/create-collection (domain_blocked, verified via contract)",
+        "script:state_collections_create_06.py line 54-88 (test vectors.distance='Euclidean' with sizes [1,64,128,256,1024])",
+        "log:output_state_collections_create_06.log lines 4-10 (HTTP 400 Bad Request for all 5 Euclidean tests, API rejected)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Chain断裂于doc层：contract文档(1.19.x版本)声明'Euclidean'是有效距离度量值，但v1.18.2 API实际拒绝该值(HTTP 400)。API行为正确(正确拒绝不支持的值)，但contract文档与目标API版本不一致。script测试的'Euclidean'值被API拒绝，验证了API不支持此值，暴露了contract文档版本不匹配问题。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "distance.*Euclidean",
+        "vectors.*distance",
+        "collections.*create.*distance"
+      ],
+      "files_examined": [],
+      "source_excerpt": "",
+      "call_chain_traced": "not_found_in_source - TESTVDB_SRC_DIR not available in session environment",
+      "verification_outcome": "webfetch_shallow",
+      "note": "TESTVDB_SRC_DIR not available in session environment. Attempted source code verification blocked by missing clone. Unable to perform deep source inspection (Grep+Read workflow) as required by ADR-0008 step2. Classification as webfetch_shallow due to domain restrictions preventing alternative verification paths. Source code verification would confirm whether 'Euclidean' distance metric is implemented in v1.18.2 codebase.",
+      "sufficiency_check": "clone_unavailable",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "parameter_typo"
+      ],
+      "surviving": null,
+      "note": "No mundane explanations apply. Observation shows deterministic rejection of 'Euclidean' distance value across 5 different vector sizes (all HTTP 400). Not environmental - consistent behavior. Not concurrency - single sequential requests. Not parameter typo - script uses capitalized 'Euclidean' matching contract specification. Not caching - each test uses unique collection name. The API is correctly rejecting an unsupported value per v1.18.2 implementation; the contract documentation is outdated."
+    }
+  }
+}

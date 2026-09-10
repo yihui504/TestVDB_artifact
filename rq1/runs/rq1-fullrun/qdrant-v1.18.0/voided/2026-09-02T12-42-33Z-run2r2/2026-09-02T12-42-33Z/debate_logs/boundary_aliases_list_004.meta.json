@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_list_004",
+ "endpoint": "aliases+list",
+ "param": "alias_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "special_value",
+ "oracle": {
+  "statement": "for every alias name whose creation the write face accepted with 200, GET /aliases returns HTTP 200 and result.aliases contains exactly one entry with byte-exact alias_name equal to the created name and collection_name equal to the backing collection (dropped/mangled/wrongly-bound entry = Type4_StateLogicViolation); 5xx on the list = Type3; creation-side 4xx rejections are recorded and skipped (that is the write face's validation, not this unit); envelope nests at result.aliases per response_shape (constraint qdrant_behavioral_aliases_list_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

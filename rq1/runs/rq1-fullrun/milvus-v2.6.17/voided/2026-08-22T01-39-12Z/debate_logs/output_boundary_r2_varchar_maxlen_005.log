@@ -1,0 +1,9 @@
+max_length=65535 (at max)          -> code=0     {"code":0,"data":{}}
+max_length=65536 (max+1)           -> code=1100  {"code":1100,"message":"the maximum length specified for the field(text) should be in (0, 65535], but got 65536 instead: invalid p
+max_length=0                       -> code=1100  {"code":1100,"message":"the maximum length specified for the field(text) should be in (0, 65535], but got 0 instead: invalid param
+max_length=-1                      -> code=1100  {"code":1100,"message":"the maximum length specified for the field(text) should be in (0, 65535], but got -1 instead: invalid para
+max_length='abc' (non-numeric)     -> code=65535 {"code":65535,"message":"strconv.ParseInt: parsing \"abc\": invalid syntax"}
+max_length missing                 -> code=65535 {"code":65535,"message":"type param(max_length) should be specified for the field(text) of collection r2vc_missing"}
+insert value len 65536 (decl 65535) -> code=1100 {"code":1100,"message":"length of varchar field text exceeds max length, row number: 0, length: 65536, max length: 65535: invalid 
+insert 21846 CJK chars (65544 bytes) -> code=1100 insertCount=None {"code":1100,"message":"length of varchar field text exceeds max length, row number: 0, length: 65538, max length: 65535: invalid 
+VERDICT: NO_DEFECT

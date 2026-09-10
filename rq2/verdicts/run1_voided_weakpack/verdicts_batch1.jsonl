@@ -1,0 +1,14 @@
+{"defect_id": "milvus_001", "verdict": "FALSE_POSITIVE", "confidence": 0.3, "rationale": "observed 栏明示『无可用观察记录：raw 为空且 log 未捕获』，无任何观察证据支持违反契约的判断，按保守裁决判 FP。"}
+{"defect_id": "milvus_002", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "包内契约 10 条均无 nprobe 取值范围约束（仅 limit>0 与维度匹配），nprobe=0 被 code 0 接受缺乏契约依据判为被拒值。"}
+{"defect_id": "milvus_003", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "包内契约无任何 HNSW ef 取值范围条目，ef=0 返回 code 0 无包内契约断言可判违反。"}
+{"defect_id": "milvus_004", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "『age in [10, 5]』是合法集合成员布尔表达式（顺序无关），deleteCount=1 恰好命中存在的 age=10，符合『filter 为有效布尔表达式』契约，包内无 IN 列表须有序的依据。"}
+{"defect_id": "milvus_005", "verdict": "CONFIRMED", "confidence": 0.6, "rationale": "insert 对动态字段名 '123field'/'@field' 静默接受（code 0 两次复现），而同包 query 层随后明确拒绝同一字段名（code 65535 'parse output field name failed: 123field'），属静默接受被拒值，写入成功但数据不可读。"}
+{"defect_id": "milvus_006", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "text_field 为动态字段（quick-create 仅 dimension:4，schema 未声明该字段类型），动态字段无已声明类型，int 12345 不违反『data 字段类型匹配 schema』约束，查询原样返回也无类型违约。"}
+{"defect_id": "milvus_007", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "空向量 [[]] 被明确拒绝（code 1801 'dimension: 8, but length of []float: 0: invalid parameter'），正是『维度必须匹配集合维度』契约所要求的行为，未违反。"}
+{"defect_id": "milvus_008", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "补充契约（同版本文档考古，explicit）断言 COSINE 下 identical vectors distance == 0，observed 为相同向量 distance=1 且 100 次中 11 次 distance>1.0（max 1.0000002，超出相似度上界），直接违反断言。"}
+{"defect_id": "milvus_009", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "包内契约无 nprobe 范围约束条目；对照 limit=0 被拒（topk 范围报错）仅证明 limit 校验存在，nprobe=0 被接受无包内契约依据判违反。"}
+{"defect_id": "milvus_010", "verdict": "CONFIRMED", "confidence": 0.75, "rationale": "create 对 collection.ttl.seconds=-100 静默接受（code 0，且 describe 中该属性消失），同轮 alter_properties 对同一值明确拒绝（code 1100 'TTL is out of range, expect [-1, 3155760000], got -100'），违反契约 ttlSeconds>=0 与『非法参数返回 400』断言，属静默接受被拒值。"}
+{"defect_id": "milvus_011", "verdict": "CONFIRMED", "confidence": 0.6, "rationale": "契约断言 filter 为有效布尔表达式，observed 中 filter=null/缺省/'' 均被静默当作 match-all 返回全部行（code 0 三次复现），空串非有效布尔表达式，属静默接受被拒值。"}
+{"defect_id": "milvus_012", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "契约明示『collections+list 无约束条目』，dbName='' 回退默认库返回 code 0 无任何包内契约断言可判违反（对照的 query code 100 为无关控制组）。"}
+{"defect_id": "milvus_013", "verdict": "CONFIRMED", "confidence": 0.65, "rationale": "文档考古契约断言 Request-Timeout 须为整数（non-integer rejected），observed 中 3.5 与 'abc' 均被静默接受返回 code 0（恰为 provenance 注明的 silently truncated/ignored），属静默接受被拒值。"}
+{"defect_id": "milvus_014", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "契约边界为 1<=dim<=32768（内含上界），observed 中 32768 被接受、32769 被拒（'range 2 ~ 32768'），行为与契约完全一致。"}

@@ -1,0 +1,69 @@
+{
+  "defect_id": "boundary_bd_shardcount_03",
+  "endpoint": "POST /schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint weaviate_range_sharding_desired_count_001 (evidence_tier=inferred, source_verified=true)，source_url 'go-func: usecases/sharding/config/config.go validate()' 本地 clone 可达并核验（validate() 确无 desiredCount>=1 校验）；api_endpoints 含 shardingConfig.desiredCount integer（evidence_tier inferred, go-struct L22）；endpoint_registry 含 POST /schema v1.38.2。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "desiredCount=-1: create -> 200 / read-back desiredCount = None（主观测：负值创建 200）",
+      "secondary_observations": [
+        "desiredCount=1: create -> 200 {...\"class\":\"BdShardCtl\"...} / read-back desiredCount = 1 — 正常对照",
+        "desiredCount=0: create -> 422 {\"allowed\":null,\"error\":[{\"message\":\"updating db: TYPE_ADD_CLASS: apply add class: create index: failed to read sharding state: invalid sharding state: physical shards unavailable\"}]} — 0 被运行时拒绝（但报错为存储层 422 而非参数校验）",
+        "DEFECT-SIGNAL: desiredCount=-1 accepted at create (GT #11729 channel)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "负值越界参数以 200 返回（应为 422）；对照 0 值确被 422 拒绝——同为非法值，-1 过 0 拒，行为不一致"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_bd_shardcount_03", "semantic_shardcount_02"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_range_sharding_desired_count_001",
+      "assertion_text_quoted": "shardingConfig.desiredCount >= 1（description: inferred: shard count must be a positive integer (>=1); validate() 无显式校验（实测 0 被运行时拒绝 'physical shards unavailable'，负值被 200 接受——GT issue #11729））",
+      "api_violates_assertion": true,
+      "note": "desiredCount=-1 < 1 被 200 接受，直接违反 >= 1 断言；观测值（-1）在约束数值域内。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_range_sharding_desired_count_001 — desiredCount >= 1, source_verified=true",
+        "doc: api_endpoints POST /schema shardingConfig.desiredCount integer (go-struct: usecases/sharding/config/config.go#L22)",
+        "script: boundary_bd_shardcount_03.py POST /schema {shardingConfig:{desiredCount:-1}} + GET 读回",
+        "log: 'desiredCount=-1: create -> 200' + 'read-back desiredCount = None'"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["desiredCount", "DesiredCount", "func (c *Config) validate()", "physical shards unavailable"],
+      "files_examined": [
+        "usecases/sharding/config/config.go (L1-80)"
+      ],
+      "source_excerpt": "usecases/sharding/config/config.go L23-L31:\n  type Config struct {\n    VirtualPerPhysical  int    `json:\"virtualPerPhysical\"`\n    DesiredCount        int    `json:\"desiredCount\"`\n    ...\n  }\n\nL46-L71 (setDefaults + validate):\n  func (c *Config) setDefaults(nodeCount int) { c.DesiredCount = nodeCount; ... }\n  func (c *Config) validate() error {\n    if c.Key != \"_id\" { return errors.Errorf(\"sharding only supported on key '_id' ...\") }\n    if c.Strategy != \"hash\" { ... }\n    if c.Function != \"murmur3\" { ... }\n    return nil\n  }  // validate() 仅校验 key/strategy/function，无任何 DesiredCount 正整数校验",
+      "call_chain_traced": "POST /schema → schema usecase → sharding Config.validate()：无 desiredCount 下界校验。0 值的 422 来自下游索引创建（'physical shards unavailable' 存储层错误），-1 在该层因符号处理/循环不执行而未触发同样拒绝 → 200。（sufficiency_check: grep_hit_pursued——desiredCount 命中文件已 Read，validate 全文核验无下界校验）",
+      "verification_outcome": "validation_absent",
+      "note": "contract 要求的 desiredCount>=1 校验在源码 validate() 中完全缺失，真缺陷信号成立。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+ "defect_id": "boundary_collections_update_010",
+ "endpoint": "collections+update",
+ "param": "vectors",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "on a live bcu010_* collection with named vector doc{size 4, Cosine}, each PATCH attempt to change doc's size or distance returns EITHER HTTP 4xx OR HTTP 200 with the describe readback of doc.size/doc.distance unchanged at 4/Cosine (a 2xx that alters the vector-space = Type1_IllegalSuccess state violation); PATCH hnsw_config.m=8 and quantization_config.scalar.type=int8 each return HTTP 200 with result true AND persist in readback (rejection of these documented-legal config changes = Type1_IllegalRejection; 5xx/transport re-checked via /healthz)",
+  "source": "docstring"
+ }
+}

@@ -1,0 +1,77 @@
+{
+  "defect_id": "vein_wait_semantics_points_upsert_1",
+  "endpoint": "/collections/{collection_name}/points:PUT",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "FAIL",
+      "version_match": "N/A",
+      "content_consistency": "N/A",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url (https://api.qdrant.tech/api-reference/points/upsert-points) unreachable (source_status: unreachable, source_verified: false) - unable to verify documented wait parameter semantics or input validation requirements from official docs",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[Test 1] wait=false with empty vector: Response status: 200, Response body: {...'status': 'acknowledged'...}, Point stored (should be false): False; [Test 2] wait=true with empty vector: Response status: 200, Response body: {...'status': 'acknowledged'...}, Point stored (should be false): False; [Test 3] wait=false with dimension mismatch (3D in 4D collection): Response status: 200, Response body: {...'status': 'acknowledged'...}, Point stored (should be false): False",
+      "secondary_observations": [
+        "[Test 4] Control: wait=false with valid data: Response status: 200, Point stored (should be true): True (control group validates async write works correctly)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Invalid inputs (empty vectors, dimension mismatches) return HTTP 200 with 'acknowledged' operation status instead of HTTP 4xx validation error; data silently not stored"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_wait_semantics_points_upsert_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": null,
+      "assertion_text_quoted": "No constraint in structured_contract.json covers wait parameter validation semantics. Mechanical extraction surfaced only qdrant_range_upsert_points_001 (batch_size range constraint), which does not constrain wait parameter behavior or vector validation requirements.",
+      "api_violates_assertion": false,
+      "note": "Contract gap: structured_contract.json lacks constraint covering wait parameter input validation semantics. Existing constraints cover batch_size ranges (qdrant_range_upsert_points_001) and atomicity (qdrant_state_upsert_points_001), but do not specify that wait=false only affects timing, not input validation enforcement. This is a grey zone where the contract does not specify expected validation behavior for the wait parameter.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: null (no constraint covers wait parameter validation - qdrant_range_upsert_points_001 only covers batch_size range)",
+        "doc: source_url unreachable - cannot verify documented wait semantics or validation requirements",
+        "script: vein_wait_semantics_points_upsert_1.py (tests wait=false/true with invalid vectors: empty, dimension-mismatched)",
+        "log: DEFECT_FOUND - 3 observations of Type1_IllegalSuccess (acknowledged but not stored)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "Contract gap: structured_contract.json lacks constraint covering wait parameter validation semantics. Wait parameter behavior regarding input validation timing is not specified in the contract. This follows vein_type_mismatch_points_upsert_1 precedent (contract gap but HTTP semantics confirm defect).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "wait.*acknowledged OR acknowledged.*wait",
+        "empty.*vector OR vector.*empty",
+        "validate.*vector OR vector.*validate",
+        "upsert.*points",
+        "WaitUntil"
+      ],
+      "files_examined": [
+        "src/common/update.rs",
+        "src/actix/api/update_api.rs",
+        "lib/api/src/rest/schema.rs",
+        "lib/common/common/src/validation.rs",
+        "lib/collection/src/shards/shard_trait.rs",
+        "lib/collection/src/shards/replica_set/update.rs"
+      ],
+      "source_excerpt": "From src/common/update.rs:36-44:\n#[serde_with::serde_as]\n#[derive(Copy, Clone, Debug, Deserialize, Serialize, Validate)]\npub struct UpdateParams {\n    #[serde(default)]\n    pub wait: bool,\n    #[serde(default)]\n    pub ordering: WriteOrdering,\n    #[serde_as(as = \"Option<DurationSeconds<String>>\")]\n    pub timeout: Option<Duration>,\n}\n\nFrom lib/collection/src/shards/shard_trait.rs:19-37:\npub enum WaitUntil {\n    /// Wait until the operation is written in WAL.\n    /// Corresponds with wait=false, acknowledging immediately.\n    Wal,\n    /// Wait until the operation is written in a segment.\n    Segment,\n    /// Wait until the operation is visible in search results.\n    /// Corresponds with wait=true, acknowledging only when the change is fully applied and visible.\n    Visible,\n}\n\nFrom lib/api/src/rest/schema.rs:1384-1395:\n#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, JsonSchema, Validate)]\npub struct PointStruct {\n    pub id: PointIdType,\n    #[serde(alias = \"vectors\")]\n    #[validate(nested)]\n    pub vector: VectorStruct,\n    pub payload: Option<Payload>,\n}\n\nFrom lib/common/common/src/validation.rs:228-243:\npub fn validate_multi_vector_by_length(multivec_length: &[usize]) -> Result<(), ValidationErrors> {\n    if multivec_length.is_empty() {\n        let mut err = ValidationError::new(\"empty_multi_vector\");\n        err.add_param(Cow::from(\"message\"), &\"multi vector must not be empty\");\n        return Err(err);\n    }\n    // ...dimension mismatch validation follows...\n}",
+      "call_chain_traced": "UpdateParams (wait: bool) → UpdateParams::from_grpc → upsert_points handler (update_api.rs:34) → do_upsert_points → WaitUntil::from(bool) (shard_trait.rs:57-64) → WaitUntil::Wal (false) / WaitUntil::Visible (true) → update_local in replica_set → effective_wait determines acknowledgment timing. VectorStruct validation only occurs at serde/Validate layer but does not reject empty/mismatched vectors before acknowledgment. No explicit vector dimension validation observed before upsert execution.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "by_design"],
+      "surviving": "HTTP semantics show client error (invalid vectors) returned as HTTP 200 + 'acknowledged' status instead of HTTP 4xx, indicating Type1_IllegalSuccess. Empty vectors and dimension mismatches are silently rejected at storage layer after acknowledgment, not before. Wait parameter (WaitUntil enum) only controls timing of acknowledgment (WAL vs Visible) but does not affect input validation order. This violates the principle that validation should occur before acknowledgment regardless of wait setting."
+    }
+  }
+}

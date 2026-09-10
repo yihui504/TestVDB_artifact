@@ -1,0 +1,54 @@
+{
+  "defect_id": "semantic_aliases_list_1",
+  "endpoint": "collections+drop / aliases+list / aliases+describe / entities+query",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraint state_aliases_create_001 (1600/1601/1602 state machine) verified in errors.go clone; alias_binding_semantics constraint family present; all touched endpoints in registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "D drop target CB: 200 {\"code\":65535\",\"message\":\"unable to drop the collection [sm_al_b] because it has associated aliases [sm_alias_x], please remove all aliases before drop...\" ... D alias list after target drop: ['sm_alias_x'] ... DEFECT: ('query via dangling alias SUCCEEDS after target drop', '{\"code\":0\",\"cost\":0\",\"data\":[]}') + DEFECT: ('dangling alias remains in list after target collection dropped (no cascade/gc)', \"['sm_alias_x']\")",
+      "secondary_observations": ["A alias create/list/describe->sm_al_a: correct binding", "B insert via alias: code 0 insertCount 1 (but B stats CA: rowCount 0 - insert-via-alias not yet flushed; noted as-is)", "C alias alter to sm_al_b: describe reflects new target - binding semantics correct", "D describe alias after target drop: code 0 aliasName sm_alias_x -> collectionName sm_al_b (stale binding served); D has via alias: has:true", "E alias in custom db: default alias list leak: False - db isolation correct"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "protective drop rejection is 200/65535 (protective, by-design per constraint); the dangling-alias reads are 200/code 0 serving stale bindings"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_aliases_list_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_state_aliases_create_001",
+      "assertion_text_quoted": "alias states map to codes 1600/1602/1601 (already exist / not found / alias==collectionName conflict)",
+      "api_violates_assertion": false,
+      "note": "the quoted alias-state assertion was never violated in-log (create/alter/describe all correct). The two claimed defects are (1) protective drop rejection 65535 - this MATCHES source design (drop_collection_task.go:64-67 alias guard) and is likely by-design protection, not a violation; (2) dangling alias after failed drop persisting and serving stale reads - no constraint in the 39 covers cascade semantics. violates=false against quoted text; observations recorded verbatim for auditor.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:aliases_create_001 state machine (respected)", "doc:drop_collection_task.go:60-67 alias guard message verbatim match to log", "script:semantic_aliases_list_1.py create/alias/insert-via-alias/alter/drop-target/readback sequence", "log:D drop 65535 protective; dangling alias reads code 0; DEFECTs recorded"],
+      "chain_broken_at": "doc",
+      "break_detail": "the 65535 protective drop is NOT a contract violation (constraint expects it implicitly via source; assertion text doesn't demand it though). The dangling-alias-stale-read claim has no contract anchor (alias cascade/lifecycle gap). Note the drop FAILED - the alias is not truly 'dangling' from a target-exists perspective (target still exists, drop was rejected); the 'after target drop' wording in the defect label is imprecise - the collection was NOT dropped. This materially weakens the dangling claim: the system state is internally consistent (alias -> existing collection, drop refused).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["unable to drop (drop_collection_task.go:65)", "ListAliasesByID (drop_collection_task.go:61)", "aliases+list handler (handler_v2.go)"],
+      "files_examined": ["internal/rootcoord/drop_collection_task.go:42-87"],
+      "source_excerpt": "drop_collection_task.go:60-67: aliases := t.meta.ListAliasesByID(ctx, collMeta.CollectionID); if len(aliases) > 0 { err = fmt.Errorf(\"unable to drop the collection [%s] because it has associated aliases %v, please remove all aliases before dropping the collection\", ...) } - the 65535 log message is produced verbatim by this guard. Since validate() returns error BEFORE any drop occurs, the collection remains; all subsequent alias reads (describe/has/query/list) target a still-existing collection - behavior consistent with source design.",
+      "call_chain_traced": "drop(sm_al_b) -> validate -> ListAliasesByID finds sm_alias_x -> protective error -> collection retained -> alias reads serve live (not dangling) binding",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "typo"],
+      "surviving": "none material - the primary protective-rejection observation is explicitly by-design in source; the 'dangling alias' framing is undercut by the fact the drop was rejected (collection still exists). B's stats rowCount 0 right after insert is ordinary pre-flush behavior. Residual question for auditor: whether serving reads via an alias whose drop was attempted constitutes any contract concern (no constraint says so)"
+    },
+    "evidence_weight": "low for defect (protective by-design; dangling premise incorrect); high factual fidelity (verbatim message match, full lifecycle sequence logged)"
+  }
+}

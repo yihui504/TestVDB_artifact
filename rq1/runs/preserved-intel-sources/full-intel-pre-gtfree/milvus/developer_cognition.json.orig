@@ -1,0 +1,174 @@
+{
+  "_meta": {
+    "generated_at": "2026-08-06T10:00:00Z",
+    "total_issues_analyzed": 161
+  },
+  "developer_cognition_signals": {
+    "what_developers_prioritize": [
+      "Performance optimization over data validation (REST v2 issues persist)",
+      "Feature development over edge case handling (segment lifecycle)",
+      "Index functionality over data safety (compaction errors)"
+    ],
+    "blindspot_indicators": [
+      "REST v2 API data type serialization - 8 issues in corpus",
+      "Segment state machine violations - 15+ issues",
+      "Snapshot isolation broken during concurrent operations - 7 issues",
+      "Memory admission control bypassed - 6 OOM issues",
+      "RBAC privilege annotations incomplete - 5 security issues",
+      "Concurrent operation edge cases - 12 deadlock/hang issues",
+      "REST v2 and gRPC divergent validation: REST v2 accepting values the gRPC path rejects (maintainers treat cross-channel inconsistency as a defect and fix it)",
+      "Documentation-behavior consistency: when official documentation claims a behavior or capability that the server does not exhibit (documented X, actual behavior is not-X), this is a consistency defect - maintainers' repeated disposition is to fix it, usually by correcting the docs to match verified behavior (docs PRs 3402, 3513/3514; issue 46494 closed as fixed). 'The behavior looks reasonable on its own' does not neutralize a documented claim that contradicts it"
+    ],
+    "areas_with_repeated_issues": [
+      {
+        "area": "REST v2 API",
+        "issue_count": 25,
+        "pattern": "Data type serialization not validated",
+        "example_issues": [
+          52232,
+          52230,
+          52229
+        ]
+      },
+      {
+        "area": "Segment Management",
+        "issue_count": 25,
+        "pattern": "State machine violations during lifecycle transitions",
+        "example_issues": [
+          52201,
+          52199,
+          52195
+        ]
+      },
+      {
+        "area": "Concurrency Control",
+        "issue_count": 15,
+        "pattern": "Deadlocks and hangs in concurrent DML/DQL",
+        "example_issues": [
+          52233,
+          52178,
+          52154
+        ]
+      }
+    ]
+  },
+  "rejection_patterns": [
+    {
+      "pattern_id": "RP-001",
+      "rejection_reason": "expected_behavior",
+      "description": "Issue rejected as expected system behavior",
+      "examples": [
+        "load partition stuck at 50%",
+        "channel checkpoint lag increasing"
+      ],
+      "attack_guidance": "Verify against documentation, check if behavior matches documented contract"
+    },
+    {
+      "pattern_id": "RP-002",
+      "rejection_reason": "by_design",
+      "description": "Issue rejected as intentional design choice",
+      "examples": [
+        "uneven vchannel distribution",
+        "memory imbalance"
+      ],
+      "attack_guidance": "Design may prioritize scalability over perfect balance"
+    }
+  ],
+  "by_design_patterns": [
+    {
+      "pattern_id": "BDP-001",
+      "pattern": "Storage V3 excludes uncommitted segments from snapshots",
+      "endpoint": "Storage V3 snapshot/restore",
+      "developer_quote": "uncommitted V3 growing segments intentionally excluded",
+      "source_issue_numbers": [
+        52043
+      ],
+      "should_report": false,
+      "classification": "Type4_StateViolation — FALSE POSITIVE",
+      "attack_guidance": "DO NOT report missing uncommitted segments as defect. Team explicitly excludes them from snapshots for correctness."
+    },
+    {
+      "pattern_id": "BDP-002",
+      "pattern": "Rollback from 3.0 to 2.6 not supported",
+      "endpoint": "Version downgrade",
+      "developer_quote": "index store path version incompatibility - rollback not supported",
+      "source_issue_numbers": [
+        51788
+      ],
+      "should_report": false,
+      "classification": "deployment_mismatch — FALSE POSITIVE",
+      "attack_guidance": "DO NOT report rollback failures. Downgrade not supported by design."
+    },
+    {
+      "pattern": "Concurrent rename+create idempotent semantics: rename(dst) racing with create(dst) both returning success is tolerated—rename to an existing-name target is treated as idempotent no-op when parameters match",
+      "developer_stance": "by design - rename/create to same target with same params is idempotent",
+      "developer_quote": "sounds like a by designed. Milvus returns success if creating a collection with the same name and parameters.",
+      "source_issues": [
+        50192
+      ],
+      "should_report": false,
+      "_provenance": "v8 FP-side anchor 2026-08-20: issue #50192 labeled resolution/by-design + maintainer yanliang567 explicit quote. Two independent signals, no conflicting direction.",
+      "fingerprints": [
+        "rename",
+        "create",
+        "concurrent"
+      ]
+    },
+    {
+      "pattern": "get_stats rowCount reflects flushed data only: rowCount=0 after insert before flush is expected (query returns full rows; stats lag by design)",
+      "developer_stance": "by design - stats show flushed data",
+      "developer_quote": "This is by design. The entities number in collection stats only shows the data that flushed. Please retry with flush() after insert().",
+      "source_issues": [
+        50193
+      ],
+      "should_report": false,
+      "_provenance": "v8 FP-side anchor 2026-08-20: issue #50193 labeled resolution/by-design + maintainer quote.",
+      "fingerprints": [
+        "rowCount",
+        "get_stats"
+      ]
+    },
+    {
+      "pattern": "REST v2 quick-create mode semantics: creating via quick/fast mode (dimension-only) auto-loads and does not enforce full schema/load-state checks; search on such collections succeeding is expected",
+      "developer_stance": "by design - quick/fast creation mode",
+      "developer_quote": "The behavior described here appears to come from REST v2 quick/fast collection creation mode, not from search/query bypassing the collection load-state check.",
+      "source_issues": [
+        50319
+      ],
+      "should_report": false,
+      "_provenance": "v8 FP-side anchor 2026-08-20: issue #50319 labeled resolution/by-design + maintainer diagnostic quote.",
+      "fingerprints": [
+        "never explicitly loaded",
+        "search"
+      ]
+    },
+    {
+      "pattern": "REST v2 create ignores unconsumed top-level fields: params not consumed by quick-create (e.g. top-level shardsNum) are silently ignored rather than rejected; consumed via params.shardsNum",
+      "developer_stance": "by design - field consumed from params only",
+      "developer_quote": "I think this is by design. The payload in this issue uses top-level shardsNum, but this field is not consumed by the REST v2 create API. shardsNum is read from params.shards...",
+      "source_issues": [
+        50351
+      ],
+      "should_report": false,
+      "_provenance": "v8 FP-side anchor 2026-08-20: issue #50351 labeled resolution/by-design + maintainer quote.",
+      "fingerprints": [
+        "shardsNum",
+        "create"
+      ]
+    }
+  ],
+  "statistics": {
+    "total_blindspot_areas": 6,
+    "high_frequency_blindspots": [
+      "REST_v2_data_types",
+      "Segment_state_management",
+      "Concurrency_control"
+    ],
+    "rejection_patterns_count": 2,
+    "by_design_patterns_count": 2
+  },
+  "blindspot_indicators": [
+    "Documentation-behavior consistency: when official documentation claims a behavior or capability that the server does not exhibit (documented X, actual behavior is not-X), this is a consistency defect - maintainers' repeated disposition is to fix it, usually by correcting the docs to match verified behavior (docs PRs 3402, 3513/3514; issue 46494 closed as fixed). 'The behavior looks reasonable on its own' does not neutralize a documented claim that contradicts it",
+    "triage/accepted acknowledgment: issues labeled kind/bug + triage/accepted by maintainers (then closed stale without fix) represent acknowledged defects - maintainers accepted the bug report through official triage workflow and assigned a fixer, even if the fix never landed (e.g., filter expression leniency #47755, scalar type coercion #47766 - both assigned by maintainer yanliang567). Doc-implementation inconsistency falling in these categories should be treated as acknowledged defect direction."
+  ]
+}

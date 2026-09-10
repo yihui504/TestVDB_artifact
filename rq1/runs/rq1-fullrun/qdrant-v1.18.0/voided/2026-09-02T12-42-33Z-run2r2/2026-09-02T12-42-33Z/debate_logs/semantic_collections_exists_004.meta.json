@@ -1,0 +1,15 @@
+{
+  "defect_id": "semantic_collections_exists_004",
+  "endpoint": "collections+exists",
+  "param": "collection_name",
+  "expected_defect_type": "Type2_PoorDiagnostics",
+  "strategy": "diagnosis_quality",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_exists_001"
+  ],
+  "oracle": {
+    "statement": "control (self-created valid name) returns 200 with result.exists boolean True (else SCRIPT_ERROR premise); every malformed-name leg (empty / 300-char overlong / illegal chars) that answers 4xx must have a body scoring c1 (resource or value named) AND c2 (problem stated) - failing either = Type2_PoorDiagnostics (BS-02); a malformed leg answered 200/false = conform-with-note (nothing to grade), 200/true = Type4 phantom; 5xx with /healthz alive = Type3; status disposition itself is the boundary lane's (not re-adjudicated here)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

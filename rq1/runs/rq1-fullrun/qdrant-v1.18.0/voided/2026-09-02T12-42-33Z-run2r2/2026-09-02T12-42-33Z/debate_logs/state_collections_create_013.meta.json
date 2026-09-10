@@ -1,0 +1,12 @@
+{
+ "defect_id": "state_collections_create_013",
+ "endpoint": "collections+create",
+ "param": "timeout",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "delete_consistency",
+ "oracle": {
+  "statement": "?timeout=1 create -> 200 and describe -> 200; ?timeout=0 -> 400/422 and describe 404 with name absent from list (2xx = Type1; residue/missing state = Type4)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

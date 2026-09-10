@@ -1,0 +1,21 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+CASE datatype=int4 invalid: status=200 body={"result":true,"status":"ok","time":0.220516008}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — datatype=int4 invalid accepted with 200
+CASE datatype=null: status=200 body={"result":true,"status":"ok","time":0.243071919}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — datatype=null accepted with 200
+CASE datatype=123: status=200 body={"result":true,"status":"ok","time":0.252765507}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — datatype=123 accepted with 200
+CASE turbo4 on sparse vectors (must be rejected): status=200 body={"result":true,"status":"ok","time":0.28217773}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — turbo4 on sparse vectors (must be rejected) accepted with 200
+CASE sparse_vectors.sp.distance=Cosine (sparse must be Dot-only, not settable): status=200 body={"result":true,"status":"ok","time":0.284970481}
+  DESCRIBE: {"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true,"sparse_vectors":{"sp":{}}},"hnsw_config":{"m":16,"ef_construct":100,"full_scan_threshold":10000,"max_indexing_threads":0,"on_disk":f
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — sparse_vectors.sp.distance=Cosine (sparse must be Dot-only, not settable) accepted with 200 (check describe above for persisted value)
+CASE sparse_vectors.sp.size set (sparse has no size): status=200 body={"result":true,"status":"ok","time":0.265360223}
+  DESCRIBE: {"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true,"sparse_vectors":{"sp":{}}},"hnsw_config":{"m":16,"ef_construct":100,"full_scan_threshold":10000,"max_indexing_threads":0,"on_disk":f
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — sparse_vectors.sp.size set (sparse has no size) accepted with 200 (check describe above for persisted value)
+CASE sparse_vectors=[] array: status=400 body={"status":{"error":"Format error in JSON body: invalid type: sequence, expected a map at line 1 column 65"},"time":0.0}
+NOTE Type2 — sparse_vectors=[] array rejected but error lacks 'sparse': {"status":{"error":"Format error in JSON body: invalid type: sequence, expected a map at line 1 column 65"},"time":0.0}
+CASE sparse_vectors=null: status=200 body={"result":true,"status":"ok","time":0.246615122}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — sparse_vectors=null accepted with 200
+CASE dense+sparse name collision v: status=400 body={"status":{"error":"Wrong input: Dense and sparse vector names must be unique - duplicate found with 'v'"},"time":0.000053478}

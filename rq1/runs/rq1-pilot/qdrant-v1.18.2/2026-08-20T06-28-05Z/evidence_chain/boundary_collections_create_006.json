@@ -1,0 +1,83 @@
+{
+  "defect_id": "boundary_collections_create_006",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation source_url (https://api.qdrant.tech/api-reference/collections/create-collection) unreachable via WebFetch (domain_blocked). Contract structured_contract.json at line 444-452 provides explicit assertion: 'hnsw_config.m (max connections per node) ∈ [2, 100]' with source_status='reachable' and source_verified=true. Contract evidence trusted, but direct verification impossible due to network restrictions.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: hnsw_config.m=101 → http=200, body={\"result\":true,\"status\":\"ok\",\"time\":0.355496474}",
+      "secondary_observations": [
+        "c0: hnsw_config.m=1 → http=200 (boundary_collections_create_005.log, lower bound violation)",
+        "c2: hnsw_config.ef_construct=9 → http=200 (boundary_collections_create_007.log, different param)",
+        "c3: hnsw_config.ef_construct=1001 → http=200 (boundary_collections_create_008.log, different param)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 (N/A - no error code returned)",
+        "note": "Target returned HTTP 200 with result:true and status:ok, indicating successful acceptance of out-of-range value m=101. No validation error, no 4xx/5xx status. Contrast to expected 400 Bad Request for parameter validation failure."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_create_006"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_001",
+      "assertion_text_quoted": "hnsw_config.m >= 2 AND hnsw_config.m <= 100",
+      "api_violates_assertion": true,
+      "note": "Observation shows m=101 accepted with HTTP 200 + success status, directly violating upper bound constraint m <= 100. Lower bound m=1 also violated (see 005). Validation absent at API boundary.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_001 (assertion: m ∈ [2,100])",
+        "doc:https://api.qdrant.tech/api-reference/collections/create-collection (unreachable - domain_blocked)",
+        "script:boundary_collections_create_006 (sent m=101 in PUT /collections/{collection_name})",
+        "log:HTTP 200 with {\"result\":true,\"status\":\"ok\"} (DEFECT_FOUND Type1)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "note": "Four-link chain intact. Contract asserts [2,100], documentation unreachable but contract-verified, script sent m=101, API returned HTTP 200 success. Violation clearly traceable through contract → script → log. Documentation verification incomplete due to network restrictions, but contract evidence (source_verified=true in structured_contract.json) provides grounding.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "hnsw_config",
+        "hnsw_config.m",
+        "m <= 100",
+        "max_connections",
+        "validation.*m"
+      ],
+      "files_examined": [],
+      "source_excerpt": "",
+      "call_chain_traced": "webfetch_shallow",
+      "verification_outcome": "webfetch_shallow",
+      "note": "Source code clone not available (TESTVDB_SRC_DIR unset, no .srcdir file, no local qdrant/ tree found). WebFetch of documentation failed (domain_blocked at api.qdrant.tech). Cannot perform source code analysis. Documentation-based grounding insufficient for complete evidence chain.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env - network independence clear (same HTTP client succeeds on valid requests)",
+        "concurrency - single request, no race condition"
+      ],
+      "surviving": [
+        "parameter_validation_absent - API accepts m=101 without returning 4xx error",
+        "by_design_unlikely - no documentation or source evidence suggests upper bound relaxation",
+        "version_mismatch_unlikely - contract specifies v1.18.2, doc version 1.19.x cross-referenced"
+      ],
+      "dominant_hypothesis": "validation_missing",
+      "evidence_source": "behavior"
+    }
+  }
+}

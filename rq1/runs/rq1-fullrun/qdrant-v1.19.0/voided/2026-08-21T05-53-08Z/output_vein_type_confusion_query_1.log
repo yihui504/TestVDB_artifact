@@ -1,0 +1,30 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[SETUP] Creating collection vein_type_confusion_query...
+[SETUP] Inserting test points...
+[TEST 1] Testing filter.should=null (type confusion - null instead of array)...
+[TEST 1] HTTP status: 200
+[TEST 1] Returned 3 points with filter.should=null
+[TEST 1] filter.should=null was treated as no-filter (returned all points)
+[TEST 2] Testing filter.must_not=object (type confusion - object instead of array)...
+[TEST 2] HTTP status: 200
+[TEST 2] Returned 1 points with filter.must_not=object
+[TEST 2] filter.must_not=object was accepted and partially executed
+[ANALYSIS] Type confusion validation status:
+[ANALYSIS] - filter.should=null: Accepted (HTTP 200)
+[ANALYSIS] - filter.must_not=object: Accepted (HTTP 200)
+VERDICT: DEFECT_FOUND
+DEFECT_TYPE: Type1_IllegalSuccess
+SEVERITY: High
+DESCRIPTION: Query endpoint accepts invalid types for filter parameters without 4xx error
+EVIDENCE:
+  - filter.should=null: Returned HTTP 200 (should be 400 Bad Request)
+  - filter.must_not=object: Returned HTTP 200 (should be 400 Bad Request)
+PARAMETERS_TESTED:
+  - filter.should: Expected array|null, got null (treated as no-filter)
+  - filter.must_not: Expected array, got object (silently accepted)
+EXPECTED_BEHAVIOR: API should reject null/object with 400 Bad Request for array-required parameters
+ACTUAL_BEHAVIOR: API accepts invalid types and returns success (200 OK)
+ROOT_CAUSE: Missing REST API validation for nested filter parameter types
+IMPACT: Applications may send malformed filter queries that execute incorrectly, leading to silent data exposure or incorrect query results
+RELATED: Historical issue #9420 (null filter conditions accepted without validation)

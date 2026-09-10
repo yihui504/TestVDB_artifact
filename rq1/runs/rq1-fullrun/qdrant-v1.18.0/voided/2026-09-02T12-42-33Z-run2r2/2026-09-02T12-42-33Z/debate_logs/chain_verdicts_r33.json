@@ -1,0 +1,158 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "R33",
+  "verdicts": [
+    {
+      "defect_id": "boundary_points_batch_ops_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "enum closed set"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "mechanized: verdict_A=CONFIRMED (id+quote_ok, qdrant_state_points_batch_001, quote=contract description field verbatim, api_violates_assertion=true) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED: constraint qdrant_state_points_batch_001 exists, the quoted batchable-ops closed set is the contract's description field verbatim, violates=true — mechanically locked DEFECT. Primary observation covered: F7 element {\"upsert\":{...},\"delete\":{...}} (two variant keys in one op) accepted 200 with result [{\"operation_id\":2,\"status\":\"completed\"}] and point+get p1 -> 200, i.e. the delete half silently discarded; source grounds the mechanism (untagged enum UpdateOperation tries variants in declaration order, UpsertOperation lacks deny_unknown_fields, no ambiguity validation downstream) and live replay P4 reproduces including operation_id 2. B=CONFIRMED (enum closed set: out-of-form op element accepted while F5/F6/domain_006 comparator forms all got clean 400s), C=CONFIRMED (silent half-execution with no ambiguity rejection), D=NO_SIGNAL (no cognition anchor covers variant-key ambiguity; the batch-atomicity disclaimer is a different phenomenon class).",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_batch_order_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "mechanized: verdict_A=REFUTED (id+quote_ok, qdrant_state_points_batch_001, quote=assertion field verbatim, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": "log",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=REFUTED: qdrant_state_points_batch_001 quoted verbatim, violates=false — the order clause was behaviorally honored (P1 [upsert,delete] -> point absent/count 0; P2 [delete,upsert] -> present with p2 payload/count 1; per-op result entries = op count). The P3 DEFECT line contradicts its own raw log: batch with the DOC-worded 'delete_points' key got a whole-request 400 (\"data did not match any variant of untagged enum UpdateOperation\") and GET 502 -> 404 (nothing applied) — precisely the 'no half-apply' outcome the DEFECT message demands; the script's P3 branch tests st==200 for the no-defect path (inverted oracle, script lines 307-317). B=NEUTRAL (clean 400 rejection violates no objective class), C=WEAK_REFUTED (elegant rejection, source validation_present at deserialization), D=NO_SIGNAL.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_batch_reject404_007",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "NEUTRAL", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "SUPPORTS_NOT_DEFECT", "matched_pattern": "Batch operations are not promised to be atomic: users must assume partial application and retry (idempotent write design) — blindspot_indicators entry whose content is an explicit maintainer non-guarantee (rejection semantics, no fix-history backing the blindspot gloss); phenomenon-level isomorphism with this chain's position-dependent partial commit", "developer_quote": "batch operations are not promissed to be atomic"},
+        "aggregation_applied": "gray zone (A=NEUTRAL constraint_absent — composite constraint_id prose broke exact contract match; mechanical output accepted) + mechanical B NOT_TRIGGERED + B=NEUTRAL + D=SUPPORTS_NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "contract_misread",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "exploratory_candidate",
+      "exploratory": {"form": "behavioral_anomaly", "signal": "manual", "rationale": "Real, stable, source-confirmed position-dependent partial commit (F leg poison-last delete_vectors no_such_vector -> 400 yet get 612 -> 200 with payload; G leg poison-first -> 400 and 613 absent) with no contract assertion covering points+batch atomicity — anomalous behavior, uncontracted face."},
+      "rationale": "A=NEUTRAL (constraint_absent): the chain's constraint_id field carries parenthetical prose so check_chain_grounding.py exact-match failed — mechanical output accepted; the assertion actually quoted (order + per-op results) does not promise rollback, and the builder's violates=true leans on a framework state-consistency principle the doc neither promises nor contradicts (doc differentiates: aliases+update documented ATOMIC, points+batch documented only ordered). B=NEUTRAL after NOT_TRIGGERED: no numeric/enum/type acceptance, disposition 400 status-consistent in both positions (no rule-5 form), REST-only endpoint (no face asymmetry), error properly 4xx (no 2xx masking). D=SUPPORTS_NOT_DEFECT: the cognition file's batch-atomicity entry phenomenon-matches with maintainer quote \"batch operations are not promissed to be atomic\" (users must assume partial application and retry) — under GT=maintainer-attitude this class is maintainer-non-accepted, so gray-zone aggregation -> NOT_DEFECT; twin consistency with state_points_batch_atomicity_006 (same mechanism, mechanically REFUTED). C=CONFIRMED recorded (rejected request leaving committed prefix is genuinely inelegant; no intent marker in source) but cannot overturn.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_batch_atomicity_006",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "SUPPORTS_NOT_DEFECT", "matched_pattern": "Batch operations are not promised to be atomic (maintainer non-guarantee; same anchor as reject404_007)", "developer_quote": "batch operations are not promissed to be atomic"},
+        "aggregation_applied": "mechanized: verdict_A=REFUTED (id+quote_ok, qdrant_state_points_batch_001, quote=assertion field verbatim, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": "contract_misread",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=REFUTED: qdrant_state_points_batch_001 quoted verbatim, violates=false — the builder's own self-check found the phenomenon (F leg: 400 \"Vector dimension error: expected dim: 4, got 2\" yet readback shows 602/603 durably visible; G leg: 400 and 604 absent) outside the assertion's domain, and no atomicity constraint exists for points+batch among the contract's state_constraints (the only atomicity unit, qdrant_state_aliases_update_001, is endpoint-specific). The all-or-nothing premise is undocumented on this face — chain honestly broken at doc; D anchor (\"batch operations are not promissed to be atomic\") corroborates but cannot overturn the mechanical ruling. B=NEUTRAL (no objective class: same 400 disposition in both positions, REST-only face, no violating acceptance); C=CONFIRMED recorded (inelegant rejected-request-leaves-committed-prefix, no intent marker in source); the CTL-leg DEFECT is a cosine-normalization oracle artifact (readback == [9,8,7,6]/sqrt(230)) and is not the primary claim.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_batch_count_003",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "mechanized: verdict_A=REFUTED (id+quote_ok, qdrant_state_points_batch_001, quote=assertion field verbatim, violates=false; constraint_id format-fixed to bare id by main process 2026-09-04, verify_chain_quotes PASS — re-adjudicated) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=REFUTED (re-run 2026-09-04 after the main process normalized constraint_id to the bare \"qdrant_state_points_batch_001\"): quote is the assertion field verbatim and violates=false, so the mechanized layer locks NOT_DEFECT — identical ruling to the three twin oracle-artifact cases. The DEFECT line \"exact count 3 != 2\" is an oracle-constant artifact contradicted inside the chain's own evidence: from pre-state {3,10,12}, in-one-op duplicate-id upsert of 20 (last-write-wins, doc Idempotence) nets +1 and delete of 12 nets -1, so 3 is the compliant value — exactly what [M2 count] returned, with [M2 get] visible set {3,10,20}, payload try:2, and the script's own want_ids holding 3 elements; cross-script control idempotence_004 observed count 3 with NO_DEFECT. B=NEUTRAL (no violating acceptance; count and get faces agree), C=WEAK_REFUTED (elegant doc-compliant behavior; source HashMap-collapse is bare code with no intent marker), D=NO_SIGNAL.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_batch_per_op_results_009",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "mechanized: verdict_A=REFUTED (id+quote_ok, qdrant_state_points_batch_001, quote=assertion field verbatim, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=REFUTED: qdrant_state_points_batch_001 quoted verbatim, violates=false — the 200 face was honored (7-op batch -> 200 with exactly 7 completed per-op entries, payload end-state {\"s\":true}, 902 deleted 404, count 1), and the E1 DEFECT is an invented byte-equality oracle: the readback [0.35634834,0.4454354,0.5345225,0.6236096] equals V2=[2.0,2.5,3.0,3.5]/|V2| exactly (|V2|=5.6124861), proving the update_vectors op DID apply. Source overturns alone with explicit intent evidence: entry.rs:684 vectors.preprocess -> CosineMetric::preprocess, whose docstring declares \"Equivalent to DotProductMetric with normalization of the vectors in preprocessing\" (by_design_in_source); the live probe confirms metric-tracking (Euclid same op -> byte-exact [2.0,2.5,3.0,3.5], non-batch PUT vectors face -> same normalization). B=NEUTRAL (no violating acceptance), C=REFUTED (genuine by-design in source meets the v3.4 explicitness standard), D=NO_SIGNAL.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_batch_concurrent_010",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "mechanized: verdict_A=REFUTED (id+quote_ok, qdrant_state_points_batch_001, quote=assertion field verbatim, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=REFUTED: qdrant_state_points_batch_001 quoted verbatim, violates=false — and each batch here contained exactly one operation, so the in-batch ordering clause was not even exercised. Both DEFECT lines are oracle arithmetic artifacts: P2's \"exact count 50 != 51\" double-counts id 5000 (pre-existing from P1 t4's range 5000..5004; doc Idempotence: same-id re-upload overwrites) and P3's \"count 54 != 59\" double-counts 6001..6004 (pre-existing from t5; 59-54 = 5 = exactly the colliding ids); the raw [P2 count]=50 and [P3 count]=54 match the corrected expectations exactly, and the count face and batch-get face agree (54 = 46 non-shared + 8 shared returned) — the claimed read-face disagreement does not exist. Source grounds replace-or-insert upsert_point with the SegmentEntry trait docstring \"Assume all operations are idempotent\" (C=REFUTED); B=NEUTRAL (no violating acceptance), D=NO_SIGNAL.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "defect": 1,
+    "not_defect": 6,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 2, "source": 1, "both": 0, "behavior": 3},
+    "root_cause_distribution": {"script_error": 4, "contract_misread": 2},
+    "constraint_category_distribution": {"state": 7},
+    "candidate_class_distribution": {"strict_defect": 1, "exploratory_candidate": 1, "rejected": 5}
+  }
+}

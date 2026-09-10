@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_set_007",
+ "endpoint": "payload+set",
+ "param": "filter",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "with 3 points carrying {\"city\",\"n\"} each and the filter must:[match city any [ams,tok]] pre-validated via scroll to match exactly points 1 and 3, set-payload filter=<that filter> payload={\"lang\":\"nl\"} (wait=true query) returns 200; afterwards scroll shows points 1/3 payloads deep-merged to {...baseline, lang:nl} and point 2 payload deep-equal baseline; exact count stays 3 — matched point unmerged (under-reach), unmatched point touched (over-reach), merge-as-replace on a matched point, or count drift each = Type4_StateLogicViolation; non-200 on the legal filter-targeted set = Type1_IllegalSuccess; 5xx/transport = Type3_RuntimeFailure with /healthz re-check (constraint qdrant_state_payload_set_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

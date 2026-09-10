@@ -1,0 +1,15 @@
+{
+ "defect_id": "semantic_collections_list_001",
+ "endpoint": "collections+list",
+ "param": null,
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "behavioral_contract",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_list_001"
+ ],
+ "oracle": {
+  "statement": "GET /collections returns HTTP 200 and result.collections is a JSON array whose every entry (global, siblings included) is a well-formed {name: non-empty string} CollectionDescription; before any setup the unique prefix scope is empty, and after creating 3 prefix-owned collections each appears exactly once, byte-identical to its create-request name - non-200 on the legal GET = Type1_IllegalRejection, missing/unparseable array or malformed entry = Type4_StateLogicViolation, missing/duplicate/mutated prefix-scoped name = Type4_StateLogicViolation; 5xx with /healthz alive = Type3; transport failure with healthy /healthz or create setup failure = SCRIPT_ERROR",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

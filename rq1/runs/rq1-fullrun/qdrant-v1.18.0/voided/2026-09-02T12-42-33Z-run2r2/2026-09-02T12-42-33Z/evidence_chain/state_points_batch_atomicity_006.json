@@ -1,0 +1,94 @@
+{
+  "defect_id": "state_points_batch_atomicity_006",
+  "endpoint": "points+batch (POST /collections/{collection_name}/points/batch)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists for this contract (checked contracts/ dir and results/qdrant/v1.18.0/); the contract itself records source_status='degraded', source_verified=false; re-verified now — WebFetch domain verification failed for qdrant.tech and api.qdrant.tech (domain_blocked), but an alternate fetcher retrieved the full page (title 'Points - Qdrant', url https://qdrant.tech/documentation/manage-data/points/) — reachable, content in hand. Version: page is the unversioned live concept doc ('current (site latest; no version archive)' per contract doc_version); no version in URL — PARTIAL by rule (legacy concept doc, no version routing is normal). Content: the Batch Update section (v1.5.0+) says verbatim 'A batch update request consists of a list of operations. These are executed in order.' — the constraint's order claim is doc-grounded, and 'per-operation results' is grounded via the api-reference (endpoint_registry doc_quote for points+batch: 'Operations are executed in order; returns 200 with per-operation results; 404 for a missing collection'); HOWEVER the doc says NOTHING about atomicity, rollback, or failure handling of a batch — the all-or-nothing premise the script's DEFECT requires is absent from this page (contrast: the aliases+update documentation explicitly promises 'alias operations are ATOMIC' — the docs differentiate the two faces). Endpoint: points+batch -> POST /collections/{collection_name}/points/batch matches the endpoint_registry entry and the script's registered path exactly. REST page includes SDK snippets alongside REST — no SDK/REST confusion in the claim.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[F-fail-last batch 3 ops] status=400 raw={\"status\":{\"error\":\"Wrong input: Vector dimension error: expected dim: 4, got 2\"},\"time\":0.013338077} || [F-readback get [601, 602, 603]] status=200 raw={\"result\":[{\"id\":601,\"payload\":{\"n\":601},\"vector\":[0.59344244,0.5275044,0.46156633,0.3956283]},{\"id\":602,\"payload\":{\"pos\":\"F\"},\"vector\":[0.82956135,0.20739034,0.3110855,0.41478068]},{\"id\":603,\"payload\":{\"pos\":\"F\"},\"vector\":[0.9123431,0.15205719,0.22808577,0.30411437]}],\"status\":\"ok\",\"time\":0.0001253 — rejected batch's prefix upserts 602/603 durably visible",
+      "secondary_observations": [
+        "position-dependence (same log): [G-fail-first batch 2 ops] status=400 raw={\"status\":{\"error\":\"Wrong input: Vector dimension error: expected dim: 4, got 2\"},\"time\":0.003495613} || [G-readback get [602, 604]] status=200 raw={\"result\":[{\"id\":602,\"payload\":{\"pos\":\"F\"},\"vector\":[0.82956135,0.20739034,0.3110855,0.41478068]}],\"status\":\"ok\",\"time\":0.000160696} -> [G] OK: rejected batch applied nothing (604 absent — nothing applied when the poison is first)",
+        "CTL leg of log line 13 is an oracle artifact, not a server defect: [CTL-valid-update-vectors batch 1 ops] status=200 raw={\"result\":[{\"operation_id\":2,\"status\":\"completed\"}],\"status\":\"ok\",\"time\":0.003265754}; the readback vector [0.59344244,0.5275044,0.46156633,0.3956283] == V_NEW [9,8,7,6] normalized (norm sqrt(230)=15.16575; 9/15.16575=0.59344) — the Cosine-distance collection stores unit-normalized vectors (source: Distance::preprocess_vector -> CosineMetric::preprocess, lib/segment/src/types.rs:329-342), so the update DID apply; the script compared raw V_NEW against the normalized storage form",
+        "disposition consistency (same log): [disposition] fail-last=400 fail-first=400 — same poison op, same 400 disposition in both positions (G9 clean)",
+        "comparative (face=rest, same endpoint, sibling script state_points_batch_reject404_007, different poison class): [F-fail-last batch 3 ops] status=400 raw={\"status\":{\"error\":\"Wrong input: Not existing vector name error: no_such_vector\"},\"time\":0.009463842} || [F-readback get [612]] status=200 raw={\"result\":[{\"id\":612,\"payload\":{\"n\":612,\"tag\":\"x\"}}],\"status\":\"ok\",...} — DEFECT: '(F) batch REJECTED with 400 yet the prefix ops on 612 are durably visible ... no rollback, position-dependent partial commit — run2r#1-R3 defect class'",
+        "comparative (face=rest, DIFFERENT endpoint where the doc DOES promise atomicity, sibling boundary_aliases_update_008 on POST /collections/aliases): 'negative1 [create valid, create missing-coll] -> status=404' || 'VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — rejected batch [neg1] still CREATED alias bau8b8f4c71bn1 (non-atomic: first action applied although the batch failed)' — the same engine-level non-atomicity is observed on the face that carries an explicit ATOMIC doc promise (also state_aliases_update_001 mixed#1/mixed#3, semantic_aliases_update_002 caseA)",
+        "parse-time contrast (face=rest, sibling state_points_batch_order_001 P3): '[P3-delete-points-key batch 2 ops] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum UpdateOperation at line 1 column 148\"}...' -> whole request rejected at serde deserialization, nothing applied — two-tier rejection: parse-time poisons abort before any op; apply-time poisons (dim, unknown vector name) leave the committed prefix"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The poison op surfaced as request-level HTTP 400 with error body 'Wrong input: Vector dimension error: expected dim: 4, got 2' — but the 400 arrived AFTER the batch's prefix operations (602, 603) had already been submitted and applied (request used wait=true); for this endpoint a 4xx response therefore does not imply zero side effects. Inversion of the usual 2xx-masking pattern: correct error class, non-clean rejection."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_points_batch_atomicity_006",
+        "state_points_batch_reject404_007"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_points_batch_001",
+      "assertion_text_quoted": "batch operations are applied sequentially in the order given; each operation reports its own result",
+      "api_violates_assertion": false,
+      "note": "Recovered constraint_id (dispatch candidates.jsonl field was empty; named in script header line 6 and log DEFECT line 14) — found in structured_contract.json constraints.state_constraints. violates-declaration self-check: the observed phenomenon (rejected batch left its committed prefix) is OUTSIDE this assertion's constraint domain. The assertion promises (a) sequential in-order application — the observed behavior applies 602 then 603 then aborts at the poison, i.e. exactly in order; (b) per-op result reporting — a success-face promise (api-reference: 'returns 200 with per-operation results'), satisfied on the 200 CTL leg. The assertion nowhere promises all-or-nothing rollback, and no alternative constraint in the contract covers points+batch atomicity (checked all 28 state_constraints; the only explicit atomicity constraint, qdrant_state_aliases_update_001, is endpoint-specific to aliases+update). Wrong-constraint-cited branch of the self-check applies: either the citation must change to an atomicity constraint (none exists for this endpoint) or the behavior is compliant with the cited assertion — under the cited text it is compliant. The DEFECT verdict rests on an undocumented atomicity premise (reasonable transactional expectation, but not what this doc/constraint promises).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_points_batch_001 present in structured_contract.json constraints.state_constraints (endpoint points+batch, evidence_tier explicit, source_url qdrant.tech/documentation/manage-data/points/, source_status degraded/source_verified false); dispatch constraint_id field was empty — id recovered from script header and log DEFECT line",
+        "doc: page fetched in full (alternate fetcher; WebFetch domain_blocked for qdrant.tech); verbatim 'A batch update request consists of a list of operations. These are executed in order.' grounds the order claim; per-op results grounded via api-reference registry quote; BUT the page contains no atomicity/rollback/failure promise for points+batch — the behavior the claim requires (a rejected batch must apply nothing) is not in the doc",
+        "script: debate_logs/state_points_batch_atomicity_006.py sends POST /collections/{coll}/points/batch?wait=true with operations [upsert 602, upsert 603, update_vectors{602:[0.1,0.2] 2-dim poison}] (F leg) and [poison, upsert 604] (G leg) — request matches the registry endpoint exactly",
+        "log: DEFECT_FOUND (Type4) is faithful to the raw responses — 400 reject + readback genuinely shows 602/603 present; no fabrication; but the DEFECT reading of the F leg presumes the undocumented all-or-nothing premise, and the CTL leg of the DEFECT output is an oracle artifact (cosine normalization)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The doc link does not carry the claim: the cited constraint is faithfully grounded in the doc ('executed in order'), but the doc prose contains no all-or-nothing/rollback promise for points+batch, so the claim's violated expectation (rejected batch => no state change) has no documentation anchor. The docs deliberately differentiate: aliases+update is documented ATOMIC; points+batch is documented only as ordered. Auditor should weigh: real, stable, source-confirmed non-atomic behavior, tested against a face whose documentation does not promise atomicity (compare sibling candidates anchored on qdrant_state_aliases_update_001, where the same behavior IS a documented-contract violation).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Vector dimension error",
+        "points/batch",
+        "update_points_batch|UpdatePointsBatch",
+        "fn do_batch_update_points",
+        "WrongVectorDimension",
+        "atomic (whole tree, rust)",
+        "Wrong input|OperationError (lib/storage errors)",
+        "fn preprocess_vector"
+      ],
+      "files_examined": [
+        "src/actix/api/update_api.rs (route #[post(\"/collections/{collection_name}/points/batch\")] update_batch, lines 327-372)",
+        "src/common/update.rs (do_batch_update_points 752-895; update 1201-1275)",
+        "lib/segment/src/common/operation_error.rs (OperationError::WrongVectorDimension definition, lines 19-26)",
+        "lib/segment/src/common/mod.rs (check_vector_against_config, lines 188-219)",
+        "lib/storage/src/content_manager/errors.rs (StorageError::BadInput 'Wrong input: {description}', lines 12-22)",
+        "lib/segment/src/types.rs (Distance::preprocess_vector -> CosineMetric::preprocess, lines 329-342)"
+      ],
+      "source_excerpt": "src/common/update.rs:752-796, 889-895 (qdrant v1.18.0, git db3fca3):\n\npub async fn do_batch_update_points(\n    toc_provider: impl CheckedTocProvider + Clone,\n    collection_name: String,\n    operations: Vec<UpdateOperation>,\n    ...\n) -> Result<(Vec<UpdateResult>, Option<InferenceUsage>), StorageError> {\n    // Check strict mode for all batch operations, *before applying* them\n    let mut toc = None;\n\n    for operation in &operations {\n        toc = toc_provider\n            .check_strict_mode(operation, &collection_name, params.timeout_as_secs(), &auth)\n            .await?\n            .into();\n    }\n\n    let Some(toc) = toc else {\n        // Batch is empty, return empty result vector\n        return Ok((Vec::new(), None));\n    };\n\n    // Pass unchecked ToC provider into `do_*` functions, because we already checked strict mode\n    let toc_provider = UncheckedTocProvider::new_unchecked(toc);\n\n    let mut results = Vec::with_capacity(operations.len());\n    let mut inference_usage = InferenceUsage::default();\n\n    for operation in operations {\n        let current_update_result = match operation {\n            UpdateOperation::Upsert(operation) => {\n                let (result, usage) = do_upsert_points(\n                    toc_provider.clone(),\n                    collection_name.clone(),\n                    operation.upsert,\n                    ...\n                )\n                .await?;            // <-- '?' aborts the WHOLE request on first op failure;\n                                   //     ops already applied in earlier iterations are NOT rolled back\n                inference_usage.merge_opt(usage);\n                result\n            }\n            ... (Delete / SetPayload / OverwritePayload / DeletePayload / ClearPayload / UpdateVectors / DeleteVectors arms, each ending in .await?)\n        };\n\n        results.push(current_update_result);\n    }\n\n    Ok((results, inference_usage.into_non_empty()))   // per-op results only returned when ALL ops succeed\n}\n\nSupporting: lib/segment/src/common/mod.rs:188-202 — the dimension check runs per-operation at apply time inside the segment layer, not upfront for the batch:\n    fn check_vector_against_config(vector: VectorRef, vector_config: &VectorDataConfig) -> OperationResult<()> {\n        match vector {\n            VectorRef::Dense(vector) => {\n                let dim = vector_config.size;\n                if vector.len() != dim {\n                    return Err(OperationError::WrongVectorDimension { expected_dim: dim, received_dim: vector.len() });\n                }\n\nlib/segment/src/types.rs:329-342 — cosine preprocessing (explains the CTL readback):\n    pub fn preprocess_vector<...>(&self, vector: DenseVector) -> DenseVector {\n        match self {\n            Distance::Cosine => CosineMetric::preprocess(vector),   // normalizes to unit length at rest",
+      "call_chain_traced": "actix route update_batch (src/actix/api/update_api.rs:327) -> do_batch_update_points (src/common/update.rs:752): (1) upfront loop checks ONLY strict-mode/quota for all ops (lines 762-770) — no upfront vector-dimension or cross-batch validation; (2) per-op for-loop (783-892) dispatches each UpdateOperation to do_upsert_points / do_update_vectors / etc., each ending with immediate '?' error propagation — first apply-time failure aborts the loop and returns Err for the whole request; (3) per-op do_* -> update() (src/common/update.rs:1201) -> toc.update submits to the shard update channel/WAL and, with wait=true, blocks until the operation is applied or fails; (4) the poison op's dimension check runs at apply time in the segment layer (lib/segment/src/common/mod.rs:188-219) raising OperationError::WrongVectorDimension (lib/segment/src/common/operation_error.rs:22-26), mapped to StorageError::BadInput 'Wrong input: ...' (lib/storage/src/content_manager/errors.rs:15-16) -> HTTP 400. NO rollback/compensation code exists anywhere in the batch path; already-applied prefix ops stay durable. Request-parse-time poisons (wrong op key) instead fail serde deserialization of the whole UpdateOperations body before any op runs — matching the sibling order_001 P3 observation (nothing applied). This structure implements 'executed in order' literally and contains no atomicity mechanism; no comment or docstring in the path declares non-atomicity intentional, so by_design_in_source is NOT available under the v3.4 tightening (bare structural behavior without explicit intent evidence).",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (no transport failures or 5xx anywhere in the log; /healthz never needed; deterministic repeat across two scripts and two poison classes)",
+        "concurrency (single sequential client; no competing writers; collection name unique per run)",
+        "async-lag / wait semantics (batch sent with wait=true; the G fail-first control returns a clean nothing-applied state, ruling out delayed-application artifacts; the CTL leg's apparent non-application is fully explained by cosine normalization, not lag)",
+        "script-oracle artifact on the CTL leg of the DEFECT output (readback [0.59344244,0.5275044,0.46156633,0.3956283] == [9,8,7,6]/sqrt(230); source-confirmed CosineMetric::preprocess) — the CTL update_vectors DID durably apply; log line 13's DEFECT is a false observation, but it is NOT the primary claim"
+      ],
+      "surviving": null
+    }
+  }
+}

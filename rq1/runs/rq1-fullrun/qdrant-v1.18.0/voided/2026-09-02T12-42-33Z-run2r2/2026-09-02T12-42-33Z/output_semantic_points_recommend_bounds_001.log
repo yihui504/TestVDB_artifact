@@ -1,0 +1,27 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+P1 limit=1 (min closure) -> status=200
+raw: {"result":[{"id":702,"version":1,"score":0.6000004}],"status":"ok","time":0.000461432}
+P1 OK: min limit accepted with exactly 1 result
+P2 limit=3 offset=0 (offset min) -> status=200
+raw: {"result":[{"id":702,"version":1,"score":0.6000004},{"id":703,"version":1,"score":1.0},{"id":704,"version":1,"score":2.0}],"status":"ok","time":0.000309575}
+P2 OK: offset=0 accepted (3 results)
+P3 limit=1000 (modest upper leg) -> status=200
+raw: {"result":[{"id":702,"version":1,"score":0.6000004},{"id":703,"version":1,"score":1.0},{"id":704,"version":1,"score":2.0},{"id":705,"version":1,"score":4.0},{"id":706,"version":1,"score":7.0}],"status":"ok","time":0.00081412}
+P3 OK: large legal limit accepted, capped at 5 results
+P4 limit=3 offset=100 (past the end) -> status=200
+raw: {"result":[],"status":"ok","time":0.000387841}
+P4 OK: past-the-end offset accepted, page len=0
+N1 limit omitted (required) -> status=400
+raw: {"status":{"error":"Format error in JSON body: missing field `limit` at line 1 column 59"},"time":0.0}
+N1 limit omitted (required) OK: rejected with 400 (400-family)
+N2 limit=0 (< min 1) -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [recommend_request.limit: value 0 invalid, must be 1 or larger]"},"time":0.0}
+N2 limit=0 (< min 1) OK: rejected with 422 (400-family)
+N3 limit=-1 (< min 1) -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 59"},"time":0.0}
+N3 limit=-1 (< min 1) OK: rejected with 400 (400-family)
+N4 offset=-1 (< min 0) -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 72"},"time":0.0}
+N4 offset=-1 (< min 0) OK: rejected with 400 (400-family)
+VERDICT: NO_DEFECT

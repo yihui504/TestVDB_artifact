@@ -1,0 +1,67 @@
+{
+ "defect_id": "semantic_filterdiag_04",
+ "endpoint": "entities+query",
+ "defect_type": "Type1",
+ "built_by": "evidence-builder",
+ "steps": {
+  "doc_verification": {
+   "result": "DOC_VERIFIED",
+   "link_reachability": "PASS",
+   "version_match": "PASS",
+   "content_consistency": "PASS",
+   "endpoint_precision": "PASS",
+   "sdk_rest_confusion": false,
+   "detail": "constraint milvus_type_entities_delete_001 断言 filter 必须是合法 boolean 表达式；对照组（同表达式 no-dyn 集合）实测 1100 'field no_such_field_xyz not exist' 证明校验存在——本候选集合为 quick-create（EnableDynamic 默认 true）",
+   "evidence_source": "doc"
+  },
+  "execution_evidence": {
+   "grade": "A",
+   "log_pattern": "[query/unknown field] HTTP=200 code=0 raw={\"code\":0,\"cost\":0,\"data\":[]}（filter='nonexistent_field == 1'，集合内无该字段）",
+   "secondary_observations": [
+    "create: 200 {\"code\":0,\"data\":{}} + load: 200 + insert: 200 insertIds=[1]（前置就绪）",
+    "对照组（vein_unknown_field_silent_accept_1.log）：control_nodyn_rejects code:1100 'failed to create query plan: cannot parse expression: no_such_field_xyz > 5, error: field no_such_field_xyz not exist'；dyn_query/dyn_search/dyn_delete 全 code:0 —— 同根因双脚本互证"
+   ],
+   "claim_alignment": "aligned",
+   "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "静态 schema 集合以 200+1100 拒绝；dynamic-field 集合以 200+code:0 空结果接受"},
+   "reproducibility": "多脚本稳定触发",
+   "script_error": false,
+   "triggering_scripts": ["debate_logs/semantic_filterdiag_04.py", "vein_scripts/vein_unknown_field_silent_accept_1.py"],
+   "evidence_source": "behavior"
+  },
+  "contract_grounding": {
+   "constraint_id": "milvus_type_entities_delete_001",
+   "assertion_text_quoted": "filter != null AND is valid boolean expr",
+   "api_violates_assertion": true,
+   "note": "query filter 引用不存在的字段仍 code:0——对 'is valid boolean expr' 断言的违反；但注意源码侧解释：dynamic-field 集合中未知字段是合法的动态字段引用（运行时取值 NULL，NULL==1 为 false，故空结果），仅在非 dynamic 集合才是 parse 错误。violates=True 基于 REST 观测，by-design 抗辩由 judge 权衡",
+   "evidence_source": "doc"
+  },
+  "chain_trace": {
+   "chain_links": [
+    "contract: milvus_type_entities_delete_001 (filter valid boolean expr)",
+    "doc: 源码 parser 对静态 schema 集合确实报 field not exist（对照组实测）",
+    "script: semantic_filterdiag_04.py case ('unknown field','nonexistent_field == 1','query')",
+    "log: [query/unknown field] code=0 data=[]"
+   ],
+   "chain_broken_at": null,
+   "break_detail": null,
+   "evidence_source": "doc+behavior"
+  },
+  "source_grounding": {
+   "grep_queries": ["field not exist", "ErrFieldNotFound", "cannot parse expression", "EnableDynamicField"],
+   "files_examined": [
+    "pkg/util/merr/errors.go (L168 ErrFieldNotFound=1700)",
+    "internal/parser/planparserv2/plan_parser_v2.go (query plan 生成)",
+    "internal/distributed/proxy/httpserver/constant.go (L105 EnableDynamic=true)",
+    "vein_scripts/output_vein_unknown_field_silent_accept_1.log（双分支对照组）"
+   ],
+   "source_excerpt": "对照组 log（vein_unknown_field_silent_accept_1.log）:\n1: PASS control_nodyn_rejects {'code': 1100, 'message': 'failed to create query plan: cannot parse expression: no_such_field_xyz > 5, error: field no_such_field_xyz not exist: invalid parameter'}\n2: PASS dyn_query_silent_code0 {'code': 0, 'cost': 0, 'data': []}\n—— Milvus plan parser 对 dynamic-field 集合的未知字段不报错（视为动态字段引用，表达式合法、运行时空匹配）；对静态 schema 集合同输入报 1100。两分支均有源码语义支撑：字段存在性检查依赖 collSchema.EnableDynamicField。",
+   "call_chain_traced": "HTTP query(filter) -> plan parser（依 schema：static->field-not-exist 1100 / dynamic->动态字段引用放行）-> 执行 NULL 比较 -> 空结果 -> code:0",
+   "verification_outcome": "by_design_in_source",
+   "evidence_source": "source"
+  },
+  "mundane_explanation": {
+   "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+   "surviving": null
+  }
+ }
+}

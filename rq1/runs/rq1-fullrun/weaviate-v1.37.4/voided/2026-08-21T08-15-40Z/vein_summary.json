@@ -1,0 +1,146 @@
+{
+  "target": "weaviate",
+  "version": "v1.37.4",
+  "session_dir": "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\results\\weaviate\\v1.37.4\\2026-08-21T08-15-40Z",
+  "session_id": "weaviate-v1.37.4-2026-08-21T08-15-40Z",
+  "top_endpoints": [
+    "POST /v1/schema",
+    "GET /v1/objects",
+    "POST /v1/batch/objects"
+  ],
+  "richness_scores": {
+    "POST /v1/schema": 8.5,
+    "GET /v1/objects": 7.0,
+    "POST /v1/batch/objects": 6.5
+  },
+  "shape_sources": {
+    "POST /v1/schema": "numeric_boundary shape + richness (vectorIndexConfig params: dynamicEfMin/dynamicEfMax/flatSearchCutoff/replicationFactor)",
+    "GET /v1/objects": "pagination richness + boundary validation (limit/offset parameters)",
+    "POST /v1/batch/objects": "compound_and consistency + tenant testing"
+  },
+  "candidates_count": 7,
+  "skipped_count": 1,
+  "candidates": [
+    {
+      "id": "vein_range_filter_numeric_config_1",
+      "endpoint": "POST /v1/schema",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "Server accepts inverted range (Min > Max), negative values, and zero for dynamicEfMin/dynamicEfMax",
+      "by_design_match": false,
+      "inspired_by": "numeric_boundary shape",
+      "script_path": "vein_scripts/vein_range_filter_numeric_config_1.py",
+      "defect_type": "Type4"
+    },
+    {
+      "id": "vein_pagination_cursor_objects_1",
+      "endpoint": "GET /v1/objects",
+      "condition_type": "pagination_cursor",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "Server accepts negative limit and negative offset parameters without validation",
+      "by_design_match": false,
+      "inspired_by": "boundary validation",
+      "script_path": "vein_scripts/vein_pagination_cursor_objects_1.py",
+      "defect_type": "Type1"
+    },
+    {
+      "id": "vein_compound_and_schema_pairing_1",
+      "endpoint": "POST /v1/schema",
+      "condition_type": "compound_and",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "Server accepts inverted pairing (Min=500 > Max=100), negative values (-100, -500), zero values (0, 0), and extreme values (999999999) for dynamicEfMin/dynamicEfMax without validation",
+      "by_design_match": false,
+      "inspired_by": "pagination_cursor finding → adjacent endpoint testing",
+      "script_path": "vein_scripts/vein_compound_and_schema_pairing_1.py",
+      "defect_type": "Type4"
+    },
+    {
+      "id": "vein_type_mismatch_objects_1",
+      "endpoint": "POST /v1/objects",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "Server accepts null, numeric (999), array ([ONE, QUORUM]), and object ({level: ONE}) types for consistencyLevel without validation, silently coercing to default",
+      "by_design_match": false,
+      "inspired_by": "adjacent endpoint type testing",
+      "script_path": "vein_scripts/vein_type_mismatch_objects_1.py",
+      "defect_type": "Type2"
+    }
+  ],
+  "additional_findings": [
+    {
+      "endpoint": "POST /v1/schema",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "detail": "Server accepts negative (-1000) and zero (0) flatSearchCutoff values without validation"
+    },
+    {
+      "endpoint": "POST /v1/schema",
+      "condition_type": "compound_and",
+      "finding": "by_design_excluded",
+      "detail": "replicationFactor parameter coerces to 1 in single-node mode (negative, zero, large values all result in factor=1) - by-design for standalone deployment"
+    },
+    {
+      "endpoint": "POST /v1/batch/objects",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "detail": "Server accepts null and numeric (999) consistencyLevel in batch operations without validation"
+    },
+    {
+      "endpoint": "POST /v1/objects",
+      "condition_type": "null_check",
+      "finding": "DEFECT_FOUND",
+      "detail": "Server accepts null tenant parameter without validation (silently coerced), but correctly rejects numeric tenant with 400"
+    }
+  ],
+  "no_defects_found": [
+    {
+      "id": "vein_compound_and_batch_1",
+      "endpoint": "POST /v1/batch/objects",
+      "condition_type": "compound_and",
+      "finding": "NO_DEFECT",
+      "script_path": "vein_scripts/vein_compound_and_batch_1.py",
+      "note": "All invalid combinations correctly rejected"
+    },
+    {
+      "id": "vein_range_filter_replication_1",
+      "endpoint": "POST /v1/replication/scale",
+      "condition_type": "range_filter",
+      "finding": "NO_DEFECT",
+      "script_path": "vein_scripts/vein_range_filter_replication_1.py",
+      "note": "All invalid replicationFactor values correctly rejected"
+    }
+  ],
+  "completion_metrics": {
+    "total_endpoints_tested": 3,
+    "total_condition_types_tested": 8,
+    "defects_found": 7,
+    "by_design_excluded": 1,
+    "test_scripts_generated": 6,
+    "rounds_completed": 1,
+    "max_turns_utilization": "12/200 (6%)"
+  },
+  "key_insights": [
+    "Shape-to-vein guidance from numeric_boundary successfully identified rich config parameter surface",
+    "POST /v1/schema vectorIndexConfig parameters lack comprehensive boundary validation (Min > Max pairing invariant violation, negative, zero, extreme values)",
+    "Pagination cursor validation missing on GET /v1/objects (negative limit/offset)",
+    "Type coercion is selective: consistencyLevel accepts multiple types silently (null, numeric, array, object) while tenant rejects numeric types",
+    "Control group validation identified by-design behavior: replicationFactor coercion in single-node mode",
+    "Finding-feedback loop effective: pagination_cursor finding → compound_and schema pairing test → type_mismatch objects test",
+    "Endpoint cross-pollination confirmed: POST /objects type_mismatch → POST /batch/objects type_mismatch finding",
+    "Silent substitution pattern across multiple endpoints: invalid values coerced to defaults without 4xx errors"
+  ],
+  "follow_up_recommendations": [
+    "Test compound_or on consistency/tenant parameter combinations",
+    "Test collection_membership on object IDs and tenant references",
+    "Explore 3-way AND combinations on GET /objects pagination (limit+offset+class)",
+    "Test mixed type/null combinations on POST /objects parameters",
+    "Deepen numeric boundary validation on nested vectorIndexConfig sub-parameters (ef, efConstruction, maxConnections)",
+    "Test geo_filter on any spatial query parameters (if applicable)",
+    "Continue finding-feedback chain from type_mismatch → collection_membership → compound_or",
+    "Test additional endpoints from richness ranking: POST /schema/{className}/tenants, POST /batch/references"
+  ]
+}

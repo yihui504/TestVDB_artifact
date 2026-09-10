@@ -1,0 +1,99 @@
+{
+  "defect_id": "semantic_collections_create_001",
+  "endpoint": "PUT /collections/{collection_name} (collections+create)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability=PARTIAL: no doc_preflight.json sidecar exists for this contract; WebFetch of https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection was network-blocked (domain_blocked, recorded not treated as FAIL); verification used the version-pinned in-repo served spec docs/redoc/master/openapi.json at git tag v1.18.0, which per tools/generate_openapi_models.sh is the exact artifact published to the doc site. version=PASS: URL route v-1-18-x matches target v1.18.0 and the in-repo artifact is exactly tag v1.18.0 (git describe). content=PARTIAL: all three clauses of the assertion text are verbatim-real in the served spec (VectorParams.required=[distance,size]; size={type:integer,format:uint64,minimum:1}; Distance enum exactly [Cosine,Euclid,Dot,Manhattan]), but the claim's operative premise 'vectors required=true' is contradicted by the same spec: CreateCollection carries NO required array, i.e. vectors is documented optional. endpoint=PASS: endpoint_registry collections+create PUT /collections/{collection_name}; script used PUT via runtime path_key create_collection; live probe matched.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[create scc01_1788388157_no_vectors] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.21433192}",
+      "secondary_observations": [
+        "[claim statement, log L12] [no_vectors] vectors omitted entirely (required=true) was ACCEPTED with status 200 (expected clean 4xx rejection per qdrant_type_collections_create_001: VectorParams.requires [size, distance], size uint64); raw={\"result\":true,\"status\":\"ok\",\"time\":0.21433192}",
+        "[legal control, log L6] [create scc01_1788388157_ok_plain] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.25802524}",
+        "[legal control, log L8-9] [create scc01_1788388157_ok_empty_hnsw] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.245815344} — hnsw_config={} empty diff accepted",
+        "[sibling script, same constraint, rest face, output_boundary_collections_create_001.log L5] [vectors={} (no vector space defined - BS-01)] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.213936728}",
+        "[sibling script contrast, same constraint, rest face, output_boundary_collections_create_001.log L6] [vectors={'size':4} distance missing] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 24\"},\"time\":0.0}",
+        "[live comparative probe, rest face, this evidence-builder session] c1 repro: PUT /collections/ebc1_*_novectors body {} (vectors omitted) -> HTTP=200 {\"result\":true,\"status\":\"ok\",\"time\":0.313310038}; readback config.params.vectors = {} (persisted as empty named-vector map)",
+        "[live comparative probe, rest face] c2 same-family inner-field-missing: vectors={\"size\":4} -> HTTP=400 Format error in JSON body: data did not match any variant of untagged enum VectorsConfig",
+        "[live comparative probe, rest face] c3 same-family empty-object: vectors={} -> HTTP=200 {\"result\":true,\"status\":\"ok\",\"time\":0.253409482}",
+        "[live comparative probe, rest face] c4 documented omission use case: sparse-only create {\"sparse_vectors\":{\"text\":{\"index\":{}}}} -> HTTP=200",
+        "[live comparative probe, rest face] c5 documented fill workflow on a vectorless collection: PUT /collections/{shell}/vectors/myvec {\"dense\":{\"size\":4,\"distance\":\"Cosine\"}} -> HTTP=200 {\"result\":{\"operation_id\":2,\"status\":\"acknowledged\"}}; readback config.params.vectors = {\"myvec\": {\"size\": 4, \"distance\": \"Cosine\"}}",
+        "[grpc face, source-level comparison only, no live grpc probe] lib/api/src/grpc/qdrant.rs L1196-1199: CreateCollection.vectors_config is Option<VectorsConfig> (prost message optional, tag 10) — omission permitted on the gRPC face as well",
+        "[reproducibility scope note] the exact omitted-field probe appears in exactly one script log; the 'collection created with zero vector spaces accepted 200' phenomenon under the same constraint_id was triggered by two scripts (semantic_001 wire shape: key omitted; boundary_001 wire shape: empty object) — both shapes converge to the identical internal state VectorsConfig::Multi(empty) via #[serde(default)] and untagged-enum map parse respectively; additionally reproduced live twice by this builder; all other collections+create logs (boundary_005, semantic_002, semantic_006, state_002, state_007) only show the 400 inner-field rejection face"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "field omission that the claim treats as request-side-decidable illegal input was accepted as 200 with the success envelope {result:true} — zero error surface, not even a business error code; the target does not classify this input as an error at all"
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["semantic_collections_create_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_collections_create_001",
+      "assertion_text_quoted": "vectors.distance IN {Cosine, Euclid, Dot, Manhattan}; VectorParams.required = [size, distance]; vectors.size is an unsigned integer (uint64)",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check, wrong-citation fork: the quoted clauses govern the INNER fields of a vectors config when one is present, and all of them are enforced by the API (live: vectors={\"size\":4} without distance -> 400). The observed phenomenon — the whole vectors object omitted — lies outside the quote's domain: no clause of the quote asserts that vectors itself must be present. The 'required=true' premise in the claim traces to the mining-layer registry row (raw_knowledge.json api_endpoints[collections+create].parameters.vectors.required=true, mirrored in structured_contract.json), which the version-pinned served OpenAPI contradicts (CreateCollection has no required array). The citation that would govern this phenomenon is a 'create must define at least one vector space' constraint, which the v1.18.x documentation does not assert (it documents vectors optional and documents PUT /collections/{name}/vectors/{vector_name} for post-create addition).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_collections_create_001 exists (structured_contract.json L5949-5960; type_constraint, evidence_tier=explicit, source_url=https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection, source_verified=false); NOTE the candidates.jsonl dispatch row for this defect_id carries constraint_id=\"\" — the id is recoverable only from the attack string and debate meta",
+        "doc: version-pinned served spec (docs/redoc/master/openapi.json @ tag v1.18.0) — VectorParams.required=[distance,size], size format uint64 minimum 1, Distance enum [Cosine,Euclid,Dot,Manhattan] all present verbatim; CreateCollection has NO required array (vectors documented optional); VectorNameConfig docstring documents post-create vector addition",
+        "script: debate_logs/semantic_collections_create_001.py L239 case ('no_vectors', {}, 'vectors omitted entirely (required=true)') sends PUT /collections/{name} with body {} — vectors key absent; oracle (meta.json) treats 'omitted' as one of the wrong-typed/missing vectors shapes to be refused 400/422",
+        "log: output_semantic_collections_create_001.log L10-12 — [create scc01_1788388157_no_vectors] status=200 raw={\"result\":true,...}; VERDICT: DEFECT_FOUND (Type1_IllegalSuccess); script exits at first violating case so the remaining 11 cases never ran in this log"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The script's oracle adjudicated 'vectors omitted' as a violation of qdrant_type_collections_create_001 by importing the premise vectors.required=true from the mining-layer registry; neither the constraint's assertion text nor the versioned documentation asserts presence-requiredness. The DEFECT verdict therefore fired on a phenomenon outside the cited constraint's domain (which covers inner-field typing and is in fact enforced with clean 400s). The contract→doc link is intact for the assertion text; the break is where the script extends the constraint to field presence.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "pub struct CreateCollection",
+        "pub enum VectorsConfig",
+        "impl Default for VectorsConfig",
+        "VectorsConfig::empty()",
+        "untagged enum VectorsConfig",
+        "fn create_collection",
+        "validate_vector_name",
+        "without (any )?vectors|no vectors|vectorless|empty vectors config"
+      ],
+      "files_examined": [
+        "lib/storage/src/content_manager/collection_meta_ops.rs",
+        "lib/collection/src/operations/types.rs",
+        "lib/storage/src/content_manager/toc/create_collection.rs",
+        "lib/api/src/grpc/qdrant.rs",
+        "openapi/openapi-collections.ytt.yaml",
+        "docs/redoc/master/openapi.json",
+        "tools/generate_openapi_models.sh"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/collection_meta_ops.rs L106-126 (REST payload struct):\n/// Operation for creating new collection and (optionally) specify index params\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct CreateCollection {\n    /// Vector data config.\n    /// It is possible to provide one config for single vector mode and list of configs for multiple vectors mode.\n    #[serde(default)]\n    #[validate(nested)]\n    pub vectors: VectorsConfig,\n    /// For auto sharding:\n    /// Number of shards in collection.\n    ///  - Default is 1 for standalone, otherwise equal to the number of nodes\n    ///  - Minimum is 1\n    ...\n\nlib/collection/src/operations/types.rs L1468-1484 (the enum the field defaults to):\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Anonymize, Clone, PartialEq, Hash, Eq)]\n#[serde(rename_all = \"snake_case\", untagged)]\npub enum VectorsConfig {\n    Single(VectorParams),\n    Multi(BTreeMap<VectorNameBuf, VectorParams>),\n}\n\nimpl Default for VectorsConfig {\n    fn default() -> Self {\n        VectorsConfig::Multi(Default::default())\n    }\n}\n\nimpl VectorsConfig {\n    pub fn empty() -> Self {\n        VectorsConfig::Multi(BTreeMap::new())\n    }\n\nlib/collection/src/operations/types.rs L1338-1343 (inner fields ARE required — the enforced half of the constraint):\npub struct VectorParams {\n    /// Size of a vectors used\n    #[validate(custom(function = \"validate_nonzerou64_range_min_1_max_65536\"))]\n    pub size: NonZeroU64,\n    /// Type of distance function used for measuring distance between vectors\n    pub distance: Distance,\n\nlib/storage/src/content_manager/collection_meta_ops.rs L197-217 (maintainer comment naming the two creation paths):\n        // Apply the same vector-name validation that the\n        // `PUT /collections/{name}/vectors/{vector_name}` endpoint enforces\n        // (length 0..=200, no filesystem-unsafe characters), so both creation\n        // paths reject the same set of bad names. The `Validate` derive on\n        // `CreateCollection` only walks `BTreeMap` *values*, never keys, so this\n        // has to run imperatively here.\n        if let collection::operations::types::VectorsConfig::Multi(multi) = &create_collection.vectors {\n            for vector_name in multi.keys() {\n                common::validation::validate_vector_name(vector_name).map_err(|err| { ... })?;\n            }\n        }",
+      "call_chain_traced": "PUT /collections/{name} -> CreateCollection serde payload: #[serde(default)] on vectors: VectorsConfig means an omitted key deserializes to VectorsConfig::default() = Multi(BTreeMap::new()) (types.rs L1475-1479); explicit vectors={} reaches the same state via the untagged-enum map variant. CreateCollectionOperation::new (collection_meta_ops.rs L192-250) validates only vector NAMES of entries that exist plus dense/sparse name uniqueness — no check that at least one vector space is defined. TableOfContent::create_collection (toc/create_collection.rs L20-147) passes vectors untouched into CollectionParams (L132-134) and persists; live readback confirms config.params.vectors = {}. Inner-field enforcement is real and separate: VectorParams{size: NonZeroU64 with custom range validator 1..=65536, distance: Distance} have no serde defaults (types.rs L1338-1343), so a partial VectorParams fails untagged deserialization -> HTTP 400 'data did not match any variant of untagged enum VectorsConfig' (live c2 + boundary_001 log L6/L8). gRPC face mirrors REST: CreateCollection.vectors_config is Option<VectorsConfig> (grpc/qdrant.rs L1196-1199).",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "by_design_evidence": "explicit intent evidence: (1) maintainer comment in CreateCollectionOperation::new names 'both creation paths' for vector configs — create-time and the POST-CREATE endpoint PUT /collections/{name}/vectors/{vector_name}, whose served doc reads 'Create a new named vector on an existing collection' (openapi-collections.ytt.yaml L234-240) and whose VectorNameConfig docstring says storage/index/quantization 'can be configured separately later'; (2) the served v1.18.0 OpenAPI (docs/redoc/master/openapi.json, the artifact published to api.qdrant.tech per tools/generate_openapi_models.sh) documents vectors as optional — CreateCollection has no required array — while marking VectorParams.required=[distance,size]; (3) deliberate code: #[serde(default)] on the vectors field plus impl Default for VectorsConfig = Multi(empty) plus an explicit VectorsConfig::empty() constructor; (4) the documented sparse-only use case (sparse_vectors without dense vectors) is live-accepted (c4); (5) the shell-then-fill workflow was verified live end-to-end: create with {} -> 200, PUT /collections/{name}/vectors/myvec {\"dense\":{size,distance}} -> 200 acknowledged, readback config.params.vectors = {\"myvec\":{\"size\":4,\"distance\":\"Cosine\"}}. The acceptance of a vectors-less create is a designed capability, not an oversight.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (log pre-probe /healthz=200; live reproduction succeeded on the same deployment)",
+        "concurrency (single sequential PUT; no racing scripts)",
+        "cache delay (live readback shows config.params.vectors={} persisted)",
+        "request-parameter typo (probe body {} is exactly the scripted omission; script log line confirms the intended case)"
+      ],
+      "surviving": "by_design: vectors is documented optional in the versioned spec, omission converges to the deliberate Multi(empty) default, and the documented post-create named-vector endpoint makes vectorless creation a functional first step (live-verified); the observed 200 is designed-in behavior rather than a validation gap"
+    }
+  }
+}

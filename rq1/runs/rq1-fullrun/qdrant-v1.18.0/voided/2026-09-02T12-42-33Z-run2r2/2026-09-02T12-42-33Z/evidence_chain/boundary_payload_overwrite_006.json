@@ -1,0 +1,88 @@
+{
+  "defect_id": "boundary_payload_overwrite_006",
+  "endpoint": "payload+overwrite (PUT /collections/{collection_name}/points/payload)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS: no doc_preflight.json sidecar exists; WebFetch was domain-blocked (api.qdrant.tech safety verification failed) but the page was fetched via web reader — title 'Overwrite payload | Qdrant | API Reference'. Version PASS: URL route v-1-18-x, page header v1.18.x, target v1.18.0 (major.minor 1.18 match). Content PARTIAL: page prose types the request field as 'payload map from strings to any Required' (confirms the script's 'spec: object' premise) and documents the 200 Updated response; the 400/404 dispositions come from the endpoint_registry doc_quote 'Replaces the entire payload of targeted points (set semantics: keys missing from the new payload are removed); 200 ok / 400 / 404.' (verified 2026-09-02T12:34:08Z) and are not rendered in the fetched static page prose (Fern page shows only the success response); NEITHER the page prose nor the registry quote makes any promise about error-message content or parameter naming — the Type2 naming requirement has no doc-prose basis and rests on the script's Type-2 rubric oracle. Endpoint PASS: registry entry payload+overwrite method PUT path /collections/{collection_name}/points/payload; the script's request URL matches exactly.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "case payload=[] (array, spec: object) -> status=400 / raw: {\"status\":{\"error\":\"Format error in JSON body: invalid type: sequence, expected a map at line 1 column 27\"},\"time\":0.0} (log lines 9-10; verdict line 11: DEFECT_FOUND Type2_PoorDiagnostics — error does not name the confused parameter 'payload')",
+      "secondary_observations": [
+        "[rest, same endpoint, same log — disposition contrast] case payload omitted (spec: required=['payload']) -> status=400 / raw: {\"status\":{\"error\":\"Format error in JSON body: missing field `payload` at line 1 column 15\"},\"time\":0.0} — the missing-field 400 DOES name 'payload' (serde names fields on missing-field errors, not on type-confusion errors)",
+        "[rest, same-family endpoint payload+delete, sibling script boundary_payload_delete_006.log:6-7 — same-family parameter comparison] case keys='city' (string, spec types array[string]) rejected with 400 / raw: {\"status\":{\"error\":\"Format error in JSON body: invalid type: string \\\"city\\\", expected a sequence at line 1 column 30\"},\"time\":0.0} — same unattributed serde type-error class; the error does not name 'keys'",
+        "[rest, cross-endpoint pattern recurrence, boundary_collections_create_002.log:5] [sparse_vectors=[] (array for map-typed field)] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: invalid type: sequence, expected a map at line 1 column 65\"},\"time\":0.0} — identical message shape on collections+create's map-typed field (also semantic_collections_create_003.log:13 and state_collections_create_004.log:8), showing the pattern is systemic to the serde Deserialize branch, not specific to payload+overwrite",
+        "note: the message does carry a byte locator (line 1 column 27 = the start of the payload array in the body {\"points\": [1], \"payload\": []}) — it locates the offending position but never names the field"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The client-side-decidable error (array supplied for the map-typed required field payload) was returned as a proper HTTP 400 with business error body {\"status\":{\"error\":...},\"time\":0.0}. The status-code disposition is correct; the claimed deficiency concerns only the error body's content (no parameter name)."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["boundary_payload_overwrite_006"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_payload_overwrite_001",
+      "assertion_text_quoted": "overwrite_payload with valid targets returns HTTP 200; invalid input returns 400; missing collection returns 404",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check: the observed phenomenon is a REJECTION (HTTP 400), not a silent acceptance, and the assertion's 'invalid input returns 400' branch was literally honored — so api_violates_assertion=false is correct for the quoted assertion. The Type2 defect claim rests on the script's Type-2 rubric oracle ('4xx must name the confused parameter') and the BS-01 blindspot framing, neither of which appears in the assertion text, the endpoint_registry doc_quote, or the fetched doc prose. Adjudication of whether the rubric is a valid defect basis belongs to the auditor.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_payload_overwrite_001 found at structured_contract.json assertions[21] (endpoint payload+overwrite, category behavioral, evidence_tier explicit, level endpoint); the dispatch constraint_id field was empty — resolved from the attack string and the script header (constraint_ids: qdrant_behavioral_payload_overwrite_001)",
+        "doc: source_url https://api.qdrant.tech/v-1-18-x/api-reference/points/overwrite-payload reachable; prose types payload as 'map from strings to any Required' (consistent with the invalid-input premise); 400/404 legs present only via endpoint_registry doc_quote; no error-message-content promise anywhere in the documentation",
+        "script: debate_logs/boundary_payload_overwrite_006.py sends PUT /collections/{coll}/points/payload?wait=true with body {\"points\": [1], \"payload\": []} (case 2 of a 6-case type-confusion sweep) under the oracle '4xx naming the confused parameter, else Type2_PoorDiagnostics'",
+        "log: output_boundary_payload_overwrite_006.log:9-11 — status=400 with raw error 'invalid type: sequence, expected a map at line 1 column 27' containing no 'payload' token → VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics); sweep returned early so cases 3-6 (payload string/number/null, points string) were never executed"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Format error in JSON body (0 hits; variant 'Format error' -> src/actix/mod.rs:252)",
+        "Format error",
+        "serde_path_to_error (0 hits in whole tree — no path enrichment of serde errors anywhere)",
+        "struct SetPayload (hits: lib/shard/src/operations/payload_ops.rs, lib/shard re-export lib/collection/src/operations/payload_ops.rs, lib/api/src/grpc/qdrant.rs)",
+        "SetPayload",
+        "JSON body (binding site src/actix/mod.rs:111; also qdrant's own openapi tests asserting field-attributed Validation-error messages)",
+        "points/payload|overwrite_payload|set_payload",
+        "pub type Payload / type Payload / Payload, (definition found: lib/segment/src/types.rs:2012)"
+      ],
+      "files_examined": [
+        "src/actix/mod.rs (lines 111, 200-279)",
+        "src/actix/api/update_api.rs (lines 1-45, 190-258)",
+        "lib/collection/src/operations/payload_ops.rs (lines 1-60)",
+        "lib/shard/src/operations/payload_ops.rs (lines 1-200)",
+        "lib/segment/src/types.rs (lines 2000-2029)"
+      ],
+      "source_excerpt": "src/actix/mod.rs:111 (JSON extractor error-handler binding):\n    .error_handler(|err, rec| validation_error_handler(\"JSON body\", err, rec));\n\nsrc/actix/mod.rs:227-268 (validation_error_handler — the message producer):\nfn validation_error_handler(\n    name: &str,\n    err: actix_web_validator::Error,\n    _req: &HttpRequest,\n) -> error::Error {\n    use actix_web_validator::error::DeserializeErrors;\n\n    // Nicely describe deserialization and validation errors\n    let msg = match &err {\n        actix_web_validator::Error::Validate(errs) => {\n            validation::label_errors(format!(\"Validation error in {name}\"), errs)\n        }\n        actix_web_validator::Error::Deserialize(err) => {\n            format!(\n                \"Deserialize error in {name}: {}\",\n                match err {\n                    DeserializeErrors::DeserializeQuery(err) => err.to_string(),\n                    DeserializeErrors::DeserializeJson(err) => err.to_string(),\n                    DeserializeErrors::DeserializePath(err) => err.to_string(),\n                }\n            )\n        }\n        actix_web_validator::Error::JsonPayloadError(\n            actix_web::error::JsonPayloadError::Deserialize(err),\n        ) => {\n            format!(\"Format error in {name}: {err}\",)     // <-- observed branch: raw serde_json Display pass-through, no field-name enrichment\n        }\n        err => err.to_string(),\n    };\n\n    // Build fitting response\n    let response = match &err {\n        actix_web_validator::Error::Validate(_) => HttpResponse::UnprocessableEntity(),\n        _ => HttpResponse::BadRequest(),                   // <-- 400 for type-confusion (matches observed status)\n    }\n    .json(ApiResponse::<()> {\n        result: None,\n        status: ApiStatus::Error(msg),\n        time: 0.0,                                          // <-- hardcoded time 0.0 (matches observed \"time\":0.0)\n        usage: None,\n    });\n    error::InternalError::from_response(err, response).into()\n}\n\nsrc/actix/api/update_api.rs:227-236 (route — body type):\n#[put(\"/collections/{collection_name}/points/payload\")]\nasync fn overwrite_payload(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    operation: Json<SetPayload>,                          // <-- actix_web_validator Json extractor -> validation_error_handler\n    params: Query<UpdateParams>,\n    ...\n\nlib/shard/src/operations/payload_ops.rs:63-78 (body schema — payload must be a map):\n/// This data structure is used in API interface and applied across multiple shards\n#[cfg(feature = \"api\")]\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone)]\n#[serde(try_from = \"SetPayloadShadow\")]\npub struct SetPayload {\n    pub payload: Payload,                                 // <-- map-typed field; [] fails here\n    /// Assigns payload to each point in this list\n    pub points: Option<Vec<PointIdType>>,\n    /// Assigns payload to each point that satisfy this filter condition\n    #[validate(nested)]\n    pub filter: Option<Filter>,\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub shard_key: Option<api::rest::ShardKeySelector>,\n    /// Assigns payload to each point that satisfy this path of property\n    pub key: Option<JsonPath>,\n}\n\nlib/shard/src/operations/payload_ops.rs:127-135 (shadow used for try_from deserialization):\n#[cfg(feature = \"api\")]\n#[derive(Deserialize)]\nstruct SetPayloadShadow {\n    pub payload: Payload,\n    pub points: Option<Vec<PointIdType>>,\n    pub filter: Option<Filter>,\n    pub shard_key: Option<api::rest::ShardKeySelector>,\n    pub key: Option<JsonPath>,\n}\n\nlib/segment/src/types.rs:2010-2012 (the map type itself):\n#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, JsonSchema, Hash)]\n#[schemars(example = \"payload_example\")]\npub struct Payload(pub Map<String, Value>);              // <-- serde_json Map; a JSON sequence yields 'invalid type: sequence, expected a map'",
+      "call_chain_traced": "PUT /collections/{collection_name}/points/payload -> overwrite_payload (src/actix/api/update_api.rs:227) with Json<SetPayload> extractor wired to validation_error_handler(\"JSON body\") (src/actix/mod.rs:111) -> serde deserializes SetPayload via try_from SetPayloadShadow (lib/shard/src/operations/payload_ops.rs:66,127-162) -> field payload: Payload where Payload(pub Map<String, Value>) (lib/segment/src/types.rs:2012) rejects a JSON array -> serde_json::Error Display = 'invalid type: sequence, expected a map at line 1 column 27' (type + line/column, NO field path — serde_json does not include field names, and serde_path_to_error appears nowhere in the tree) -> JsonPayloadError::Deserialize branch formats 'Format error in JSON body: {err}' (src/actix/mod.rs:249-253) -> HttpResponse::BadRequest with ApiStatus::Error(msg), time: 0.0 (src/actix/mod.rs:258-267). Contrast branch: the validator-based Validate arm uses validation::label_errors producing field-attributed messages that qdrant's own tests assert verbatim (e.g. tests/openapi/test_query.py:87 'Validation error in JSON body: [internal.limit: value 0 invalid, must be 1 or larger]') — so field attribution exists in the codebase for semantic-validation errors but not for serde type-confusion errors. No code comment or explicit declaration marks the un-attributed Deserialize message as intentional.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — deterministic deserialization path; /healthz never consulted; no transport failures in the log",
+        "concurrency — single sequential request against an owned scratch collection (bpow6+tag)",
+        "cache — stateless request-body rejection, no storage involved",
+        "request-parameter typo — raw body is printed in the log; the reported column 27 aligns with the '[' of the payload array in {\"points\": [1], \"payload\": []}"
+      ],
+      "surviving": null
+    }
+  }
+}

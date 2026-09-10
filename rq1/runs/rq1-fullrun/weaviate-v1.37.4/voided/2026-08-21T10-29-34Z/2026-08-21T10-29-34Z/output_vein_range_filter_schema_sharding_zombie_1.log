@@ -1,0 +1,12 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+POST create (desiredCount=-3) Status: 200
+POST create raw: ''
+GET schema immediately: 404 body=''
+POST add-property immediately: 422 {"error":[{"message":"class is nil: not found"}]}
+
+CONTROL desiredCount=0 -> 422: {"error":[{"message":"updating db: TYPE_ADD_CLASS: apply add class: create index: failed to read sharding state: invalid sharding state: physical shards unavailable"}]}
+
+CONTROL desiredCount=0 residue GET=200 (class exists after 422?)
+CONTROL desiredCount=1 -> 200 body_len=1395 GET=200
+VERDICT: DEFECT_FOUND: Type1_IllegalSuccess/Type2: POST /v1/schema with shardingConfig.desiredCount=-3 returned HTTP 200 with EMPTY body (no class echo, no error). The 'created' class is a phantom: GET /v1/schema/VeinShardingZombie32368 -> 404 (class not readable), POST properties -> 422 'class is nil: not found' (schema API cannot extend it), until an object write forces registration. Control desiredCount=0 -> 422 (explicit rejection) proves the validation path exists; negative values bypass it and silently produce an inconsistent phantom state, and the 200 response discloses nothing (empty body).

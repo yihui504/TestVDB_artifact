@@ -1,0 +1,65 @@
+{
+  "defect_id": "vein_schema_silent_drop_nested_4",
+  "endpoint": "POST /schema (properties[].indexNullState 错位键)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "openapi-specs/schema.json:1122-1125 indexNullState 定义于 InvertedIndexConfig（类级 invertedIndexConfig 对象）——不是 Property 对象字段。Property 定义（entities/models/property.go）无 indexNullState json tag。契约 POST /schema 端点已注册。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "create status=200 property readback={\"indexFilterable\": true, \"indexRangeFilters\": false, \"indexSearchable\": false, \"name\": \"num\"} class indexNullState=None",
+      "secondary_observations": [
+        "IsNull after misplaced key: status=200 errors=[{\"message\": \"shard JwA4H67fePEZ: retrieve doc IDs from se...\"}]  # 运行时 IsNull 过滤器报错",
+        "control class-level key IsNull: status=200 count=1"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "错位键 200 接受 + readback 静默丢弃（属性级无该字段）+ 类级 indexNullState=None（未激活）；运行时 IsNull 查询报错。类级对照组正常 count=1"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_schema_silent_drop_nested_4.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_silent_substitution (泛标签；实际引用 openapi InvertedIndexConfig.indexNullState 类级定义)",
+      "assertion_text_quoted": "openapi-specs/schema.json:1122-1125 (InvertedIndexConfig): \"indexNullState\": {\"description\": \"Index each object with the null state (default: `false`).\", \"type\": \"boolean\"}",
+      "api_violates_assertion": true,
+      "note": "violates=True 的依据不是'未知字段被忽略'本身（Go 解码惯例），而是三段链式后果：200 无警告 + 使用者合理预期的 null-state 索引未建立 + 运行时 IsNull 查询报错——静默接受一个语义上被丢弃的配置是输入验证缺席（应 422 指出 indexNullState 不属于 properties[]）。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: POST /schema；indexNullState 属 InvertedIndexConfig（openapi 定义）",
+        "doc: openapi-specs/schema.json InvertedIndexConfig.indexNullState；Property 结构无此字段",
+        "script: vein_schema_silent_drop_nested_4.py 在 properties[].indexNullState=true 错位发送 + 类级对照组",
+        "log: create 200; property readback 无 indexNullState; class indexNullState=None; IsNull 运行时报错; 类级对照 count=1"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["IndexNullState", "indexNullState", "OperatorIsNull", "Nullstate must be indexed"],
+      "files_examined": ["entities/schema/inverted_index_config.go", "entities/models/inverted_index_config.go", "entities/models/property.go", "adapters/repos/db/inverted/prop_value_pairs.go", "usecases/schema/class.go"],
+      "source_excerpt": "entities/models/inverted_index_config.go:40: IndexNullState bool `json:\"indexNullState,omitempty\"`  ← 仅类级 InvertedIndexConfig 有此 tag\nentities/models/property.go:33-73 Property struct json tags: bucketGeneration/dataType/description/.../indexFilterable/indexInverted/indexRangeFilters/indexSearchable/moduleConfig/name/nestedProperties/textAnalyzer/tokenization —— 无 indexNullState，Go 解码静默丢弃属性级错位键。\n\nadapters/repos/db/inverted/prop_value_pairs.go:349-350（运行时报错点）:\n  if pv.operator == filters.OperatorIsNull && !pv.Class.InvertedIndexConfig.IndexNullState {\n      return nil, errors.Errorf(\"Nullstate must be indexed to be filterable! Add `indexNullState: true` to the invertedIndexConfig\")\n  }\n——错位键被丢弃 → 类级 IndexNullState=false → IsNull 查询命中此运行时错误（与 log 中 shard ... retrieve doc IDs 错误对应）。",
+      "call_chain_traced": "POST /schema → models.Class decode（Property 无 indexNullState 字段→丢弃）→ schema 落盘(类级 IndexNullState=false) → GraphQL IsNull filter → prop_value_pairs.go:349 守卫报错",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "错位键无 422 反馈通道（swagger 模型解码不拒绝未知属性字段）；报错延迟到查询期。by-design 抗辩空间：'未知字段忽略'是 Go/OpenAPI 运行时默认，但 Weaviate 对其他错位场景（如 virtualPerPhysical 更新）有显式报错，此处沉默非一致设计——留 auditor 裁。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo（错位是攻击本体而非笔误）"],
+      "surviving": "unknown_field_tolerated_by_design（Go 解码层默认容忍未知字段——但容忍导致配置静默失效+运行时错误，是否缺陷由 auditor 裁）"
+    }
+  },
+  "evidence_weight": "medium-high"
+}

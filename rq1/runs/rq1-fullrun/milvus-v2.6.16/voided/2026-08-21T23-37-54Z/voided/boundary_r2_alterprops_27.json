@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_r2_alterprops_27",
+  "endpoint": "collections+alter_properties, collections+drop_properties",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "constraint_id='boundary' 为 gap。最近邻：milvus_range_collections_querymode_001 / milvus_type_collections_create_009 覆盖 query_mode 枚举（log 对照组证实生效）；契约对 ttl.seconds 取值域、空属性键、drop_properties 空串键均无断言。TTL 校验源码在 task.go（已 Read）但契约未收录其范围。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[alter ttl.seconds=0] 200 {\"code\":0,\"data\":{}} -> DEFECT_FOUND（主观测：TTL=0 即'立即过期'语义值被接受；ttl.seconds=-1 同型 code:0）",
+      "secondary_observations": [
+        "[create schema-mode] 200 {\"code\":0,\"data\":{}}",
+        "[control query_mode='bogus'] 200 {\"code\":65535,\"message\":\"invalid query_mode value \\\"bogus\\\", valid values: [large_topk]\"}（对照组：枚举校验通道活着）",
+        "[alter query_mode=''] 200 {\"code\":65535,...} -> NO_DEFECT（空串在 query_mode 上被正确拒）",
+        "[alter query_mode=null] 200 {\"code\":65535,...,<nil>...} -> NO_DEFECT",
+        "[alter empty key ''] 200 {\"code\":0,\"data\":{}} -> DEFECT_FOUND（空属性键被接受）",
+        "[drop_properties ['']] 200 {\"code\":0,\"data\":{}} -> DEFECT_FOUND（删除空键名 code:0）",
+        "[drop_properties []] 200 {\"code\":1100,\"message\":\"no properties or delete keys provided: invalid parameter\"} -> NO_DEFECT（空数组被拒——对照）",
+        "[alter properties={}] 200 {\"code\":1100,...} -> recorded"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "TTL 0/-1、空属性键以 HTTP 200+code:0 接受；同为非法形状的 drop_properties=[] 则 1100——同端点内选择性校验。"},
+      "reproducibility": "多脚本稳定触发（vein_query_mode_maturity_1.log 独立复现 alter_properties 未校验键名即持久化：unknown properties ['junk_key_abc','query_mod','nprobe'] 写入 collection metadata）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_alterprops_27.py", "vein_scripts/vein_query_mode_maturity_1.py（次观测：未校验属性键持久化）"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "boundary (gap；最近邻 milvus_range_collections_querymode_001 / milvus_type_collections_create_009 均只覆盖 query_mode)",
+      "assertion_text_quoted": "(契约无 ttl.seconds/空属性键/drop_properties 键名断言。query_mode 对照断言：'properties/params.query_mode NOT IN {unset, large_topk} => code 65535'——该断言在 log 对照组被正确执行)",
+      "api_violates_assertion": false,
+      "note": "观测的参数（ttl.seconds、空键、drop_properties 键名）不在任何现有契约断言域内；violates=false 因无断言可违——候选发现的是契约+校验双缺口。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 'boundary' 不存在（gap）；query_mode 断言存在且与对照 log 一致",
+        "doc: 契约源 common.go/task.go（本地已 Read validateCollectionTTL 与 alterCollectionProperties）",
+        "script: boundary_r2_alterprops_27.py 发出 properties{'collection.ttl.seconds':0/-1}、{'':''}、propertyKeys:['']",
+        "log: 三类主观测 http=200 + code:0；query_mode 'bogus'/'' / null 与 drop[] 对照全被拒"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "第一环 gap（无 TTL/键名断言）；行为环自洽且对照组密集。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["func validateCollectionTTL", "CollectionTtlConfigKey", "alterCollectionProperties", "DeleteKeys|PropertyKeys"],
+      "files_examined": [
+        ".milvus-src-2616/internal/proxy/task.go",
+        ".milvus-src-2616/internal/distributed/proxy/httpserver/handler_v2.go",
+        ".milvus-src-2616/pkg/common/common.go"
+      ],
+      "source_excerpt": "task.go:359-370 validateCollectionTTL: `if pair.Key == common.CollectionTTLConfigKey { val, err := strconv.Atoi(pair.Value); if err != nil {...}; if val < -1 || val > common.MaxTTLSeconds { return ... 'collection TTL is out of range, expect [-1, 3155760000], got %d' } }` —— 源码显式允许 [-1, MaxTTLSeconds]，即 0 与 -1 均在 by-design 域内（-1=无 TTL）。common.go:197/200: `CollectionTTLConfigKey = \"collection.ttl.seconds\"; MaxTTLSeconds = 3155760000`。handler_v2.go:844-854 alterCollectionProperties: properties map 直接 fmt.Sprintf 转KeyValuePair，无键名/空键校验；dropCollectionProperties(handler_v2.go:934-939) 将 httpReq.PropertyKeys 原样传 DeleteKeys，仅 REST 层空列表触发 1100。",
+      "call_chain_traced": "alter body properties → handler_v2.go 851-853 逐键转 KV（无键校验）→ proxy alterCollectionTask PreExecute → validateCollectionTTL（-1/0 通过）→ 持久化；drop body propertyKeys → DeleteKeys 原样透传 → 空串键删除成功（无键名校验点）",
+      "verification_outcome": "by_design_in_source",
+      "note": "ttl.seconds=-1 明确 by-design（=禁用 TTL）；0 在源码允许域内（语义'立即过期'，危害性由 auditor 裁）。空属性键与 drop [''] 为真 validation_absent（无任何键名校验点），两存并记。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（query_mode 对照组证明 alter 校验通道活着）", "concurrency"],
+      "surviving": "ttl -1 by-design 抗辩成立（源码注释级语义）；ttl=0 与空键/drop 空串键的抗辩较弱（无显式设计语义，仅'未校验'）"
+    }
+  }
+}

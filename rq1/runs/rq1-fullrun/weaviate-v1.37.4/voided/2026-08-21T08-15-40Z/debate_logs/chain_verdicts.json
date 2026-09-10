@@ -1,0 +1,319 @@
+{
+  "auditor": "chain-auditor",
+  "target": "weaviate",
+  "version": "v1.37.4",
+  "verdicts": [
+    {
+      "defect_id": "boundary_schema_dynamicEfMax_negative",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NOT_AVAILABLE",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE, B=CONFIRMED → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Chain complete with grade A evidence. Source confirms validate() omits negative check for dynamicEfMax (validation_absent). HTTP 200 accepts -1. Objective violation: negative/zero values for search EF parameters violate numerical lower bound (≥1 implied)."
+    },
+    {
+      "defect_id": "boundary_schema_dynamicEfMax_zero",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NOT_AVAILABLE",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE, B=CONFIRMED → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Chain complete with grade A evidence. Source confirms validate() omits zero check for dynamicEfMax. HTTP 200 accepts 0. EF parameters represent search recall limits—zero is semantically invalid. Numerical lower bound violation."
+    },
+    {
+      "defect_id": "boundary_schema_dynamicEfMin_negative",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NOT_AVAILABLE",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE, B=CONFIRMED → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Chain complete with grade A evidence. Source confirms validate() omits negative/zero checks for dynamicEfMin. HTTP 200 accepts -1. EF minimum cannot be negative—objective numerical constraint violation."
+    },
+    {
+      "defect_id": "boundary_schema_dynamicEfMin_zero",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NOT_AVAILABLE",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE, B=CONFIRMED → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Chain complete with grade A evidence. Source confirms validate() omits zero check for dynamicEfMin. HTTP 200 accepts 0. EF minimum of zero disables dynamic EF adjustment—semantically invalid for search parameter."
+    },
+    {
+      "defect_id": "boundary_schema_dynamicEf_inverted",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NOT_AVAILABLE",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE, B=CONFIRMED → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Chain complete with grade A evidence. Source confirms validate() omits pairing check (dynamicEfMin ≤ dynamicEfMax). HTTP 200 accepts inverted pairing (Min=500 > Max=100). Inverted EF range violates semantic invariant—lower bound cannot exceed upper bound."
+    },
+    {
+      "defect_id": "boundary_schema_flatSearchCutoff_negative",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NOT_AVAILABLE",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE, B=CONFIRMED → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Chain complete with grade B evidence. Source confirms validate() omits negative/zero checks for flatSearchCutoff. HTTP 200 accepts -1. Cutoff threshold must be non-negative—objective numerical constraint violation."
+    },
+    {
+      "defect_id": "boundary_schema_replicationFactor_negative",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NOT_AVAILABLE",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE, B=CONFIRMED → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Multi-value matrix proves inconsistent handling: -1/0 silently normalized to 1 (HTTP 200), but 2/100 rejected with explicit HTTP 422 error. If single-node normalization were by-design, ALL invalid values should normalize consistently. Selective normalization of only negative/zero while rejecting valid-but-unavailable cluster values proves validation gap, not intentional behavior. Source confirms three-no pattern (no validation, no logging, no user notification). Official GitHub issue #11401 shows community recognizes silent normalization as problematic, not by-design. Type1: illegal input (-1) accepted with success response when it should be rejected with HTTP 4xx."
+    },
+    {
+      "defect_id": "boundary_schema_replicationFactor_zero",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NOT_AVAILABLE",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE, B=CONFIRMED → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Multi-value matrix proves inconsistent handling: 0/-1 silently normalized to 1 (HTTP 200), but 2/100 rejected with explicit HTTP 422 error. Inconsistent normalization proves validation gap, not by-design single-node behavior. Source confirms three-no pattern (no validation at schema POST, no logging of normalization, no response indication). Official GitHub issue #11401 documents this as problematic behavior acknowledged by community. Type1: semantically invalid input (replicationFactor cannot be 0) accepted with success response when it should be rejected with HTTP 4xx."
+    },
+    {
+      "defect_id": "vein_collection_membership_objects_1",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "设计行为"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "CONFIRMED",
+          "matched_pattern": "auto_schema feature with allowCreateClass flag",
+          "developer_quote": "add.go:95: 'autoSchemaVersion, err := m.autoSchemaManager.autoSchema(ctx, principal, true, fetchedClasses, object)' - passes allowCreateClass=true; auto_schema.go:113-115: conditional rejection 'if schemaClass == nil && !allowCreateClass { return ErrInvalidUserInput{\"given class does not exist\"}}'; auto_schema.go:121-133: automatic creation 'if schemaClass == nil { ... schemaClass, schemaVersion, err = m.createClass(ctx, principal, object.Class, properties) ... classes[object.Class] = versioned.Class{...}}'"
+        },
+        "aggregation_applied": "A=NEUTRAL (no contract constraint), B=CONFIRMED (by-design auto-schema), C=CONFIRMED (HTTP 200 observed), D=CONFIRMED (source confirms auto-schema feature) → final=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "Auto-schema feature by design - allowCreateClass=true enables automatic class creation",
+      "rationale": "Source code confirms HTTP 200 for non-existent class is by-design behavior via auto-schema feature. add.go:95 calls autoSchema with allowCreateClass=true (third parameter). auto_schema.go:113-115 shows class existence validation exists but is conditional: 'if schemaClass == nil && !allowCreateClass { return ErrInvalidUserInput{\"given class does not exist\"}}'. Since allowCreateClass=true, validation is bypassed and auto_schema.go:121-133 creates the class automatically: 'if schemaClass == nil { ... m.createClass(...) }'. Class existence check at add.go:195-196 occurs AFTER auto-schema has already populated fetchedClasses. Other validation tests (tenant/empty/special chars) pass because auto-schema only handles class creation, not other parameter types. No contract constraint requires rejecting non-existent classes. Classification: NOT_DEFECT (documented architectural behavior, not validation_absent)"
+    },
+    {
+      "defect_id": "vein_compound_and_schema_pairing_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NOT_AVAILABLE",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE, B=CONFIRMED → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Chain complete with grade A evidence. 4/4 invalid pairing combinations accepted (inverted/negative/zero/extreme). Source confirms validate() omits pairing check (Min ≤ Max). EF parameters are semantic bounds—inverted pairing (Min > Max) violates objective invariant. Multiple test variants confirm systematic validation_absent."
+    },
+    {
+      "defect_id": "vein_type_mismatch_objects_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "类型恒真"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NOT_AVAILABLE",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE, B=CONFIRMED → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Chain complete with grade A evidence. 4/4 invalid consistencyLevel types accepted (null/numeric/array/object) with HTTP 200 and silent coercion. consistencyLevel is enum parameter—type violation is objective constraint. API accepts non-string values without error indication. Source verification_outcome=not_found_in_source but execution evidence is grade A with reproducible multi-variant confirmation. Type1 violation: enum parameter validation absent."
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "defect": 10,
+    "not_defect": 1,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {
+      "doc": 0,
+      "source": 1,
+      "both": 0,
+      "behavior": 0
+    },
+    "root_cause_distribution": {
+      "auto_schema_feature": 1
+    }
+  }
+}

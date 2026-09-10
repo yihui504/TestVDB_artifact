@@ -1,0 +1,11 @@
+[create schema-mode] 200 {"code":0,"data":{}}
+[control query_mode='bogus'] 200 {"code":65535,"message":"invalid query_mode value \"bogus\", valid values: [large_topk]"}
+[alter query_mode=''] 200 {"code":65535,"message":"invalid query_mode value \"\", valid values: [large_topk]"} -> NO_DEFECT
+[alter query_mode=null] 200 {"code":65535,"message":"invalid query_mode value \"\u003cnil\u003e\", valid values: [large_topk]"} -> NO_DEFECT
+[alter ttl.seconds=0] 200 {"code":0,"data":{}} -> DEFECT_FOUND
+[alter ttl.seconds=-1] 200 {"code":0,"data":{}} -> DEFECT_FOUND
+[alter empty key ''] 200 {"code":0,"data":{}} -> DEFECT_FOUND
+[drop_properties ['']] 200 {"code":0,"data":{}} -> DEFECT_FOUND
+[drop_properties []] 200 {"code":1100,"message":"no properties or delete keys provided: invalid parameter"} -> NO_DEFECT
+[alter properties={}] 200 {"code":1100,"message":"no properties or delete keys provided: invalid parameter"} -> recorded
+VERDICT: DEFECT_FOUND

@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_collection_update_007",
+  "endpoint": "cluster+collection+update",
+  "param": "shard_transfers",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "state_observability_positive",
+  "oracle": {
+    "statement": "create_sharding_key K -> 200 accepted; polling GET /collections/{name}/cluster for up to 12s must show K in local/remote shard ids or in shard_transfers/resharding_operations -> NO_DEFECT; 200-accepted but never observable in any instrument = Type4_StateLogicViolation (progress-is-observable promise broken); 400-rejected move_shard leaving a ghost shard_transfers entry = Type4; 5xx = Type3 with /healthz rechecked; no acceptable carrier = SCRIPT_ERROR",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

@@ -1,0 +1,18 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+create MT class: 200
+create tenant: 200
+insert obj(t1): 200
+GET ?tenant ACTIVE (expect 200): 200
+GET X-Weaviate-Tenant-Header: 422 {"error":[{"message":"repo: object by id: search index stt003: determine shard: class StT003 has multi-tenancy enabled, 
+DEFECT Type2-diagnostic: X-Weaviate-Tenant-Header silently ignored on object GET (says 'request was without tenant') while ?tenant=t1 works — inconsistent tenant transport
+set INACTIVE: 200 [{"activityStatus":"COLD","name":"t1"}]
+
+GET ?tenant INACTIVE: 422 {"error":[{"message":"repo: object by id: search index stt003: determine shard: tenant not active: '
+reactivate: 200
+GET ?tenant reactivated (expect 200): 200
+delete tenant: 200
+GET after tenant delete: 422
+recreate tenant: 200
+GET after tenant recreate (expect 404): 404
+VERDICT: DEFECT_FOUND

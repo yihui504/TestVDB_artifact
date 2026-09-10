@@ -1,0 +1,2273 @@
+{
+ "target": "milvus",
+ "version": "v2.3.22",
+ "cache_ttl_hours": 168,
+ "cached_at": "2026-08-22T00:00:00Z",
+ "sdk": {
+  "package": "pymilvus",
+  "version": "2.3.8",
+  "install_command": "pip install pymilvus==2.3.8"
+ },
+ "docker": {
+  "repo": "milvusdb/milvus",
+  "available_tags": [
+   "v2.3.22"
+  ]
+ },
+ "api_endpoints": [
+  {
+   "path": "v1/vector/collections",
+   "method": "GET",
+   "category": "schema",
+   "description": "List collection names; empty -> empty array (never null)",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false,
+     "default_value": "default"
+    }
+   ]
+  },
+  {
+   "path": "v1/vector/collections/create",
+   "method": "POST",
+   "category": "schema",
+   "description": "Quick-create: CreateCollection(shards=1, consistency=Bounded, autoID=true Int64 PK + FloatVector) then auto index vector_idx then auto-load",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "dimension",
+     "type": "int32",
+     "required": true,
+     "description": "must be non-zero"
+    },
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false,
+     "default_value": "default"
+    },
+    {
+     "name": "metricType",
+     "type": "string",
+     "required": false,
+     "default_value": "L2",
+     "enum_values": [
+      "L2",
+      "IP",
+      "COSINE",
+      "HAMMING",
+      "JACCARD",
+      "SUBSTRUCTURE",
+      "SUPERSTRUCTURE"
+     ]
+    },
+    {
+     "name": "primaryField",
+     "type": "string",
+     "required": false,
+     "default_value": "id"
+    },
+    {
+     "name": "vectorField",
+     "type": "string",
+     "required": false,
+     "default_value": "vector"
+    },
+    {
+     "name": "description",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "enableDynamicField",
+     "type": "bool",
+     "required": false,
+     "default_value": true
+    }
+   ]
+  },
+  {
+   "path": "v1/vector/collections/describe",
+   "method": "GET",
+   "category": "schema",
+   "description": "Describe collection: fields/indexes/load; not found -> code 100; GET only (POST -> HTTP 404)",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true,
+     "description": "query param"
+    }
+   ]
+  },
+  {
+   "path": "v1/vector/collections/drop",
+   "method": "POST",
+   "category": "schema",
+   "description": "Drop collection; non-existent -> error code 100",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "v1/vector/query",
+   "method": "POST",
+   "category": "data",
+   "description": "Query rows by boolean filter expr; limit+offset compose into topK",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "filter",
+     "type": "string",
+     "required": true,
+     "description": "boolean expr"
+    },
+    {
+     "name": "outputFields",
+     "type": "array<string>",
+     "required": false,
+     "default_value": "*"
+    },
+    {
+     "name": "limit",
+     "type": "int32",
+     "required": false
+    },
+    {
+     "name": "offset",
+     "type": "int32",
+     "required": false
+    },
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "partitionNames",
+     "type": "array<string>",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "v1/vector/get",
+   "method": "POST",
+   "category": "data",
+   "description": "Get row by primary key; not found -> empty data array",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "id",
+     "type": "int64|string",
+     "required": true,
+     "description": "scalar by PK type"
+    },
+    {
+     "name": "outputFields",
+     "type": "array<string>",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "v1/vector/delete",
+   "method": "POST",
+   "category": "data",
+   "description": "Delete by id OR filter - exactly one required; 200 code 200 empty data",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "id",
+     "type": "int64|string",
+     "required": false
+    },
+    {
+     "name": "filter",
+     "type": "string",
+     "required": false,
+     "description": "exactly one of id/filter required"
+    }
+   ]
+  },
+  {
+   "path": "v1/vector/insert",
+   "method": "POST",
+   "category": "data",
+   "description": "Insert rows; v1-created collections have autoID=true -> explicit id rejected code 1804; returns insertCount/insertIds",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "data",
+     "type": "array<object>",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v1/vector/upsert",
+   "method": "POST",
+   "category": "data",
+   "description": "Upsert rows; same autoID=true PK constraint as insert; returns upsertCount/upsertIds",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "data",
+     "type": "array<object>",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v1/vector/search",
+   "method": "POST",
+   "category": "search",
+   "description": "Single-vector ANN search (nq fixed 1), consistency hard-coded Bounded, round_decimal -1; empty result -> code 200 empty array",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "vector",
+     "type": "array<float>",
+     "required": true,
+     "description": "single query vector"
+    },
+    {
+     "name": "filter",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "limit",
+     "type": "int32",
+     "required": false,
+     "default_value": 100
+    },
+    {
+     "name": "offset",
+     "type": "int32",
+     "required": false,
+     "default_value": 0
+    },
+    {
+     "name": "outputFields",
+     "type": "array<string>",
+     "required": false
+    },
+    {
+     "name": "params",
+     "type": "object<number>",
+     "required": false,
+     "description": "keys radius, range_filter"
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/collections/list",
+   "method": "POST",
+   "category": "schema",
+   "description": "List collection names",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/collections/has",
+   "method": "POST",
+   "category": "schema",
+   "description": "Check collection exists; returns data with has bool",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/collections/describe",
+   "method": "POST",
+   "category": "schema",
+   "description": "Full schema + indexes + load state",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/collections/get_stats",
+   "method": "POST",
+   "category": "schema",
+   "description": "Collection stats; returns data with rowCount (cardinality API, live-probe used for COUNT consistency checks)",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/collections/get_load_state",
+   "method": "POST",
+   "category": "admin",
+   "description": "Load state: loadState NotLoad|Loading|Loaded, loadProgress 0-100 (-1 on err); NotExist -> collection-not-found error",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionNames",
+     "type": "array<string>",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/collections/create",
+   "method": "POST",
+   "category": "schema",
+   "description": "Create collection: quick-create (dimension) OR explicit schema fields+autoID; v2 quick-create metricType default COSINE; explicit schema autoID default false",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "dimension",
+     "type": "int32",
+     "required": false,
+     "description": "quick-create path (mutually exclusive with schema)"
+    },
+    {
+     "name": "idType",
+     "type": "string",
+     "required": false,
+     "enum_values": [
+      "Int64",
+      "VarChar"
+     ]
+    },
+    {
+     "name": "metricType",
+     "type": "string",
+     "required": false,
+     "default_value": "COSINE",
+     "enum_values": [
+      "L2",
+      "IP",
+      "COSINE",
+      "HAMMING",
+      "JACCARD",
+      "SUBSTRUCTURE",
+      "SUPERSTRUCTURE"
+     ]
+    },
+    {
+     "name": "schema",
+     "type": "object",
+     "required": false,
+     "description": "fields[{fieldName,dataType,isPrimary,isPartitionKey,elementTypeParams{dim,max_length}}]"
+    },
+    {
+     "name": "indexParams",
+     "type": "array<object>",
+     "required": false
+    },
+    {
+     "name": "params",
+     "type": "object",
+     "required": false,
+     "description": "max_length for VarChar PK"
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/collections/drop",
+   "method": "POST",
+   "category": "schema",
+   "description": "Drop collection",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/collections/rename",
+   "method": "POST",
+   "category": "schema",
+   "description": "Rename collection",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "newCollectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "newDbName",
+     "type": "string",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/collections/load",
+   "method": "POST",
+   "category": "admin",
+   "description": "Async load; poll get_load_state",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/collections/release",
+   "method": "POST",
+   "category": "admin",
+   "description": "Release collection -> NotLoad",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/entities/insert",
+   "method": "POST",
+   "category": "data",
+   "description": "Insert entities",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "data",
+     "type": "array<object>",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/entities/upsert",
+   "method": "POST",
+   "category": "data",
+   "description": "Upsert entities",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "data",
+     "type": "array<object>",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/entities/delete",
+   "method": "POST",
+   "category": "data",
+   "description": "Delete entities by filter OR id",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "filter",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "id",
+     "type": "int64|string",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/entities/get",
+   "method": "POST",
+   "category": "data",
+   "description": "Get entity by id",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "id",
+     "type": "int64|string",
+     "required": true
+    },
+    {
+     "name": "outputFields",
+     "type": "array<string>",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/entities/query",
+   "method": "POST",
+   "category": "data",
+   "description": "Query entities by boolean filter (required)",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "filter",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "outputFields",
+     "type": "array<string>",
+     "required": false
+    },
+    {
+     "name": "limit",
+     "type": "int32",
+     "required": false
+    },
+    {
+     "name": "offset",
+     "type": "int32",
+     "required": false
+    },
+    {
+     "name": "partitionNames",
+     "type": "array<string>",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/entities/search",
+   "method": "POST",
+   "category": "search",
+   "description": "ANN search; data supports multiple vectors (unlike v1 nq=1); params map string->float64 numeric only",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "data",
+     "type": "array<array<float>>",
+     "required": true,
+     "description": "supports multiple vectors"
+    },
+    {
+     "name": "annsField",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "filter",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "limit",
+     "type": "int32",
+     "required": false
+    },
+    {
+     "name": "offset",
+     "type": "int32",
+     "required": false
+    },
+    {
+     "name": "outputFields",
+     "type": "array<string>",
+     "required": false
+    },
+    {
+     "name": "params",
+     "type": "map<string,float64>",
+     "required": false,
+     "description": "numeric values only"
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/partitions/list",
+   "method": "POST",
+   "category": "admin",
+   "description": "List partitions",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/partitions/has",
+   "method": "POST",
+   "category": "admin",
+   "description": "Check partition exists",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/partitions/stats",
+   "method": "POST",
+   "category": "admin",
+   "description": "Partition stats",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/partitions/create",
+   "method": "POST",
+   "category": "admin",
+   "description": "Create partition",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/partitions/drop",
+   "method": "POST",
+   "category": "admin",
+   "description": "Drop partition",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/partitions/load",
+   "method": "POST",
+   "category": "admin",
+   "description": "Load partitions",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionNames",
+     "type": "array<string>",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/partitions/release",
+   "method": "POST",
+   "category": "admin",
+   "description": "Release partitions",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionNames",
+     "type": "array<string>",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/users/list",
+   "method": "POST",
+   "category": "admin",
+   "description": "List users",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": []
+  },
+  {
+   "path": "v2/vectordb/users/describe",
+   "method": "POST",
+   "category": "admin",
+   "description": "Describe user",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "userName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/users/create",
+   "method": "POST",
+   "category": "admin",
+   "description": "Create user",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "userName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "password",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/users/update_password",
+   "method": "POST",
+   "category": "admin",
+   "description": "Update password",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "userName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "password",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "newPassword",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/users/drop",
+   "method": "POST",
+   "category": "admin",
+   "description": "Drop user",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "userName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "password",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/users/grant_role",
+   "method": "POST",
+   "category": "admin",
+   "description": "Grant role to user",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "userName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "roleName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/users/revoke_role",
+   "method": "POST",
+   "category": "admin",
+   "description": "Revoke role from user",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "userName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "roleName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/roles/list",
+   "method": "POST",
+   "category": "admin",
+   "description": "List roles",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": []
+  },
+  {
+   "path": "v2/vectordb/roles/describe",
+   "method": "POST",
+   "category": "admin",
+   "description": "Describe role",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "roleName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/roles/create",
+   "method": "POST",
+   "category": "admin",
+   "description": "Create role",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "roleName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/roles/drop",
+   "method": "POST",
+   "category": "admin",
+   "description": "Drop role",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "roleName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/roles/grant_privilege",
+   "method": "POST",
+   "category": "admin",
+   "description": "Grant privilege to role",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "roleName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "objectType",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "objectName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "privilege",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/roles/revoke_privilege",
+   "method": "POST",
+   "category": "admin",
+   "description": "Revoke privilege from role",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "roleName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "objectType",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "objectName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "privilege",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/indexes/list",
+   "method": "POST",
+   "category": "index",
+   "description": "List indexes; each item {indexName, fieldName, state}",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/indexes/describe",
+   "method": "POST",
+   "category": "index",
+   "description": "Describe index; returns metricType, indexType, totalRows, pendingRows, indexedRows, state (InProgress|Finished|Failed|Retry), failReason",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "indexName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/indexes/create",
+   "method": "POST",
+   "category": "index",
+   "description": "Create index",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "indexParams",
+     "type": "array<object>",
+     "required": true,
+     "description": "each {fieldName, indexName, metricType, params{index_type, M, efConstruction, nlist, ...}}"
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/indexes/drop",
+   "method": "POST",
+   "category": "index",
+   "description": "Drop index",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "indexName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/aliases/list",
+   "method": "POST",
+   "category": "admin",
+   "description": "List aliases",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": []
+  },
+  {
+   "path": "v2/vectordb/aliases/describe",
+   "method": "POST",
+   "category": "admin",
+   "description": "Describe alias",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "aliasName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/aliases/create",
+   "method": "POST",
+   "category": "admin",
+   "description": "Create alias pointing to collection",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "aliasName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/aliases/drop",
+   "method": "POST",
+   "category": "admin",
+   "description": "Drop alias",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "aliasName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v2/vectordb/aliases/alter",
+   "method": "POST",
+   "category": "admin",
+   "description": "Alter alias target collection",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "parameters": [
+    {
+     "name": "aliasName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "healthz",
+   "method": "GET",
+   "category": "admin",
+   "description": "Health check on management port 9091, returns OK (live-verified)",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/http/healthz/healthz_handler.go",
+   "doc_version": "v2.3.22",
+   "parameters": []
+  }
+ ],
+ "endpoint_registry": [
+  {
+   "path": "v1/vector/collections",
+   "method": "GET",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "200 with data as name array; empty -> empty array (never null)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1/vector/collections/create",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "CreateCollection then CreateIndex then LoadCollection; dimension required non-zero; autoID=true Int64 PK + FloatVector",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1/vector/collections/describe",
+   "method": "GET",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "not found -> code 100 collection not found; GET only - POST returns HTTP 404 page not found",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1/vector/collections/drop",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "200 code 200; non-existent -> error code 100",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1/vector/query",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "invalid filter -> 1804-family; limit+offset compose into topK",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1/vector/get",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "200 with row; not found -> empty data array",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1/vector/delete",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "id (opt) OR filter (opt) - exactly one required; 200 code 200 empty data",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1/vector/insert",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "200 with insertCount and insertIds; autoID=true -> explicit id fails code 1804",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1/vector/upsert",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "200 with upsertCount and upsertIds; same autoID PK constraint",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1/vector/search",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "range_filter without radius rejected code 1802; empty result -> code 200 empty array",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/collections/list",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "List collection names",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/collections/has",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Check collection exists; returns data with has bool",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/collections/describe",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Full schema + indexes + load state",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/collections/get_stats",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "data {rowCount}",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/collections/get_load_state",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "data loadState NotLoad|Loading|Loaded, loadProgress int (-1 on err); NotExist mapped to collection-not-found error",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/collections/create",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "idType can only be [Int64, VarChar], default: Int64; data type X is invalid (case sensitive)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/collections/drop",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Drop collection",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/collections/rename",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Rename collection",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/collections/load",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Async load; poll get_load_state",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/collections/release",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Release collection -> NotLoad",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/entities/insert",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Insert entities",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/entities/upsert",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Upsert entities",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/entities/delete",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Delete entities by filter OR id",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/entities/get",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Get entity by id",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/entities/query",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Query entities by boolean filter (required)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/entities/search",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "data (req array - supports multiple vectors, unlike v1); params map string->float64, numeric only",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/partitions/list",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "List partitions",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/partitions/has",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Check partition exists",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/partitions/stats",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Partition stats",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/partitions/create",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Create partition",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/partitions/drop",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Drop partition",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/partitions/load",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Load partitions",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/partitions/release",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Release partitions",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/users/list",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "List users",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/users/describe",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Describe user",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/users/create",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Create user",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/users/update_password",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Update password",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/users/drop",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Drop user",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/users/grant_role",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Grant role to user",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/users/revoke_role",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Revoke role from user",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/roles/list",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "List roles",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/roles/describe",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Describe role",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/roles/create",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Create role",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/roles/drop",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Drop role",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/roles/grant_privilege",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Grant privilege to role",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/roles/revoke_privilege",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Revoke privilege from role",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/indexes/list",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "List indexes; each item {indexName, fieldName, state}",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/indexes/describe",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Describe index; returns metricType, indexType, totalRows, pendingRows, indexedRows, state (InProgress|Finished|Failed|Retry), failReason",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/indexes/create",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Create index",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/indexes/drop",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Drop index",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/aliases/list",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "List aliases",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/aliases/describe",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Describe alias",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/aliases/create",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Create alias pointing to collection",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/aliases/drop",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Drop alias",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v2/vectordb/aliases/alter",
+   "method": "POST",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Alter alias target collection",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "healthz",
+   "method": "GET",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/http/healthz/healthz_handler.go",
+   "doc_version": "v2.3.22",
+   "doc_quote": "Health check on management port 9091, returns OK (live-verified)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  }
+ ],
+ "constraints": {
+  "type_constraints": [
+   {
+    "constraint_id": "milvus_type_create_collection_001",
+    "endpoint": "v1/vector/collections/create",
+    "description": "metricType must be one of L2/IP/COSINE/HAMMING/JACCARD/SUBSTRUCTURE/SUPERSTRUCTURE",
+    "assertion": "metricType in [L2, IP, COSINE, HAMMING, JACCARD, SUBSTRUCTURE, SUPERSTRUCTURE]",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/pkg/util/metric/metric_type.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_v2_create_collection_001",
+    "endpoint": "v2/vectordb/collections/create",
+    "description": "idType enum Int64/VarChar; invalid value rejected with message: idType can only be [Int64, VarChar], default: Int64",
+    "assertion": "idType in [Int64, VarChar]",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_v2_create_collection_002",
+    "endpoint": "v2/vectordb/collections/create",
+    "description": "field dataType is case-sensitive; wrong case rejected with: data type X is invalid(case sensitive)",
+    "assertion": "schema.fields[].dataType must match exact case-sensitive DataType string",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_v2_search_001",
+    "endpoint": "v2/vectordb/entities/search",
+    "description": "params map values must be numeric (string->float64)",
+    "assertion": "params is map<string, float64> numeric values only",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/request_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_v1_search_001",
+    "endpoint": "v1/vector/search",
+    "description": "id int64 serialization: header Accept-Type-Allow-Int64 true returns int64 ids as JSON numbers, default returns strings",
+    "assertion": "Accept-Type-Allow-Int64 header controls int64 id JSON encoding (number vs string)",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/constant.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_data_types_001",
+    "endpoint": "v2/vectordb/collections/create",
+    "description": "supported dataType strings: Int64, VarChar, FloatVector, BinaryVector, Bool, Float, Double, JSON, Array",
+    "assertion": "dataType in [Int64, VarChar, FloatVector, BinaryVector, Bool, Float, Double, JSON, Array]",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/request_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   }
+  ],
+  "range_constraints": [
+   {
+    "constraint_id": "milvus_range_create_collection_001",
+    "endpoint": "v1/vector/collections/create",
+    "description": "dimension required and non-zero; missing or 0 -> code 1802 with message: required parameters: [collectionName, dimension]",
+    "assertion": "dimension != 0 and dimension present",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/pkg/util/merr/errors.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_range_search_001",
+    "endpoint": "v1/vector/search",
+    "description": "missing collectionName or vector -> code 1802, required parameters: [collectionName, vector]",
+    "assertion": "collectionName and vector required; else code 1802",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/pkg/util/merr/errors.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_range_v1_search_defaults_001",
+    "endpoint": "v1/vector/search",
+    "description": "limit default 100, offset default 0",
+    "assertion": "limit default_value = 100",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_range_get_load_state_001",
+    "endpoint": "v2/vectordb/collections/get_load_state",
+    "description": "loadProgress is 0-100; >=100 means LoadStateLoaded; -1 on error",
+    "assertion": "loadProgress in [0, 100] when state Loaded",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_range_v2_query_limit_001",
+    "endpoint": "v2/vectordb/entities/query",
+    "description": "R2 消解：query limit 语义应与 search topk 一致（正值域 [1,16384]）；limit<=0 静默全量返回与 search 拒绝形成同参数两面语义矛盾（实测 008/vein_002 两链）",
+    "assertion": "v2 entities/query limit >= 1 且 <= 16384，否则业务码拒绝（同 v1 topk）",
+    "type": "range_constraint",
+    "evidence_tier": "inferred",
+    "source_url": "go-func: handler_v2.go:565 (if httpReq.Limit > 0 静默丢弃) vs :879 (search 无条件 TopK=Limit)",
+    "source_status": "reachable",
+    "source_verified": true
+   }
+  ],
+  "state_constraints": [
+   {
+    "constraint_id": "milvus_state_insert_001",
+    "endpoint": "v1/vector/insert",
+    "description": "v1-created collections force autoID=true -> explicit id in insert data fails code 1804 with message: fail to deal the insert data, error: invalid parameter[expected=][actual=set primary key but autoID == true]; insert without id succeeds (server generates id)",
+    "assertion": "autoID==true AND explicit id in data -> code 1804",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/pkg/util/merr/errors.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_state_upsert_001",
+    "endpoint": "v1/vector/upsert",
+    "description": "upsert on autoID collection rejected: cannot upsert an autoID collection",
+    "assertion": "autoID==true collection -> upsert rejected",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_state_v2_create_001",
+    "endpoint": "v2/vectordb/collections/create",
+    "description": "explicit schema: autoID default false -> client must supply PK in insert; contrast with v1 quick-create",
+    "assertion": "v2 explicit schema autoID default == false (client supplies id)",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/request_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_state_create_collection_001",
+    "endpoint": "v1/vector/collections/create",
+    "description": "collection auto-loaded after v1 quick-create (composite create->CreateIndex->LoadCollection); duplicate name -> already-exists error",
+    "assertion": "after create success, load state becomes Loaded without explicit load call",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_state_search_001",
+    "endpoint": "v1/vector/search",
+    "description": "search/query require Loaded state; release returns to NotLoad; state machine NotExist->NotLoad->Loading->Loaded",
+    "assertion": "search on NotLoad collection -> error until Loaded",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_state_release_001",
+    "endpoint": "v2/vectordb/collections/release",
+    "description": "release returns collection to NotLoad; load is async (poll get_load_state)",
+    "assertion": "after release, loadState == NotLoad",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   }
+  ]
+ },
+ "assertions": [
+  {
+   "assertion_id": "milvus_behavioral_describe_001",
+   "endpoint": "v1/vector/collections/describe",
+   "description": "describe non-existent collection -> code 100 message collection not found[database=default][collection=nope]",
+   "category": "behavioral",
+   "expected_behavior": "HTTP 200 with body code 100, not HTTP 4xx",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type1_IllegalSuccess"
+  },
+  {
+   "assertion_id": "milvus_behavioral_describe_002",
+   "endpoint": "v1/vector/collections/describe",
+   "description": "describe is GET-only: POST with JSON body returns HTTP 404 page not found",
+   "category": "behavioral",
+   "expected_behavior": "HTTP 404 for POST to GET-only route (unmatched-route)",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type3_RuntimeFailure"
+  },
+  {
+   "assertion_id": "milvus_behavioral_drop_001",
+   "endpoint": "v1/vector/collections/drop",
+   "description": "drop non-existent collection -> error code 100",
+   "category": "behavioral",
+   "expected_behavior": "HTTP 200 body with code 100",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type4_StateLogicViolation"
+  },
+  {
+   "assertion_id": "milvus_behavioral_search_001",
+   "endpoint": "v1/vector/search",
+   "description": "search with range_filter but no radius -> rejected code 1802 invalid search params (rangeFilterOk requires radiusOk)",
+   "category": "behavioral",
+   "expected_behavior": "HTTP 200 body code 1802; range_filter requires radius",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type1_IllegalSuccess"
+  },
+  {
+   "assertion_id": "milvus_behavioral_search_002",
+   "endpoint": "v1/vector/search",
+   "description": "empty result (TopK==0 / empty collection) -> code 200 with empty array",
+   "category": "behavioral",
+   "expected_behavior": "code 200, empty result array, no error",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type2_PoorDiagnostics"
+  },
+  {
+   "assertion_id": "milvus_behavioral_search_003",
+   "endpoint": "v1/vector/search",
+   "description": "vector dim mismatch with collection dim -> 1804-family error",
+   "category": "behavioral",
+   "expected_behavior": "code 1804 invalid data on dim mismatch",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type1_IllegalSuccess"
+  },
+  {
+   "assertion_id": "milvus_behavioral_get_001",
+   "endpoint": "v1/vector/get",
+   "description": "get non-existent id -> code 200 with empty data array",
+   "category": "behavioral",
+   "expected_behavior": "success envelope with empty data, not not-found error",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type2_PoorDiagnostics"
+  },
+  {
+   "assertion_id": "milvus_behavioral_query_001",
+   "endpoint": "v1/vector/query",
+   "description": "invalid filter -> 1804-family error; limit+offset compose into topK",
+   "category": "behavioral",
+   "expected_behavior": "code 1804 for invalid boolean expr",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type1_IllegalSuccess"
+  },
+  {
+   "assertion_id": "milvus_behavioral_delete_001",
+   "endpoint": "v1/vector/delete",
+   "description": "delete requires exactly one of id/filter; both missing -> code 1802 required parameters: [collectionName, id/filter]",
+   "category": "behavioral",
+   "expected_behavior": "code 1802 missing id/filter",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type1_IllegalSuccess"
+  },
+  {
+   "assertion_id": "milvus_behavioral_error_envelope_001",
+   "endpoint": "v1/vector/search",
+   "description": "REST error model: most business errors reported as HTTP 200 + nonzero body code (100/1802/1804...), not 4xx/5xx; only auth 401/403, timeout middleware, unmatched-route 404 fall outside",
+   "category": "behavioral",
+   "expected_behavior": "business error -> HTTP 200 with body code != 200",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/pkg/util/merr/errors.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type1_IllegalSuccess"
+  },
+  {
+   "assertion_id": "milvus_behavioral_insert_001",
+   "endpoint": "v1/vector/insert",
+   "description": "insert success returns insertCount and insertIds; server-generated ids when autoID=true",
+   "category": "behavioral",
+   "expected_behavior": "code 200 with insertCount/insertIds",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22"
+  },
+  {
+   "assertion_id": "milvus_behavioral_list_001",
+   "endpoint": "v1/vector/collections",
+   "description": "listCollections empty -> empty array (never null)",
+   "category": "behavioral",
+   "expected_behavior": "data is [] when no collections",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type2_PoorDiagnostics"
+  },
+  {
+   "assertion_id": "milvus_behavioral_load_state_001",
+   "endpoint": "v2/vectordb/collections/get_load_state",
+   "description": "NotExist mapped to collection-not-found error (source handler_v2.go:432-480)",
+   "category": "behavioral",
+   "expected_behavior": "get_load_state on missing collection -> collection-not-found error",
+   "evidence_tier": "explicit",
+   "source_verified": true,
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.3.22",
+   "defect_type_if_violated": "Type4_StateLogicViolation"
+  }
+ ],
+ "behavioral_contracts": [
+  {
+   "contract_id": "milvus_bc_error_envelope",
+   "description": "REST error model: business errors use HTTP 200 + nonzero body code",
+   "scenario": "any v1/v2 request with invalid param / missing collection / bad data",
+   "expected_behavior": "HTTP 200 with body code in {100 collection not found, 1802 missing/invalid params, 1804 invalid data}; only auth(401/403), timeout, unmatched-route(404) are non-200",
+   "related_endpoints": [
+    "v1/vector/search",
+    "v1/vector/collections/describe",
+    "v1/vector/insert"
+   ],
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/pkg/util/merr/errors.go"
+  },
+  {
+   "contract_id": "milvus_bc_create_query_visibility",
+   "description": "create->list/describe visibility",
+   "scenario": "create collection then listCollections",
+   "expected_behavior": "new collection name appears in list; describe returns schema/indexes/load",
+   "related_endpoints": [
+    "v1/vector/collections/create",
+    "v1/vector/collections"
+   ],
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go"
+  },
+  {
+   "contract_id": "milvus_bc_drop_invisibility",
+   "description": "drop->query invisibility",
+   "scenario": "drop collection then listCollections/describe",
+   "expected_behavior": "name absent from list; describe -> code 100 collection not found",
+   "related_endpoints": [
+    "v1/vector/collections/drop",
+    "v1/vector/collections/describe"
+   ],
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go"
+  },
+  {
+   "contract_id": "milvus_bc_v1_vs_v2_semantics",
+   "description": "v1 vs v2 semantic divergence: metricType default, PK policy, search arity",
+   "scenario": "same operation via v1 and v2",
+   "expected_behavior": "v1: default metric L2, autoID=true forced, search nq=1 single vector, consistency hard-coded Bounded; v2: quick-create default metric COSINE, explicit schema autoID=false (client supplies id), search data supports multiple vectors",
+   "related_endpoints": [
+    "v1/vector/collections/create",
+    "v2/vectordb/collections/create",
+    "v1/vector/search",
+    "v2/vectordb/entities/search"
+   ],
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go"
+  },
+  {
+   "contract_id": "milvus_bc_radius_range_filter",
+   "description": "range search coupling: range_filter requires radius",
+   "scenario": "v1 search with params {range_filter: X} but no radius",
+   "expected_behavior": "rejected code 1802 invalid search params; with radius present both are honored as range search",
+   "related_endpoints": [
+    "v1/vector/search"
+   ],
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go"
+  },
+  {
+   "contract_id": "milvus_bc_consistency_bounded",
+   "description": "v1 consistency hard-coded Bounded, not a request parameter (2.3.x)",
+   "scenario": "v1 create/search",
+   "expected_behavior": "consistency level Bounded applied server-side (source lines 228, 852); cannot be overridden via REST request in 2.3.x",
+   "related_endpoints": [
+    "v1/vector/collections/create",
+    "v1/vector/search"
+   ],
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go"
+  }
+ ],
+ "state_invariants": [
+  {
+   "invariant_id": "milvus_inv_created_queryable",
+   "description": "collection created -> queryable via describe/list",
+   "assertion": "after successful create, collections/describe returns code 200 and name in list",
+   "scope": "global",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go"
+  },
+  {
+   "invariant_id": "milvus_inv_dropped_absent",
+   "description": "collection dropped -> absent",
+   "assertion": "after successful drop, describe -> code 100 collection not found",
+   "scope": "global",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go"
+  },
+  {
+   "invariant_id": "milvus_inv_count_consistency",
+   "description": "insert N entities -> rowCount == N (get_stats)",
+   "assertion": "after inserting N rows, collections/get_stats data.rowCount == N",
+   "scope": "per_collection",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go"
+  },
+  {
+   "invariant_id": "milvus_inv_load_lifecycle",
+   "description": "load state machine NotExist->NotLoad->Loading->Loaded; release returns NotLoad; search/query require Loaded [R2 消解 2026-08-22：v2 create 路径尾部无条件 LoadCollection（handler_v2.go:1165，quick/explicit 两分支汇合）= auto-load 例外；显式 load/release 语义仅约束 v1 路径与显式调用]",
+   "assertion": "loadState in [NotLoad, Loading, Loaded]; after release loadState == NotLoad; search before Loaded fails",
+   "scope": "per_collection",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+   "note_rework": "contract self-conflict resolved: v2 create auto-load by-design (source-verified); semantic_load_state_07 behavior == amended contract"
+  },
+  {
+   "invariant_id": "milvus_inv_autoid_pk",
+   "description": "autoID=true collection: client PK in insert rejected; autoID=false: client must supply PK",
+   "assertion": "autoID==true AND explicit id -> code 1804; autoID==false AND missing id -> error",
+   "scope": "per_collection",
+   "source_url": "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go"
+  }
+ ],
+ "data_types": [
+  {
+   "name": "Int64",
+   "description": "64-bit integer; JSON number or string per Accept-Type-Allow-Int64 header"
+  },
+  {
+   "name": "VarChar",
+   "description": "string; max_length from params.elementTypeParams"
+  },
+  {
+   "name": "FloatVector",
+   "description": "float32 vector; dim from elementTypeParams.dim / v1 dimension"
+  },
+  {
+   "name": "BinaryVector",
+   "description": "binary vector; dim required"
+  },
+  {
+   "name": "Bool",
+   "description": "boolean"
+  },
+  {
+   "name": "Float",
+   "description": "32-bit float"
+  },
+  {
+   "name": "Double",
+   "description": "64-bit float"
+  },
+  {
+   "name": "JSON",
+   "description": "JSON object field; filter supports field[key] access"
+  },
+  {
+   "name": "Array",
+   "description": "array field; elementType case-sensitive"
+  },
+  {
+   "name": "MetricType",
+   "description": "L2 (euclidean), IP (inner product), COSINE, HAMMING, JACCARD, SUBSTRUCTURE, SUPERSTRUCTURE (pkg/util/metric)"
+  },
+  {
+   "name": "ConsistencyLevel",
+   "description": "Strong, Bounded, Session, Eventually; v1 REST hard-codes Bounded (not exposed as request param in 2.3.x)"
+  },
+  {
+   "name": "LoadState",
+   "description": "NotExist | NotLoad | Loading | Loaded; get_load_state loadProgress 0-100, >=100 -> Loaded"
+  },
+  {
+   "name": "IndexState",
+   "description": "InProgress | Finished | Failed | Retry; failReason populated on Failed"
+  },
+  {
+   "name": "FilterExpr",
+   "description": "boolean expr: ==, !=, >, >=, <, <=, in [...], like, and/or/not, field[key] JSON access, array contains"
+  }
+ ],
+ "_passport": {
+  "schema_version": "2.0",
+  "contract_hash": "sha256:43f86ab0cc9eb57cd56128a87abe318bcd35e82772452765d6e60de986c4d0c4",
+  "contract_hash_algorithm": "sha256",
+  "source": {
+   "doc_urls": [
+    "https://github.com/milvus-io/milvus/tree/v2.3.22",
+    "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v1.go",
+    "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/handler_v2.go",
+    "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/request.go",
+    "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/request_v2.go",
+    "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/distributed/proxy/httpserver/constant.go",
+    "https://github.com/milvus-io/milvus/blob/v2.3.22/pkg/util/metric/metric_type.go",
+    "https://github.com/milvus-io/milvus/blob/v2.3.22/pkg/util/merr/errors.go",
+    "https://github.com/milvus-io/milvus/blob/v2.3.22/internal/http/healthz/healthz_handler.go",
+    "http://localhost:19530/v1/ (live probe, standalone v2.3.22)"
+   ],
+   "doc_version": "v2.3.22",
+   "crawl_method": "source-derived (local git tag mirror + live probe)",
+   "crawled_at": "2026-08-22T00:00:00Z"
+  },
+  "generation": {
+   "knowledge_extractor_agent": "testvdb:knowledge-extractor",
+   "contract_formalizer_agent": "testvdb:contract-formalizer",
+   "generated_at": "2026-08-22T00:00:00Z",
+   "cache_ttl_hours": 168
+  },
+  "integrity": {
+   "verified": true,
+   "verified_at": "2026-08-22T00:00:00Z",
+   "core_crud_coverage_pct": 100,
+   "endpoint_count": 56,
+   "constraint_count": 16
+  }
+ }
+}

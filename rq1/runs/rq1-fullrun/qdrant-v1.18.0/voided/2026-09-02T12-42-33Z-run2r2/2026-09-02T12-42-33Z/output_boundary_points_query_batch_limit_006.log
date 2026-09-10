@@ -1,0 +1,23 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+L1 limit=1 (min legal closure) -> batch status=200, single status=200
+batch raw: {"result":[{"points":[{"id":4,"version":1,"score":0.999992}]}],"status":"ok","time":0.000455398}
+single raw: {"result":{"points":[{"id":4,"version":1,"score":0.999992}]},"status":"ok","time":0.00068549}
+L1 limit=1 (min legal closure): upheld on both faces (exactly 1 point each)
+
+L0 limit=0 (min-1 boundary) -> batch status=422, single status=422
+batch raw: {"status":{"error":"Validation error in JSON body: [searches[0].internal.limit: value 0 invalid, must be 1 or larger]"},"time":0.0}
+single raw: {"status":{"error":"Validation error in JSON body: [internal.limit: value 0 invalid, must be 1 or larger]"},"time":0.0}
+L0 limit=0 (min-1 boundary): clean rejection on both faces (batch=422, single=422); diagnostics name the limit construct
+
+Lneg limit=-1 (negative) -> batch status=400, single status=400
+batch raw: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 71"},"time":0.0}
+single raw: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 57"},"time":0.0}
+Lneg limit=-1 (negative): clean rejection on both faces (batch=400, single=400); diagnostics name the limit construct
+
+Ltype limit="3" (string) -> batch status=400, single status=400
+batch raw: {"status":{"error":"Format error in JSON body: invalid type: string \"3\", expected usize at line 1 column 72"},"time":0.0}
+single raw: {"status":{"error":"Format error in JSON body: invalid type: string \"3\", expected usize at line 1 column 58"},"time":0.0}
+Ltype limit="3" (string): clean rejection on both faces (batch=400, single=400); diagnostics name the limit construct
+VERDICT: NO_DEFECT

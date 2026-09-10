@@ -1,0 +1,95 @@
+{
+  "defect_id": "boundary_index_delete_004",
+  "endpoint": "index+delete (DELETE /collections/{collection_name}/index/{field_name})",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists for this contract; the WebFetch channel was domain-blocked ('Unable to verify if domain api.qdrant.tech is safe to fetch') but the alternate reader channel fetched both the HTML page and the .md version with full content => PASS. Version: page version selector and URL segment show v1.18.x vs target v1.18.0 (major.minor match) => PASS. Endpoint: page documents DELETE /collections/:collection_name/index/:field_name, exact match with endpoint_registry (path index+delete, method DELETE) and the tested route => PASS. Content: PARTIAL - (a) the 200 'Deleted / successful operation' face IS documented; (b) field_name is documented as 'string Required - Name of the field where to delete the index' with NO charset/format/json-path constraint (the source repo's own OpenAPI template openapi-collections.ytt.yaml:207-212 likewise declares plain type: string), which SUPPORTS the script premise that doc-legal plain strings were rejected; (c) HOWEVER the assertion's '(existing or not)' unconditional qualifier and the 'missing collection returns 404' prose are NOT found verbatim on the delete-field-index page (the .md shows only the 200 response block) nor on the qdrant.tech payload concept page (no idempotent-delete prose); contract's own source_verified flag was already false. The endpoint_registry doc_quote 'Deleting a non-existent index succeeds (idempotent 200)...' was not located verbatim on either page fetched now.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "DEFECT: (space) route-preserving well-formed path param value=' ' got HTTP 400; the promise 'index deletion (existing or not) returns HTTP 200' is unconditional - legal input rejected - Type1_IllegalSuccess signal - raw={\"status\":{\"error\":\"Deserialize error in path parameters: Invalid json path: ' '\"},\"time\":0.0} (qdrant_behavioral_index_delete_001)",
+      "secondary_observations": [
+        "[leg 'embedded-space-name' value='f kw' class=promise] status=400 raw={\"status\":{\"error\":\"Deserialize error in path parameters: Invalid json path: 'f kw'\"},\"time\":0.0}",
+        "[leg 'unicode' value='中文🎯' class=promise] status=400 raw={\"status\":{\"error\":\"Deserialize error in path parameters: Invalid json path: '中文🎯'\"},\"time\":0.0}",
+        "[leg 'encoded-dotdot-lit' value='%2e%2e' class=promise] status=400 raw={\"status\":{\"error\":\"Deserialize error in path parameters: Invalid json path: '..'\"},\"time\":0.0} (server decoded %2e%2e to '..' — decode verified by the error echo)",
+        "[leg 'overlong-1024' value='aaaaaaaaaaaaaaaaaaaa...len=1024' class=measured] status=200 raw={\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.289143689} — grammar-valid name ('a'*1024, alphanumeric-only) got the promised 200 idempotent success: the promise HOLDS on the grammar-legal domain",
+        "[leg 'empty' value='' class=measured] status=404 raw= (empty segment -> trailing-slash route shift)",
+        "[leg 'embedded-slash' value='sl/ash' class=measured] status=404 raw= (extra path segment -> route shift)",
+        "[leg 'control-char' value='ctrl\\x01x' class=measured] status=400 raw={\"status\":{\"error\":\"Deserialize error in path parameters: Invalid json path: 'ctrl\\u0001x'\"},\"time\":0.0}",
+        "[leg 'nul-byte' value='nul\\x00byte' class=measured] status=400 raw={\"status\":{\"error\":\"Deserialize error in path parameters: Invalid json path: 'nul\\u0000byte'\"},\"time\":0.0}",
+        "cross-face same-family comparison (rest, index+create body field_name): output_boundary_index_create_004.log:17 [probe field_name '' (empty string)] body={\"field_name\": \"\", \"field_schema\": {\"type\": \"keyword\"}} -> status=400 raw={\"status\":{\"error\":\"Format error in JSON body: Invalid json path: '' at line 1 column 17\"},\"time\":0.0}",
+        "cross-face same-family comparison (rest, index+create body field_name): output_boundary_index_create_008.log:5 [probe unicode 城市🎯field] -> status=400 raw={\"status\":{\"error\":\"Format error in JSON body: Invalid json path: '城市🎯field' at line 1 column 46\"},\"time\":0.0} — same-value disposition on the create face: also rejected (consistent grammar enforcement across faces)",
+        "cross-face (grpc): no live gRPC probe in this sandbox (face_unavailable at runtime), but the gRPC conversion sites enforce the identical grammar (lib/api/src/conversions/json.rs:44-47 json_path_from_proto -> Status::invalid_argument(\"Invalid json path: '{a}'\"), called for field_name at src/tonic/api/update_common.rs:719/761/794/825)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "Mirror image of the 2xx-antipattern: malformed/grammar-invalid parameter values were returned as proper HTTP 400 with a descriptive body that echoes the offending value ('Invalid json path: <value>'). The dispute is not error-transport hygiene but whether these values are legal input at all — the documentation publishes no charset constraint while the runtime enforces one."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["boundary_index_delete_004"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_index_delete_001",
+      "assertion_text_quoted": "index deletion (existing or not) returns HTTP 200; missing collection returns 404",
+      "api_violates_assertion": true,
+      "note": "api_violates_assertion=true chosen honestly per the self-check: the observed dispositions (HTTP 400) for plain-string field_name values on a live collection with no index are outside the asserted 200-promise and outside any documented charset restriction — field_name is documented (page + OpenAPI ytt + JsonPath's own JsonSchema impl) as unconstrained string, so at the doc face these inputs are legal and the 400 contradicts the quote. The competing reading — that the promise's domain presumes grammar-valid names per the source's JsonPath grammar (unquoted keys limited to alphanumeric/_/-, quoting escape hatch exists so '\"f kw\"' with literal double quotes would parse) — is a source-level mitigation the doc never states; it cannot flip the doc-face violation and is left to the auditor.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: structured_contract.json /assertions/45 qdrant_behavioral_index_delete_001, endpoint index+delete, evidence_tier explicit, source_url https://api.qdrant.tech/v-1-18-x/api-reference/indexes/delete-field-index, expected_behavior 'index deletion (existing or not) returns HTTP 200; missing collection returns 404' — NOTE: the dispatch row in candidates.jsonl carried constraint_id=\"\" (truncated attack string too); the constraint was recovered from the script header (constraint_ids: qdrant_behavioral_index_delete_001, qdrant_state_index_delete_001) and the log DEFECT citations, and it EXISTS in the contract",
+        "doc: v-1-18-x delete-field-index page documents DELETE /collections/:collection_name/index/:field_name, 200 Deleted (successful operation) with result{status,operation_id}, and field_name 'string Required' with NO charset constraint — link PARTIAL not broken: the 200-deletion face is documented, but the '(existing or not)' unconditional qualifier is contract phrasing, not verbatim doc prose (page and payload concept page both lack it)",
+        "script: boundary_index_delete_004 (debate_logs/boundary_index_delete_004.py, strategy2_path_param_boundary) creates live collection bidl4_<ts>_col with NO index, verifies empty payload_schema gate, then sends DELETE delete_index with path_params field_name across 9 values {' ', 'f kw', '中文🎯', '%2e%2e', '', 'sl/ash', 'a'*1024, 'ctrl\\x01x', 'nul\\x00byte'}, wait=true, timeout=20",
+        "log: 4 promise-class legs got 400 'Deserialize error in path parameters: Invalid json path: ...' (DEFECT lines cite qdrant_behavioral_index_delete_001); grammar-valid overlong-1024 leg got 200 {operation_id:2,status:completed}; empty/slash legs 404 route-shift; describe-after still empty payload_schema (no Type4); cleanup dropped collection; VERDICT: DEFECT_FOUND — raw responses are consistent with the verdict pattern, no chain break at log"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Invalid json path",
+        "delete_field_index",
+        "struct FieldPath",
+        "field_name (in openapi/openapi-collections.ytt.yaml)",
+        "key_needs_quoting|fn parse|raw_str (in lib/segment/src/json_path)",
+        "json_path_from_proto"
+      ],
+      "files_examined": [
+        "src/actix/api/update_api.rs (route :410, handler :411-431, FieldPath :27-30)",
+        "lib/segment/src/json_path/mod.rs (Deserialize :516-523, JsonSchema :525-537)",
+        "lib/segment/src/json_path/parse.rs (grammar :42-58, quoting tests :92-107)",
+        "lib/api/src/conversions/json.rs (gRPC conversion :44-47)",
+        "src/tonic/api/update_common.rs (gRPC field_name call sites :719/761/794/825, grep)",
+        "openapi/openapi-collections.ytt.yaml (delete_field_index spec :193-232)",
+        "lib/api/Cargo.toml (version 1.18.0 confirmed)"
+      ],
+      "source_excerpt": "# 1) src/actix/api/update_api.rs:27-30 — the path param is typed JsonPath, not String\nstruct FieldPath {\n    #[serde(rename = \"field_name\")]\n    name: JsonPath,\n}\n\n# 2) src/actix/api/update_api.rs:410-417 — route + handler; failed Path<JsonPath> extraction becomes actix 400 'Deserialize error in path parameters'\n#[delete(\"/collections/{collection_name}/index/{field_name}\")]\nasync fn delete_field_index(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    field: Path<FieldPath>,\n    params: Query<UpdateParams>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Responder {\n\n# 3) lib/segment/src/json_path/mod.rs:516-523 — custom Deserialize: parse failure => 'Invalid json path: \\'<value>\\'' (exact string seen in the log)\nimpl<'de> Deserialize<'de> for JsonPath {\n    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {\n        let string = String::deserialize(deserializer)?;\n        string\n            .parse()\n            .map_err(|_| serde::de::Error::custom(format!(\"Invalid json path: \\'{string}\\'\")))\n    }\n}\n\n# 4) lib/segment/src/json_path/parse.rs:42-53 — the grammar: UNQUOTED keys accept only alphanumeric/_/- ; any other char (space, emoji, leading dot) requires the double-quoted form\nfn raw_str(input: &str) -> IResult<&str, &str> {\n    recognize(many1(\n        satisfy(|c: char| c.is_alphanumeric() || c == '_' || c == '-').map(|_: char| ()),\n    ))\n    .parse(input)\n}\n\nfn quoted_str(input: &str) -> IResult<&str, String> {\n    let (input, _) = char('\\\"')(input)?;\n    let (input, rest) = many0(none_of(\"\\\\\\\"\")).parse(input)?;\n    let (input, _) = char('\\\"')(input)?;\n    Ok((input, rest.iter().collect()))\n}\n\n# 5) lib/segment/src/json_path/parse.rs:99-103 — unit tests encode the designed quoting semantics (space-containing keys must be quoted)\n        assert!(key_needs_quoting(\" foo\"));\n        assert!(key_needs_quoting(\"foo \"));\n        assert!(key_needs_quoting(\"foo bar\"));\n\n# 6) lib/segment/src/json_path/mod.rs:525-537 — the OpenAPI schema for JsonPath is a PLAIN STRING: the grammar constraint is enforced at runtime but NOT published in the generated API schema\nimpl JsonSchema for JsonPath {\n    fn is_referenceable() -> bool { false }\n    fn schema_name() -> String { \"JsonPath\".to_string() }\n    fn json_schema(generator: &mut SchemaGenerator) -> Schema {\n        String::json_schema(generator)\n    }\n}\n\n# 7) openapi/openapi-collections.ytt.yaml:207-212 — published spec for delete_field_index: field_name unconstrained string\n        - name: field_name\n          in: path\n          description: Name of the field where to delete the index\n          required: true\n          schema:\n            type: string\n\n# 8) lib/api/src/conversions/json.rs:44-47 — gRPC face enforces the identical grammar (field_name call sites src/tonic/api/update_common.rs:719/761/794/825)\npub fn json_path_from_proto(a: &str) -> Result<JsonPath, Status> {\n    JsonPath::try_from(a)\n        .map_err(|_| Status::invalid_argument(format!(\"Invalid json path: \\'{a}\\'\")))\n}",
+      "call_chain_traced": "REST: #[delete(\"/collections/{collection_name}/index/{field_name}\")] (update_api.rs:410) -> actix Path<FieldPath> extraction -> FieldPath.name: JsonPath (update_api.rs:27-30) -> JsonPath::deserialize (json_path/mod.rs:516) -> FromStr -> parse::json_path nom grammar (parse.rs:28-40) where raw_str accepts only is_alphanumeric()||'_'||'-' (parse.rs:42-47) -> failure mapped to serde custom error 'Invalid json path: <value>' -> actix renders HTTP 400 'Deserialize error in path parameters: ...'. gRPC: update_common.rs:719/761/794/825 field_name = json_path_from_proto(...) (conversions/json.rs:44) -> same grammar -> Status::invalid_argument. Meanwhile the published contract surfaces no constraint: JsonPath's JsonSchema impl returns String::json_schema (mod.rs:525-537) and openapi-collections.ytt.yaml:207-212 declares field_name type: string with no pattern — so ' ', 'f kw', '中文🎯' (emoji char not alphanumeric; CJK chars alone would pass), decoded '..' all fail the UNDOCUMENTED grammar and are rejected 400, while grammar-valid names ('a'*1024, dotted nested paths, double-quoted keys like \"f kw\") parse and proceed to the idempotent-delete logic which returns 200 for non-existent indexes.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (server healthy in-run: grammar-valid overlong-1024 leg returned 200 during the same pass; describe gates returned 200 with empty payload_schema before and after all legs)",
+        "concurrency (strictly sequential legs, single collection)",
+        "request-parameter typo (server error echo shows the exact decoded values ' ', 'f kw', '中文🎯', '..', proving the intended values reached the server)",
+        "client-side send refusal (zero CLIENT_SIDE_SKIP entries; every leg received a real server response)"
+      ],
+      "surviving": "doc-underspecification: field_name is published as an unconstrained string (API reference page + openapi ytt + JsonPath's own JsonSchema emitting plain String) while the runtime enforces an undocumented JsonPath grammar — unquoted keys restricted to alphanumeric/_/-, with a double-quoting escape hatch the documentation never mentions. The observed 400s are that grammar firing deterministically; the defect question reduces to whether an undocumented input constraint contradicts the documented unconditional-200 promise."
+    }
+  }
+}

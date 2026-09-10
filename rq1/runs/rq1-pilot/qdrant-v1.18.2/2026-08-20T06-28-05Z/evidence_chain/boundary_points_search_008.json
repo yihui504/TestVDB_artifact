@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_points_search_008",
+  "endpoint": "points+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url (https://api.qdrant.tech/api-reference/points/search-points) unreachable due to domain block - api.qdrant.tech blocked; doc_version 1.19.x matches target v1.18.2 (major.minor); endpoint registry lists points+search with source_url; contract constraint qdrant_range_search_points_points_002 asserts score_threshold ∈ [0, 1] but cannot verify against live doc due to network restriction",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c8: score_threshold=Infinity → http=-1, body='Out of range float values are not JSON compliant: inf'",
+      "secondary_observations": [
+        "c7: limit=NaN → http=-1, body='Out of range float values are not JSON compliant: nan'",
+        "c3: limit=1001 → http=200 (Type1_IllegalSuccess, upper bound violation)",
+        "c1: limit=0 → http=422 with validation error (correct rejection)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP -1 (network/library error)",
+        "note": "Status -1 indicates JSON serialization failure before HTTP request completes - Infinity is not JSON compliant, causing client-side serialization error rather than server-side validation"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_points_search_008"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_search_points_002",
+      "assertion_text_quoted": "score_threshold (minimum score) ∈ [0, 1]",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_search_points_002 (score_threshold ∈ [0, 1])",
+        "doc:https://api.qdrant.tech/api-reference/points/search-points (unreachable, domain blocked)",
+        "script:POST /collections/{collection_name}/points/search with score_threshold=Infinity",
+        "log:Status -1 (JSON serialization failure - Infinity not compliant)"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "contract expects score_threshold ∈ [0, 1]; Infinity is special float value outside valid range; client-side JSON serialization rejects Infinity before request reaches API validation (status -1, 'Out of range float values are not JSON compliant: inf'). This is client-side rejection, NOT server-side validation - server never sees the request, so contract constraint is not actively enforced by API. Chain断裂在script层：特殊值未經服務器驗證就在客戶端被序列化層拒絕。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "score_threshold Option<ScoreType>",
+        "validate range",
+        "pub score_threshold",
+        "JSON compliant"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs (line 589)",
+        "lib/collection/src/operations/verification/mod.rs (lines 86-95, 356-369)",
+        "lib/common/inference/query_requests_rest.rs (search parameter handling)"
+      ],
+      "source_excerpt": "File: lib/api/src/rest/schema.rs:589 (SearchPointRequestInternal)\n    /// Return points with scores better than this threshold.\n    pub score_threshold: Option<ScoreType>,\n    // ❌ NO range validation like #[validate(range(min = 0, max = 1))]\n\nFile: lib/collection/src/operations/verification/mod.rs:86-95\n    fn check_request_query_limit(\n        &self,\n        strict_mode_config: &StrictModeConfig,\n    ) -> CollectionResult<()> {\n        check_limit_opt(\n            self.query_limit(),\n            strict_mode_config.max_query_limit,\n            \"limit\",\n        )\n    }\n    // ❌ No equivalent check_score_threshold_range() function exists\n\nFile: lib/collection/src/operations/verification/mod.rs:337-352 (check_limit_opt)\npub(crate) fn check_limit_opt<T: PartialOrd + Display>(\n    value: Option<T>,\n    limit: Option<T>,\n    name: &str,\n) -> CollectionResult<()> {\n    let (Some(limit), Some(value)) = (limit, value) else {\n        return Ok(());\n    };\n    if value > limit {\n        return Err(CollectionError::strict_mode(\n            format!(\"Limit exceeded {value} > {limit} for \\\"{name}\\\"\"),\n            format!(\"Reduce the \\\"{name}\\\" parameter to or below {limit}.\"),\n        ));\n    }\n    Ok(())\n}\n// ❌ This function only checks if value exceeds configured max, NOT absolute range [0, 1]\n// ❌ No validation for special float values (Infinity, NaN)",
+      "call_chain_traced": "client: Python/requests JSON serialization detects Infinity and throws 'Out of range float values are not JSON compliant: inf' before HTTP request → client never sends request to server → server-side validation (schema.rs + verification/mod.rs) never executes → score_threshold ∈ [0, 1] constraint is not enforced by API → Type1 violation via silent client-side rejection rather than explicit server-side 400 error",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache", "by-design"],
+      "surviving": "Type1 violation - special float value (Infinity) should be rejected with 400 Bad Request by API, but instead fails at client-side JSON serialization layer with status -1, indicating no server-side input validation for special float values"
+    }
+  }
+}

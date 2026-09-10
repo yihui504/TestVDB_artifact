@@ -1,0 +1,10 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+candidate ef=-5: POST=200 readback=-5
+candidate efZero=0: POST=200 readback=0
+candidate vectorCacheMaxObjects=-1: POST=200 readback=-1
+candidate cleanupIntervalSeconds=-1: POST=200 readback=-1
+candidate pq.centroids=-1: POST=200 readback=-1
+control maxConnections=-1: POST=422 {"error":[{"message":"class.VectorIndexConfig can not parse: parse vector index config: invalid hnsw config: maxConnecti
+control efConstruction=-5: POST=422 {"error":[{"message":"class.VectorIndexConfig can not parse: parse vector index config: invalid hnsw config: efConstruct
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess): vectorIndexConfig int params inconsistently validated: [('ef', -5, -5), ('efZero', 0, 0), ('vectorCacheMaxObjects', -1, -1), ('cleanupIntervalSeconds', -1, -1), ('pq.centroids', -1, -1)] accepted AND persisted (HTTP 200, response echoes value, GET read-back confirms) while controls maxConnections=422, efConstruction=422 are rejected on the same config object. ef=-5/0 is especially notable: ef is the active HNSW search-time param (documented default sentinel is -1); -5/0 are invalid values persisted silently.

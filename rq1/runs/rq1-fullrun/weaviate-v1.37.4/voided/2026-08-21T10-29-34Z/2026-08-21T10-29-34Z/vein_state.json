@@ -1,0 +1,123 @@
+{
+ "target": "weaviate",
+ "version": "v1.37.4",
+ "round": 2,
+ "session_id": "weaviate-v1.37.4-2026-08-21T10-29-34Z",
+ "top_endpoints": [
+  "POST /v1/schema (create class)",
+  "GET /v1/schema/{className} (read-back)",
+  "PUT /v1/schema/{className} (update path)"
+ ],
+ "richness_scores": {
+  "POST /v1/schema": 9.0,
+  "GET /v1/schema/{className}": 6.5,
+  "PUT /v1/schema/{className}": 5.5,
+  "POST /v1/schema/{className}/properties": 5.0
+ },
+ "shape_sources": {
+  "POST /v1/schema": "R1 finding chain: replicationConfig.factor silent-normalize (by-design, disclosed) + vectorIndexConfig EF type-coercion (DEFECT) -> R2 deep-dive: silent-normalize observability across replicationConfig/shardingConfig/vectorIndexConfig ints (generalized from R1 known_instances replicationFactor/vectorIndexConfig)",
+  "GET /v1/schema/{className}": "submit-persist read-back consistency (adjacent to POST, cross-pollination)",
+  "PUT /v1/schema/{className}": "update-path validation parity (adjacent state transition)"
+ },
+ "condition_history": [
+  {
+   "endpoint": "POST /v1/schema",
+   "condition_type": "type_mismatch",
+   "finding": "DEFECT_FOUND",
+   "http_status": 200,
+   "detail": "R1: EF-anchor vectorIndexConfig params silently coerce wrong-typed string/bool to 0 (dynamicEfMax='abc' etc.) with HTTP 200.",
+   "inspired_by": null
+  },
+  {
+   "endpoint": "POST /v1/schema",
+   "condition_type": "range_filter",
+   "finding": "DEFECT_FOUND",
+   "http_status": 200,
+   "detail": "R2: shardingConfig.desiredCount=-1/-2/-3/-4/-5 -> HTTP 200 with EMPTY body (no class echo, no error, no Content-Type). Class is a PHANTOM until first object write: GET /v1/schema/{class}->404, absent from schema list, POST properties->422 'class is nil: not found', GraphQL 'Cannot query field'. After first object write the class becomes fully visible. Family: virtualPerPhysical=-2 same; compound dc=-3+vpp=-2 same. Controls: desiredCount=0 -> 422 explicit error BUT leaves residue class (GET 200); string 'abc' -> 422 with residue; desiredCount=1 -> 200+echo+GET 200. Phantom persists as silent 200 for negatives vs 422-with-residue for 0/string. Script: vein_range_filter_schema_sharding_zombie_1.",
+   "inspired_by": "replicationFactor silent-normalize observability (R1 by-design excluded) + finding-feedback range->compound"
+  },
+  {
+   "endpoint": "POST /v1/schema",
+   "condition_type": "range_filter",
+   "finding": "DEFECT_FOUND",
+   "http_status": 200,
+   "detail": "R2: vectorIndexConfig int params inconsistent validation surface. Accepted+persisted with 200 (response echoes, GET read-back confirms): ef=-5, ef=0, vectorCacheMaxObjects=-1, cleanupIntervalSeconds=-1, pq.centroids=-1. Rejected 422 on same config object: maxConnections=-1, efConstruction=-5. Extends R1 claim ('gap specific to EF params') -> gap is broader: ef is the active HNSW search-time param (default sentinel -1; -5/0 invalid). Script: vein_range_filter_schema_vi_ints_1.",
+   "inspired_by": "R1 type_mismatch finding (EF params no validation) + range boundary generalization"
+  },
+  {
+   "endpoint": "POST /v1/schema",
+   "condition_type": "null_check",
+   "finding": "CONTROL",
+   "detail": "R2 direction answered: replicationConfig.factor=-1/0 -> 200, POST response body ECHOES normalized value (factor:1, not -1/0), GET read-back=1. Normalization IS disclosed at HTTP layer -> NOT silent -> consistent with R1 by-design ruling (source Factor<1->1). Observability contract satisfied; excluded."
+  },
+  {
+   "endpoint": "POST /v1/schema",
+   "condition_type": "range_filter",
+   "finding": "OBSERVED_TIMEOUT",
+   "detail": "shardingConfig.desiredCount=1e9 -> POST read timeout >15s (no residue, no class created, DB healthy after). Huge desiredCount hangs the create path; not pursued further (no-hang red line)."
+  }
+ ],
+ "last_finding": {
+  "endpoint": "POST /v1/schema",
+  "condition_type": "range_filter",
+  "finding": "DEFECT_FOUND",
+  "http_status": 200
+ },
+ "adjacent_pending": [
+  "compound_or on shardingConfig (two shards strategies conflict)",
+  "type_mismatch on shardingConfig keys (desiredCount as string in tenants mode)"
+ ],
+ "by_design_excluded": [
+  {
+   "condition_type": "range_filter",
+   "detail": "replicationConfig.factor=-1/0 -> normalized to 1, and the POST response ECHOES the normalized value (factor:1) + GET=1: normalization disclosed, consistent with R1 by-design (source Factor<1->1). Not silent at HTTP layer.",
+   "verdict": "by_design_excluded"
+  },
+  {
+   "condition_type": "range_filter",
+   "detail": "ef=0/ef=-5 runtime impact test: 5-object nearVector search still returns 5 hits -> no observable search degradation at this scale; only the silent persistence of the invalid value is observable (covered by script 2).",
+   "verdict": "low_impact_note"
+  }
+ ],
+ "findings": [
+  {
+   "id": "vein_type_mismatch_schema_ef_pair_1",
+   "endpoint": "POST /v1/schema",
+   "condition_type": "type_mismatch",
+   "finding": "DEFECT_FOUND",
+   "http_status": 200,
+   "script_path": "vein_scripts/vein_type_mismatch_schema_ef_pair_1.py",
+   "meta_path": "vein_scripts/vein_type_mismatch_schema_ef_pair_1.meta.json",
+   "detail": "R1: EF-anchor vectorIndexConfig params (dynamicEfMin/Max/Factor, flatSearchCutoff) silently coerce wrong-typed string/bool to 0 with HTTP 200."
+  },
+  {
+   "id": "vein_range_filter_schema_sharding_zombie_1",
+   "endpoint": "POST /v1/schema",
+   "condition_type": "range_filter",
+   "finding": "DEFECT_FOUND",
+   "http_status": 200,
+   "script_path": "vein_scripts/vein_range_filter_schema_sharding_zombie_1.py",
+   "meta_path": "vein_scripts/vein_range_filter_schema_sharding_zombie_1.meta.json",
+   "detail": "R2: shardingConfig.desiredCount<0 -> HTTP 200 + EMPTY body + phantom class (GET 404, property-add 422 'class is nil', GraphQL absent) until first object write. Controls prove validation exists (0->422, 1->200 normal). Submit-persist consistency break with zero disclosure."
+  },
+  {
+   "id": "vein_range_filter_schema_vi_ints_1",
+   "endpoint": "POST /v1/schema",
+   "condition_type": "range_filter",
+   "finding": "DEFECT_FOUND",
+   "http_status": 200,
+   "script_path": "vein_scripts/vein_range_filter_schema_vi_ints_1.py",
+   "meta_path": "vein_scripts/vein_range_filter_schema_vi_ints_1.meta.json",
+   "detail": "R2: vectorIndexConfig int validation asymmetry: ef=-5/0, vectorCacheMaxObjects=-1, cleanupIntervalSeconds=-1, pq.centroids=-1 accepted+persisted (200) vs maxConnections=-1/efConstruction=-5 rejected (422). Extends R1 gap map beyond EF-anchor params."
+  }
+ ],
+ "script_written": [
+  "vein_type_mismatch_schema_ef_pair_1",
+  "vein_range_filter_schema_sharding_zombie_1",
+  "vein_range_filter_schema_vi_ints_1"
+ ],
+ "self_run_results": {
+  "vein_range_filter_schema_sharding_zombie_1": "PASSED - VERDICT DEFECT_FOUND, real exit 1, cleanup OK (DELETE 200), controls: dc=0->422+residue GET 200, dc=1->200 echo GET 200",
+  "vein_range_filter_schema_vi_ints_1": "PASSED - VERDICT DEFECT_FOUND, real exit 1, cleanup OK, 5 candidates accepted+persisted vs 2 controls 422"
+ }
+}

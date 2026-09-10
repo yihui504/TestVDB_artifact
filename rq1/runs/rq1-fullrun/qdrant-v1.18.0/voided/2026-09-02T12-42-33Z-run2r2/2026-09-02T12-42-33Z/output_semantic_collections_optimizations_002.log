@@ -1,0 +1,24 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] collection_optimizations = /collections/{collection_name}/optimizations (raw_knowledge api_endpoints[collections+optimizations].url); describe = /collections/{name}; list = /collections
+ownership prefix: sco028c1bf5
+[assertion quote] existing collection: HTTP 200 with per-shard optimizer status; missing collection: HTTP 404
+[setup] created sco028c1bf5_a and sco028c1bf5_b
+[MR1a] optimizations(sco028c1bf5_a) status=200 raw={"result":{"summary":{"queued_optimizations":0,"queued_segments":0,"queued_points":0,"idle_segments":8},"running":[]},"status":"ok","time":0.000053103}
+[MR1a] describe(sco028c1bf5_a) status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_di
+[MR1a] list status=200 prefix-scope-listed=True
+[MR1b] optimizations(sco028c1bf5_b) status=200 raw={"result":{"summary":{"queued_optimizations":0,"queued_segments":0,"queued_points":0,"idle_segments":8},"running":[]},"status":"ok","time":0.000054942}
+[MR1b] describe(sco028c1bf5_b) status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_di
+[MR1b] list status=200 prefix-scope-listed=True
+[MR2] optimizations(sco028c1bf5_never_5ae258) status=404 raw={"status":{"error":"Not found: Collection `sco028c1bf5_never_5ae258` doesn't exist!"},"time":5.574e-6}
+[MR2] describe(sco028c1bf5_never_5ae258) status=404 raw={"status":{"error":"Not found: Collection `sco028c1bf5_never_5ae258` doesn't exist!"},"time":6.064e-6}
+[MR2] list status=200 prefix-scope-listed=False
+[MR3 delete ACK of sco028c1bf5_b] status=200 raw={"result":true,"status":"ok","time":0.013108069}
+[MR3-deleted] optimizations(sco028c1bf5_b) status=404 raw={"status":{"error":"Not found: Collection `sco028c1bf5_b` doesn't exist!"},"time":5.706e-6}
+[MR3-deleted] describe(sco028c1bf5_b) status=404 raw={"status":{"error":"Not found: Collection `sco028c1bf5_b` doesn't exist!"},"time":5.803e-6}
+[MR3-deleted] list status=200 prefix-scope-listed=False
+[MR3-control] optimizations(sco028c1bf5_a) status=200 raw={"result":{"summary":{"queued_optimizations":0,"queued_segments":0,"queued_points":0,"idle_segments":8},"running":[]},"status":"ok","time":0.000034018}
+[MR3-control] describe(sco028c1bf5_a) status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_di
+[MR3-control] list status=200 prefix-scope-listed=True
+OK: relation R held on every probe - existing sco028c1bf5_a/sco028c1bf5_b answered optimizations 200 + describe 200 + listed; never-created sco028c1bf5_never_5ae258 and deleted sco028c1bf5_b answered optimizations 404 + describe 404 + unlisted; control sco028c1bf5_a unaffected after the delete ACK
+VERDICT: NO_DEFECT

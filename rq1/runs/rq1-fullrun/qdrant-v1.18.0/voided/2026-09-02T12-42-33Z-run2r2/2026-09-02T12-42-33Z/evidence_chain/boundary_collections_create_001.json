@@ -1,0 +1,105 @@
+{
+  "defect_id": "boundary_collections_create_001",
+  "endpoint": "collections+create (PUT /collections/{collection_name})",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar existed in the contract dir (results/qdrant/v1.18.0/), WebFetch was network-blocked for api.qdrant.tech, but an alternate documentation reader fetched https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection successfully (page 'Create a collection | Qdrant | API Reference', full request-body field list rendered) - PASS. Version: URL segment v-1-18-x matches target 1.18.0 major.minor - PASS. Content: the page documents the single-mode VectorParams shape ('Single mode: { \"size\": 128, \"distance\": \"Cosine\" }') which supports the assertion's field-level clauses, but it explicitly marks the body field as 'vectors object or map from strings to objects Optional' and nowhere states that a collection must define at least one vector space at creation - the claim's operative inference ('a collection with no compliant vector space must be rejected') has no doc support and is contradicted by the Optional marking - PARTIAL. Endpoint: endpoint_registry entry path=collections+create, method=PUT, same source_url (structured_contract.json:19-44 and registry quote block :5330-5336); the script hit the collection-create endpoint - PASS. Page is REST api-reference and the probe was REST - no SDK/REST confusion.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[vectors={} (no vector space defined - BS-01)] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.213936728}",
+      "secondary_observations": [
+        "rest same-endpoint, same-family probe (partial single-mode VectorParams): [vectors={'size':4} distance missing] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 24\"},\"time\":0.0}",
+        "rest same-family probe: [vectors={'distance':'Cosine'} size missing] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 35\"},\"time\":0.0}",
+        "rest same-family probe (enum closure): [distance='Euclidean' (non-enum alias)] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 49\"},\"time\":0.0}",
+        "rest same-family probe (uint64 domain): [size=-1 (uint64 violation)] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 47\"},\"time\":0.0}",
+        "rest same-family probe (type confusion): [size='4' (string type confusion)] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 48\"},\"time\":0.0}",
+        "rest same-family probe (valid enum member): [distance='Manhattan' (enum closure, least-common member)] status=200; [conform] readback config.params.vectors.distance='Manhattan' (persisted as sent)",
+        "rest sibling script, same constraint, omitted-key form (output_semantic_collections_create_001.log:10,12): [create scc01_1788388157_no_vectors] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.21433192}; '[no_vectors] vectors omitted entirely (required=true) was ACCEPTED with status 200'",
+        "grpc/sdk face: face_unavailable - this sandbox round exercised the REST face only; no gRPC/SDK request for the same value exists in the session logs"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The primary probe did not return an error at all: plain HTTP 200 with full success envelope (result:true, status:ok) - the server classified vectors={} as a valid request. The same-family malformed/partial probes ({'size':4}, size missing, size=-1, size='4', distance='Euclidean') all returned proper HTTP 400 with a diagnostic body, so server-side validation is present and functioning for the VectorParams field domain; the acceptance is specific to the empty-map/omitted form."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_collections_create_001 (vectors={} form, exit code 1 = designed DEFECT_FOUND verdict path, no TypeError/SCRIPT_ERROR markers)",
+        "semantic_collections_create_001 (vectors-omitted form, same constraint anchor, exit code 1)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_collections_create_001",
+      "assertion_text_quoted": "vectors.distance IN {Cosine, Euclid, Dot, Manhattan}; VectorParams.required = [size, distance]; vectors.size is an unsigned integer (uint64)",
+      "api_violates_assertion": false,
+      "note": "Dispatch constraint_id field was empty; anchor recovered verbatim from the attack text and found at structured_contract.json:5949-5960. Violates-declaration self-check: the observed body value vectors={} deserializes as the Multi variant (empty BTreeMap), not as a VectorParams instance missing required fields, so it lies OUTSIDE the quoted clauses' domain - the quote constrains VectorParams' field-level requiredness (which the API does enforce: all partial single-mode probes got 400), not the cardinality of the vectors map. The endpoint-level reading the claim needs ('a collection with no compliant vector space must be rejected') is a different constraint facet than the one quoted, and that facet is contradicted by both the versioned doc (vectors Optional) and the source (serde default = Multi(empty)); api_violates_assertion=false is therefore the honest declaration under the wrong-constraint-cited branch, not a judgment that the observation is compliant-with-intent.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_collections_create_001 present in structured_contract.json:5949 (type_constraints, endpoint collections+create, assertion as quoted; dispatch candidates.jsonl constraint_id field empty - anchor from attack text)",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection reachable, v-1-18-x versioned; documents single-mode VectorParams {size,distance} but marks the vectors body field 'object or map from strings to objects Optional'; contains no statement that a collection must define >=1 vector space at creation",
+        "script: boundary_collections_create_001 sent PUT create with body vectors={} (log line 4 quotes the constraint; ownership prefix bcc0114b766; constraint quote header names VectorParams.required=[size,distance])",
+        "log: line 5 raw 200 {\"result\":true,\"status\":\"ok\"}; line 18 VERDICT: DEFECT_FOUND (Type1_IllegalSuccess: 'vectors={} ... ACCEPTED with 200 ... a collection with no compliant vector space must be rejected')"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Layer A content consistency is only PARTIAL and fails exactly where the claim needs it: the cited documentation constrains the VectorParams single-mode shape (field-level requiredness) but explicitly renders the vectors field as Optional and describes the multi/named-map mode ('object or map from strings to objects'), providing no documented basis for the claim's operative inference that a no-vector-space collection 'must be rejected'. The contract, script and log links are present and internally consistent; the doc link does not ground the claimed violation.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "enum VectorsConfig",
+        "struct CreateCollection",
+        "impl Default for VectorsConfig",
+        "struct NamedVectors (zero hits - pre-1.10 name, renamed to Multi map)",
+        "fn perform_create_collection (zero hits - handler named differently)",
+        "pub async fn create_collection\\( (zero hits - signature differs)",
+        "create_collection|CreateCollection (collections_api.rs)",
+        "VectorsConfig::empty\\(\\)",
+        "VectorsConfig::default\\(\\)|VectorsConfig::Multi\\(BTreeMap::new\\(\\)\\)",
+        "vectors_num\\(\\)",
+        "without vectors|no vectors|add vectors later (only unrelated hits)",
+        "vectors/\\{vector_name\\}"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/types.rs (VectorsConfig enum + Default + empty() at 1455-1498; VectorParams at 1332-1343)",
+        "lib/storage/src/content_manager/collection_meta_ops.rs (CreateCollection struct at 106-114; CreateCollectionOperation::new validation at 192-246)",
+        "src/actix/api/collections_api.rs (REST handler create_collection at 111-133)",
+        "src/actix/api/vector_name_api.rs (companion vectors-PATCH face at 14-58)"
+      ],
+      "source_excerpt": "lib/collection/src/operations/types.rs:1455-1484 (v1.18.0 clone):\n1455  /// Vector params separator for single and multiple vector modes\n1456  /// Single mode:\n1458  /// { \"size\": 128, \"distance\": \"Cosine\" }\n1460  /// or multiple mode:\n1462  /// {\n1463  ///      \"default\": {\n1464  ///          \"size\": 128,\n1465  ///          \"distance\": \"Cosine\"\n1466  ///      }\n1467  /// }\n1468  #[derive(Debug, Deserialize, Serialize, JsonSchema, Anonymize, Clone, PartialEq, Hash, Eq)]\n1469  #[serde(rename_all = \"snake_case\", untagged)]\n1470  pub enum VectorsConfig {\n1471      Single(VectorParams),\n1472      Multi(BTreeMap<VectorNameBuf, VectorParams>),\n1473  }\n1475  impl Default for VectorsConfig {\n1476      fn default() -> Self {\n1477          VectorsConfig::Multi(Default::default())\n1478      }\n1479  }\n1481  impl VectorsConfig {\n1482      pub fn empty() -> Self {\n1483          VectorsConfig::Multi(BTreeMap::new())\n1484      }\n\nlib/storage/src/content_manager/collection_meta_ops.rs:106-114:\n106  /// Operation for creating new collection and (optionally) specify index params\n109  pub struct CreateCollection {\n110      /// Vector data config.\n111      /// It is possible to provide one config for single vector mode and list of configs for multiple vectors mode.\n112      #[serde(default)]\n113      #[validate(nested)]\n114      pub vectors: VectorsConfig,\n\nlib/storage/src/content_manager/collection_meta_ops.rs:197-217 (CreateCollectionOperation::new):\n197          // Apply the same vector-name validation that the\n198          // `PUT /collections/{name}/vectors/{vector_name}` endpoint enforces\n199          // (length 0..=200, no filesystem-unsafe characters), so both creation\n200          // paths reject the same set of bad names. ...\n207          if let collection::operations::types::VectorsConfig::Multi(multi) =\n208              &create_collection.vectors\n209          {\n210              for vector_name in multi.keys() {  // empty map -> zero iterations -> nothing rejected\n...\n\nlib/collection/src/operations/types.rs:1338-1343 (VectorParams):\n1338  pub struct VectorParams {\n1340      #[validate(custom(function = \"validate_nonzerou64_range_min_1_max_65536\"))]\n1341      pub size: NonZeroU64,\n1343      pub distance: Distance,\n\nsrc/actix/api/vector_name_api.rs:22-23 (companion post-creation face):\n22  #[put(\"/collections/{collection_name}/vectors/{vector_name}\")]\n23  async fn create_vector_name(",
+      "call_chain_traced": "REST PUT /collections/{name} -> actix create_collection (collections_api.rs:111) deserializes Json<CreateCollection> where vectors carries #[serde(default)] (collection_meta_ops.rs:112) -> untagged enum VectorsConfig tries Single(VectorParams) first ({}, {'size':4}, {'distance':'Cosine'} all fail: size/distance have no serde default, types.rs:1341/1343), then Multi(BTreeMap) which accepts {} as an empty map -> CreateCollectionOperation::new (collection_meta_ops.rs:192) only validates vector NAMES by iterating multi.keys(); an empty map has zero keys so no check fires and no >=1-vector cardinality check exists anywhere on the path -> dispatcher.submit_collection_meta_op proceeds to create. Source-identical state for omitted key: #[serde(default)] -> Default for VectorsConfig = Multi(Default::default()) (types.rs:1475-1479), i.e. 'vectors omitted' and 'vectors={}' produce exactly the same Multi(empty) config - matching the two scripts' identical 200 behavior.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (sibling log pre-probe /healthz status=200 'healthz check passed'; legal-control creations returned 200 deterministically)",
+        "concurrency (single sequential request, no races involved in serde deserialization)",
+        "cache delay (creation is synchronously committed; the Manhattan leg's readback shows immediate persistence)",
+        "request typo (probe sent as intended; ownership prefix bcc0114b766 and constraint-quote header confirm intent)",
+        "by_design (source-established: #[serde(default)] on CreateCollection.vectors + deliberate Default impl returning Multi(empty) + explicit VectorsConfig::empty() constructor + companion PUT /collections/{name}/vectors/{vector_name} face for adding vector params after creation + versioned api-reference generated from these very annotations rendering 'vectors ... Optional')"
+      ],
+      "surviving": null
+    }
+  },
+  "by_design_evidence_note": "The v3.4-tightened explicitness standard is met by convergent deliberate declarations rather than a single 'by design' comment: (1) the hand-written Default impl for VectorsConfig (types.rs:1475-1479) makes Multi(empty) the canonical default state of a new collection; (2) the named constructor VectorsConfig::empty() exists expressly for that state; (3) #[serde(default)] on the vectors field is an intentional attribute making omission legal; (4) the struct doc-comment at types.rs:1455-1467 is the verbatim source of the api-reference page text, and the Fern-generated page renders the field as Optional; (5) the maintainer comment at collection_meta_ops.rs:197-198 explicitly references the PUT /collections/{name}/vectors/{vector_name} creation path, i.e. named vector params are designed to be addable after collection creation. No contradicting 'must reject empty' check exists anywhere on the create path.",
+  "evidence_source_manifest": {
+    "doc": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection (fetched live 2026-09-03; contract structured_contract.json:5949-5960 and :19-44/:5330-5336)",
+    "behavior": "output_boundary_collections_create_001.log (18 lines, all REQ/RESP pairs read); output_semantic_collections_create_001.log (13 lines, all read)",
+    "source": "clone at <DESKTOP>/vdb_src/qdrant/v1.18.0 (4 files examined, 12 grep queries)"
+  }
+}

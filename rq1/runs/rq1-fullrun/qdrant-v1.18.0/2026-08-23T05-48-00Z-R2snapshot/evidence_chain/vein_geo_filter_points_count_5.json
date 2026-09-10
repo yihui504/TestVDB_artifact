@@ -1,0 +1,74 @@
+{
+  "defect_id": "vein_geo_filter_points_count_5",
+  "endpoint": "POST /collections/{collection_name}/points/count (filter.must[].geo_bounding_box / geo_radius, exact=false)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "可达性: WebFetch 被策略拦截, 改用 curl 直取 https://api.qdrant.tech/v-1-18-x/api-reference/points/count-points → HTTP 200, URL 版本 v-1-18-x 与 target 1.18.0 宽松匹配 PASS; 端点精确性: count-points API reference 确有 filter+exact 参数, PASS; 内容一致性 PARTIAL: 文档原话 'If true, count exact number of points. If false, count approximate number of points faster. Approximate count might be unreliable during the indexing process. Default: true' — 文档仅承诺 approximate + unreliable-during-indexing, 未给出任何量化误差容差 (no documented tolerance); claim_hint 所称 'documented estimation tolerance' 在文档中不存在。geo filter 语义在 raw_knowledge.md concepts/filtering 有记载 (GeoBoundingBox/GeoRadius 结构)。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "bbox antimeridian: exact=13 approx=56 scroll=13 / radius earth: exact=35 approx=200 scroll=35 / approx deviation from truth: 43 (331%) and 165 (471%)",
+      "secondary_observations": [
+        "bbox antimeridian (top_left lon=170, bottom_right lon=-170 → 反子午线穿越): exact=13 与 scroll=13 完全一致 (exact 路径正确), approx=56 超估 331%",
+        "geo_radius (center 0,0, radius 6.4e6m ≈ 地球半径): exact=35 与 scroll=35 完全一致, approx=200 即全集合 N=200 — 估计值收敛到 whole-hemisphere/全库覆盖",
+        "两条件 exact 路径与 scroll 独立交叉验证一致, 排除 exact 路径自身错误"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "请求合法, HTTP 200 正常返回 count 数字 — 违规在于响应数值语义 (近似计数偏差 331%-471%), 非请求侧错误"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_geo_filter_points_count_5"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "(candidates.jsonl 中 constraint_id 为空串, 按语义匹配到唯一 count 相关断言 qdrant_behavioral_points_count_001; chain_trace 中记 broken_at=contract)",
+      "assertion_text_quoted": "count with exact=true gives exact count; 200 {count}; 404 collection missing (doc: 'If true, count exact number of points. If false, count approximate number of points faster. Approximate count might be unreliable during the indexing process. Default: true')",
+      "api_violates_assertion": false,
+      "note": "断言域在 exact=true, 而观测在 exact=false 路径 — 文档未承诺量化容差, 故 '违反文档断言' 不成立。violates=False 的理由是观测值不在所引断言的约束域内 (exact=true 行为经验证正确), 非指 approx 质量无问题; 观测的真实问题属 Type2 近似质量语义, 供 auditor 终判。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: candidates.jsonl 该条 constraint_id='' (空), 无直接 constraint; 语义上唯一相关断言为 qdrant_behavioral_points_count_001 (仅覆盖 exact=true)",
+        "doc: api.qdrant.tech/v-1-18-x/points/count-points 原文 'count approximate number of points faster... might be unreliable during the indexing process' — 无量化容差",
+        "script: vein_scripts/vein_geo_filter_points_count_5.py — 200 点随机 geo payload, bbox(反子午线)与 radius(地球尺度)两条件, exact/approx/scroll 三路对照, 容差函数 max(2, 0.2*exact) 为脚本自设非文档值",
+        "log: output_vein_geo_filter_points_count_5.log — exact=13/35 与 scroll 一致, approx=56/200 偏差 331%/471%, VERDICT: DEFECT_FOUND (Type2 语义)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "候选未携带 constraint_id, 且文档未定义近似计数量化容差 — '违反 documented tolerance' 的 claim 前提在文档层即不成立; 链在 contract→doc 环断裂 (doc 无容差可违)。执行证据 (behavior 环) 本身自洽: exact/scroll 双路一致, approx 独立发散。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["geo_bounding_box (query_optimization/)", "estimate_cardinality|cardinality (query_optimization/)", "geo|Geo (query_estimator.rs)", "fn estimate_cardinality (segment/src)", "geo_bounding_box|GeoBoundingBox|check_geohash (query_checker.rs)", "GeoBoundingBox|GeoRadius|in_bbox|check_geo (condition_checker.rs)", "geo|Geo (optimizer.rs)", "GEO_QUERY_MAX_REGION", "fn geohash_regions|max_regions (geo_hash.rs)", "exact.*count|approximate_count|count_points|fn count.*exact (lib/collection)"],
+      "files_examined": [
+        "lib/segment/src/index/field_index/geo_index/mod.rs (L36 GEO_QUERY_MAX_REGION=12; L180-232 match_cardinality; L588-634 estimate_cardinality)",
+        "lib/segment/src/index/field_index/geo_hash.rs (L309-341 geohash_regions; L400-460 create_hashes/rectangle_hashes/circle_hashes)",
+        "lib/segment/src/types.rs (L2867-2919 GeoBoundingBox::check_point 含 antimeridian 分支; GeoRadius::check_point Haversine)",
+        "lib/segment/src/payload_storage/condition_checker.rs (L245-277 GeoBoundingBox/GeoRadius ValueChecker — exact 路径谓词)",
+        "lib/segment/src/index/query_optimization/condition_converter.rs (L219-231 geo checker 转换)",
+        "lib/collection/src/shards/local_shard/mod.rs (L935-963 estimate_point_count 跨 segment merge_independent)",
+        "lib/edge/src/count.rs (L13-47 count: exact→read_filtered 精确计数; exact=false→estimate_point_count 取 cardinality.exp)",
+        "lib/segment/src/index/query_estimator.rs (无 geo 特化路径)"
+      ],
+      "source_excerpt": "// lib/edge/src/count.rs:19-43\nlet points_count = if exact {\n    segments.map(|segment| segment.get().read().read_filtered(...))\n        .process_results(|iter| iter.flatten().count())?   // 精确路径: 谓词过滤\n} else {\n    let cardinality = segments.map(|segment| segment.get().read()\n        .estimate_point_count(filter.as_ref(), ...))\n        .process_results(|iter| iter.merge_independent())?;\n    cardinality.exp                                          // 近似路径: 直接取估计期望值\n};\n\n// lib/segment/src/index/field_index/geo_index/mod.rs:36,588-613\nconst GEO_QUERY_MAX_REGION: usize = 12;\nfn estimate_cardinality(...) {\n    if let Some(geo_bounding_box) = &condition.geo_bounding_box {\n        let Some(geo_hashes) = rectangle_hashes(geo_bounding_box, GEO_QUERY_MAX_REGION).ok() else { return Ok(None); };\n        let mut estimation = self.match_cardinality(&geo_hashes, hw_counter)?; ...\n    }\n    if let Some(geo_radius) = &condition.geo_radius {\n        let Some(geo_hashes) = circle_hashes(geo_radius, GEO_QUERY_MAX_REGION).ok() else { ... };\n        let mut estimation = self.match_cardinality(&geo_hashes, hw_counter)?; ...\n    }\n}\n\n// lib/segment/src/index/field_index/geo_hash.rs:309-340 geohash_regions: 从 bbox 角点 truncate(precision) 起, 沿东/南 sphere_neighbor 逐格枚举, seen.len() > max_regions 即返回 None → 降精度重试; create_hashes 取满足 max_regions 的最高精度覆盖。\n\n// lib/segment/src/types.rs:2880-2891 exact 路径谓词 GeoBoundingBox::check_point: top_left.lon > bottom_right.lon 时走 antimeridian 分支 (point.lon > top_left.lon || point.lon < bottom_right.lon)。",
+      "call_chain_traced": "REST count(exact=false) → shard count → segment estimate_point_count → payload_index estimate_cardinality → GeoMapIndex::estimate_cardinality (geo_index/mod.rs:588) → rectangle_hashes/circle_hashes(rect, GEO_QUERY_MAX_REGION=12) 生成覆盖 geohash 集 → match_cardinality(:180) 用 points_of_hash/values_of_hash 做 min/max/exp 区间估计 → merge_independent 跨 segment 合并 → cardinality.exp 作为最终 count 返回。exact=true 路径走 condition_checker.rs 的 check_point 谓词逐点过滤 (含 antimeridian 分支)。",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source",
+      "mechanism_note": "近似路径质量瓶颈有两处结构性来源: (1) GEO_QUERY_MAX_REGION=12 限制 geohash 覆盖格数, 大空间尺度查询 (地球尺度 radius 或跨 340 度经度的 antimeridian bbox) 只能用极粗精度 geohash 覆盖, match_cardinality 在粗格上做区间估计 → exp 收敛到全库量级 (观测中 radius 情形 approx=200=N); (2) 估计仅给出 min≤exp≤max 区间, API 只暴露 exp 不暴露任何不确定度。观测到的 331%/471% 偏差是该 by-design 近似机制在大范围查询下的表现, 非校验缺失 (validation_absent 不成立); 是否构成缺陷 (exp 大范围退化为近全库且无警示) 属设计语义判定, 留给 auditor。",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": ["request typo (脚本参数与 OpenAPI schema 一致)", "exact 路径错误 (exact 与 scroll 双路独立一致, 确证 ground truth)", "缓存/并发 race (单线程顺序请求, wait=true upsert)"],
+      "surviving": "indexing in progress: 文档明示 'Approximate count might be unreliable during the indexing process'; 脚本 indexing_threshold=1 且仅 sleep 8s, 优化器可能仍在建 geo 索引/未合并 segment, 未验证索引完全就绪后复测 (builder 无法重跑实验)。若索引就绪后 approx 仍偏差 300%+, 则归因于 GEO_QUERY_MAX_REGION=12 的结构性粗精度。"
+    }
+  }
+}

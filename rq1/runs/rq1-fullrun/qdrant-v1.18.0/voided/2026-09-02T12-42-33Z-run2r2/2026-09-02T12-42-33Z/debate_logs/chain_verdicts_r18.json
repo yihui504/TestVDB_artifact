@@ -1,0 +1,53 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "state_facet_002",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=REFUTED (mechanical, id+quote_ok on qdrant_behavioral_facet_001 at assertions[43], violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "contract_misread",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Involved unit is a behavioral endpoint assertion (200 value/count hits / 400 / 404 promise, doc-silent on zero-count suppression), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "rejected",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "A-restatement: constraint qdrant_behavioral_facet_001 (structured_contract assertions[43], quote verbatim) — the post-delete exact=true response 200 hits [{A,175},{B,100},{C,0}] (output_state_facet_002.log lines 20-21) conforms to its letter and to the FacetValueHit.count schema minimum 0; the contested zero-count suppression clause exists only in the script's leg-E oracle, hence api_violates_assertion=false -> REFUTED. B=NEUTRAL (count 0 respects its schema lower bound, exact is a documented toggle, all legs HTTP 200+ok — no objective constraint class engaged); C=CONFIRMED (no explicit by-design anywhere in source; the count>0 guard on the approximate face at read_view/facet.rs:115 vs its absence in the exact_facet emission at local_shard/facet.rs:98-154 is a real cross-face asymmetry, reproduced by the live 5-point probe: exact [{A,2},{B,2},{C,0}] vs approximate [{A,2},{B,2}] vs count face 4); D=NO_SIGNAL (no cognition anchor on facet/zero-count retention — WAL-replay and replica blindspots are different mechanisms). Doubt recorded for main-process review: doc-silent, but the MutableMapIndex.remove_point empty-key retention (mutable_map_index.rs:163-188) surfacing as a stale zero-count exact-facet bucket is a genuine reproducible behavioral inconsistency that may deserve maintainer-issue triage; it is not a defect against the cited contract, which is mechanically decisive.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "defect": 0,
+    "not_defect": 1,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 1, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {"contract_misread": 1},
+    "constraint_category_distribution": {"other": 1},
+    "candidate_class_distribution": {"strict_defect": 0, "exploratory_candidate": 0, "rejected": 1}
+  }
+}

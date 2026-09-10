@@ -1,0 +1,20 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] keys present=['delete_index', 'create_index', 'describe_collection', 'count', 'scroll']
+[setup upsert] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.009972538}
+[setup create index f_kw] status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.528299098}
+[setup create index f_int] status=200 raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.848384219}
+[describe gate] describe status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":10,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_const
+[baseline exact count] count status=200 raw={"result":{"count":10},"status":"ok","time":0.0016406}
+[baseline filtered count] count status=200 raw={"result":{"count":5},"status":"ok","time":0.001043732}
+[baseline scroll] scroll status=200 raw={"result":{"points":[{"id":1,"payload":{"f_kw":"kw1","f_int":10}},{"id":2,"payload":{"f_kw":"kw0","f_int":20}},{"id":3,"payload":{"f_kw":"kw1","f_int":30}},{"id":4,"payload":{"f_kw":"kw0","f_int":40}}
+[delete f_kw] status=200 raw={"result":{"operation_id":7,"status":"completed"},"status":"ok","time":0.289680079}
+[delete f_int] status=200 raw={"result":{"operation_id":9,"status":"completed"},"status":"ok","time":0.296546254}
+[describe after deletes] describe status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":10,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_const
+[post exact count] count status=200 raw={"result":{"count":10},"status":"ok","time":0.000319811}
+[post scroll] scroll status=200 raw={"result":{"points":[{"id":1,"payload":{"f_kw":"kw1","f_int":10}},{"id":2,"payload":{"f_kw":"kw0","f_int":20}},{"id":3,"payload":{"f_kw":"kw1","f_int":30}},{"id":4,"payload":{"f_kw":"kw0","f_int":40}}
+[post filtered count] count status=200 raw={"result":{"count":5},"status":"ok","time":0.000366592}
+[summary] counts=[10, 10] filtered=[5, 5] payload_stable=True schema_residue=0 defects=0
+data-preservation across index deletion holds on all three readback channels: exact count 10->10, payload snapshot deep-equal, keyword filter 5->5 after both payload indexes deleted with clean describe readback (no residue in {f_kw, f_int}) - NO_DEFECT
+[cleanup] dropped bidl2_1788435242_29684_col
+VERDICT: NO_DEFECT

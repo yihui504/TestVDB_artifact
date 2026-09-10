@@ -1,0 +1,1253 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "cache_ttl_hours": 168,
+  "cached_at": "2026-08-21T03:22:10.661958Z",
+  "sdk": {
+    "package": "qdrant-client",
+    "version": "1.19.0",
+    "install_command": "pip install qdrant-client==1.19.0"
+  },
+  "docker": {
+    "repo": "qdrant/qdrant",
+    "available_tags": [
+      "v1.18.0",
+      "v1.18.0-pgsql",
+      "v1.18.0-bionic",
+      "latest"
+    ]
+  },
+  "api_endpoints": [
+    {
+      "path": "/collections/{collection_name}",
+      "method": "PUT",
+      "category": "schema",
+      "description": "Create a new collection with specified vector configuration and HNSW parameters",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "vectors",
+          "type": "object",
+          "required": true,
+          "description": "Vector configuration"
+        },
+        {
+          "name": "vectors.size",
+          "type": "integer",
+          "required": true,
+          "description": "Dimension of vectors"
+        },
+        {
+          "name": "vectors.distance",
+          "type": "string",
+          "required": true,
+          "description": "Distance metric: Cosine, Euclidean, Dot, Manhattan"
+        },
+        {
+          "name": "hnsw_config",
+          "type": "object",
+          "required": false,
+          "description": "HNSW index parameters"
+        },
+        {
+          "name": "hnsw_config.m",
+          "type": "integer",
+          "required": false,
+          "default_value": 16,
+          "description": "Max connections per node"
+        },
+        {
+          "name": "hnsw_config.ef_construct",
+          "type": "integer",
+          "required": false,
+          "default_value": 100,
+          "description": "Index build speed/accuracy"
+        },
+        {
+          "name": "optimizers_config",
+          "type": "object",
+          "required": false,
+          "description": "Optimization parameters"
+        },
+        {
+          "name": "optimizers_config.indexing_threshold",
+          "type": "integer",
+          "required": false,
+          "default_value": 20000,
+          "description": "Min vector count for indexing"
+        },
+        {
+          "name": "replication_factor",
+          "type": "integer",
+          "required": false,
+          "default_value": 1,
+          "description": "Number of replicas"
+        },
+        {
+          "name": "write_consistency_factor",
+          "type": "integer",
+          "required": false,
+          "default_value": 1,
+          "description": "Write consistency"
+        },
+        {
+          "name": "on_disk",
+          "type": "boolean",
+          "required": false,
+          "default_value": false,
+          "description": "Store vectors on disk"
+        },
+        {
+          "name": "quantization_config",
+          "type": "object",
+          "required": false,
+          "description": "Quantization configuration"
+        },
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "shard_number",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "sharding_method",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "on_disk_payload",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "wal_config",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "sparse_vectors",
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "strict_mode_config",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "metadata",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/{collection_name}",
+      "method": "GET",
+      "category": "schema",
+      "description": "Retrieve collection information including configuration and status",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the collection"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/{collection_name}",
+      "method": "DELETE",
+      "category": "schema",
+      "description": "Delete a collection and all its data",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the collection"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections",
+      "method": "GET",
+      "category": "schema",
+      "description": "List all collections in the cluster",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collections",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/{collection_name}/points",
+      "method": "PUT",
+      "category": "data",
+      "description": "Insert or update points in a collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "points",
+          "type": "array",
+          "required": true,
+          "description": "List of points to insert/update"
+        },
+        {
+          "name": "points[].id",
+          "type": "integer/string",
+          "required": true,
+          "description": "Point identifier"
+        },
+        {
+          "name": "points[].vector",
+          "type": "array",
+          "required": true,
+          "description": "Vector data"
+        },
+        {
+          "name": "points[].payload",
+          "type": "object",
+          "required": false,
+          "description": "Key-value payload"
+        },
+        {
+          "name": "wait",
+          "type": "boolean",
+          "required": false,
+          "default_value": false,
+          "description": "Wait for completion"
+        },
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "ordering",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/{collection_name}/points/search",
+      "method": "POST",
+      "category": "search",
+      "description": "Search for the closest points to a given query vector",
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "vector",
+          "type": "array",
+          "required": true,
+          "description": "Query vector"
+        },
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": false,
+          "default_value": 10,
+          "description": "Max results"
+        },
+        {
+          "name": "score_threshold",
+          "type": "float",
+          "required": false,
+          "default_value": 0.0,
+          "description": "Min score"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "description": "Filter conditions"
+        },
+        {
+          "name": "params",
+          "type": "object",
+          "required": false,
+          "description": "Search parameters"
+        },
+        {
+          "name": "params.hnsw_ef",
+          "type": "integer",
+          "required": false,
+          "description": "Search accuracy"
+        },
+        {
+          "name": "with_payload",
+          "type": "boolean/array",
+          "required": false,
+          "description": "Return payload"
+        },
+        {
+          "name": "with_vector",
+          "type": "boolean",
+          "required": false,
+          "description": "Return vectors"
+        },
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "offset",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/{collection_name}/points/delete",
+      "method": "POST",
+      "category": "data",
+      "description": "Delete points from a collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "points",
+          "type": "array",
+          "required": false,
+          "description": "Point IDs to delete"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "description": "Filter conditions"
+        },
+        {
+          "name": "wait",
+          "type": "boolean",
+          "required": false,
+          "description": "Wait for completion"
+        },
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "ids",
+          "type": "array",
+          "required": true,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "with_payload",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "with_vector",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/{collection_name}/points/{point_id}",
+      "method": "GET",
+      "category": "data",
+      "description": "Retrieve a specific point by ID",
+      "source_url": "https://api.qdrant.tech/api-reference/points/get-point",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "required": true,
+          "description": "Collection name"
+        },
+        {
+          "name": "point_id",
+          "type": "integer/string",
+          "required": true,
+          "description": "Point identifier"
+        },
+        {
+          "name": "with_payload",
+          "type": "boolean/array",
+          "required": false,
+          "description": "Return payload"
+        },
+        {
+          "name": "with_vector",
+          "type": "boolean",
+          "required": false,
+          "description": "Return vectors"
+        },
+        {
+          "name": "id",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/{collection_name}/points/scroll",
+      "method": "POST",
+      "category": "data",
+      "description": "Scroll through all points in a collection with pagination",
+      "source_url": "https://api.qdrant.tech/api-reference/points/scroll-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": false,
+          "default_value": 10,
+          "description": "Batch size"
+        },
+        {
+          "name": "offset",
+          "type": "integer/string",
+          "required": false,
+          "description": "Pagination offset"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "description": "Filter conditions"
+        },
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "with_payload",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "with_vector",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "order_by",
+          "type": "object",
+          "required": false,
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/aliases",
+      "method": "GET",
+      "category": "admin",
+      "description": "List all aliases",
+      "source_url": "openapi",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/cluster",
+      "method": "GET",
+      "category": "admin",
+      "description": "Check cluster status",
+      "source_url": "openapi",
+      "parameters": [
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/cluster/peer/{peer_id}",
+      "method": "DELETE",
+      "category": "admin",
+      "description": "Remove peer from cluster",
+      "source_url": "openapi",
+      "parameters": [
+        {
+          "name": "peer_id",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "force",
+          "type": "boolean",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/cluster/recover",
+      "method": "POST",
+      "category": "admin",
+      "description": "Recover cluster state",
+      "source_url": "openapi",
+      "parameters": [
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/cluster/telemetry",
+      "method": "GET",
+      "category": "admin",
+      "description": "Collect cluster telemetry",
+      "source_url": "openapi",
+      "parameters": [
+        {
+          "name": "details_level",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/aliases",
+      "method": "POST",
+      "category": "schema",
+      "description": "Update collection aliases",
+      "source_url": "openapi",
+      "parameters": [
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "actions",
+          "type": "array",
+          "required": true,
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/{collection_name}/aliases",
+      "method": "GET",
+      "category": "schema",
+      "description": "List collection aliases",
+      "source_url": "openapi",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/{collection_name}/cluster",
+      "method": "GET",
+      "category": "admin",
+      "description": "Retrieve cluster details",
+      "source_url": "openapi",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/{collection_name}/cluster",
+      "method": "POST",
+      "category": "admin",
+      "description": "Update cluster setup",
+      "source_url": "openapi",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    },
+    {
+      "path": "/collections/{collection_name}/exists",
+      "method": "GET",
+      "category": "schema",
+      "description": "Check collection existence",
+      "source_url": "openapi",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi (mechanical backfill)"
+        }
+      ]
+    }
+  ],
+  "endpoint_registry": [
+    {
+      "path": "/collections/{collection_name}",
+      "method": "PUT",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+      "doc_version": "1.19.x",
+      "doc_quote": "Create a new collection with specified vector configuration and HNSW parameters",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/{collection_name}",
+      "method": "GET",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "doc_version": "1.19.x",
+      "doc_quote": "Retrieve collection information including configuration and status",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/{collection_name}",
+      "method": "DELETE",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete a collection and all its data",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections",
+      "method": "GET",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collections",
+      "doc_version": "1.19.x",
+      "doc_quote": "List all collections in the cluster",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/{collection_name}/points",
+      "method": "PUT",
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Insert or update points in a collection",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/{collection_name}/points/search",
+      "method": "POST",
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Search for the closest points to a given query vector",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/{collection_name}/points/delete",
+      "method": "POST",
+      "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete points from a collection",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/{collection_name}/points/{point_id}",
+      "method": "GET",
+      "source_url": "https://api.qdrant.tech/api-reference/points/get-point",
+      "doc_version": "1.19.x",
+      "doc_quote": "Retrieve a specific point by ID",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/{collection_name}/points/scroll",
+      "method": "POST",
+      "source_url": "https://api.qdrant.tech/api-reference/points/scroll-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Scroll through all points in a collection with pagination",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/aliases",
+      "method": "GET",
+      "source_url": "openapi",
+      "doc_version": "unknown",
+      "doc_quote": "List all aliases",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/cluster",
+      "method": "GET",
+      "source_url": "openapi",
+      "doc_version": "unknown",
+      "doc_quote": "Check cluster status",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/cluster/peer/{peer_id}",
+      "method": "DELETE",
+      "source_url": "openapi",
+      "doc_version": "unknown",
+      "doc_quote": "Remove peer from cluster",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/cluster/recover",
+      "method": "POST",
+      "source_url": "openapi",
+      "doc_version": "unknown",
+      "doc_quote": "Recover cluster state",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/cluster/telemetry",
+      "method": "GET",
+      "source_url": "openapi",
+      "doc_version": "unknown",
+      "doc_quote": "Collect cluster telemetry",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/aliases",
+      "method": "POST",
+      "source_url": "openapi",
+      "doc_version": "unknown",
+      "doc_quote": "Update collection aliases",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/{collection_name}/aliases",
+      "method": "GET",
+      "source_url": "openapi",
+      "doc_version": "unknown",
+      "doc_quote": "List collection aliases",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/{collection_name}/cluster",
+      "method": "GET",
+      "source_url": "openapi",
+      "doc_version": "unknown",
+      "doc_quote": "Retrieve cluster details",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/{collection_name}/cluster",
+      "method": "POST",
+      "source_url": "openapi",
+      "doc_version": "unknown",
+      "doc_quote": "Update cluster setup",
+      "verified_at": "2026-08-21T03:22:10Z"
+    },
+    {
+      "path": "/collections/{collection_name}/exists",
+      "method": "GET",
+      "source_url": "openapi",
+      "doc_version": "unknown",
+      "doc_quote": "Check collection existence",
+      "verified_at": "2026-08-21T03:22:10Z"
+    }
+  ],
+  "constraints": {
+    "type_constraints": [
+      {
+        "constraint_id": "qdrant_type_create_collection_001",
+        "endpoint": "/collections/{collection_name}:PUT",
+        "description": "vectors.size must be positive integer",
+        "assertion": "vectors.size > 0",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "unreachable",
+        "source_verified": false
+      },
+      {
+        "constraint_id": "qdrant_type_create_collection_002",
+        "endpoint": "/collections/{collection_name}:PUT",
+        "description": "vectors.distance must be valid metric",
+        "assertion": "vectors.distance in [Cosine, Euclidean, Dot, Manhattan]",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "unreachable",
+        "source_verified": false
+      }
+    ],
+    "range_constraints": [
+      {
+        "constraint_id": "qdrant_range_create_collection_001",
+        "endpoint": "/collections/{collection_name}:PUT",
+        "description": "HNSW m parameter range",
+        "assertion": "hnsw_config.m >= 2 and hnsw_config.m <= 100",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "unreachable",
+        "source_verified": false
+      },
+      {
+        "constraint_id": "qdrant_range_create_collection_002",
+        "endpoint": "/collections/{collection_name}:PUT",
+        "description": "HNSW ef_construct parameter range",
+        "assertion": "hnsw_config.ef_construct >= 10 and hnsw_config.ef_construct <= 1000",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "unreachable",
+        "source_verified": false
+      },
+      {
+        "constraint_id": "qdrant_range_search_points_001",
+        "endpoint": "/collections/{collection_name}/points/search:POST",
+        "description": "limit must be positive and bounded",
+        "assertion": "limit >= 1 and limit <= 1000",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+        "source_status": "unreachable",
+        "source_verified": false
+      },
+      {
+        "constraint_id": "qdrant_range_upsert_points_001",
+        "endpoint": "/collections/{collection_name}/points:PUT",
+        "description": "batch_size range for upsert",
+        "assertion": "batch_size >= 1 and batch_size <= 1000",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+        "source_status": "unreachable",
+        "source_verified": false
+      }
+    ],
+    "state_constraints": [
+      {
+        "constraint_id": "qdrant_state_create_collection_001",
+        "endpoint": "/collections/{collection_name}:PUT",
+        "description": "Atomic creation - fails if collection exists",
+        "assertion": "NOT EXISTS(collection_name) implies create succeeds; EXISTS(collection_name) implies create fails with error",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "unreachable",
+        "source_verified": false
+      },
+      {
+        "constraint_id": "qdrant_state_delete_collection_001",
+        "endpoint": "/collections/{collection_name}:DELETE",
+        "description": "Atomic deletion - removes all data",
+        "assertion": "DELETE(collection_name) implies collection removed and all points deleted",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection",
+        "source_status": "unreachable",
+        "source_verified": false
+      },
+      {
+        "constraint_id": "qdrant_state_upsert_points_001",
+        "endpoint": "/collections/{collection_name}/points:PUT",
+        "description": "Atomic upsert - insert or update per point",
+        "assertion": "UPSERT(points) implies each point inserted or updated atomically",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+        "source_status": "unreachable",
+        "source_verified": false
+      }
+    ]
+  },
+  "assertions": [
+    {
+      "assertion_id": "qdrant_behavioral_create_collection_001",
+      "endpoint": "/collections/{collection_name}:PUT",
+      "description": "Valid collection creation returns 200 OK",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with collection info",
+      "evidence_tier": "explicit",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+      "source_verified": false
+    },
+    {
+      "assertion_id": "qdrant_behavioral_get_collection_001",
+      "endpoint": "/collections/{collection_name}:GET",
+      "description": "Get existing collection returns 200 OK",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with collection details",
+      "evidence_tier": "explicit",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "source_verified": false
+    },
+    {
+      "assertion_id": "qdrant_behavioral_get_collection_002",
+      "endpoint": "/collections/{collection_name}:GET",
+      "description": "Get missing collection returns 404",
+      "category": "behavioral",
+      "expected_behavior": "returns 404 Not Found",
+      "evidence_tier": "explicit",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "source_verified": false
+    },
+    {
+      "assertion_id": "qdrant_behavioral_search_points_001",
+      "endpoint": "/collections/{collection_name}/points/search:POST",
+      "description": "Search returns scored results",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with array of scored results",
+      "evidence_tier": "explicit",
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "source_verified": false
+    },
+    {
+      "assertion_id": "qdrant_behavioral_search_points_002",
+      "endpoint": "/collections/{collection_name}/points/search:POST",
+      "description": "Empty collection search returns empty results",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with empty array, no error",
+      "evidence_tier": "inferred",
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "source_verified": false
+    }
+  ],
+  "behavioral_contracts": [
+    {
+      "contract_id": "qdrant_behavioral_create_then_get_001",
+      "description": "Created collection should be retrievable",
+      "scenario": "Create collection then Get collection info",
+      "expected_behavior": "Get returns 200 with created collection details",
+      "related_endpoints": [
+        "/collections/{collection_name}:PUT",
+        "/collections/{collection_name}:GET"
+      ],
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection"
+    },
+    {
+      "contract_id": "qdrant_behavioral_delete_then_get_001",
+      "description": "Deleted collection should not exist",
+      "scenario": "Create collection then Delete collection then Get collection",
+      "expected_behavior": "Get returns 404 Not Found",
+      "related_endpoints": [
+        "/collections/{collection_name}:PUT",
+        "/collections/{collection_name}:DELETE",
+        "/collections/{collection_name}:GET"
+      ],
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection"
+    },
+    {
+      "contract_id": "qdrant_behavioral_upsert_then_search_001",
+      "description": "Upserted points should be searchable",
+      "scenario": "Create collection then Upsert points then Search points",
+      "expected_behavior": "Search returns upserted points with scores",
+      "related_endpoints": [
+        "/collections/{collection_name}:PUT",
+        "/collections/{collection_name}/points:PUT",
+        "/collections/{collection_name}/points/search:POST"
+      ],
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points"
+    }
+  ],
+  "state_invariants": [
+    {
+      "invariant_id": "qdrant_invariant_create_exists_001",
+      "description": "Created collection should exist",
+      "assertion": "AFTER create(collection) EXISTS(collection) is true",
+      "scope": "per_collection",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection"
+    },
+    {
+      "invariant_id": "qdrant_invariant_delete_not_exists_001",
+      "description": "Deleted collection should not exist",
+      "assertion": "AFTER delete(collection) EXISTS(collection) is false",
+      "scope": "per_collection",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection"
+    },
+    {
+      "invariant_id": "qdrant_invariant_upsert_count_001",
+      "description": "Upsert N points increases count by N",
+      "assertion": "COUNT before upsert plus N equals COUNT after upsert",
+      "scope": "per_collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points"
+    }
+  ],
+  "data_types": [
+    {
+      "name": "Vector",
+      "description": "Dense vector of floats with fixed dimension",
+      "fields": [
+        {
+          "name": "data",
+          "type": "array<float>",
+          "required": true
+        },
+        {
+          "name": "dimension",
+          "type": "integer",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "DistanceMetric",
+      "description": "Distance metric for vector similarity",
+      "fields": [
+        {
+          "name": "type",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "Point",
+      "description": "Data point with vector and optional payload",
+      "fields": [
+        {
+          "name": "id",
+          "type": "integer|string",
+          "required": true
+        },
+        {
+          "name": "vector",
+          "type": "array<float>",
+          "required": true
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "_passport": {
+    "schema_version": "2.0",
+    "source": {
+      "doc_urls": [
+        "https://api.qdrant.tech/api-reference",
+        "https://qdrant.tech/documentation/concepts/collections/",
+        "https://qdrant.tech/documentation/concepts/vectors/",
+        "https://qdrant.tech/documentation/concepts/payload/",
+        "https://qdrant.tech/documentation/concepts/indexing/",
+        "https://qdrant.tech/documentation/concepts/search/"
+      ],
+      "doc_version": "1.18.0",
+      "crawl_method": "crawl4ai",
+      "crawled_at": "2026-08-20T05:00:00Z"
+    },
+    "generation": {
+      "knowledge_extractor_agent": "testvdb:knowledge-extractor",
+      "contract_formalizer_agent": "testvdb:contract-formalizer",
+      "generated_at": "2026-08-21T03:22:10.661958Z",
+      "cache_ttl_hours": 168
+    },
+    "integrity": {
+      "verified": true,
+      "verified_at": "2026-08-21T03:22:10.661958Z",
+      "core_crud_coverage_pct": 100.0,
+      "endpoint_count": 19,
+      "constraint_count": 9
+    },
+    "contract_hash": "sha256:5752205777e7b70222e36155cbcc934f7c1fb405ae2d6e269e14dfc34b14c886"
+  }
+}

@@ -1,0 +1,137 @@
+[ATTACK] type_mismatch on count endpoint (finding-feedback + type_confusion shape)
+======================================================================
+
+[TEST] Collection size: 50
+--------------------------------------------------
+
+  [Type-Matched] Integer filter:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [Type-Mismatched] String '200' on integer field:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [Null Check]:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+[TEST] Collection size: 200
+--------------------------------------------------
+
+  [Type-Matched] Integer filter:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [Type-Mismatched] String '200' on integer field:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [Null Check]:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+[TEST] Collection size: 500
+--------------------------------------------------
+
+  [Type-Matched] Integer filter:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [Type-Mismatched] String '200' on integer field:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [Null Check]:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+======================================================================
+[ANALYSIS] Type mismatch cardinality estimation results
+----------------------------------------------------------------------
+[BY_DESIGN] Type-mismatched filters rejected (expected behavior)
+
+======================================================================
+{
+  "strategy": "vein_type_mismatch",
+  "endpoint": "POST /collections/{collection}/points/count",
+  "condition_type": "type_mismatch",
+  "test_sizes": [
+    50,
+    200,
+    500
+  ],
+  "results": {
+    "size_50": {
+      "type_matched": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "type_mismatched": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "null_check": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      }
+    },
+    "size_200": {
+      "type_matched": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "type_mismatched": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "null_check": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      }
+    },
+    "size_500": {
+      "type_matched": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "type_mismatched": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "null_check": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      }
+    }
+  },
+  "verdict": "BY_DESIGN_EXCLUDED",
+  "threat_model_reference": "BS-01 (Parameter Type Coercion Trust)",
+  "finding_feedback_source": "cardinality_oracle (round 1) + type_confusion shape"
+}
+======================================================================
+
+VERDICT: NO_DEFECT
+
+[CLEANUP] Deleting test collections...
+  - DELETE vein_type_mismatch_50: 200
+  - DELETE vein_type_mismatch_200: 200
+  - DELETE vein_type_mismatch_500: 200

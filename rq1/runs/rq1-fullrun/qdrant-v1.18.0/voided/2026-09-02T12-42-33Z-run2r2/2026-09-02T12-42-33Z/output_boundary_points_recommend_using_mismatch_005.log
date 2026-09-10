@@ -1,0 +1,22 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+leg A1 lookup_from dim-4 (guard) -> status=200
+raw: {"result":[{"id":1,"version":1,"score":0.0},{"id":2,"version":1,"score":0.0057622097},{"id":3,"version":1,"score":0.011524419}],"status":"ok","time":0.000436872}
+leg A1 OK: dim-4 lookup live
+
+leg A2 lookup_from dim-6 -> status=400
+raw: {"status":{"error":"Wrong input: Vector dimension error: expected dim: 4, got 6"},"time":0.000903567}
+leg A2 lookup dim-6 OK: rejected with 400 (context: fetched dim-6 example vectors cannot serve the dim-4 space)
+
+leg B1 using=txt on partial point (guard) -> status=200
+raw: {"result":[{"id":202,"version":1,"score":0.0057622097}],"status":"ok","time":0.00037972}
+leg B1 OK: txt face of the partial point live
+
+leg B2 using=img on txt-only point -> status=400
+raw: {"status":{"error":"Wrong input: Positive vectors should not be empty with `average` strategy"},"time":0.000149336}
+leg B2 using=img, point lacks img OK: rejected with 400 (context: point 201 exists but has no img vector (the exact 'without the used vector' clause))
+
+leg B3 negative ref lacks img -> status=200
+raw: {"result":[],"status":"ok","time":0.00044618}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — leg [B3 negative without used vector]: negative example 201 has no img vector; the request was ACCEPTED with 200 (0 points returned from mismatched vectors): {"result":[],"status":"ok","time":0.00044618}

@@ -1,0 +1,14 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+F1 empty operations [] -> status=200
+raw: {"result":[],"status":"ok","time":0.000151478}
+F1: 200 with result == [] (consistent: 0 ops -> 0 entries)
+
+F2 single upsert op -> status=200
+raw: {"result":[{"operation_id":1,"status":"completed"}],"status":"ok","time":0.004251464}
+F2 readback payload={"n": 1} (durable)
+
+F3 three identical set_payload ops -> status=200
+raw: {"result":[{"operation_id":2,"status":"completed"},{"operation_id":3,"status":"completed"},{"operation_id":4,"status":"completed"}],"status":"ok","time":0.008806632}
+F3 readback payload={"n": 7} (idempotent closure OK)
+VERDICT: NO_DEFECT

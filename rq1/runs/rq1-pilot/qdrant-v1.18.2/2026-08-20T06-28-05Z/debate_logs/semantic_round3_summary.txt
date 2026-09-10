@@ -1,0 +1,104 @@
+# Qdrant v1.18.2 Semantic Attack Scripts — Round 3
+# Target: chunk_points+search (2 behavioral contracts)
+# Generated: 2026-08-20
+
+## Coverage Summary
+
+### Target Unit Refs (from chunk_points+search)
+- qdrant_behavioral_search_points_001 (search returns 200 OK with scored results)
+- qdrant_behavioral_search_points_002 (empty collection search returns empty array)
+
+### Generated Scripts (11 total)
+
+1. semantic_points_search_001.py
+   - Strategy: behavioral_contract
+   - Param: vector
+   - Testing: Search returns 200 OK with scored results
+   - Expected: Type4_StateLogicViolation
+
+2. semantic_points_search_002.py
+   - Strategy: diagnosis_quality
+   - Param: vector
+   - Testing: Dimension mismatch error quality
+   - Expected: Type2_PoorDiagnostics
+
+3. semantic_points_search_003.py
+   - Strategy: illegal_rejection
+   - Param: limit
+   - Testing: Valid limit values accepted
+   - Expected: Type1_IllegalRejection
+
+4. semantic_points_search_004.py
+   - Strategy: type_coercion
+   - Param: limit
+   - Testing: Incorrect limit types rejected
+   - Expected: Type1_IllegalSuccess
+
+5. semantic_points_search_005.py
+   - Strategy: behavioral_contract
+   - Param: null
+   - Testing: Empty collection returns empty array
+   - Expected: Type4_StateLogicViolation
+
+6. semantic_points_search_006.py
+   - Strategy: search_correctness
+   - Param: vector
+   - Testing: Results ordered by similarity score
+   - Expected: Type4_StateLogicViolation
+
+7. semantic_points_search_007.py
+   - Strategy: diagnosis_quality
+   - Param: limit
+   - Testing: Out-of-range limit error quality
+   - Expected: Type2_PoorDiagnostics
+
+8. semantic_points_search_008.py
+   - Strategy: filter_semantics
+   - Param: filter
+   - Testing: Filter conditions work correctly
+   - Expected: Type4_StateLogicViolation
+
+9. semantic_points_search_009.py
+   - Strategy: behavioral_contract
+   - Param: score_threshold
+   - Testing: Score threshold filters results
+   - Expected: Type4_StateLogicViolation
+
+10. semantic_points_search_010.py
+    - Strategy: illegal_rejection
+    - Param: score_threshold
+    - Testing: Valid score_threshold values accepted
+    - Expected: Type1_IllegalRejection
+
+11. semantic_points_search_011.py
+    - Strategy: type_coercion
+    - Param: score_threshold
+    - Testing: Incorrect score_threshold types rejected
+    - Expected: Type1_IllegalSuccess
+
+## Strategy Distribution
+- behavioral_contract: 3 (001, 005, 009)
+- diagnosis_quality: 2 (002, 007)
+- illegal_rejection: 2 (003, 010)
+- type_coercion: 2 (004, 011)
+- search_correctness: 1 (006)
+- filter_semantics: 1 (008)
+
+## Parameter Coverage
+- vector: 3 (dimension mismatch, result structure, similarity ordering)
+- limit: 4 (valid values, type coercion, range errors, quality)
+- filter: 1 (condition semantics)
+- score_threshold: 3 (filtering, valid values, type coercion)
+- null (general behavior): 1 (empty collection)
+
+## Cognitive Blindspots Targeted
+- BS-02 (Error Message Negligence): diagnosis_quality scripts
+- BS-05 (Documentation Drift): behavioral_contract, search_correctness
+
+## Contract Compliance
+All scripts follow:
+- safe_request() wrapper (no bare .json() chains)
+- BASE_URL from environment (no hardcoded ports)
+- Contract-derived endpoints (no hardcoded paths)
+- Cleanup wrapped in try/except
+- VERDICT printing at end

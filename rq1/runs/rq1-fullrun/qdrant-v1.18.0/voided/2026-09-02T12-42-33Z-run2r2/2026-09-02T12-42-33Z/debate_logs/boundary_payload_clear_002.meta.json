@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_clear_002",
+ "endpoint": "payload+clear",
+ "param": "filter",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "with 3 payload-bearing points (city ams/par/tok), clear {\"filter\":{\"must\":[{\"key\":\"city\",\"match\":{\"value\":\"par\"}}]},\"wait\":true} returns 200; scroll afterwards shows the par point payload empty (null/{}), ams/tok payloads deep-equal to baseline, all vectors intact, exact count stays 3 — residue on the matched point, collateral wipe on unmatched points, vector loss or count drift each = Type4_StateLogicViolation; 5xx = Type3_RuntimeFailure with /healthz re-check",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

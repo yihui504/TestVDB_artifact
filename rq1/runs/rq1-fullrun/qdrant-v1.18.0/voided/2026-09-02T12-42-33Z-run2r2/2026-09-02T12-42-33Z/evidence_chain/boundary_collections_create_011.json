@@ -1,0 +1,100 @@
+{
+  "defect_id": "boundary_collections_create_011",
+  "endpoint": "collections+create",
+  "defect_type": "Type3_RuntimeFailure",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: WebFetch to api.qdrant.tech was domain-blocked by the sandbox, but the page was successfully retrieved via the alternate web reader (title 'Create a collection | Qdrant | API Reference', served at the versioned v-1-18-x path) - recorded as live, not domain_blocked, because content was actually obtained. version: versioned URL v-1-18-x matches target 1.18.x doc line ('1.18.x (versioned v-1-18-x api-reference)'). content: the Fern-rendered HTML inlines wal_config only as 'Custom params for WAL. If none - values from service configuration file are used.' (field grid loaded via JS, not visible in fetched markdown); the member-for-member grid backing the assertion was verified in the versioned OpenAPI artifact shipped inside the target repo itself (docs/redoc/v1.18.x/openapi.json): WalConfigDiff.wal_retain_closed {type integer, format uint, minimum 0, nullable true} - exactly the constraint's create-side claim; the resolved describe-side WalConfig declares wal_retain_closed {minimum 1, default 1}, the documented internal asymmetry the script annotated as the conflict zone. endpoint: endpoint_registry maps collections+create -> PUT /collections/{collection_name} -> this exact source_url; page documents the create-collection request face carrying wal_config.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[measured-only:wal_retain_closed=0 (diff min 0 vs resolved min 1)] status=500 raw={\"status\":{\"error\":\"Service internal error: Tokio task join error: task 16212 panicked with message \\\"called `Option::unwrap()` on a `None` value\\\"\"},\"time\":1.243433819} (followed by log line 16: [healthz attempt 1] status=200 raw=healthz check passed)",
+      "secondary_observations": [
+        "[wal_config.wal_capacity_mb=0 (min-1, both grids)] status=422 raw={\"status\":{\"error\":\"Validation error in JSON body: [wal_config.wal_capacity_mb: value 0 invalid, must be 1 or larger]\"},\"time\":0.0} (same-family field, illegal under both grids, rejected on the validation face)",
+        "[wal_config.wal_segments_ahead=-1 (min-1, both grids)] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 86\"},\"time\":0.0}",
+        "[wal_config.wal_retain_closed=-1 (illegal under diff min 0 AND resolved min 1)] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 85\"},\"time\":0.0}",
+        "[positive minima combo {\"wal_capacity_mb\": 1, \"wal_segments_ahead\": 0}] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.344849842}",
+        "[readback] config.wal_config={\"wal_capacity_mb\": 1, \"wal_segments_ahead\": 0, \"wal_retain_closed\": 1} (resolved default of the un-sent retain_closed field is 1)",
+        "rest (semantic_collections_create_014, sibling script, same constraint qdrant_range_collections_create_005, all-minima closure incl. wal_retain_closed=0): [create scc14_1788388177_ok_minima] status=500 raw={\"status\":{\"error\":\"Service internal error: Tokio task join error: task 17006 panicked with message \\\"called `Option::unwrap()` on a `None` value\\\"\"},\"time\":1.169060873}",
+        "rest (state_collections_create_011, sibling script, same constraint, minima closure incl. wal_retain_closed=0): [wal_min] status=500 raw={\"status\":{\"error\":\"Service internal error: Tokio task join error: task 17417 panicked with message \\\"called `Option::unwrap()` on a `None` value\\\"\"},\"time\":1.14942087}",
+        "grpc face: source shows the gRPC CreateCollection message carries the same shared WalConfigDiff with #[validate(nested)] (lib/api/src/grpc/qdrant.rs:1179) so the same 0 would pass the same diff validation, but no gRPC probe was executed in this round (rest-only harness) - face_unavailable, no fabricated comparison line"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The server did not mask the failure as 2xx: it returned a proper HTTP 500 with a diagnostic body. However the disposition face is inconsistent across the documented grids' conflict zone: wal_capacity_mb=0 (illegal under BOTH grids) is rejected as 422 'Validation error', while wal_retain_closed=0 (legal under the create-side WalConfigDiff grid that governs this request, illegal only under the resolved WalConfig grid) surfaces as 500 'Service internal error: Tokio task join error ... panicked' - a server-fault face for a value the request-side schema declares legal."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_collections_create_011",
+        "semantic_collections_create_014",
+        "state_collections_create_011"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_collections_create_005",
+      "assertion_text_quoted": "wal_config (create, WalConfigDiff schema): wal_capacity_mb minimum 1; wal_segments_ahead minimum 0; wal_retain_closed minimum 0",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates-declaration self-check: the probe value 0 is INSIDE the quoted assertion's constraint domain (wal_retain_closed minimum 0 => 0 is a documented-legal input on this face), and the API's disposition for that legal value is a 500 task panic instead of the documented successful create - the constraint is violated by failure-to-honor, not by acceptance. The full contract description additionally records 'wal_retain_closed minimum 0 (resolved default 1)', i.e. the contract itself already encodes the create-vs-resolved asymmetry; the observed crash sits exactly on that documented-legal boundary. Note also: candidates.jsonl carries constraint_id \"\" in the entry, but both the attack text and the script header/meta name qdrant_range_collections_create_005, which exists in structured_contract.json constraints.range_constraints with a matching verbatim assertion - the empty field is a dispatch-listing artifact, not a missing constraint."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_range_collections_create_005 present in structured_contract.json constraints.range_constraints (endpoint collections+create, evidence_tier explicit, source_verified false in contract); assertion matches the script's [constraint quote] line verbatim",
+        "doc: source_url https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection retrieved live via alternate reader (WebFetch domain-blocked); create-side grid corroborated member-for-member by the versioned OpenAPI shipped in the target repo (docs/redoc/v1.18.x/openapi.json: WalConfigDiff.wal_retain_closed minimum 0); resolved-side WalConfig minimum 1/default 1 is the doc's own internal asymmetry, the conflict zone under test",
+        "script: debate_logs/boundary_collections_create_011.py line 247 sends PUT create_collection {\"vectors\": {\"size\":4,\"distance\":\"Cosine\"}, \"wal_config\": {\"wal_retain_closed\": 0}} (path_key create_collection from runtime PATHS); conflict leg pre-declared measured-only with 5xx+alive => Type3 oracle",
+        "log: output_boundary_collections_create_011.log lines 15-16 show status=500 with the Tokio panic body and healthz 200; VERDICT DEFECT_FOUND (Type3) is directly grounded in those raw lines; reproduced identically (different task ids 17006/17417) by semantic_collections_create_014 and state_collections_create_011"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "wal_retain_closed",
+        "WalOptions",
+        "NonZeroUsize::new",
+        "JoinError / task join error",
+        "SerdeWal::new",
+        "perform_collection_meta_op"
+      ],
+      "files_examined": [
+        "docs/redoc/v1.18.x/openapi.json (WalConfigDiff + WalConfig schema dump)",
+        "lib/collection/src/operations/config_diff.rs (WalConfigDiff definition lines 79-88; DiffConfig<WalConfigDiff> for WalConfig update lines 281-295)",
+        "lib/collection/src/config.rs (WalConfig lines 34-50; From<&WalConfig> for WalOptions lines 52-65 - the panicking unwrap at line 62)",
+        "lib/storage/src/content_manager/toc/create_collection.rs (diff resolution line 148; CollectionConfigInternal built and passed to Collection::new lines 192-234 with no .validate() on the resolved wal_config)",
+        "lib/collection/src/collection/mod.rs (Collection::new lines 103-169 -> ShardReplicaSet::build line 142)",
+        "lib/collection/src/shards/replica_set/mod.rs (ShardReplicaSet::build lines 139-177 -> LocalShard::build line 161)",
+        "lib/collection/src/shards/local_shard/mod.rs (LocalShard::build from line 579; SerdeWal::new(&wal_path, (&config.wal_config).into()) at lines 658-659, and the load path at line 372)",
+        "lib/storage/src/dispatcher.rs (single-node meta-op wrapper tokio::task::spawn(async move { toc.perform_collection_meta_op(operation).await }).await? at lines 257-261)",
+        "lib/storage/src/content_manager/errors.rs (impl From<tokio::task::JoinError> for StorageError -> service_error(\"Tokio task join error: {err}\") at lines 332-334)",
+        "lib/api/src/grpc/qdrant.rs (gRPC CreateCollection carries Option<WalConfigDiff> with #[validate(nested)] at lines 1177-1179)"
+      ],
+      "source_excerpt": "lib/collection/src/config.rs:34-65 --\n34  #[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Anonymize, Clone, PartialEq, Eq)]\n36  pub struct WalConfig {\n37      /// Size of a single WAL segment in MB\n38      #[validate(range(min = 1))]\n39      pub wal_capacity_mb: usize,\n40      /// Number of WAL segments to create ahead of actually used ones\n41      pub wal_segments_ahead: usize,\n42      /// Number of closed WAL segments to keep\n43      #[validate(range(min = 1))]\n44      #[serde(default = \"default_wal_retain_closed\")]\n45      pub wal_retain_closed: usize,\n46  }\n48  fn default_wal_retain_closed() -> usize {\n49      1\n50  }\n52  impl From<&WalConfig> for WalOptions {\n53      fn from(config: &WalConfig) -> Self {\n54          let WalConfig {\n55              wal_capacity_mb,\n56              wal_segments_ahead,\n57              wal_retain_closed,\n58          } = config;\n59          WalOptions {\n60              segment_capacity: wal_capacity_mb * 1024 * 1024,\n61              segment_queue_len: *wal_segments_ahead,\n62              retain_closed: NonZeroUsize::new(*wal_retain_closed).unwrap(),   // <-- PANIC SITE: 0 -> None -> unwrap()\n63          }\n64      }\n65  }\n\nlib/collection/src/operations/config_diff.rs:79-88 --\n79  #[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone, PartialEq, Eq, Hash)]\n80  pub struct WalConfigDiff {\n81      /// Size of a single WAL segment in MB\n82      #[validate(range(min = 1))]\n83      pub wal_capacity_mb: Option<usize>,\n84      /// Number of WAL segments to create ahead of actually used ones\n85      pub wal_segments_ahead: Option<usize>,\n86      /// Number of closed WAL segments to retain\n87      pub wal_retain_closed: Option<usize>,      // <-- NO #[validate(range(min = 1))]: 0 passes request validation\n88  }\n\nlib/collection/src/operations/config_diff.rs:281-295 (update) --\n292              wal_retain_closed: wal_retain_closed.unwrap_or(self.wal_retain_closed),  // Some(0) overwrites default 1 with 0, no clamping\n\nlib/storage/src/content_manager/toc/create_collection.rs:148,192-234 --\n148          let wal_config = self.storage_config.wal.update_opt(wal_config_diff.as_ref());  // resolved WalConfig{wal_retain_closed: 0}; NO .validate() before Collection::new\n206          let collection = Collection::new(..., &collection_config, ...).await?;\n\nlib/collection/src/shards/local_shard/mod.rs:658-659 (inside LocalShard::build, from line 579) --\n658          let wal: SerdeWal<OperationWithClockTag> =\n659              SerdeWal::new(&wal_path, (&config.wal_config).into())?;    // <-- invokes From<&WalConfig> for WalOptions -> unwrap panics\n\nlib/storage/src/dispatcher.rs:257-261 (single-node meta-op dispatch) --\n257          } else {\n258              let toc = self.toc.clone();\n259              tokio::task::spawn(async move { toc.perform_collection_meta_op(operation).await })\n260                  .await?    // <-- JoinError from the panicked task\n261          }\n\nlib/storage/src/content_manager/errors.rs:332-334 --\n332  impl From<tokio::task::JoinError> for StorageError {\n333      fn from(err: tokio::task::JoinError) -> Self {\n334          Self::service_error(format!(\"Tokio task join error: {err}\"))   // <-- the observed 500 body prefix",
+      "call_chain_traced": "PUT /collections/{name} {wal_config:{wal_retain_closed:0}} -> request DTO validation (WalConfigDiff has NO range attribute on wal_retain_closed, so 0 passes; wal_capacity_mb=0 is the field WITH range(min=1), explaining its 422) -> toc/create_collection.rs:148 update_opt resolves Some(0) over default 1 with no clamping and no .validate() on the resolved config -> Collection::new (collection/mod.rs:103) -> ShardReplicaSet::build (replica_set/mod.rs:139) -> LocalShard::build (local_shard/mod.rs:579) -> SerdeWal::new(&wal_path, (&config.wal_config).into()) (local_shard/mod.rs:659; the load path at :372 shares the same conversion) -> From<&WalConfig> for WalOptions (config.rs:52) -> NonZeroUsize::new(0).unwrap() PANICS 'called `Option::unwrap()` on a `None` value' (config.rs:62) -> panic contained in dispatcher.rs:259 tokio::task::spawn -> JoinError -> StorageError::service_error('Tokio task join error: task NNNN panicked with message ...') (errors.rs:332-334) -> HTTP 500; process survives, /healthz stays 200",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "The create-side WalConfigDiff carries no range validation on wal_retain_closed (config_diff.rs:87) while its sibling wal_capacity_mb does (line 82) - mirroring the documented min-0 grid - and the resolved WalConfig's range(min=1) (config.rs:43) is never enforced on the create path (no .validate() call in create_collection between diff resolution and Collection::new). The documented-legal boundary value 0 therefore reaches an unguarded NonZeroUsize::new(0).unwrap() (config.rs:62) whose panic message matches the observed 500 body byte-for-byte. NOT marked by_design_in_source: the unwrap carries no intent comment/docstring and no maintainer declaration is present; bare unannotated behavior is barred from by_design per the v3.4 tightening. The resolved-side range(min=1) shows the codebase itself considers <1 invalid for WalConfig, which makes the missing diff-side guard/clamp an omission, not a declared decision."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env: same endpoint family served 422/400/200 correctly in the same script run immediately before the 500, and /healthz returned 200 after it (log line 16); a sibling script's default-config control create succeeded on the same deployment",
+        "concurrency: single sequential request; the panic is deterministic value-conditioned logic (NonZeroUsize::new(0) is None for a pure-function reason), reproduced across 3 scripts with 3 distinct task ids",
+        "request typo: the JSON is schema-valid and passed the server's own 422 validator for the diff grid (only the min-1 field wal_capacity_mb is range-checked there)",
+        "server restart/crash: the panic is contained inside the spawned meta-op task; the process stayed alive (healthz 200 immediately after, three separate runs)"
+      ],
+      "surviving": "genuine defect signal: a create-request value that the versioned create-side WalConfigDiff grid documents as legal (minimum 0) deterministically panics the collection-creation task and surfaces as HTTP 500"
+    }
+  }
+}

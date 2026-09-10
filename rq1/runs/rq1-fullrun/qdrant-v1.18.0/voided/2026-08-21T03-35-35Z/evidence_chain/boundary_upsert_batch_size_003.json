@@ -1,0 +1,61 @@
+{
+  "defect_id": "boundary_upsert_batch_size_003",
+  "endpoint": "/collections/{collection_name}/points:PUT",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url reachable (200), doc version 1.19.x vs target v1.18.0 minor mismatch, constraint assertion batch_size <= 1000 is inferred not explicitly quoted in doc",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: batch_size=1001 (exceeds documented max 1000) → http=200, code=0 (acknowledged)",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Target accepts illegal batch_size and returns success (status ok, operation_id=1, status acknowledged)"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_upsert_batch_size_003"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_upsert_points_001",
+      "assertion_text_quoted": "batch_size >= 1 and batch_size <= 1000",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_upsert_points_001 (batch_size <= 1000)",
+        "doc:https://api.qdrant.tech/api-reference/points/upsert-points (inferred constraint)",
+        "script:boundary_upsert_batch_size_003 (batch_size=1001 in request)",
+        "log:HTTP 200 + acknowledged (target accepted violation)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Target accepted batch_size=1001 exceeding documented max 1000, returning 200 + acknowledged instead of 4xx/5xx",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["batch_size", "upsert", "points.*insert", "validation.*batch", "1000"],
+      "files_examined": ["not_available_local - v1.18.2 source exists but v1.18.0 not cloned"],
+      "source_excerpt": "",
+      "call_chain_traced": "not_available_local - v1.18.0 source not cloned, v1.18.2 clone at C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.qdrant-src cannot substitute for v1.18.0 verification",
+      "verification_outcome": "not_available_local",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "validation_absent"
+    }
+  }
+}

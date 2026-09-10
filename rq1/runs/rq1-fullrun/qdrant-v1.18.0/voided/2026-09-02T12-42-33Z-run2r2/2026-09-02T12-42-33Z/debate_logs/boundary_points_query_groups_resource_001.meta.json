@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_points_query_groups_resource_001",
+ "endpoint": "points+query+groups",
+ "param": "group_size",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "limit x group_size both extreme (1e6/1e8/INT_MAX) -> 200 with <= seeded hits or clean 400/422; 5xx/OOM/panic, transport-fail with /healthz alive, or transport death with /healthz DOWN post-request (server killed by the request; resource_bound, R11 framing) = Type3_RuntimeFailure",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,20 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] index keys present=['delete_index', 'create_index', 'describe_collection', 'drop_collection', 'create_collection']
+[setup upsert C1] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.005061143}
+[setup create index sidd5_1788435267_36816_col] status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.51107329}
+[setup create index sidd5_1788435267_36816_dropped] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.474082328}
+[setup drop C2] status=200 raw={"result":true,"status":"ok","time":0.011603121}
+[leg1 existing-index delete] status=200 raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.298522693}
+[leg1 existing-index delete] envelope note: status='ok' result_type=dict shape_matches_response_shape=True
+[leg2 nonexistent-index delete] status=200 raw={"result":{"operation_id":7,"status":"completed"},"status":"ok","time":0.287340315}
+[leg2 nonexistent-index delete] envelope note: status='ok' result_type=dict shape_matches_response_shape=True
+[leg3 never-created collection] status=404 raw={"status":{"error":"Not found: Collection `sidd5_1788435267_36816_never_created` doesn't exist!"},"time":0.000035484}
+[leg4a dropped collection] status=404 raw={"status":{"error":"Not found: Collection `sidd5_1788435267_36816_dropped` doesn't exist!"},"time":0.000034931}
+[leg4b dropped collection repeat] status=404 raw={"status":{"error":"Not found: Collection `sidd5_1788435267_36816_dropped` doesn't exist!"},"time":0.000045285}
+[control count C1] status=200 raw={"result":{"count":3},"status":"ok","time":0.000310034}
+[summary] legs adjudicated: existing/nonexistent on live col (want 200), never-created + dropped x2 (want 404); control_count=3 defects=0
+status matrix clean: live-collection deletes 200 (existing and non-existent index alike), never-created and dropped collection deletes 404 stable on repeat, data intact - NO_DEFECT
+[cleanup] dropped sidd5_1788435267_36816_col
+[cleanup] dropped sidd5_1788435267_36816_dropped
+VERDICT: NO_DEFECT

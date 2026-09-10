@@ -1,0 +1,71 @@
+{
+  "defect_id": "boundary_search_required_005",
+  "endpoint": "v1/vector/search（header 语义：Accept-Type-Allow-Int64）",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "medium",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint milvus_type_v1_search_001 断言'默认返回字符串、header 控制为数字'。本地源码 paramtable/http_param.go:40-47 显示 v2.3.2 起 proxy.http.acceptTypeAllowInt64 默认值=\"true\"（服务端默认允许 int64 数字），即官方实现已把默认翻转——契约描述与该版默认行为不符（版本演进）",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "[int64 hdr ids] {\"code\":200,\"data\":[{\"distance\":0,\"id\":468539281520724797}]} + [id types] default=468539281520724797(int) header=468539281520724797(int)（主观测：默认即返回 JSON 数字，与契约'默认字符串'不符）",
+      "secondary_observations": [
+        "[default ids] {\"code\":200,\"data\":[{\"distance\":0,\"id\":468539281520724797}]}（默认路径同为数字）",
+        "[missing vector] http=200 code=1802 \"missing required parameters, required parameters: [collectionName, vector]\"（契约 milvus_range_search_001 正确执行）",
+        "[vector=empty []] http=200 body={\"code\":200,\"data\":[]}（空向量绕过必填校验，次要观测）",
+        "[vector=string/number/nested/str-array] http=200 code=1801 各类 unmarshal 拒绝（类型校验严格，对照）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "主观测为响应编码语义（id 序列化形态），非错误路径；对照组 1802/1801 均 HTTP 200 + 业务码"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_search_required_005.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_v1_search_001",
+      "assertion_text_quoted": "Accept-Type-Allow-Int64 header controls int64 id JSON encoding (number vs string)",
+      "api_violates_assertion": true,
+      "note": "契约含'default returns strings'语义（description 明示）；实测默认返回 JSON 数字。但源码 DefaultValue=\"true\"（v2.3.2 引入）表明该行为是官方配置默认值翻转，属契约-实现版本漂移而非无据实现——api_violates_assertion=true 仅陈述观测与契约文本矛盾",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_v1_search_001 header 控制 id 编码、默认字符串",
+        "doc: constant.go:80 定义 header；http_param.go:40-47 服务端默认 acceptTypeAllowInt64=true",
+        "script: boundary_search_required_005.py 分别以默认/带 header 检索并比对 id 类型",
+        "log: default 与 header 两条路径均返回 int（主观测差异为零）"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "契约 description 与 v2.3.22 源码 DefaultValue=\"true\" 冲突：无 header 时中间件把 header 设为 'true'（service.go:196-203），响应 id 恒为数字。契约文本未随 v2.3.2 默认值变更更新",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["Accept-Type-Allow-Int64", "HTTPHeaderAllowInt64", "acceptTypeAllowInt64"],
+      "files_examined": [
+        "internal/distributed/proxy/service.go:195-213",
+        "pkg/util/paramtable/http_param.go:40-48",
+        "internal/distributed/proxy/httpserver/constant.go:80",
+        "internal/distributed/proxy/httpserver/handler_v1.go:912-916"
+      ],
+      "source_excerpt": "service.go:195-203（中间件）:\n\t_, err := strconv.ParseBool(c.Request.Header.Get(httpserver.HTTPHeaderAllowInt64))\n\tif err != nil {\n\t\tif paramtable.Get().HTTPCfg.AcceptTypeAllowInt64.GetAsBool() {\n\t\t\tc.Request.Header.Set(httpserver.HTTPHeaderAllowInt64, \"true\")\n\t\t} else { ... \"false\" }\n\t}\nhttp_param.go:40-47: p.AcceptTypeAllowInt64 = ParamItem{ Key: \"proxy.http.acceptTypeAllowInt64\", DefaultValue: \"true\", Version: \"2.3.2\", Doc: \"high-level restful api, whether http client can deal with int64\" }\nhandler_v1.go:915: allowJS, _ := strconv.ParseBool(c.Request.Header.Get(HTTPHeaderAllowInt64)) → buildQueryResp(..., allowJS)",
+      "call_chain_traced": "请求（无 header）→ gin 中间件 service.go:196 ParseBool 失败 → 服务端默认 acceptTypeAllowInt64=true → 强制注入 header 'true' → search handler_v1.go:915 allowJS=true → buildQueryResp 返回原生 int64 数字。'header 控制'机制本身存在且有效（显式发 false 时走字符串），但默认分支已被 v2.3.2 配置默认值翻转",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "部署配置依赖：若部署环境显式设置 proxy.http.acceptTypeAllowInt64=false 则默认返回字符串——本环境未见该覆盖（docker 默认配置），如实记录；契约文本与 v2.3.2+ 默认值的版本漂移交 auditor"
+    }
+  }
+}

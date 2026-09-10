@@ -1,0 +1,56 @@
+{
+  "defect_id": "boundary_schema_flatSearchCutoff_zero",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url=openapi fallback（contract 抓取自 openapi/go-struct，非独立文档 URL，可达性记 PARTIAL）；POST /schema 在 endpoint_registry 存在（doc_quote 'Create collection'）；contract 参数表声明 flatSearchCutoff type=int default=40000，但无范围约束（无 min/max），0 是否合法文档未明示",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Status: 200; Raw: {...\"vectorIndexConfig\":{\"skip\":false,...,\"flatSearchCutoff\":0,...}} (POST /v1/schema flatSearchCutoff=0 被接受且回读持久化 0)",
+      "secondary_observations": [
+        "judge 判定：回读值 0 == 攻击值 0（persist）→ DEFECT_FOUND",
+        "同 endpoint 兄弟脚本：flatSearchCutoff=-1 → 200 接受、flatSearchCutoff=1e9 → 200 接受（同模式，仅 float 值 422 拒绝）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "flatSearchCutoff=0 以 HTTP 200 接受并原样持久化（回读 0）；若 0 视为非法值则应为 4xx，但 0 有确定运行时语义（见 source_grounding），违规性待 auditor 判定"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_schema_flatSearchCutoff_zero", "boundary_schema_flatSearchCutoff_negative", "boundary_schema_flatSearchCutoff_extreme"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "contract",
+      "assertion_text_quoted": "POST /schema 参数 flatSearchCutoff: type=int, required=false, description='Flat search cutoff (source: go-struct, default: 40000)', default_value=40000",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:POST /schema flatSearchCutoff int default 40000（无范围约束）", "doc:openapi fallback 'Create collection' v1.37.4", "script:boundary_schema_flatSearchCutoff_zero.py POST flatSearchCutoff=0", "log:Status 200 + 回读 flatSearchCutoff=0（persist）"],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["FlatSearchCutoff in entities/vectorindex/hnsw", "flatSearchCutoff in adapters/repos/db/vector/hnsw"],
+      "files_examined": ["entities/vectorindex/hnsw/config.go", "entities/vectorindex/hnsw/config_test.go", "adapters/repos/db/vector/hnsw/index.go", "adapters/repos/db/vector/hnsw/search.go", "adapters/repos/db/vector/hnsw/config_update.go"],
+      "source_excerpt": "config.go:34 DefaultFlatSearchCutoff=40000; config.go:58 FlatSearchCutoff int `json:\"flatSearchCutoff\"`; config.go:201-205 经 vectorIndexCommon.OptionalIntFromMap(asMap, \"flatSearchCutoff\", ...) 读取；config.go:260-323 validate() 仅校验 MaxConnections/EFConstruction/FilterStrategy/压缩方法/PQ/RQ/Multivector —— 无 FlatSearchCutoff 任何范围校验；search.go:85-86,122-123 `flatSearchCutoff := int(atomic.LoadInt64(&h.flatSearchCutoff)); if allowList != nil && !h.forbidFlat && allowList.Len() < flatSearchCutoff { 使用 flat search }` → 0 时条件恒 false，flat search 永不触发（禁用语义确定）",
+      "call_chain_traced": "POST /v1/schema → ParseAndValidateConfig → SetDefaults(40000) → OptionalIntFromMap 覆盖用户值（无校验） → validate() 通过 → 持久化回读；运行时 hnsw/search.go 以 allowList.Len() < cutoff 决定是否走 flat search",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "0 持久化一致（无漂移），但 0 语义合法（运行时=禁用 flat search，行为确定非 crash）——by-design 候选，auditor 判定 DEFECT/NOT_DEFECT 时需权衡 '无校验接受' vs '0 有合法语义'"
+    }
+  }
+}

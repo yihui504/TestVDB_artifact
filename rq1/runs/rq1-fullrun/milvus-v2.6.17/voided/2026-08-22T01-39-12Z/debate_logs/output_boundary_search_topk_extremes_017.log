@@ -1,0 +1,9 @@
+limit 1e6 -> http=200 code=65535 elapsed=0.0s raw={"code":65535,"message":"topk [1000000] is invalid, it should be in range [1, 16384], but got 1000000"}
+limit 1e8 -> http=200 code=65535 elapsed=0.0s raw={"code":65535,"message":"topk [100000000] is invalid, it should be in range [1, 16384], but got 100000000"}
+INT32_MAX -> http=200 code=65535 elapsed=0.0s raw={"code":65535,"message":"topk [2147483647] is invalid, it should be in range [1, 16384], but got 2147483647"}
+INT64_MAX -> http=200 code=1801 elapsed=0.0s raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number 9223372036854775807 into Go struct field SearchReqV2.limit of type int32"}
+float 1e9 -> http=200 code=1801 elapsed=0.0s raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number 1000000000.0 into Go struct field SearchReqV2.limit of type int32"}
+float 1e300 -> http=200 code=1801 elapsed=0.0s raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number 1e+300 into Go struct field SearchReqV2.limit of type int32"}
+group limit=groupSize=1e6 -> http=200 code=65535 raw={"code":65535,"message":"topk [1000000] is invalid, it should be in range [1, 16384], but got 1000000"}
+post-attack healthz: OK
+VERDICT: NO_DEFECT

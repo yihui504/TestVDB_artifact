@@ -1,0 +1,11 @@
+{"defect_id": "qdrant_028", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "strict max_query_limit=10 下 scroll limit=100 被明确 400 拒绝、limit=5 返回 200，行为与契约 limit 默认 10（可调）完全一致，无任何违反。"}
+{"defect_id": "weaviate_001", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "包内契约条目均不涉及 dynamicEfMin/dynamicEfMax，dynamicEfMin=500>dynamicEfMax=10 被接受虽可疑但缺乏契约断言支持，证据不足以判定违反。"}
+{"defect_id": "weaviate_002", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "包内唯一范围断言是 replicationConfig.factor>=1，无 flatSearchCutoff 取值范围约束，-100 被接受并持久化不构成对包内契约的违反。"}
+{"defect_id": "weaviate_003", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "请求 factor=-1 虽返回 200，但响应与 GET 显示落库 factor=1，最终状态满足契约断言 replicationConfig.factor>=1，包内亦无要求 4xx 拒绝的断言。"}
+{"defect_id": "weaviate_004", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "ef=-1 正是系统默认值（各材料包响应中默认 ef 均为 -1），且包内契约无任何 ef 范围断言，不构成违反。"}
+{"defect_id": "weaviate_005", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "desiredCount=-1 被 200 接受与 desiredCount=0 被 422 拒收确不对称，但包内契约无任何 shardingConfig.desiredCount 断言，保守裁决证据不足。"}
+{"defect_id": "weaviate_006", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "tokenization='' 虽返回 200，但响应显示落库值被规范化为 word（在契约枚举内），最终状态满足枚举断言，包内无要求拒绝非法输入的声明。"}
+{"defect_id": "weaviate_007", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "distance=null 被规范化为默认 cosine，最终状态合法，且包内契约无 distance 取值或空值处理相关断言。"}
+{"defect_id": "weaviate_008", "verdict": "CONFIRMED", "confidence": 0.6, "rationale": "契约断言 create 时 activityStatus 必须 ∈ {ACTIVE,INACTIVE}，而 activityStatus='' 的创建请求被 200 接受且响应中完全缺失 activityStatus 字段，属静默接受被拒值。"}
+{"defect_id": "weaviate_009", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约断言仅为 vector 是浮点数组，空数组 [] 未被任何包内断言声明为非法（无 minItems 类约束），429 整批拒绝等断言与本案无关，证据不足。"}
+{"defect_id": "weaviate_010", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "缺失 where/class 的批量删除被明确拒绝且未删除数据，包内该端点唯一断言是删除数<=10000，无状态码语义断言，500 而非 4xx 不构成包内契约违反。"}

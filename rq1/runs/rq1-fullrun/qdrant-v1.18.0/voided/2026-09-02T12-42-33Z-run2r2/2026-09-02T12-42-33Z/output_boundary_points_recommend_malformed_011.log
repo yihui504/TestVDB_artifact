@@ -1,0 +1,23 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+leg G raw-channel guard -> status=200
+raw: {"result":[{"id":2,"version":1,"score":0.0057622097},{"id":3,"version":1,"score":0.011524419},{"id":4,"version":1,"score":0.01728663}],"status":"ok","time":0.000658184}
+leg G OK: raw-bytes channel works
+
+leg M1 truncated JSON -> status=400
+raw: {"status":{"error":"Format error in JSON body: EOF while parsing an object at line 1 column 28"},"time":0.0}
+leg M1 truncated JSON OK: rejected with 400 (parser leak tokens: [])
+
+leg M2 bare NUL in string value -> status=400
+raw: {"status":{"error":"Format error in JSON body: control character (\\u0000-\\u001F) found while parsing a string at line 1 column 43"},"time":0.0}
+leg M2 bare NUL in string value OK: rejected with 400 (parser leak tokens: [])
+
+leg M3 NaN token in vector -> status=400
+raw: {"status":{"error":"Format error in JSON body: expected value at line 1 column 21"},"time":0.0}
+leg M3 NaN token in vector OK: rejected with 400 (parser leak tokens: [])
+
+leg M4 lone surrogate escape -> status=400
+raw: {"status":{"error":"Format error in JSON body: unexpected end of hex escape at line 1 column 47"},"time":0.0}
+leg M4 lone surrogate escape OK: rejected with 400 (parser leak tokens: [])
+VERDICT: NO_DEFECT

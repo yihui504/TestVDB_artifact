@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_overwrite_004",
+ "endpoint": "payload+overwrite",
+ "param": "payload",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "each overwrite (wait=true query) returns 200 and its point's scroll readback deep-equals the provided payload EXACTLY — case A: p1 == {\"c\":3} after the first and == {\"d\":4,\"e\":5} after the second (\"c\" gone = chained full replacement); case B: p2 == {\"only\":\"key\"}; case C: p3 == {\"nested\":{\"new\":2},\"top\":5} deep-equal; case D: p4 == {\"k\":null} (4xx on null value = NOTE ladder, 200 with readback {} = Type4 null-key drop); any residue of a previous payload on ANY case, any distortion of the provided payload, or collateral change on a sibling point = Type4_StateLogicViolation; non-200 on a legal overwrite = Type1_IllegalSuccess; 5xx/transport = Type3_RuntimeFailure with /healthz re-check (constraint qdrant_state_payload_overwrite_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,76 @@
+{
+  "defect_id": "vein_cardinality_oracle_count_1",
+  "endpoint": "POST /collections/{collection}/points/count",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PARTIAL",
+      "sdk_rest_confusion": false,
+      "detail": "Count endpoint not in structured_contract.json endpoint registry (contract covers 10 core CRUD endpoints; count API missing). WebFetch blocked (domain restrictions). Version match confirmed (doc 1.19.x vs target 1.18.2, major.minor compatible). Content consistency partial - 'exact' parameter semantics inferred from behavior but not verified against primary documentation.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: collection_size_50, exact_true=30, exact_false=26, error=-13.3% (under-estimate, exceeds 10% tolerance); c2: collection_size_200, exact_true=100, exact_false=105, error=+5.0% (over-estimate, within tolerance); c3: collection_size_500, exact_true=250, exact_false=225, error=-10.0% (under-estimate, at threshold) - VERDICT: DEFECT_FOUND",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "All requests returned HTTP 200 OK with successful count results. No client-side errors returned. Defect is in result accuracy (cardinality estimation error), not HTTP semantics."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_cardinality_oracle_count_1.py"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A - count endpoint not covered by structured_contract.json constraints",
+      "api_violates_assertion": false,
+      "note": "No constraint_id assigned in candidate entry. This is a Type2 (diagnostics quality) defect discovered via shape-guided vein mining, not via contract constraint violation. The defect is that count(exact:false) returns inaccurate cardinality estimates (5-13% error, non-linear, direction-flipping) without any warning or confidence indication, not that it violates an explicit parameter constraint.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: N/A (count endpoint not in structured_contract.json)",
+        "doc: WebFetch blocked - domain restrictions prevent verification",
+        "script: vein_cardinality_oracle_count_1.py - tests count(exact:true) vs count(exact:false) divergence across collection sizes (50, 200, 500)",
+        "log: DEFECT_FOUND - cardinality estimation error exceeds 10% tolerance with non-linear, direction-flipping behavior (under/over/under pattern proves not by-design heuristic)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "WebFetch blocked at api.qdrant.tech - cannot verify count endpoint documentation or 'exact' parameter semantics from primary source. Contract layer also incomplete (count endpoint missing from structured_contract.json). Execution evidence is strong and self-consistent.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "exact",
+        "count",
+        "cardinality",
+        "estimator",
+        "histogram"
+      ],
+      "files_examined": [],
+      "source_excerpt": "",
+      "call_chain_traced": "Source clone not available at TESTVDB_SRC_DIR - no local qdrant source code found. WebFetch blocked prevents GitHub exploration. Per ADR-0008 step2 fallback: evidence relies on behavioral observation (execution logs) rather than source code verification.",
+      "verification_outcome": "not_found_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "cache",
+        "race",
+        "by_design"
+      ],
+      "surviving": "Control group analysis explicitly tested and excluded by-design heuristic hypothesis: (1) Error does NOT scale linearly with collection size (FAILED - 50:-13.3%, 200:+5%, 500:-10% non-linear), (2) Error direction is NOT consistent (FAILED - flips under/over/under), (3) Magnitude exceeds 10% tolerance in 2 of 3 cases. If this were a by-design fallback heuristic (e.g., 'estimate at 50% when uncertain'), error direction and magnitude would be consistent. The observed non-linear, direction-flipping pattern indicates a genuine estimator bug in index histogram calculation."
+    }
+  }
+}

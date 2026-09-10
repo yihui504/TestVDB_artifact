@@ -1,0 +1,70 @@
+{
+  "defect_id": "semantic_cosine_range_03",
+  "endpoint": "v2/vectordb/entities/search（COSINE metric 距离语义）",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "evidence_weight": "high",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约无 COSINE 距离域显式断言；语义锚为 metric_type.go:25-26 注释 'COSINE represents cosine distance'（distance 命名→非相似度）。数学域 cosine distance=1-cos∈[0,2]；实测返回域 [-1,1] 即相似度原值。auditor 判定要点",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "cosine_search: 200 {\"code\":200,\"data\":[{\"distance\":1,\"id\":1},{\"distance\":0,\"id\":2},{\"distance\":-1,\"id\":3}]}（主观测：identical→1、orthogonal→0、opposite→-1）",
+      "secondary_observations": [
+        "ids: [1, 2, 3] dists: [1, 0, -1]（读回原值，-1 超 cosine distance 域 [0,2]）",
+        "create: 200 code 200；insert: 200 {\"insertCount\":3,\"insertIds\":[1,2,3]}（前置全部正常）",
+        "对照脚本 semantic_load_state_07 L2 场景 distance=1/4/9（平方欧氏距离语义正常，见其 log 第 7 行）——语义反转仅 COSINE"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "无错误路径；违规体现在响应数值语义（distance 字段承载相似度）"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_cosine_range_03.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_create_collection_001",
+      "assertion_text_quoted": "metricType in [L2, IP, COSINE, HAMMING, JACCARD, SUBSTRUCTURE, SUPERSTRUCTURE]",
+      "api_violates_assertion": false,
+      "note": "violates=False：metricType=COSINE 本身完全合法、请求全部成功。主观测不在该 assertion 域——是 COSINE 输出语义（distance 字段返回 [-1,1] 相似度而非 [0,2] 距离）的语义正确性缺陷，契约无对应断言（缺口记录，交 auditor）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 无 COSINE 距离域断言（缺口）；metric 枚举锚 milvus_type_create_collection_001",
+        "doc: metric_type.go:25-26 'COSINE represents cosine distance'（distance 语义锚）",
+        "script: semantic_cosine_range_03.py 建 COSINE 集合插 identical/orthogonal/opposite 三向量并检索",
+        "log: distance=1/0/-1（主观测，-1 越界）"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "契约无 COSINE 输出值域/语义断言；doc 环以源码注释 'cosine distance' 锚定语义预期",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["COSINE represents", "cosine.*distance.*similar", "assert 1 >= distance >= -1", "Scores"],
+      "files_examined": [
+        "pkg/util/metric/metric_type.go:18-39",
+        "tests/python_client/testcases/test_search.py:4650-4676",
+        "internal/distributed/proxy/httpserver/handler_v1.go:916",
+        "internal/distributed/proxy/httpserver/utils.go:907-923"
+      ],
+      "source_excerpt": "metric_type.go:25-26: // COSINE represents cosine distance\\n\\tCOSINE MetricType = \"COSINE\"\\ntest_search.py:4650-4676 (test_search_cosine_all_indexes，官方 L2 测试): for distance in res[i].distances: assert 1 >= distance >= -1 —— 官方测试显式断言 COSINE 'distances' 落在 [-1,1]，即引擎层把相似度直接放进 distance 字段是已知/被测行为；REST 层 handler_v1.go:916 buildQueryResp(..., response.Results.Scores, ...) 把 Scores 原样命名为 distance 返回",
+      "call_chain_traced": "COSINE 检索 → 引擎（segcore，浮点相似度）→ SearchResults.Scores（相似度域 [-1,1]）→ REST buildQueryResp → 响应字段名 'distance'（语义与值错配）。命名矛盾在源码注释层即存在：metric_type.go 称 cosine distance，官方测试却断言 [-1,1]（相似度域）",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "'distance 字段返回相似度'在引擎层被官方测试固化（test_search.py:4676 断言 [-1,1]），即 Milvus 2.3.x 的 COSINE 设计即如此；但 metric_type.go 注释自称 distance、契约语义锚也是 distance——命名/语义矛盾真实存在，by_design 抗辩与语义反转缺陷并存，交 auditor"
+    }
+  }
+}

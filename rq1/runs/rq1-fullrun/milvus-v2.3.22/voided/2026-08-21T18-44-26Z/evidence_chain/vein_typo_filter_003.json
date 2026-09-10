@@ -1,0 +1,67 @@
+{
+  "defect_id": "vein_typo_filter_003",
+  "endpoint": "v2/vectordb/entities/query + entities/search",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约 FilterExpr 数据类型条目列 'boolean expr: ==, !=, ... field[key] JSON access'，未规定未知字段引用的处理；endpoint 参数表 filter required(bool expr)。源头可达（handler_v2.go v2.3.22），契约对未知字段语义沉默——主张靠内部矛盾（typo 静默 200 vs 类型错 65535）支撑",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "valid filter rows=5; type-mismatch code=65535; nonexistent-field query code=200, search code=200",
+      "secondary_observations": [
+        "Detail 行：filter on nonexistent field silently accepted (code 200, empty data) on both query and search, while other invalid exprs get 65535 — user typo yields misleading 'no results' instead of an error",
+        "⚠️ 取证限制：vein 摘要级 log。raw 佐证：semantic_filter_expr_05.log 第 7 行 bad_field 逐字 '200 {\"code\":65535,...field nonexistent_field not exist}' ——注意该链打的是 query 且报了错，与本链'query 静默 200'存在表面冲突，差异可能来自表达式形式（本链 typo 字段 vs 05 链的 nonexistent_field == 1 完整式）或字段类型上下文，如实记录供 auditor 对勘"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "未知字段引用以 200+code:200+空 data 返回（吞成无结果）；对照类型不匹配以 200+code:65535 显式报错"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_typo_filter_003.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_behavioral_query_001",
+      "assertion_text_quoted": "invalid filter -> 1804-family error (expected_behavior: code 1804 for invalid boolean expr)",
+      "api_violates_assertion": true,
+      "note": "二选一核对：引用不存在字段是 invalid boolean expr（同断言域；05 链源码证实底层能识别 'field X not exist' 并报错），本链观测 query/search 均 200+空结果=静默接受非法表达式——violates=True。断言 endpoint 归属 v1 的含混同 05 链已记录",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_behavioral_query_001 invalid filter 应报错（1804-family）",
+        "doc: source_url handler_v2.go v2.3.22 可达",
+        "script: vein_typo_filter_003.py 合法 filter 对照 + 类型错 + 未知字段，query/search 双面",
+        "log: 未知字段 -> 200 空结果（query 与 search 均），类型错 -> 65535"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "断链在 target 环：非法引用（未知字段）未按断言报错而静默返回空集。⚠️ 附加不一致：05 链同类载荷（nonexistent_field == 1）在 query 报 65535——两脚本载荷细节差异未在摘要 log 中逐字可考，断链判定以本链自述为准并标注冲突供 auditor 复核",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["cannot parse expression", "field .* not exist (planparserv2)", "httpReq.Filter v2 query/search", "DslType_BoolExprV1"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go (551-590 query, 869-910 search: Dsl=httpReq.Filter 直通底层)"
+      ],
+      "source_excerpt": "handler_v2.go:556 Expr: httpReq.Filter; 896 Dsl: httpReq.Filter, DslType: commonpb.DslType_BoolExprV1 —— query 与 search 都把 filter 原文交给底层 plan/parser，REST 层零字段名校验。'field not exist' 检测发生在 expr plan 阶段（05 链 log 的错误消息即源出 parser）；未知列在部分 plan 路径下被当作恒假谓词返回空集而非报错——REST 层无法区分，两行为并存于同一参数",
+      "call_chain_traced": "filter -> proxy.Query/Search -> planparserv2：语法错/类型错 -> parse error -> 65535；字段名解析路径 -> 部分 segment/plan 缓存场景下未知列按 always-false 求值 -> 空结果。两条分支同参数共存，REST 无统一错误语义",
+      "verification_outcome": "validation_absent",
+      "note": "REST 层无字段名校验确证；底层 parser 对未知列的行为分歧（报错 vs 恒假）未在本次 clone 深挖到具体分叉行（planparserv2 未逐文件追），如实记 partial",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error(合法 filter 对照 rows=5 正常)", "env"],
+      "surviving": "查询返回空集对未知字段在部分查询系统是可辩护语义；但同参数类型错报 65535 的内部矛盾 + 05 链同类载荷报错的跨脚本不一致，使'误导性无结果'主张存活"
+    }
+  },
+  "evidence_weight": "C+（摘要级 log、单脚本、与 05 链存在待解释的表面冲突；REST 层无校验有源码确证，底层行为分叉未溯源到底）"
+}

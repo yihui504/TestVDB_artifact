@@ -1,0 +1,91 @@
+{
+  "defect_id": "vein_guardrail_capacity_points_count_10",
+  "endpoint": "PUT /collections/{collection_name} (strict_mode_config) + PUT /collections/{collection_name}/points?wait=true",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "qdrant.tech/documentation/strict-mode/ 两条通道均不可达（WebFetch 域验证拒绝 + web_reader 500 网络错 x2）→ domain_blocked，该页是 enforcement 语义的应然出处，未能核对；api.qdrant.tech/v-1-18-x create-collection 可达（web_reader），页面仅声明 'strict_mode_config object or any Optional' 未展开子字段；三字段定义取自目标仓内同版本 docs/redoc/v1.18.x/openapi.json：max_points_count='Max number of points estimated in a collection'（注意 estimated 措辞）、max_collection_vector_size_bytes='Max size of a collections vector storage in bytes, ignoring replicas.'、max_collection_payload_size_bytes='Max size of a collections payload storage in bytes'；版本 v-1-18.x/v1.18.x 与 target v1.18.0 一致；两 REST 端点均在 contract endpoint_registry 且 api_endpoints 含 strict_mode_config 参数声明。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "below-cap upsert: 200 | +5 beyond point-cap: 200 | 30x200B beyond size caps: 200 || final point count: 41 (caps: points=10, vector bytes=100, payload bytes=100) —— 主违规观测：max_points_count=10 的 collection 上，6 点合法写(200)后 +5 点(总 11>10)与 30 点 x200B payload 三次越限 PUT points?wait=true 全部 HTTP 200 无错误体，exact count=41 为点帽 4.1 倍。",
+      "secondary_observations": [
+        "strict echo: {\"enabled\": true, \"max_collection_vector_size_bytes\": 100, \"max_collection_payload_size_bytes\": 100, \"max_points_count\": 10} —— 三帽在 GET /collections 原样回显（配置被接受且持久化）",
+        "control upsert_max_batchsize=50, batch of 60 -> 400 (enforced) —— 同一 strict-mode 机制下不依赖统计的兄弟守门立即拒绝，证明校验机制本身激活，非全局 strict-mode 失效",
+        "verdict 文案数值漂移（脚本模板硬编码）：log 第 7 行 VERDICT 文案写 'writes 11x/16x the point cap and 4.8x+ the byte caps'，但本 run 实测点帽倍数为 41/10=4.1x、向量字节 41x16B=656B/100B=6.56x、payload 字节 6000B/100B=60x——观测成立，倍数文案与实测不符"
+      ],
+      "claim_alignment": "aligned",
+      "alignment_note": "claim 三要素（帽被接受并回显 / 越限写成功 / 兄弟守门正常）与 log 3-6 行逐条对应；但 claim 的 'never enforced' 推断超出 3 次请求可证范围——源码显示第 32 次 stats 调用后缓存刷新会拒绝（上游测试已编码此行为），本 run 未驱动到该点，'永远不执行'既未证明也未证伪。",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx（200 + success，无任何错误码——应被守门拒绝的越限写被静默接受）",
+        "note": "三次越限 upsert 均返回 200 且 body 为常规成功响应，无业务错误码；对照（batchsize 越限）返回 400。"
+      },
+      "reproducibility": "单脚本",
+      "reproducibility_note": "该三帽组合仅本脚本触发；同族旁证：vein_guardrail_oversampling_query_11 在另一参数上观察到同型 strict-mode 运行期守门失效（search_max_oversampling 1.5/2.0/100.0 全 200 而 search_max_hnsw_ef 拒绝），不同端点不同参数，不计入同模式多脚本。",
+      "script_error": false,
+      "triggering_scripts": ["vein_guardrail_capacity_points_count_10"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "OpenAPI v1.18.x StrictModeConfig 字段定义（docs/redoc/v1.18.x/openapi.json，与 API 参考同源）：max_points_count: 'Max number of points estimated in a collection'（integer uint minimum 1, nullable）；max_collection_vector_size_bytes: 'Max size of a collections vector storage in bytes, ignoring replicas.'；max_collection_payload_size_bytes: 'Max size of a collections payload storage in bytes'。注：structured_contract.json 中不存在覆盖这三字段的任何 constraint（唯一 strict_mode 相关约束 qdrant_range_collections_create_004 针对同结构体另一字段 max_resident_memory_percent IN [1,100]）；contract 仅在 api_endpoints 声明 'strict_mode_config: StrictModeConfig, required: false'（PUT/PATCH collections，source_url=api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection）。",
+      "api_violates_assertion": true,
+      "note": "violates=true 按 'Max number of points' 字面守门语义判定：max_points_count=10 已被设置且在约束域内，写至 41 点全部 200 无拒绝。但引用文本自带 'estimated' 限定词，且源码（见 source_grounding）显示 32 次调用缓存窗口内不拒绝为注释明示的设计行为——by-design 抗辩的采信由 auditor 裁量，此处不做结论。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 派发 constraint_id 为空；structured_contract.json 无这三字段的任何约束/断言，仅 api_endpoints 类型级声明 strict_mode_config:StrictModeConfig(可选)——契约层无 enforcement 断言可引（断链点）",
+        "doc: 字段语义存在于 v1.18.x OpenAPI（仓内副本已核对原文，live API 参考页可达但不展开子字段）；enforcement 语义的应然出处 strict-mode 概念页 domain_blocked 未能核对",
+        "script: vein_scripts/vein_guardrail_capacity_points_count_10.py — PUT /collections/vein_gcap10 带 enabled=true + max_points_count=10 + 两字节帽=100；随后 3 次 PUT points?wait=true（6/5/30 点，末批 30 点各带 200B payload）；对照 collection vein_gcap10_ctl 设 upsert_max_batchsize=50 后写 60 点",
+        "log: 3 次越限写全 200 + exact count=41>10 + 对照 400——DEFECT_FOUND 与 raw 观测一致；但 verdict 文案倍数 '11x/16x' 为脚本硬编码，与本 run 实测 4.1x 不符（观测不漂移，文案漂移）；'never enforced' 为超出 3 请求证据的过度概括（源码证明第 32 次调用后存在拒绝路径）"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "structured_contract.json 中不存在 max_points_count / max_collection_vector_size_bytes / max_collection_payload_size_bytes 的任何 constraint——契约第一环缺失，claim 的规范依据只能退到文档字段定义（'estimated' 措辞本身弱化硬拒绝语义）。doc 环次弱：enforcement 语义页 domain_blocked。script→log 两环完整一致。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "max_points_count",
+        "max_collection_vector_size_bytes|max_collection_payload_size_bytes",
+        "check_collection_size_limit",
+        "estimated_collection_stats\\(\\)",
+        "UPDATE_INTERVAL",
+        "new_with_values",
+        "strict_mode_config\\(\\)"
+      ],
+      "files_examined": [
+        ".qdrant-src-1190/lib/segment/src/types.rs (StrictModeConfig 定义 1080-1231 / StrictModeConfigOutput 1236-1384)",
+        ".qdrant-src-1190/lib/collection/src/operations/verification/update.rs (PointInsertOperations::check_custom 155-219, check_collection_size_limit 279-324)",
+        ".qdrant-src-1190/lib/collection/src/common/collection_size_stats.rs (全文件 1-156)",
+        ".qdrant-src-1190/lib/collection/src/collection/mod.rs (缓存初始化 171-175, estimated_collection_stats 945-960)",
+        ".qdrant-src-1190/lib/storage/src/content_manager/collection_verification.rs (strict-mode 门控入口 20-86)",
+        ".qdrant-src-1190/tests/openapi/test_strictmode.py (test_strict_mode_max_collection_point_count_upsert_batch 1171-1218 等)",
+        ".qdrant-src-1190/docs/redoc/v1.18.x/openapi.json (StrictModeConfig schema)"
+      ],
+      "source_excerpt": "[1] lib/collection/src/operations/verification/update.rs:279-324\n/// Checks all collection size limits that are configured in strict mode.\nasync fn check_collection_size_limit(collection: &Collection, strict_mode_config: &StrictModeConfig) -> CollectionResult<()> {\n    let vector_limit = strict_mode_config.max_collection_vector_size_bytes;\n    let payload_limit = strict_mode_config.max_collection_payload_size_bytes;\n    let point_limit = strict_mode_config.max_points_count;\n    if (vector_limit, payload_limit, point_limit) == (None, None, None) { return Ok(()); }\n    let Some(stats) = collection.estimated_collection_stats().await? else { return Ok(()); };\n    if let Some(vector_storage_size_limit_bytes) = vector_limit { check_collection_vector_size_limit(vector_storage_size_limit_bytes, stats)?; }\n    if let Some(payload_storage_size_limit_bytes) = payload_limit { check_collection_payload_size_limit(payload_storage_size_limit_bytes, stats)?; }\n    if let Some(points_count_limit) = point_limit { check_collection_points_count_limit(points_count_limit, stats)?; }\n    Ok(())\n}\nfn check_collection_points_count_limit(points_count_limit: usize, stats: &CollectionSizeAtomicStats) -> CollectionResult<()> {\n    let points_count = stats.get_points_count();\n    if points_count >= points_count_limit {\n        return Err(CollectionError::bad_request(format!(\"Max points count limit of {points_count_limit} reached!\")));\n    }\n    Ok(())\n}\n\n[2] lib/collection/src/common/collection_size_stats.rs:6-7,29-51\n/// Amount of requests that have to be done until the cached data gets updated.\nconst UPDATE_INTERVAL: usize = 32;\n...\npub fn check_need_update_and_increment(&self) -> bool {\n    let req_counter = self.request_counter.fetch_add(1, Ordering::Relaxed);\n    req_counter.is_multiple_of(UPDATE_INTERVAL)\n}\npub async fn get_or_update_cache<U>(&self, update_fn: impl FnOnce() -> U) -> CollectionResult<Option<&CollectionSizeAtomicStats>> ... {\n    if self.check_need_update_and_increment() { /* 每 32 次调用才刷新一次 */ ... }\n    Ok(self.stats.as_ref())\n}\n\n[3] lib/collection/src/collection/mod.rs:952-953 (doc 注释)\n/// Returns estimations of collection sizes. This values are cached and might be not 100% up to date.\n/// The cache gets updated every 32 calls.\n\n[4] tests/openapi/test_strictmode.py:1206-1216 (上游明示滞后为预期行为)\n    for i in range(32):\n        failed_upsert = upsert_points([5, 6, 7, 8, 9, 10])\n        if failed_upsert.ok:\n            continue\n        assert \"Max points count limit of 10 reached!\" in failed_upsert.json()['status']['error']\n        ... # 注释（原文, 行1209）: Max limit has been reached and one of the next requests must fail. Due to cache it might not be the first call!",
+      "call_chain_traced": "REST upsert → check_strict_mode_toc_batch (lib/storage/src/content_manager/collection_verification.rs:39-57, strict_mode_config.enabled 门控) → StrictModeVerification::check_strict_mode → check_custom (verification/mod.rs:164-168 分发) → PointInsertOperations::check_custom (update.rs:160-182)：先 check_limit_opt(upsert_max_batchsize)——纯请求内同步校验不依赖统计→生效（对照观测 400 即此路径）；再 check_collection_size_limit (update.rs:171→280-310) → estimated_collection_stats (mod.rs:954-960) → CollectionSizeStatsCache::get_or_update_cache (collection_size_stats.rs:35-52)：缓存以建 collection 时的统计初始化（mod.rs:173-175，新集合为 0 点），每 32 次调用才刷新（UPDATE_INTERVAL=32）→ check_collection_points_count_limit (update.rs:312-324) 只在缓存计数>=上限时拒绝。本 run 3 次越限 upsert 全落在窗口内（缓存计数恒 0<10）故全放行；点帽=10 时 5 点/30 点批次各自也远小于窗口内可累计量。源码层面 enforcement 存在且最终会触发（上游测试断言错误串 'Max points count limit of 10 reached!'），失效的是即时性：新建集合后前 31 次 stats 调用按陈旧 0 计数放行。",
+      "verification_outcome": "by_design_in_source",
+      "outcome_note": "校验代码存在（非 validation_absent）：容量检查真实接入 upsert 路径且上游有通过测试；但判定依据是 32 次调用一刷的缓存统计——源码注释明示（mod.rs:952-953 'might be not 100% up to date. The cache gets updated every 32 calls.'）且上游测试注释明示（'Due to cache it might not be the first call!'）为设计内行为，故归 by_design_in_source。观测到的 31 次调用窗口内 4.1x 越限全接受与该设计完全相容；'never enforced'（跨过刷新点仍不拒绝）本 run 未触及。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env（同一服务器同一 collection 族的对照守门 batchsize 立即 400，strict-mode 机制激活，非环境未启用）",
+        "concurrency（脚本串行 wait=true 顺序写，无并发竞争）",
+        "script_error（exit 正常，VERDICT 正常打印，无 TypeError/SCRIPT_ERROR 标记）",
+        "request_typo（三帽在 GET 回显中逐字确认被服务端接受）"
+      ],
+      "surviving": "by_design_stats_cache_lag：容量守门以每 32 次调用才刷新的缓存统计为判据（源码注释+上游测试明示），新建 collection 后前 31 次越限写按陈旧 0 计数放行——本 run 三次越限接受全部可由此解释。该解释将 claim 从 'never enforced' 收窄为 '31 次调用窗口内不 enforced'；窗口内无上限的累积越限（本 run 4.1x）是否仍构成缺陷，属 auditor 判定域。"
+    }
+  }
+}

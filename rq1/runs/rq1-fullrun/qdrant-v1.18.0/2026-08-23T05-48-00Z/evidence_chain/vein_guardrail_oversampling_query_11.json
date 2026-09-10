@@ -1,0 +1,90 @@
+{
+  "defect_id": "vein_guardrail_oversampling_query_11",
+  "endpoint": "POST /collections/{collection_name}/points/query (+ /points/search, prefetch inner params)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Live qdrant.tech and api.qdrant.tech both domain_blocked (network restriction) -> PARTIAL, not FAIL. Version verified via the qdrant v1.18.0 clone's vendored API reference docs/redoc/v1.18.x/openapi.json (exact version match). That spec documents StrictModeConfig.search_max_oversampling = 'Max oversampling value allowed in search.' and defines SearchParams with ONLY hnsw_ef/exact/quantization/indexed_only/acorn — there is NO top-level params.oversampling; the documented oversampling knob is params.quantization.oversampling ('Oversampling factor for quantization. Default is 1.0.', validate range min 1.0). The claim's probed knob (top-level params.oversampling) does not exist in the v1.18.x API reference, so the claim premise is unsupported by documentation: content_consistency FAIL. Endpoints points/query and points/search are real v1.18 endpoints: PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "query oversampling=100.0: 200 (claim's main violation observation; sibling raw lines: 'query oversampling=1.5: 200', 'query oversampling=2.0: 200')",
+      "secondary_observations": [
+        "strict echo: {\"enabled\": true, \"search_max_hnsw_ef\": 16, \"search_max_oversampling\": 1.0}",
+        "query oversampling=0.5: 200",
+        "query oversampling=1.0: 200",
+        "search oversampling=2.0: 200",
+        "prefetch inner oversampling=50: 200",
+        "control hnsw_ef=64 (max 16): 400 (enforced)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Observed as plain HTTP 200 success with a normal result body — not even a business error code; the cap is silently not applied. Source explains why: the sent top-level 'oversampling' key is dropped during serde deserialization (unknown field, no deny_unknown_fields), so the server never sees a value to reject. Values 0.5/1.0 (within cap) also 200 — acceptance is value-independent, consistent with key-ignored rather than cap-checked. Control hnsw_ef=64 (a real SearchParams field) correctly returned 400 on the same collection."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_guardrail_oversampling_query_11"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "structured_contract.json contains NO assertion on search_max_oversampling (grep 'oversampling' over the full contract JSON: zero matches; nearest strict-mode constraint is qdrant_range_collections_create_004 'strict_mode_config.max_resident_memory_percent IN [1, 100]' — different field, wrong constraint domain, not force-quoted as grounding). Doc-side grounding instead: v1.18.x OpenAPI StrictModeConfig.search_max_oversampling: \"Max oversampling value allowed in search.\" (vendored at docs/redoc/v1.18.x/openapi.json in the qdrant v1.18.0 clone, schema ~line 8087); SearchParams.quantization -> QuantizationSearchParams.oversampling: \"Oversampling factor for quantization. Default is 1.0.\" with #[validate(range(min = 1.0))].",
+      "api_violates_assertion": false,
+      "note": "violates=False 判定理由: the observed 200s were produced by an undocumented top-level params.oversampling key that serde silently drops; the cap's constraint domain (search oversampling = params.quantization.oversampling) was never exercised by any request in the log, so the documented assertion is not violated by these requests. 观测的参数不在 quote 约束域内 (observed parameter path is outside the quoted constraint's domain), and no contract constraint exists to switch to — the contract has no oversampling constraint at all.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:MISSING — dispatch constraint_id empty; grep of structured_contract.json yields zero constraints/assertions mentioning oversampling (vein candidate, hypothesis-driven, not contract-grounded)",
+        "doc:PARTIAL/CONTRADICTS-PREMISE — live doc domains blocked (domain_blocked); repo-vendored v1.18.x OpenAPI shows search_max_oversampling is a documented cap whose governed knob is params.quantization.oversampling; the probed top-level params.oversampling is not a documented field",
+        "script:vein_guardrail_oversampling_query_11.py — creates collection with strict_mode_config {enabled, search_max_hnsw_ef:16, search_max_oversampling:1.0} + scalar quantization (lines 31-41); probes top-level params {'oversampling': ov} on points/query (lines 52-57), points/search params {'oversampling':2.0} (lines 58-61), prefetch inner params {'oversampling':50.0} (lines 62-66); control params {'hnsw_ef':64} (lines 68-72)",
+        "log:statuses faithful — query 0.5/1.0/1.5/2.0/100.0 all 200, search 200, prefetch 200, control hnsw_ef 400 (enforced); VERDICT line asserts the guardrail is absent"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "First break at contract: no constraint exists for this claim (dispatch constraint_id empty; grep zero hits). Second break at doc semantics: the vendored v1.18.x OpenAPI contradicts the claim's premise — the probed knob does not exist in the documented API, so the 200s evidence an unknown-field-ignored artifact rather than a guardrail gap. Qdrant's own integration test in the same v1.18.0 tree (tests/openapi/test_strictmode.py:495-529, test_strict_mode_search_max_oversampling_validation) asserts the documented path params.quantization.oversampling above search_max_oversampling IS rejected with an 'oversampling' strict-mode error.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "search_max_oversampling",
+        "search_max_hnsw_ef",
+        "pub struct SearchParams \\{",
+        "pub struct QuantizationSearchParams",
+        "StrictModeVerification|check_custom\\(|check_strict_mode"
+      ],
+      "files_examined": [
+        "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.3.0/.qdrant-src-1190/lib/collection/src/operations/verification/mod.rs (lines 36-105, 280-370)",
+        "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.3.0/.qdrant-src-1190/lib/segment/src/types.rs (lines 503-530 QuantizationSearchParams, 590-617 SearchParams, 1185-1231 StrictModeConfig Hash, 1234-1310 StrictModeConfigOutput)",
+        "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.3.0/.qdrant-src-1190/lib/collection/src/operations/verification/query.rs (lines 130-234)",
+        "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.3.0/.qdrant-src-1190/lib/collection/src/operations/verification/search.rs (lines 1-60)",
+        "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.3.0/.qdrant-src-1190/tests/openapi/test_strictmode.py (lines 430-529)",
+        "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.3.0/.qdrant-src-1190/docs/redoc/v1.18.x/openapi.json (SearchParams, StrictModeConfig, QuantizationSearchParams schemas)"
+      ],
+      "source_excerpt": "// ===== lib/collection/src/operations/verification/mod.rs:297-348 (qdrant v1.18.0) =====\npub(crate) fn check_limit_opt<T: PartialOrd + Display>(\n    value: Option<T>, limit: Option<T>, name: &str,\n) -> CollectionResult<()> {\n    let (Some(limit), Some(value)) = (limit, value) else {\n        return Ok(());   // value None (key absent/ignored) => PASS\n    };\n    if value > limit {\n        return Err(CollectionError::strict_mode(\n            format!(\"Limit exceeded {value} > {limit} for \\\"{name}\\\"\"),\n            format!(\"Reduce the \\\"{name}\\\" parameter to or below {limit}.\")));\n    }\n    Ok(())\n}\n\nimpl StrictModeVerification for SearchParams {\n    async fn check_custom(&self, _collection: &Collection,\n                           strict_mode_config: &StrictModeConfig) -> CollectionResult<()> {\n        check_limit_opt(\n            self.quantization.and_then(|i| i.oversampling),  // enforced knob: params.quantization.oversampling\n            strict_mode_config.search_max_oversampling,\n            \"oversampling\",\n        )?;\n        check_limit_opt(\n            self.hnsw_ef,\n            strict_mode_config.search_max_hnsw_ef,\n            \"hnsw_ef\",\n        )?;\n        Ok(())\n    }\n}\n\n// ===== lib/segment/src/types.rs:590-617 =====\npub struct SearchParams {\n    pub hnsw_ef: Option<usize>,\n    #[serde(default)] pub exact: bool,\n    #[serde(default)] #[validate(nested)] pub quantization: Option<QuantizationSearchParams>, // ONLY holder of oversampling\n    #[serde(default)] pub indexed_only: bool,\n    #[serde(default)] #[validate(nested)] pub acorn: Option<AcornSearchParams>,\n}   // NO top-level oversampling field; NO #[serde(deny_unknown_fields)] => unknown JSON keys silently ignored\n\n// ===== lib/segment/src/types.rs:507-530 =====\npub struct QuantizationSearchParams {\n    pub ignore: bool,\n    pub rescore: Option<bool>,\n    /// Oversampling factor for quantization. Default is 1.0.\n    #[serde(default = \"default_quantization_oversampling_value\")]\n    #[validate(range(min = 1.0))]\n    pub oversampling: Option<f64>,\n}\n\n// ===== tests/openapi/test_strictmode.py:495-529 (Qdrant own integration test, same v1.18.0 tree) =====\ndef test_strict_mode_search_max_oversampling_validation(collection_name):\n    ... body={\"vector\": [0.2,0.1,0.9,0.7], \"limit\": 4,\n               \"params\": {\"quantization\": {\"oversampling\": 2.0}}}   # documented path\n    set_strict_mode(collection_name, {\"enabled\": True, \"search_max_oversampling\": 2.0})\n    search_request().raise_for_status()          # at cap => pass\n    set_strict_mode(collection_name, {\"enabled\": True, \"search_max_oversampling\": 1.9})\n    search_fail = search_request()\n    assert \"oversampling\" in search_fail.json()['status']['error']  # above cap => REJECTED\n    assert not search_fail.ok",
+      "call_chain_traced": "REST /points/query -> CollectionQueryRequest::check_strict_mode (verification/mod.rs:160-175: verify() calls check_custom + check_search_params) -> CollectionQueryRequest::request_search_params() returns self.params: SearchParams (query.rs:182-184) -> SearchParams::check_custom (mod.rs:331-348) -> check_limit_opt(self.quantization.and_then(|i| i.oversampling), search_max_oversampling) and check_limit_opt(self.hnsw_ef, search_max_hnsw_ef). Prefetch recursion: CollectionQueryRequest::check_custom loops self.prefetch -> CollectionPrefetch::check_strict_mode (query.rs:141-145 and 187-233, its own request_search_params() = self.params). REST /points/search -> SearchRequestInternal::request_search_params() = self.params (search.rs:21-23) -> same SearchParams::check_custom. Because SearchParams (segment/types.rs:590-617) has no top-level oversampling field and no deny_unknown_fields, the script's top-level 'oversampling' JSON key is silently dropped at deserialization; the check reads quantization=None -> check_limit_opt(None, Some(1.0)) returns Ok (mod.rs:302 both-Some guard) -> 200. The control hnsw_ef=64 hit a real SearchParams field -> 400, exactly as logged.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — control hnsw_ef=64 (max 16) rejected with 400 on the same collection proves strict mode is active and the enforcement pipeline is live; strict config echoed verbatim by GET /collections",
+        "concurrency — sequential single-client requests, no parallelism in script",
+        "cache_delay — strict-mode checks are per-request validation, no state or TTL involved",
+        "version_skew — server image and examined clone are both v1.18.0; vendored v1.18.x OpenAPI matches runtime behavior (control field enforces)"
+      ],
+      "surviving": "wrong_parameter_path_in_script — the script probed an undocumented top-level params.oversampling; the documented knob is params.quantization.oversampling; unknown JSON fields are silently ignored by serde, which fully accounts for all 200s (including in-cap 0.5/1.0 also returning 200, i.e. value-independent acceptance) without any guardrail gap. Qdrant's own v1.18.0 integration test proves the documented path IS rejected above the cap."
+    }
+  }
+}

@@ -1,0 +1,30 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+F1 operations missing -> status=400
+raw: {"status":{"error":"Format error in JSON body: missing field `operations` at line 1 column 2"},"time":0.0}
+F1 operations missing: 400 clean domain rejection (error names the op field: True — NOTE only, R29)
+
+F2 operations null -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: null, expected a sequence at line 1 column 19"},"time":0.0}
+F2 operations null: 400 clean domain rejection (error names the op field: False — NOTE only, R29)
+
+F3 operations object -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: map, expected a sequence at line 1 column 15"},"time":0.0}
+F3 operations object: 400 clean domain rejection (error names the op field: False — NOTE only, R29)
+
+F4 operations string -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"upsert\", expected a sequence at line 1 column 23"},"time":0.0}
+F4 operations string: 400 clean domain rejection (error names the op field: False — NOTE only, R29)
+
+F5 op object empty -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum UpdateOperation at line 1 column 19"},"time":0.0}
+F5 op object empty: 400 clean domain rejection (error names the op field: True — NOTE only, R29)
+
+F6 unknown variant key -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum UpdateOperation at line 1 column 48"},"time":0.0}
+F6 unknown variant key: 400 clean domain rejection (error names the op field: True — NOTE only, R29)
+
+F7 two variant keys in one op -> status=200
+raw: {"result":[{"operation_id":2,"status":"completed"}],"status":"ok","time":0.003374076}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — F7 two variant keys in one op: out-of-domain operations accepted with 200 (result=[{"operation_id": 2, "status": "completed"}]); point+get p1 -> 200 (upsert-face intact)

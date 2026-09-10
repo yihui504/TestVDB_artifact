@@ -1,0 +1,74 @@
+{
+  "defect_id": "semantic_diag_quality_06",
+  "endpoint": "POST /v1/graphql (Aggregate groupBy / Get nearVector)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraint_id diagnosis_quality：错误诊断质量（精确指明原因 vs 静默/堆栈倾倒）。GraphQL Get where/sort 对未知属性报精确错误（对照组实测），证明该 API 面有属性校验惯例；Aggregate groupBy 无",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[aggregate on unknown property] status=200 score=0 msg={'data': {'Aggregate': {'TSemDiag06': []}}}",
+      "secondary_observations": [
+        "[nearVector dimension mismatch (2-d class, 4-d query)] status=200 score=0 msg=explorer: get class: concurrentTargetVectorSearch): ... knn search: distance between entrypoint and query node: 2 vs 4: vector len...",
+        "[invalid where operator] status=200 score=1 msg=Argument \"where\" has invalid value ... Expected type \"GetObjectsTSemDiag06WhereOperatorEnum\", found Equals.（对照：精确）",
+        "[where on unknown property] status=200 score=1 msg=invalid 'where' filter: no such prop with name 'nope' ...（对照：精确）",
+        "[sort on unknown property] status=200 score=1 msg=invalid 'sort' parameter: ... no such prop ...（对照：精确）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "GraphQL 200+errors 为常态；两条主观测一条完全静默（无 errors）、一条错误消息为内部堆栈链（不提 dimension）"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/semantic_diag_quality_06.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "diagnosis_quality",
+      "assertion_text_quoted": "错误消息应指明真实原因：未知属性应如 where/sort 通道报 no such prop；维度不匹配应提及 dimension 而非内部堆栈链",
+      "api_violates_assertion": true,
+      "note": "aggregate groupBy 未知属性 → 无错误空数组（对照同 API 面 where/sort 精确报错）；nearVector 维度错 → 内部调用链倾倒。violates=True（两条独立 Type2）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:diagnosis_quality",
+        "doc:GraphQL where/sort 精确校验消息（脚本实测为对照基线）",
+        "script:semantic_diag_quality_06.py 5 组查询（2 主观测 + 3 对照）",
+        "log:aggregate 空数组无 errors / nearVector 堆栈消息 / 3 对照全部精确报错"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["ExtractGroupBy", "no such prop with name", "distance between entrypoint and query node", "groupBy"],
+      "files_examined": [
+        "adapters/handlers/graphql/local/common_filters/group_by.go (L17-39)",
+        "adapters/repos/db/vector/hnsw/search.go (L742)",
+        "usecases/traverser/traverser_aggregate.go（无 groupBy 属性校验）",
+        "adapters/handlers/graphql/local/aggregate/aggregate.go (L128)"
+      ],
+      "source_excerpt": "adapters/handlers/graphql/local/common_filters/group_by.go L17-26:\nfunc ExtractGroupBy(source map[string]interface{}) searchparams.GroupBy {\n\tvar args searchparams.GroupBy\n\tp, ok := source[\"path\"]\n\tif ok {\n\t\trawSlice := p.([]interface{})\n\t\tif len(rawSlice) == 1 {\n\t\t\targs.Property = rawSlice[0].(string)   // ← 任意字符串原样接受，无 schema 校验\n\t\t}\n\t}\n...\n}\nadapters/repos/db/vector/hnsw/search.go L742: return nil, nil, errors.Wrap(err, \"knn search: distance between entrypoint and query node\") —— 维度不匹配错误从 hnsw 内层冒泡，错误词无 dimension，仅 '2 vs 4: vector len'。",
+      "call_chain_traced": "① Aggregate groupBy: GraphQL ExtractGroupBy 无属性存在性校验（对照 filters/sort 路径有 validateExistence 类检查）→ 下游对未知属性无匹配桶 → 空结果。② nearVector: 维度校验不在入口（ExtractNearVector 无 class 维度比对）→ hnsw 图遍历才发现 '2 vs 4' → 包装为内部链消息",
+      "verification_outcome": "validation_absent",
+      "note": "两条主观测均为'校验缺失/入口缺失'型：groupBy 属性零校验、向量维度入口零校验（错误延迟到最深处）。by_design 抗辩弱：同 API 面 where/sort 均有入口校验",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

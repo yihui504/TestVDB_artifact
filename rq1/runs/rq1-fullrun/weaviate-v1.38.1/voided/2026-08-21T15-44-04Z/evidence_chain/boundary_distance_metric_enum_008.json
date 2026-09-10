@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_distance_metric_enum_008",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "无专属 constraint_id；枚举约束锚为源码 shard_init_vector.go 的 'choose one of [cosine, dot, l2-squared, manhattan, hamming]' 错误文案。注意：该校验在 shard init 时触发而非 schema 校验时——与观测 'invalid 值 200 归一 cosine' 的矛盾即缺陷面",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[metric] 'invalid' -> create=200 persisted_distance='cosine' / DEFECT Type1_IllegalSuccess: illegal metric 'invalid' silently normalized to cosine",
+      "secondary_observations": [
+        "[anchor] vectorIndexType='invalid' -> 422 {\"allowed\":null,\"error\":[{\"message\":\"unrecognized or unsupported vectorIndexType \\\"invalid\\\"\"}]}（锚：未知枚举本应拒绝）",
+        "[anchor] vectorIndexType='HNSW' -> 422 ...unrecognized or unsupported vectorIndexType \"HNSW\"...",
+        "[metric] 'cosine' -> create=200 persisted_distance='cosine'",
+        "[metric] 'dot' -> create=200 persisted_distance='cosine'（合法值 dot 也被归一为 cosine！）",
+        "[metric] '' -> create=200 persisted_distance='cosine'"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "非法枚举静默归一 cosine 而非 422；更严重：合法值 dot 被静默替换为 cosine——用户指定的度量被静默改变（数据正确性面）"
+      },
+      "reproducibility": "单脚本（5 变体确定性；含合法值被替换的强观测）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_distance_metric_enum_008.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "boundary (族级；枚举锚 entities/vectorindex/common/config.go L22-27 Distance 常量集)",
+      "assertion_text_quoted": "distance ∈ {cosine, dot, l2-squared, manhattan, hamming}（源自 shard_init_vector.go L75 'choose one of [...]'）",
+      "api_violates_assertion": true,
+      "note": "'invalid'/空串不在枚举内却被 200 接受；且嵌套 distance:{name:'dot'} 结构整体被丢弃导致合法 dot 归一 cosine——枚举约束与输入结构双重违反，violates=True",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 枚举约束（common/config.go 常量 + shard_init_vector.go 错误文案）",
+        "doc: 源码锚本地核对",
+        "script: boundary_distance_metric_enum_008.py vectorIndexConfig.distance.name 变体",
+        "log: invalid/''/dot 全部 200 persisted cosine；vectorIndexType 对照组 422"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "无专属 constraint_id；且攻击路径为嵌套对象 distance:{name:...} 而源码 flat 字段为 distance:\"string\"——结构错配也是 silent-drop 的机制之一，需 auditor 认定",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["unsupported distance type|distance.*must be one of", "OptionalStringFromMap", "unrecognized distance metric"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\entities\\vectorindex\\common\\config.go (L22-27, L95-109 OptionalStringFromMap)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\entities\\vectorindex\\hnsw\\config.go (L213-217 distance 解析)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\adapters\\repos\\db\\shard_init_vector.go (L59-77)"
+      ],
+      "source_excerpt": "common/config.go L95-107 OptionalStringFromMap:\n\tasString, ok := value.(string)\n\tif !ok {\n\t\treturn nil  // ← 非字符串（如嵌套 map {name:...}）静默返回，不报错\n\t}\n\nhnsw/config.go L213-217: OptionalStringFromMap(asMap, \"distance\", ...) 赋值后 validate() 无枚举检查。\nshard_init_vector.go L61-77: switch DistanceName() { case \"\", cosine: ... default: return error \"unrecognized distance metric %q, choose one of [...]\" } — 唯一校验点在 shard init，但 \"\" case 被显式映射为 cosine，且无效值在到达此处前已被归一/持久化为 'cosine'",
+      "call_chain_traced": "POST /schema → hnsw.ParseAndValidateConfig → OptionalStringFromMap(\"distance\")：嵌套 map 非字符串→静默保留 SetDefaults 的 cosine（L96 u.Distance=DefaultDistanceMetric）；字符串 'invalid' → 赋值但 validate() 无枚举检查 → 持久化。运行时 shard init 的 default 分支存在但此路径下未拦截（持久化值已是 cosine）",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["请求笔误（'dot' 为合法枚举值也被替换，排除用户侧结构误解为主因）"],
+      "surviving": "shard_init_vector.go 存在 default 拒绝分支可被引为'运行时有校验'；但 schema 层持久化已归一 cosine，运行时校验永远看不到原值——校验时序错位 surviving"
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "defect_id": "semantic_points_search_003",
+  "endpoint": "points+search",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation verified: contract constraint qdrant_type_search_points_001 states 'vector dimension must match collection vector size' per structured_contract.json (line 420-429)",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "Testing limit=1: status=200",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A",
+        "note": "HTTP 200 returned even though search with dimension-mismatched vector should be rejected with diagnostic error"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_points_search_003"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_search_points_001",
+      "assertion_text_quoted": "vector dimension must match collection vector size",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_search_points_001 - 'vector dimension must match collection vector size'",
+        "doc: https://api.qdrant.tech/api-reference/points/search-points verified at 2026-08-20T06:14:40Z",
+        "script: semantic_points_search_003 calls points+search with mismatched dimension (limit=1 test case)",
+        "log: status=200 returned, no dimension validation error despite mismatch"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Dimension validation absent: API contract requires dimension matching but search request with mismatched dimensions returns HTTP 200 instead of 400 with diagnostic error message",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "dimension",
+        "validate.*vector",
+        "vector.*size",
+        "len.*vector"
+      ],
+      "files_examined": [
+        "src/common/validate_vectors.rs",
+        "src/tonic/api/query_common.rs",
+        "lib/collection/src/operations/verification/search.rs"
+      ],
+      "source_excerpt": "File: src/common/validate_vectors.rs, lines 1-28:\n/// Validate vector dimensions in an upsert operation.\n/// This performs an early O(n) check before the operation is written to WAL\npub fn validate_vector_dimensions(\n    operation: &PointInsertOperationsInternal,\n    vectors_config: &VectorsConfig,\n) -> Result<(), StorageError> {\n    // Validation only applies to upsert operations\n}\n\nFile: src/tonic/api/query_common.rs, lines 63-109:\npub async fn search(...) {\n    let vector_internal = VectorInternal::from_vector_and_indices(vector, sparse_indices.map(|v| v.data));\n    let vector_struct = api::grpc::conversions::into_named_vector_struct(vector_name, vector_internal)?;\n    // NO DIMENSION VALIDATION HERE - proceeds directly to CoreSearchRequest construction\n}",
+      "call_chain_traced": "search() in points_api.rs:382 -> validate() called but no vector dimension check -> search() in query_common.rs:63 creates CoreSearchRequest without validation -> do_core_search_points() executes search",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "Missing validation: Source code shows validate_vector_dimensions() only applies to upsert operations (src/common/validate_vectors.rs), not search operations. Search path (query_common.rs) lacks dimension validation step before executing query."
+    }
+  }
+}

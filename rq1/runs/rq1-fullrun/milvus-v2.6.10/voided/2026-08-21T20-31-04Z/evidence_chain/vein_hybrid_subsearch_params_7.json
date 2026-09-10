@@ -1,0 +1,78 @@
+{
+  "defect_id": "vein_hybrid_subsearch_params_7",
+  "endpoint": "entities+hybrid_search (advanced_search)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "官方契约对 hybrid 子搜索 params 无断言（2.6 新路径覆盖缺口）；vein 契约 vein_hybrid_subsearch_params 主张同请求内 rerank 与子搜索 params 校验应一致。rerank 侧有校验（65535）由行为直证。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "PASS subsearch_ef_str_silent_code0 {'code': 0, 'cost': 0, 'data': [...]} + PASS subsearch_ef_str_same_as_valid 'identical to valid-ef results = silently substituted default' — 子搜索 params.ef=\"abc\"",
+      "secondary_observations": [
+        "PASS control_bad_rerank_errors {'code': 65535, 'message': 'unsupported rank type bogus'} — 同一 hybrid 请求的 rerank strategy 有显式校验",
+        "PASS subsearch_ef_neg_silent_code0 — ef=-3 同病 code:0",
+        "PASS control_valid code:0 基线"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "子搜索非法 ef 无错误通道（200+code:0 结果与默认逐位同）；rerank 非法值同请求内 200+65535——同请求不对称校验。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_scripts/vein_hybrid_subsearch_params_7.py",
+        "vein_scripts/vein_searchparams_silent_default_3.log 单搜索路径同模式互证"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_hybrid_subsearch_params",
+      "assertion_text_quoted": "hybrid search 子搜索 searchParams 非法值（非数字/负数 ef）应与 rerank 参数同等校验报错，不得静默替换默认值",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates=True 理由：ef=\"abc\"/-3 均 code:0 且结果与合法 ef 逐位一致（静默替换），同请求 rerank 非法值 65535——'同等校验'被同请求内对照直接否定。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: vein_hybrid_subsearch_params（vein 自生；官方契约 hybrid 面无 params 断言——缺口记）",
+        "doc: 官方 endpoint registry 含 hybrid/advanced_search",
+        "script: vein_hybrid_subsearch_params_7.py 五断言含 rerank 同请求对照",
+        "log: subsearch silent_code0 vs bad_rerank 65535 并列"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "generateSearchParams handler_v2.go:1620 (hybrid 子搜索调用)",
+        "unsupported rank type internal/util/function/rerank",
+        "rankTypeMap function_score.go"
+      ],
+      "files_examined": [
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go:1615-1635 (advancedSearch 子搜索: generateSearchParams(subReq.SearchParams) + TopKKey/OffsetKey 注入)",
+        ".milvus-src-2610/internal/util/function/rerank/function_score.go:190-200 (rankType 白名单校验 rankTypeMap → 'unsupported rank type %s')",
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go:2076-2134 (generateSearchParams 无 ef 校验——与单搜索共用)"
+      ],
+      "source_excerpt": "// handler_v2.go:1618-1631 (advancedSearch 子搜索)\n\tfor _, subReq := range httpReq.Search {\n\t\tsearchParams, err := generateSearchParams(subReq.SearchParams)  // 无 ef 校验，透传\n\t\t...\n\t\tsearchParams = append(searchParams, &commonpb.KeyValuePair{Key: common.TopKKey, Value: strconv.FormatInt(int64(subReq.Limit), 10)})\n\t\tsearchParams = append(searchParams, &commonpb.KeyValuePair{Key: proxy.OffsetKey, ...})\n...\n// function_score.go:194-197 (rerank 白名单——同请求另一路径有校验)\n\t\trankTypeStr, err := funcutil.GetAttrByKeyFromRepeatedKV(legacyRankTypeKey, rankParams)\n\t\tif _, ok := rankTypeMap[rankTypeStr]; !ok {\n\t\t\treturn nil, fmt.Errorf(\"unsupported rank type %s\", rankTypeStr)\n\t\t}",
+      "call_chain_traced": "hybrid: 子搜索经同一 generateSearchParams（无 ef 校验）→ knowhere 层默认替换（同 vein_searchparams_silent_default_3 根因）；rerank: function_score.go rankTypeMap 白名单 → fmt.Errorf → 65535。不对称根因=子搜索 params 与 rerank params 走完全不同的校验函数，2.6 hybrid 新路径复用了无校验的透传函数。",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "cache_delay"],
+      "surviving": null
+    }
+  }
+}

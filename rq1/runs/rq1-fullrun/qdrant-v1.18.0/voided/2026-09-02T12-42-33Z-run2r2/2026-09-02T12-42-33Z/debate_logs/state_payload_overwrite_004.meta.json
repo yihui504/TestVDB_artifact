@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_payload_overwrite_004",
+  "endpoint": "payload+overwrite",
+  "param": "filter",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "count_consistency",
+  "oracle": {
+    "statement": "after a wait=true filter-targeted overwrite {\"payload\":{\"n\":\"gone\",\"new\":1},\"filter\":must grp=a} (expect HTTP 200) on the 8-point collection: ids 0-3 payload EXACTLY {\"n\":\"gone\",\"new\":1} (grp and keep removed, even the selector key); ids 4-7 payload equals the original {\"grp\":\"b\",\"n\":i,\"keep\":\"k\"}; all 8 vectors equal baseline readback (<=1e-6); exact count 8 before and after, unchanged by an identical repeat",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

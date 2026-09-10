@@ -1,0 +1,84 @@
+{
+ "defect_id": "vein_type_mismatch_datetime_range_8",
+ "endpoint": "POST /collections/{collection_name}/points/count",
+ "defect_type": "Type2",
+ "built_by": "evidence-builder",
+ "steps": {
+  "doc_verification": {
+   "result": "DOC_PARTIAL",
+   "link_reachability": "PARTIAL",
+   "version_match": "PASS",
+   "content_consistency": "PASS",
+   "endpoint_precision": "PASS",
+   "sdk_rest_confusion": false,
+   "detail": "WebFetch 对 api.qdrant.tech / qdrant.tech 均被网络策略拦截（domain_blocked）；改用 mcp web-reader 成功抓取官方 filtering 文档（canonical https://qdrant.tech/documentation/search/filtering/）。原文 Datetime Range 节：'The datetime range is a unique range condition, used for datetime payloads, which supports RFC 3339 formats. You do not need to convert dates to UNIX timestamps.' — 文档明确要求 RFC 3339 且明确说不需要转 UNIX timestamp；未提 integer 界限被接受。endpoint_registry 中 points+count 注册项 source_url 版本 1.18.x 匹配。",
+   "evidence_source": "doc"
+  },
+  "execution_evidence": {
+   "grade": "B",
+   "log_pattern": "indexed ts  int:    status=200 count=193 / unindexed raw int:  status=200 count=0（主观测：同一 integer 界限 1767312000000000 作 range.gte，indexed datetime 字段返回 193，unindexed datetime 字段返回 0，均 HTTP 200 无错误）",
+   "secondary_observations": [
+    "indexed ts  string: status=200 count=193",
+    "unindexed raw str:  status=200 count=193（RFC3339 字符串基线：两字段一致 193，基线成立）"
+   ],
+   "claim_alignment": "aligned",
+   "http_semantics": {
+    "client_error_returned_as": "N/A",
+    "note": "类型不匹配的 integer 界限未被当作请求错误处理，以 HTTP 200 + 正常 count 结果静默返回，且 indexed(193) vs unindexed(0) 语义分叉"
+   },
+   "reproducibility": "单脚本",
+   "script_error": false,
+   "triggering_scripts": [
+    "vein_scripts/vein_type_mismatch_datetime_range_8.py"
+   ],
+   "evidence_source": "behavior"
+  },
+  "contract_grounding": {
+   "constraint_id": "",
+   "assertion_text_quoted": "raw_knowledge.md:1017 'Range: {lt?, gt?, gte?, lte?} numbers; datetime range supports RFC 3339 [DOC filtering]'；官方文档原文 'The datetime range ... supports RFC 3339 formats. You do not need to convert dates to UNIX timestamps.'",
+   "api_violates_assertion": true,
+   "note": "候选带空 constraint_id（structured_contract.json 58 条 constraints 中无 datetime range 类型约束条目——契约对 datetime range 界限类型未形式化，链在 contract 环先天缺失）。按 violates 自检条款核对：观测是'integer 界限被 HTTP 200 静默接受'，而文档约束声称 datetime range 支持/要求 RFC 3339 且'不需要转 UNIX timestamp'，integer 界限不在该约束的合法值域内且被无错接受 → 违反成立。引用文档原文替代缺失 constraint。",
+   "evidence_source": "doc"
+  },
+  "chain_trace": {
+   "chain_links": [
+    "contract:constraint_id 为空——structured_contract.json 无 datetime range 界限类型约束（链断点）",
+    "doc:官方 filtering 文档 Datetime Range 节原文 'supports RFC 3339 formats. You do not need to convert dates to UNIX timestamps.'",
+    "script:vein_scripts/vein_type_mismatch_datetime_range_8.py — 对 datetime 索引字段 ts 与未索引字段 raw 分别以 range.gte=1767312000000000(integer) 与 '2026-01-02T00:00:00Z'(string) 作对照 count(exact=true)",
+    "log:output_vein_type_mismatch_datetime_range_8.log — 'indexed ts int: status=200 count=193' / 'unindexed raw int: status=200 count=0' / string 基线双 193"
+   ],
+   "chain_broken_at": "contract",
+   "break_detail": "candidates.jsonl 该条目 constraint_id 为空，structured_contract.json 三类 58 条约束中不存在覆盖 'datetime range 界限必须是 RFC 3339 字符串' 的条目。doc→script→log 三环完整自洽（文档声称 RFC 3339-only，脚本以 integer 探测，log 显示被静默接受且语义分叉），唯 contract 环缺失。",
+   "evidence_source": "doc+behavior"
+  },
+  "source_grounding": {
+   "grep_queries": [
+    "DateTimePayloadType",
+    "RangeInterface",
+    "datetime_range",
+    "get_datetime_range_checkers",
+    "check_match"
+   ],
+   "files_examined": [
+    "lib/segment/src/types.rs",
+    "lib/segment/src/payload_storage/condition_checker.rs",
+    "lib/segment/src/index/query_optimization/condition_converter.rs"
+   ],
+   "source_excerpt": "lib/segment/src/types.rs:2704-2765 (v1.18.0 db3fca3) — #[serde(untagged)] pub enum RangeInterface { Float(Range<OrderedFloat<FloatPayloadType>>), DateTime(Range<DateTimePayloadType>) }；custom Deserialize：仅当 range bound 是 string 时才按 DateTime 解析（has_string_bound），否则 fallback 到 RangeInterfaceUntagged —— integer JSON number 界限落到 RangeInterface::Float 分支，无任何针对字段 schema 为 datetime 的类型校验。\n\nlib/segment/src/payload_storage/condition_checker.rs:226-237（未索引路径）— impl ValueChecker for Range<DateTimePayloadType> { fn check_match(&self, payload) { payload.as_str()...parse RFC3339... } }：DateTime range 只对字符串 payload 生效，payload 是字符串（本例 200 点均为 RFC3339 字符串）但查询界限是 Float —— Float checker 只匹配 Value::Number payload，字符串 payload 不匹配 → count=0（静默漏配）。\n\nlib/segment/src/index/query_optimization/condition_converter.rs:346-377（索引路径）— get_float_range_checkers 对 FieldIndex::DatetimeIndex 返回 None，但 DatetimeIndex 底层以 timestamp_micros i64 存储；integer 界限 1767312000000000 作为 Float(range) 走 IntIndex 分支语义（as IntPayloadType 截断/转换）后与 datetime 索引内部数值比较 —— 具体命中路径：datetime 索引字段被 DatetimeIndex 覆盖，Float checker 返回 None 时回退 payload 检查或其他 numeric 通路，使 1.767e15 数值与存储的 epoch-microseconds 同量纲比较成立 → count=193。两条路径对同一请求给出 193 vs 0 的语义分叉，源码层面无统一的 datetime-range-界限类型校验。",
+   "call_chain_traced": "REST Filter → RangeInterface::deserialize (types.rs:2740) [integer bound → RangeInterface::Float，无 schema-aware 校验] → 索引路径 get_float_range_checkers/get_datetime_range_checkers (condition_converter.rs:337-343，按 bound 类型而非字段 schema 分派) ↔ 未索引路径 Range<Float>/Range<DateTime> ValueChecker (condition_checker.rs:226-237，按 payload JSON 类型匹配) → 两条路径对同一 integer bound 分别产生 193（numeric 同量纲命中）与 0（字符串 payload 遇 Float checker 不匹配）",
+   "verification_outcome": "validation_absent",
+   "note": "RangeInterface::deserialize 仅以 'bound 是否为 string' 判定 Float/DateTime 分支，从不查询字段 schema；源码中不存在 'datetime 字段的 range 界限必须是 RFC 3339' 的校验，与文档声称一致的行为校验缺失。indexed/unindexed 分叉是两条求值通路（condition_converter vs condition_checker）类型语义不一致的直接结果。",
+   "sufficiency_check": "grep_hit_pursued",
+   "evidence_source": "source"
+  },
+  "mundane_explanation": {
+   "excluded": [
+    "env（脚本内 string RFC3339 基线双 193 成立，环境与数据正常）",
+    "request_typo（脚本经变量复用同一数值，四组请求仅 key/bound 类型不同）",
+    "concurrency（单线程顺序 count，exact=true 精确计数）",
+    "indexing_delay（脚本建索引后 sleep 8s 且 string 基线证明索引已生效一致）"
+   ],
+   "surviving": "by-design 论点：文档 Datetime Range 节未以 must/should 显式禁止 integer 界限，开发者可能将 untagged Float 兼容视为宽容设计；但 'You do not need to convert dates to UNIX timestamps' + RFC3339-only 表述 + indexed/unindexed 同请求结果分叉（0 vs 193）非任何单一设计意图能解释——分叉本身不是被设计的行为。此解释无法完全排除，留 auditor 终判。"
+  }
+ }
+}

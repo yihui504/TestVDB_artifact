@@ -1,0 +1,35 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+G valid sparse target -> status=200
+raw: {"result":[[{"id":3,"version":1,"score":0.85549134},{"id":2,"version":1,"score":0.85465115},{"id":1,"version":1,"score":0.85380113}]],"status":"ok","time":0.000417317}
+G valid sparse target: 200, inner len=3 (sparse channel live)
+
+S1 cardinality mismatch -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [searches[0].discover_request.target.values: Validation error: must be the same length as indices [{}]]"},"time":0.0}
+S1 cardinality mismatch: 422 clean rejection; diagnostics name the vector construct
+
+S2 negative index (uint domain) -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum RecommendExample at line 1 column 89"},"time":0.0}
+S2 negative index (uint domain): 400 clean rejection; NOTE (strategy5): rejection text names no vector-family token — diagnostics gap recorded for the judge
+
+S3 indices as STRINGS -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum RecommendExample at line 1 column 100"},"time":0.0}
+S3 indices as STRINGS: 400 clean rejection; NOTE (strategy5): rejection text names no vector-family token — diagnostics gap recorded for the judge
+
+S4 empty sparse vector -> status=200
+raw: {"result":[[{"id":6,"version":1,"score":0.5},{"id":2,"version":1,"score":0.5},{"id":5,"version":1,"score":0.5}]],"status":"ok","time":0.000461637}
+S4 empty sparse vector: judge-call face — accepted with a valid result array (len=3); recorded for the judge (empty sparse vector semantics)
+
+S5 dense array on sparse channel -> status=400
+raw: {"status":{"error":"Wrong input: Conversion between sparse and regular vectors failed"},"time":0.000596049}
+S5 dense array on sparse channel: 400 clean rejection; diagnostics name the vector construct
+
+U1 using=nonexistent name -> status=400
+raw: {"status":{"error":"Wrong input: Not existing vector name error: nope"},"time":0.000233305}
+U1 using=nonexistent name: 400 clean rejection; diagnostics name the vector construct
+
+M1 mixed batch (valid sparse + cardinality mismatch) -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [searches[1].discover_request.target.values: Validation error: must be the same length as indices [{}]]"},"time":0.0}
+M1: whole-batch clean rejection (atomic 400) — alignment contract upheld
+VERDICT: NO_DEFECT

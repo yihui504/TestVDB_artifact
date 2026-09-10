@@ -1,0 +1,53 @@
+{
+  "defect_id": "vein_type_confusion_query_1",
+  "endpoint": "/collections/{collection_name}/points/search:POST",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Search endpoint documented, filter.should and filter.must_not should accept array of conditions per schema",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: filter.should=null (type confusion - null instead of array) → HTTP 200, returned 3 points → VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)",
+      "secondary_observations": ["c2: filter.must_not=object (type confusion - object instead of array) → HTTP 200, returned 1 points", "c3: API accepts invalid types for filter parameters without 4xx error"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "Type errors (null for array, object for array) should return 400 but returned 200"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_type_confusion_query_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A - vein script target (not from formal constraint)",
+      "api_violates_assertion": true,
+      "evidence_source": "behavior"
+    },
+    "chain_trace": {
+      "chain_links": ["contract: (none - vein target)", "doc: search endpoint filter schema defined", "script: vein_type_confusion_query_1", "log: Type1_IllegalSuccess — null/object accepted instead of array"],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["filter.*should.*must", "validate.*filter.*type", "Condition.*Filter"],
+      "files_examined": ["lib/segment/src/payload_storage/query_checker.rs", "lib/segment/src/types.rs", "lib/api/src/rest/schema.rs"],
+      "source_excerpt": "lib/segment/src/payload_storage/query_checker.rs check_filter() validates filter structure but does not reject null/object for array fields; Filter struct allows should/must_not as Option<Vec<Condition>> but REST layer lacks type validation before internal processing",
+      "call_chain_traced": "REST schema → Filter deserialization → query_checker check",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "REST API layer missing type validation for nested filter parameters; null/object accepted where array required"
+    }
+  }
+}

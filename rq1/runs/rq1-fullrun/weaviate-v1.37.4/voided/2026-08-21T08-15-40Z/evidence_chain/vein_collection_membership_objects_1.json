@@ -1,0 +1,76 @@
+{
+  "defect_id": "vein_collection_membership_objects_1",
+  "endpoint": "POST /v1/objects",
+  "defect_type": "NOT_DEFECT",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Network blocked doc verification. OpenAPI spec defines /objects endpoint but collection membership validation requirements undocumented. Auto-schema feature behavior not documented in accessible REST API docs.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: [Non-existent Class] FAIL: DEFECT: Server accepts objects for non-existent class without validation, creating implicit collection → http=200, object created with id",
+      "secondary_observations": [
+        "c2: [Non-existent Tenant] PASS: OK: Server rejected non-existent tenant with 422",
+        "c3: [Empty Class Name] PASS: OK: Server rejected empty class name with 422",
+        "c4: [Special Characters Class] PASS: OK: Server rejected special characters in class name with 500"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 with object creation for non-existent class 'NonexistentCollection'. Server creates implicit collection via auto-schema feature instead of rejecting. Other validation tests (tenant/empty/special chars) show validation exists for those cases."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_collection_membership_objects_1"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint in structured_contract.json for collection membership validation on POST /objects. Contract lacks assertion requiring server to reject non-existent classes.",
+      "api_violates_assertion": false,
+      "note": "No contract assertion exists that would be violated. The observed behavior (HTTP 200 for non-existent class) is by-design auto-schema feature, not a contract violation.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (no collection membership constraint)",
+        "doc: (partial, network blocked - auto-schema behavior undocumented)",
+        "script: POST /v1/objects with class='NonexistentCollection'",
+        "log: HTTP 200, object created with id (auto-schema triggered)",
+        "source: add.go:95 calls autoSchema with allowCreateClass=true → auto_schema.go:121-133 creates class if nil"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "Chain complete: No contract assertion requires rejection of non-existent classes. Source code confirms HTTP 200 is expected behavior when auto-schema is enabled - class existence validation is conditionally bypassed by design. This is a legitimate feature (auto-schema), not a validation defect.",
+      "evidence_source": "doc+behavior+source"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "autoSchema.*allowCreateClass",
+        "given class does not exist",
+        "class.*not found in schema"
+      ],
+      "files_examined": [
+        "usecases/objects/add.go",
+        "usecases/objects/auto_schema.go"
+      ],
+      "source_excerpt": "Line 95 (add.go): autoSchema called with allowCreateClass=true:\n  autoSchemaVersion, err := m.autoSchemaManager.autoSchema(ctx, principal, true, fetchedClasses, object)\n\nLine 113-115 (auto_schema.go): Conditional rejection logic:\n  if schemaClass == nil && !allowCreateClass {\n    return 0, ErrInvalidUserInput{\"given class does not exist\"}\n  }\n\nLine 121-133 (auto_schema.go): Auto-creation when allowCreateClass=true:\n  if schemaClass == nil {\n    err := m.authorizer.Authorize(ctx, principal, authorization.CREATE, authorization.CollectionsMetadata(object.Class)...)\n    if err != nil {\n      return 0, fmt.Errorf(\"auto schema can't create objects because can't create collection: %w\", err)\n    }\n    schemaClass, schemaVersion, err = m.createClass(ctx, principal, object.Class, properties)\n    if err != nil {\n      return 0, err\n    }\n    classes[object.Class] = versioned.Class{Class: schemaClass, Version: schemaVersion}\n  }\n\nKey finding: Class existence validation exists but is conditionally bypassed. When allowCreateClass=true (passed at add.go:95), auto_schema.go creates non-existent classes automatically instead of rejecting with error. HTTP 200 is by-design behavior for auto-schema feature.",
+      "call_chain_traced": "POST /v1/objects → handler → Manager.AddObject() → add.go:95 autoSchema(ctx, principal, true, ...) → auto_schema.go:113-115 (check: if nil && !allowCreateClass → reject) → auto_schema.go:121-133 (if nil && allowCreateClass → create class) → HTTP 200 returned with created object",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "笔误"],
+      "surviving": "HTTP 200 for non-existent class is by-design behavior when auto-schema feature is enabled. Source code shows class existence validation exists (auto_schema.go:113-115) but is conditionally bypassed when allowCreateClass=true (add.go:95). This is a legitimate Weaviate feature that automatically creates schema from incoming objects. Not a validation defect. Classification: NOT_DEFECT (by-design auto-schema feature, not a contract violation or validation absence)"
+    }
+  }
+}

@@ -1,0 +1,281 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "boundary_points_query_batch_dualkey_005",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "mutually exclusive parameters"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=CONFIRMED -> final=DEFECT (mechanical)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "oneOf CONFIRMED: dual-key 200, order_by silently dropped",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_points_query_batch_mixed_008",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=REFUTED -> final=NOT_DEFECT (mechanical)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "other",
+      "category_no_fit_reason": "promise is class=behavioral",
+      "candidate_class": "rejected",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "400 = designed order_by index precondition; script setup gap",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_points_query_batch_positive_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=REFUTED -> final=NOT_DEFECT (mechanical)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "other",
+      "category_no_fit_reason": "promise is class=behavioral",
+      "candidate_class": "rejected",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "valid-batch premise false; designed order_by-index 400",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_query_batch_alignment_002",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=REFUTED -> final=NOT_DEFECT (mechanical)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "constraint_category": "other",
+      "category_no_fit_reason": "promise is class=behavioral",
+      "candidate_class": "rejected",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "order held; by-id self-absence designed must_not exclusion",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_query_batch_point_delete_003",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=REFUTED -> final=NOT_DEFECT (mechanical)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "deletes clean, no ghost read; self-absence designed",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_query_batch_upsert_idem_004",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=REFUTED -> final=NOT_DEFECT (mechanical)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "constraint_category": "other",
+      "category_no_fit_reason": "promise is class=behavioral",
+      "candidate_class": "rejected",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "idempotence held; empty by-id entry designed exclusion",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_points_query_batch_lifecycle_006",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "concurrent shard restart safety",
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=CONFIRMED -> final=DEFECT (mechanical)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "promise is class=behavioral",
+      "candidate_class": "strict_defect",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "it34 race 200 bad shape; batch handler lacks result guard",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "defect": 2,
+    "not_defect": 5,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {
+      "source": 5
+    },
+    "root_cause_distribution": {
+      "script_error": 2,
+      "approximate_by_design": 3
+    },
+    "constraint_category_distribution": {
+      "type": 1,
+      "other": 5,
+      "state": 1
+    },
+    "candidate_class_distribution": {
+      "strict_defect": 2,
+      "rejected": 5
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+ "defect_id": "boundary_collections_create_011",
+ "endpoint": "collections+create",
+ "param": "wal_config",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "constraint_ids": [
+  "qdrant_range_collections_create_005"
+ ],
+ "oracle": {
+  "statement": "wal_capacity_mb=0 / wal_segments_ahead=-1 / wal_retain_closed=-1 -> 4xx each; {1,0} combo -> 200 persisted; retain_closed=0 conflict leg measured-only",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

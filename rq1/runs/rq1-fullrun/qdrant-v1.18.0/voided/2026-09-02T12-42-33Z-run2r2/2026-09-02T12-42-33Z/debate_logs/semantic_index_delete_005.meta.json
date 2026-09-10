@@ -1,0 +1,17 @@
+{
+  "defect_id": "semantic_index_delete_005",
+  "endpoint": "index+delete",
+  "param": "collection_name",
+  "expected_defect_type": "Type2_PoorDiagnostics",
+  "strategy": "diagnosis_quality",
+  "constraint_ids": [
+    "qdrant_behavioral_index_delete_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/indexes/delete-field-index",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "with a control create+delete on a real collection returning 200 result:object (face healthy), DELETE of an index on each of two distinct never-created collection names answers exactly HTTP 404 (2xx = Type1_IllegalSuccess phantom success and outranks the rubric; non-404 4xx = Type4 branch violation; 5xx with healthy /healthz = Type3), and each 404 body scores >= 1/3 on the Type-2 rubric (c1 resource named via the collection-name literal or 'collection'; c2 existence/format hint; c3 actionable suggestion); a 404 body scoring 0/3 = Type2_PoorDiagnostics (BS-02); localization (name echoed, bodies distinct) measured but not scored; error-body field names not asserted (threat-model by-design); transport/setup = SCRIPT_ERROR (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

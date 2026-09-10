@@ -1,0 +1,21 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+M1 omit limit -> status=200
+raw: {"result":{"points":[{"id":201,"version":0,"score":1.0},{"id":202,"version":0,"score":1.0},{"id":203,"version":0,"score":1.0},{"id":204,"version":0,"score":1.0},{"id":205,"version":0,"score":1.0},{"id":206,"version":0,"score":1.0},{"id":207,"version":0,"score":1.0},{"id":208,"version":0,"score":1.0}
+M2 limit=10 explicit -> status=200
+raw: {"result":{"points":[{"id":201,"version":0,"score":1.0},{"id":202,"version":0,"score":1.0},{"id":203,"version":0,"score":1.0},{"id":204,"version":0,"score":1.0},{"id":205,"version":0,"score":1.0},{"id":206,"version":0,"score":1.0},{"id":207,"version":0,"score":1.0},{"id":208,"version":0,"score":1.0}
+M3 limit=1 (min closure) -> status=200
+raw: {"result":{"points":[{"id":201,"version":0,"score":1.0}]},"status":"ok","time":0.000278015}
+M4 offset=0 explicit -> status=200
+raw: {"result":{"points":[{"id":201,"version":0,"score":1.0},{"id":202,"version":0,"score":1.0},{"id":203,"version":0,"score":1.0},{"id":204,"version":0,"score":1.0},{"id":205,"version":0,"score":1.0},{"id":206,"version":0,"score":1.0},{"id":207,"version":0,"score":1.0},{"id":208,"version":0,"score":1.0}
+M5 limit=15 (=N) -> status=200
+raw: {"result":{"points":[{"id":201,"version":0,"score":1.0},{"id":202,"version":0,"score":1.0},{"id":203,"version":0,"score":1.0},{"id":204,"version":0,"score":1.0},{"id":205,"version":0,"score":1.0},{"id":206,"version":0,"score":1.0},{"id":207,"version":0,"score":1.0},{"id":208,"version":0,"score":1.0}
+M6 limit=16 (>N) -> status=200
+raw: {"result":{"points":[{"id":201,"version":0,"score":1.0},{"id":202,"version":0,"score":1.0},{"id":203,"version":0,"score":1.0},{"id":204,"version":0,"score":1.0},{"id":205,"version":0,"score":1.0},{"id":206,"version":0,"score":1.0},{"id":207,"version":0,"score":1.0},{"id":208,"version":0,"score":1.0}
+M1 OK: default limit returns the first 10 ids ascending
+M2 OK: limit=10 == default
+M3 OK: limit=1 accepted, returns the single lowest id
+M4 OK: offset=0 == default
+M5 OK: limit=N returns all ids ascending
+M6 OK: limit>N clamps to the real point count
+VERDICT: NO_DEFECT

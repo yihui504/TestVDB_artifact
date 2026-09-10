@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_clear_001",
+ "endpoint": "payload+clear",
+ "param": "points",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "with 3 payload-bearing points, clear {\"points\":[1],\"wait\":true} returns 200; afterwards scroll shows point 1 payload empty (null/{}) while points 2/3 payloads are deep-equal to baseline and all 3 vectors intact, and exact count stays 3 — payload residue on point 1, collateral wipe on 2/3, vector loss or count drift each = Type4_StateLogicViolation; 5xx/transport = Type3_RuntimeFailure with /healthz re-check",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

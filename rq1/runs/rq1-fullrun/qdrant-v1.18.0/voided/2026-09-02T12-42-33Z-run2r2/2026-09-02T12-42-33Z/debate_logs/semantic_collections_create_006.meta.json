@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_collections_create_006",
+  "endpoint": "collections+create",
+  "param": "datatype",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "behavioral_contract",
+  "oracle": {
+    "statement": "float16/uint8/float32 dense creates return 200 result=true with params.vectors.datatype echo equal to the member when served; turbo4 dense answers 200 (echo turbo4) or a clean 400/422; float64 and FLOAT16 are refused 400/422 (2xx = Type1_IllegalSuccess; 5xx with /healthz alive = Type3_RuntimeFailure); the sparse {\"sp\": {\"datatype\": \"turbo4\"}} case never persists sparse_vectors.sp.datatype==turbo4 (persistence = Type1_IllegalSuccess per the dense-only rule) - constraint qdrant_type_collections_create_005",
+    "source": "docstring"
+  }
+}

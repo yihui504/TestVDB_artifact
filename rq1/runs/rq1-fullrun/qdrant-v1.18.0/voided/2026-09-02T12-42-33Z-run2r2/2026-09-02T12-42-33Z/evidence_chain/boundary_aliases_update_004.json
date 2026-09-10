@@ -1,0 +1,81 @@
+{
+  "defect_id": "boundary_aliases_update_004",
+  "endpoint": "aliases+update (POST /collections/aliases)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No doc_preflight.json sidecar exists in the contract dir (results/qdrant/v1.18.0/); fallback WebFetch of https://api.qdrant.tech/v-1-18-x/api-reference/aliases/update-aliases was blocked twice by domain verification -> domain_blocked (PARTIAL, not FAIL). Version: URL path 'v-1-18-x' pins 1.18, matching target v1.18.0 -> PASS. Content: the version-pinned clone's OpenAPI source for this page (openapi/openapi-collections.ytt.yaml:112-133 uses 'responses: #@ response(type(\"boolean\"))'; openapi/openapi.lib.yml:1-35 response() helper emits ONLY {default: error, 4XX: error, 200: successful operation}) contains NO per-action '404/500 on delete_alias of an unknown alias' clause; the openapi.lib.yml defines no 404-bearing variant at all; the contract's '404/500' clause traces to raw_knowledge.json api_endpoints[40].expected_responses {200,404,500}, a generic response-code mapping, not the page's own words; conversely the JsonSchema description of the delete_alias action (rustdoc 'Delete alias if exists', collection_meta_ops.rs:49) carries if-exists semantics INTO the rendered schema -> content_consistency FAIL for the clause the defect claim rests on. Endpoint precision: endpoint_registry entry {path: aliases+update, method: POST, source_url identical to the assertion's} matches the tested route /collections/aliases -> PASS. Live-page confirmation unobtainable (domain_blocked); content conclusion is grounded in the version-pinned clone's OpenAPI, which is the source the api-reference site renders.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "negative delete-unknown-alias -> status=200 / raw: {\"result\":true,\"status\":\"ok\",\"time\":0.00012158}  [output_boundary_aliases_update_004.log lines 9-10; request body sent: {\"actions\":[{\"delete_alias\":{\"alias_name\":\"bau47671c910ghost\"}}]} per script lines 199-204]",
+      "secondary_observations": [
+        "positive multi-create -> status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.030945532} / OK: positive batch 200, both aliases applied, envelope intact  [own log lines 4-5: server and alias subsystem healthy at defect time]",
+        "negative create-on-missing-collection -> status=404 / raw: {\"status\":{\"error\":\"Not found: Collection `bau47671c910nope` doesn't exist!\"},\"time\":0.000157032}  [own log lines 6-7: same endpoint, create branch DOES reject unknown targets with 404]",
+        "rest same-family contrast (rename of unknown alias, sibling script): [N3 rename-unknown] status=404 raw={\"status\":{\"error\":\"Not found: Alias sau2_1788365147_6072_ren_old does not exists!\"},\"time\":0.000090007}  [output_state_aliases_update_002.log line 10: rename branch rejects the SAME unknown-alias condition with 404; delete branch does not]",
+        "sibling reproduction 1: case2 delete_alias unknown 's2au4_1788363015_no_such_alias_del': status=200 score=0/3 raw={\"result\":true,\"status\":\"ok\",\"time\":0.000020137}  [output_semantic_aliases_update_004.log line 5]",
+        "sibling reproduction 2: [N2 delete-unknown] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.000098373}  [output_state_aliases_update_002.log lines 8-9,15]",
+        "negative 3 (rename-unknown) of this script never executed: the script early-returns on the first DEFECT_FOUND (script lines 210-213), so the rename observation is covered by the sibling line above, not by this log",
+        "grpc face: not live-tested in this session (pipeline_state.json global_state.docker_container_running=false); source shows the gRPC DeleteAlias converts into the same AliasOperations::DeleteAlias (lib/storage/src/content_manager/conversions.rs:247-254), so the no-validation behavior is code-convergent across faces -> face evidence is source-derived, live comparison face_unavailable"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Actually the stronger form: HTTP 200 with a full success envelope {\"result\":true,\"status\":\"ok\"} — no error code at all. Deleting a nonexistent alias is indistinguishable from a successful delete (idempotent-success semantics on a documented-as-error branch)."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["boundary_aliases_update_004", "semantic_aliases_update_004", "state_aliases_update_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_aliases_update_001",
+      "assertion_text_quoted": "valid alias batch returns HTTP 200; create_alias on a missing collection returns 404; delete/rename of an unknown alias returns 404 or 500",
+      "api_violates_assertion": true,
+      "note": "Violates-declaration self-check: the observed operation (delete_alias of an unknown alias) is squarely INSIDE the quote's constraint domain (the clause names 'delete ... of an unknown alias'), and the observed 200 is literally outside the promised set {404, 500}, so api_violates_assertion=true is the honest literal reading — not a wrong-constraint-citation case. However the violated clause itself is not the documentation's own text (see doc_verification and chain_trace): the cited page documents only the generic {200, 4XX, default} family, and the source declares delete-if-exists semantics. The violation is real against the CONTRACT; its grounding against the DOC is the broken link the auditor must weigh.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_aliases_update_001 present in results/qdrant/v1.18.0/structured_contract.json (assertions list; description: 'returns 200 ok; 404 on create_alias of a missing collection; 404/500 on delete_alias of an unknown alias'; evidence_tier explicit; source_url api-reference update-aliases) — link intact",
+        "doc: source_url cites the v-1-18-x api-reference page, but the versioned clone's OpenAPI (openapi/openapi-collections.ytt.yaml:112-133 + openapi.lib.yml:1-35) documents only {200 successful operation, 4XX error, default error} for POST /collections/aliases; the '404/500 on delete_alias of unknown alias' clause is the contract's own inference from raw_knowledge expected_responses {200,404,500}, not the page's words — link broken",
+        "script: debate_logs/boundary_aliases_update_004.py lines 199-213 sent exactly the claim's probe ({\"actions\":[{\"delete_alias\":{\"alias_name\":\"<prefix>ghost\"}}]}), positive control and create-unknown control ran first and behaved — link intact",
+        "log: output_boundary_aliases_update_004.log lines 9-11 record status=200 raw={\"result\":true,\"status\":\"ok\"} and the Type1_IllegalSuccess verdict; the verdict pattern is consistent with the raw observation (200 accepted) — link intact"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The contract→doc link overstates the documentation. The cited api-reference page (per the version-pinned repo OpenAPI that generates it) promises no per-action 404/500 for delete_alias of an unknown alias — only the generic 4XX/default error family; the delete_alias action's own schema description ('Delete alias if exists') points the opposite way. Live-page re-verification was domain_blocked; conclusion rests on the clone's OpenAPI, which is the page's content source.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["delete_alias|DeleteAlias", "fn remove|rename_alias", "update_aliases", "ChangeAliasesOperation|ATOMIC|atomic", "collections/aliases", "impl ResponseError", "not_found", "response(type(\"boolean\"))"],
+      "files_examined": [
+        "lib/storage/src/content_manager/collection_meta_ops.rs (DeleteAlias/DeleteAliasOperation struct doc comments)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (update_aliases dispatcher, lines 298-338)",
+        "lib/storage/src/content_manager/alias_mapping.rs (remove / rename_alias, full read)",
+        "src/actix/api/collections_api.rs (POST /collections/aliases route, lines 180-196)",
+        "src/actix/helpers.rs (StorageError -> HTTP status mapping, lines 242-260)",
+        "openapi/openapi-collections.ytt.yaml (update_aliases operation, lines 112-133)",
+        "openapi/openapi.lib.yml (response() helper, lines 1-35)",
+        "lib/storage/src/content_manager/conversions.rs (gRPC DeleteAlias convergence, lines 247-254)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/collection_meta_ops.rs:49-61 (type-level docstrings — explicit intent evidence):\n49  /// Delete alias if exists\n50  #[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n51  #[serde(rename_all = \"snake_case\")]\n52  pub struct DeleteAlias {\n53      pub alias_name: String,\n54  }\n56  /// Delete alias if exists\n57  #[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n58  #[serde(rename_all = \"snake_case\")]\n59  pub struct DeleteAliasOperation {\n60      pub delete_alias: DeleteAlias,\n61  }\n\nlib/storage/src/content_manager/toc/collection_meta_ops.rs:298-338 (per-action validation asymmetry):\n298  /// performs several alias changes in an atomic fashion\n299  async fn update_aliases(&self, operation: ChangeAliasesOperation) -> Result<bool, StorageError> {\n305      let collection_lock = self.collections.write().await;\n306      let mut alias_lock = self.alias_persistence.write().await;\n307      for action in operation.actions {\n308          match action {\n309              AliasOperations::CreateAlias(CreateAliasOperation { create_alias: CreateAlias { collection_name, alias_name } }) => {\n316                  collection_lock.validate_collection_exists(&collection_name)?;   // -> NotFound -> HTTP 404\n317                  collection_lock.validate_collection_not_exists(&alias_name)?;\n319                  alias_lock.insert(alias_name, collection_name)?;\n320              }\n321              AliasOperations::DeleteAlias(DeleteAliasOperation { delete_alias: DeleteAlias { alias_name } }) => {\n324                  alias_lock.remove(&alias_name)?;   // NO existence validation\n325              }\n326              AliasOperations::RenameAlias(RenameAliasOperation { rename_alias: RenameAlias { old_alias_name, new_alias_name } }) => {\n333                  alias_lock.rename_alias(&old_alias_name, new_alias_name)?;   // -> validates old exists\n334              }\n336          }\n337      }\n338      Ok(true)\n\nlib/storage/src/content_manager/alias_mapping.rs:72-80 (delete path models unknown alias as normal no-op, not an error):\n72  pub fn remove(&mut self, alias: &str) -> Result<Option<String>, StorageError> {\n73      let output = self.alias_mapping.0.remove(alias);\n75      if output.is_some() {\n76          self.alias_mapping.save(&self.data_path)?;   // save deliberately skipped when nothing removed\n77      }\n79      Ok(output)   // Ok(None) for unknown alias — no error branch exists\n80  }\n\nlib/storage/src/content_manager/alias_mapping.rs:95-112 (rename path — the in-family contrast that DOES reject):\n100         match self.get(old_alias_name) {\n101             None => Err(StorageError::not_found(format!(\"Alias {old_alias_name} does not exists!\"))),   // -> HTTP 404\n105             Some(collection_name) => { ... }\n\nsrc/actix/helpers.rs:242-260: StorageError::NotFound => http::StatusCode::NOT_FOUND (404) — reachable for aliases only via create/rename branches, never via delete.",
+      "call_chain_traced": "REST #[post(\"/collections/aliases\")] update_aliases (src/actix/api/collections_api.rs:180-196) -> dispatcher.submit_collection_meta_op(ChangeAliases) -> TableOfContents::update_aliases (lib/storage/src/content_manager/toc/collection_meta_ops.rs:299) -> per-action: CreateAlias validates collection existence; DeleteAlias calls AliasPersistence::remove (alias_mapping.rs:72, HashMap::remove, returns Ok(None) for unknown alias — never constructs StorageError) -> handler returns Ok(true) -> actix process_response -> HTTP 200 {\"result\":true}. StorageError::not_found reaches 404 only via helpers.rs:246, i.e. only the create/rename branches. gRPC face converges: From<grpc::DeleteAlias> for AliasOperations (conversions.rs:247-254) feeds the same handler, so the behavior is face-inherited (not live-tested; sandbox down).",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "The delete path carries explicit intent evidence: the maintainer docstring '/// Delete alias if exists' on BOTH DeleteAlias and DeleteAliasOperation structs (also propagated into the JsonSchema/OpenAPI description of the delete_alias action), plus a deliberately modeled Ok(None) return that skips the state save when nothing was removed — the unknown-alias case is a designed outcome, not an unannotated oversight. The in-family contrast (rename_alias explicitly raises not_found) shows the codebase distinguishes the two cases on purpose. Therefore validation_absent does not hold and by_design_in_source is recorded per the v3.4 tightened rule. Caveat for the auditor: by-design here is relative to the SOURCE; the contract's 404/500 clause for this branch is not grounded in the documentation (chain_broken_at: doc), so the remaining question is contract quality, not source behavior.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache", "request_typo"],
+      "surviving": "by_design — the source docstring 'Delete alias if exists' plus the modeled no-op return make the idempotent-success semantics deliberate (see source_grounding); this explanation survives scrutiny and competes with the contract-side reading of a violated 404/500 promise that the documentation never actually made."
+    }
+  }
+}

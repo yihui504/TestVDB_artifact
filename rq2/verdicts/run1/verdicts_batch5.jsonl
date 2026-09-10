@@ -1,0 +1,14 @@
+{"defect_id": "qdrant_014", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "契约中无 cluster+recover 约束条目（仅端点描述'Recover current peer Raft state'），standalone 模式下返回带明确原因的 500 错误响应而非静默接受，不违反包内任何已列契约断言"}
+{"defect_id": "qdrant_015", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "shard_number=2147483647 满足契约下界 shard_number>=1 属合法值，读超时无响应不对应任何已列断言（契约无时限/可用性承诺），且观察摘要称 GET / 返回 200 与日志 status=None 相互矛盾削弱证据"}
+{"defect_id": "qdrant_016", "verdict": "CONFIRMED", "confidence": 0.9, "rationale": "包内补充契约明确断言 lookup_from.collection 必须引用已存在集合（non-existent -> 400/404），观察却对 nonexistent_collection_xyz 静默返回 200 并给出源集合查询结果，直接违反该断言"}
+{"defect_id": "qdrant_017", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "日志显示 offset=0/10/20 三页结果互不重叠且按分数降序、scroll 返回 next_page_offset，行为与 behavioral_008/009 完全一致，无任何违反证据"}
+{"defect_id": "qdrant_018", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约仅声明 exact=true 全扫描、exact=false 使用 segment statistics（近似机制），未断言两口径结果一致，两请求均返回 200+count 满足 behavioral_010，40 vs 24 属已披露机制差异"}
+{"defect_id": "qdrant_019", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约只描述 exact=true 全扫描/exact=false 段统计的机制差异而无精度断言，三种规模下 is_empty 近似计数偏差（约-35%~-40%）不构成对已列断言的违反，各请求均正常 200 返回"}
+{"defect_id": "qdrant_020", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "单字段 match 时 exact 与 approx 完全一致(130/130)，复合过滤下 130/99 与 73/62 的偏差无对应契约精度断言（契约仅描述 exact=false 用段统计），证据不足"}
+{"defect_id": "qdrant_021", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "契约对 count 仅约定机制（exact=false 用 segment statistics）而无任何精度/一致性断言，geo_radius 下 approx 相对 exact 的显著高估（最高+535%）不违反包内契约条目，各请求均 200+count 符合 behavioral_010"}
+{"defect_id": "qdrant_022", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "match_any 单值时 exact=approx=107，多值时的近似偏差无对应契约断言（契约仅描述 exact=false 使用段统计的机制），不构成已列断言的违反"}
+{"defect_id": "qdrant_023", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "从快照恢复后 exact count=3 恰为快照创建时状态（恢复后新增的 id=50 被回滚正是快照恢复的语义），行为符合恢复语义且满足 exact 计数一致性契约，无违反证据"}
+{"defect_id": "qdrant_024", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "首请求维度不匹配返回明确 400 诊断（'expected dim: 4, got 8'）并非静默接受，第二请求 200+排序结果符合 behavioral_012，包内契约无 lookup_from/negative 维度校验断言，证据不足以判定违反"}
+{"defect_id": "qdrant_025", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "契约无 metadata PATCH 语义条目（1.19 新特性晚于契约提取），且包内证据自相矛盾（GET 显示 metadata 仍为 {owner,env} 而 stdout 称 null），无法确立对任何已列断言的违反"}
+{"defect_id": "qdrant_026", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "8 个点向量全同导致得分并列 1.0，契约仅要求结果按分数降序（并列时顺序未定义）且 group_size/limit 满足 range 约束，包内无确定性排序断言，观察不违反所列契约"}
+{"defect_id": "qdrant_027", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约明示索引创建为异步（acknowledged 后延迟生效），随即 GET 显示 payload_schema={} 且 update_queue length=1 与异步语义相容，无断言要求字段模式即时可见，证据不足"}

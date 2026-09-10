@@ -1,0 +1,14 @@
+{"defect_id": "milvus_015", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "日志显示 create_index 对不存在集合返回 code=100 collection not found、多索引请求返回 65535 错误，均为错误响应且与契约状态约束(collection must exist)一致，未观察到静默接受或契约违反。"}
+{"defect_id": "milvus_016", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "包内契约对 entities+search 无任何 ef/nprobe 取值范围断言，且三次搜索所在集合的索引创建均失败(65535 at most one distinct index)，证据不足以支持违反契约的判断。"}
+{"defect_id": "milvus_017", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "契约中无 endpoint=aliases+list 的任何约束条目，空 collectionName 返回 code=0 空列表不违反包内任何断言，仅其他端点的 non-empty 约束不构成对该端点的契约依据。"}
+{"defect_id": "milvus_018", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "执行日志显示 rename 实际返回 65535 duplicated new collection name 错误而非观察摘要所称 code=0，与契约状态约束(新名不得已存在)一致，摘要与日志矛盾且违反不成立。"}
+{"defect_id": "milvus_019", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "包内维护者 issue 50193 明确表态 get_stats rowCount 仅统计已 flush 数据为 by design，probe 未执行 flush，rowCount=0 而查询返回 5 行属设计内滞后。"}
+{"defect_id": "milvus_020", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "delete 返回 deleteCount=5 后两次 search 均仍返回全部 10 个 id(含已删除的 1-5)，直接违反包内 state 约束 milvus_state_entities_delete_001(Deleted entities cannot be recovered/删除不可逆)。"}
+{"defect_id": "milvus_021", "verdict": "CONFIRMED", "confidence": 0.6, "rationale": "全程日志无 collections/load 调用且未创建任何索引，search 仍返回 code=0 及结果，违反包内状态约束 milvus_state_entities_search_001(collection is loaded AND index exists on annsField)。"}
+{"defect_id": "milvus_022", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "契约明文规定同 schema 重复创建为幂等 no-op 返回 200，观察到的同参重复创建成功正符合该断言及维护者 issue 50192 表态。"}
+{"defect_id": "milvus_023", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "契约行为断言明文 dropping a non-existent collection is treated as idempotent success (200, empty data)，观察到的 code=0 与其完全一致。"}
+{"defect_id": "milvus_024", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "包内契约未规定 delete 的 filter 与 ids 互斥，deleteCount=1 与集合仅含 id=1 一行一致，同时携带两参数成功不违反任何包内断言。"}
+{"defect_id": "milvus_025", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "契约约束明文 REST insert 无固定行数上限(any row count that fits the request payload are accepted, HTTP 200)，101 行插入成功符合该断言。"}
+{"defect_id": "milvus_026", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "包内 collections+create 契约仅要求 collectionName 为 string，无禁止下划线开头命名的任何断言，创建成功不违反包内契约。"}
+{"defect_id": "milvus_027", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "包内维护者 issue 50351 明确表态 REST v2 quick-create 不消费顶层 shardsNum、静默忽略为 by design，故 shardsNum=0/-1/65535 被接受属设计内行为而非违反契约。"}
+{"defect_id": "milvus_028", "verdict": "CONFIRMED", "confidence": 0.6, "rationale": "metricType=\"\" 与 consistencyLevel=\"None\" 等非法枚举值被静默接受(code=0)，违反包内类型约束 metricType in [L2,IP,COSINE] 与 consistencyLevel 四值枚举及 invalid parameters 应返回错误的行为断言；同端点 dimension=32769 被正确拒绝说明字段被消费而非整体忽略。"}

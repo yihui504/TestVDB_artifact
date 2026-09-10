@@ -1,0 +1,17 @@
+{
+  "defect_id": "state_collections_list_002",
+  "endpoint": "collections+list",
+  "param": "result.collections[] entries / name field (post-delete absence and zombie persistence through the global list face)",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "delete_consistency",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_list_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-collections",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "after a 200-confirmed DELETE the list face converges within bounded retries (4 x 0.5s) to exclude the deleted name while keeping the surviving sibling present exactly once; a persisting entry = Type4 zombie; reappearance after settled absence = Type4; a redundant DELETE against the absent name must not resurrect the entry (reappearance = Type4); immediate-presence-that-converges = OBSERVATION only; non-200 with /healthz alive = Type4; 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_r2b_insert_param_confusion_04",
+  "endpoint": "entities+insert (request-level params)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约 milvus_behavioral_envelope_003 明确断言 entities+insert 结构错误请求 → HTTP 200 + {\"code\":1801,\"message\":\"can only accept json format request...\"}（本 log 1-3 行 1801 复现印证契约）。partitionNames/timeout 的参数级类型无专条约束。文档不可达，clone 为准。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "insert partitionNames as string -> http=200 ok=True raw={\"code\":0,\"cost\":0,\"data\":{\"insertCount\":1,\"insertIds\":[3]}}",
+      "secondary_observations": [
+        "insert timeout as string -> http=200 ok=True code:0 (insertIds 4)",
+        "insert data as object -> ok=False {\"code\":1801,\"message\":\"can only accept json format request, error: json: cannot unmarshal object into Go struct field CollectionDataReq.data of type []map[string]interface {}\"}",
+        "insert rows as arrays -> ok=False code:1801 (cannot unmarshal array ... of type map[string]interface {})",
+        "insert data as string -> ok=False code:1801",
+        "insert data null -> ok=False {\"code\":1802,\"message\":\"missing required parameters ... 'Data' failed on the 'required' tag\"}",
+        "upsert data-as-object -> ok=False code:1801",
+        "readback 后续 query -> {\"code\":101,\"collection not loaded\"}（环境性，非本链主张）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "data 结构错误正确 1801/1802（HTTP 200）；partitionNames/timeout 类型错误则 200+code:0 静默接受——同端点内校验粒度不一致"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2b_insert_param_confusion_04.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_behavioral_envelope_003",
+      "assertion_text_quoted": "\"HTTP 200 with {\\\"code\\\":1801,\\\"message\\\":\\\"can only accept json format request, ...\\\"}; live confirmed\"",
+      "api_violates_assertion": false,
+      "note": "envelope_003 只约束 data 字段结构错误的 1801 响应（log 1-3 行完全符合，此环 PASS）；partitionNames 传字符串被接受不在该 quote 约束域内——参数级类型校验缺失是契约 gap，而非违反 envelope_003。故 violates=False（针对所引约束），gap 由链记录。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_behavioral_envelope_003 断言 insert 结构错误→1801（对照环成立）",
+        "doc: source_url=本地 clone handler_v2.go（核对通过）",
+        "script: boundary_r2b_insert_param_confusion_04.py data 3 种结构错 + partitionNames/timeout 传字符串",
+        "log: data 面 1801/1802 正确拒绝；partitionNames/timeout 字符串面 code:0 接受"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "链自洽——对照环与主观测环均在 log 逐字；唯 partitionNames 类型域契约无断言（gap，非断链）",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["CollectionDataReq struct", "PartitionNames []string json tag", "timeout binding"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/request_v2.go (323-331 CollectionDataReq)",
+        "internal/distributed/proxy/httpserver/request_v2.go (62-78 CollectionNameReq.PartitionNames)"
+      ],
+      "source_excerpt": "internal/distributed/proxy/httpserver/request_v2.go:323-329:\ntype CollectionDataReq struct {\n    DbName         string                   `json:\"dbName\"`\n    CollectionName string                   `json:\"collectionName\" binding:\"required\"`\n    PartitionName  string                   `json:\"partitionName\"`\n    Data           []map[string]interface{} `json:\"data\" binding:\"required\"`\n    PartialUpdate  bool                     `json:\"partialUpdate\"`\n}\n关键：CollectionDataReq 根本没有声明 partitionNames/timeout 字段——严格 JSON 反序列化下未知键被静默丢弃（Go encoding/json 默认忽略未知字段），请求仍成功。data 字段类型 []map[string]interface{} 由 json unmarshal 强校验（对应 1801）。partitionNames 在 CollectionNameReq (line 65) 为 []string，但 insert 面的请求结构未承载它。",
+      "call_chain_traced": "gin ShouldBindBodyWith -> CollectionDataReq unmarshal：未知/类型不符的非绑定字段（partitionNames、timeout）被 encoding/json 静默忽略 -> 只剩 collectionName+data 有效 -> 正常 insert -> code:0。无对该层参数类型的校验代码可寻（结构体即未声明）。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "request typo", "concurrency"],
+      "surviving": "静默忽略未知请求键是 Go REST 框架通行行为（by-design 倾向强）；但 '参数类型错误被当作参数不存在处理' 的诊断缺失仍为可观 测质量问题——交 auditor"
+    }
+  },
+  "cross_reference": "与 boundary_r2b_upsert_rowface_03 不同层：本链=请求参数级（struct 字段/未知键丢弃）；彼链=数据行字段值级（标量 cast）。",
+  "evidence_weight": "C+（主观测+强对照组（1801/1802）双面证据，但单脚本；源码直指未知键静默丢弃机制；by_design 抗辩较强——envelope_003 本身未被违反）"
+}

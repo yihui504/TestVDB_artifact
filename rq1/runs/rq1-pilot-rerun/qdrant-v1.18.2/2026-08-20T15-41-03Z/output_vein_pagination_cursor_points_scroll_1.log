@@ -1,0 +1,42 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[SETUP] Creating collection with 25 points for pagination testing...
+
+[TEST 1] Scroll with limit=10, offset=0
+  limit=10, offset=0: status=200
+    Points returned: 10
+
+[TEST 2] Scroll with offset=24 (last point)
+  limit=10, offset=24: status=200
+    Points returned: 1
+    OK: Last point returned
+
+[TEST 3] Scroll with offset=25 (beyond last point)
+  limit=10, offset=25 (beyond last): status=200
+    Points returned: 0
+    OK: Beyond last point returns 0
+
+[TEST 4] Scroll with offset=999 (far beyond)
+  limit=10, offset=999 (far beyond): status=200
+    Points returned: 0
+    OK: Far beyond returns 0
+
+[TEST 5] Scroll with negative offset
+  limit=10, offset=-1 (negative): status=400
+    OK: Rejected with 400
+
+[TEST 6] Scroll with offset as string ID instead of integer
+  limit=10, offset='some_string_id': status=400
+    OK: Rejected with 400
+
+[TEST 7] Scroll with limit=0
+  limit=0: status=422
+    OK: Rejected with 422
+
+[TEST 8] Scroll with limit=-1
+  limit=-1 (negative): status=400
+    OK: Rejected with 400
+
+============================================================
+VERDICT: NO_DEFECT
+============================================================

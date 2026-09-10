@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_delete_006",
+ "endpoint": "payload+delete",
+ "param": "keys",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "type",
+ "oracle": {
+  "statement": "each of the five type-confused bodies (keys=\"city\" / keys=[123,456] / keys=[null] / keys={\"city\":1} / keys=null, all with a valid points=[1] selector) returns 4xx with the keys parameter named in the error (silent or unnamed 4xx = Type2_PoorDiagnostics); any 200 is a defect — readback shows payload state changed = Type4_StateLogicViolation (type-confused keys executed a destructive delete), payloads deep-equal baseline = Type1_IllegalSuccess (invalid keys value accepted); 5xx = Type3_RuntimeFailure with /healthz re-check; all five rejected leaves payloads deep-equal baseline at the final readback (constraint qdrant_behavioral_payload_delete_001: \"400 on invalid input\")",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,16 @@
+alias create: 200 {"code":200,"data":{}}
+drop target: 200 {"code":200,"data":{}}
+alias describe after target drop: 200 {"code":1600,"message":"alias not found[database=default][alias=r2_alias_x_008]"}
+search via dangling alias: 200 {"code":100,"message":"can't find collection collection not found[collection=468539281521154554]"}
+alter alias to missing collection: 200 {"code":100,"message":"collection not found[collection=no_such_coll_xyz]"}
+race iter0: alter->r2_alias_a_008 code=200 | alias search http=200 code=200 {"code":200,"data":[{"distance":0,"id":0}]}
+race iter1: alter->r2_alias_b_008 code=200 | alias search http=200 code=200 {"code":200,"data":[]}
+race iter2: alter->r2_alias_a_008 code=200 | alias search http=200 code=200 {"code":200,"data":[{"distance":0,"id":0}]}
+race iter3: alter->r2_alias_b_008 code=200 | alias search http=200 code=200 {"code":200,"data":[]}
+race iter4: alter->r2_alias_a_008 code=200 | alias search http=200 code=200 {"code":200,"data":[{"distance":0,"id":0}]}
+race iter5: alter->r2_alias_b_008 code=200 | alias search http=200 code=200 {"code":200,"data":[]}
+race iter6: alter->r2_alias_a_008 code=200 | alias search http=200 code=200 {"code":200,"data":[{"distance":0,"id":0}]}
+race iter7: alter->r2_alias_b_008 code=200 | alias search http=200 code=200 {"code":200,"data":[]}
+race iter8: alter->r2_alias_a_008 code=200 | alias search http=200 code=200 {"code":200,"data":[{"distance":0,"id":0}]}
+race iter9: alter->r2_alias_b_008 code=200 | alias search http=200 code=200 {"code":200,"data":[]}
+VERDICT: NO_DEFECT

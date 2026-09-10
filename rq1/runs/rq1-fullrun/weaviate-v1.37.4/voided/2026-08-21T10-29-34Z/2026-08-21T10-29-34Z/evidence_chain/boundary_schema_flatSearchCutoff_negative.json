@@ -1,0 +1,54 @@
+{
+  "defect_id": "boundary_schema_flatSearchCutoff_negative",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "flatSearchCutoff documented in contract via go-struct type=int, default_value=40000; constraint_id=contract with empty type/range constraints. No negative bound stated in contract, but go-struct default 40000 indicates positive domain. github default (WebFetch) blocked (PARTIAL); local clone exact v1.37.4 confirms default 40000 (config.go:34 DefaultFlatSearchCutoff=40000) and zero validation on range.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: flatSearchCutoff=-1, dynamicEfMin=100 dynamicEfMax=500 default -> http=200, body persists flatSearchCutoff=-1 (status 200, VERDICT: DEFECT_FOUND)",
+      "secondary_observations": ["negative flatSearchCutoff accepted in place of default 40000 and returned verbatim; no 4xx rejection"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "HTTP 200; flatSearchCutoff=-1 persisted as a successful create rather than a 4xx invalid-parameter rejection; negative value is the GT-target face"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_schema_flatSearchCutoff_negative"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "contract",
+      "assertion_text_quoted": "data_types/vectorIndexConfig: flatSearchCutoff type=int, default_value=40000 (go-struct source). Contract provides no explicit range constraint but the positive default 40000 and runtime threshold semantics imply a non-negative cutoff",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:data_types.vectorIndexConfig.flatSearchCutoff (type=int, default 40000) -> doc:source config.go:34 DefaultFlatSearchCutoff=40000 -> script:boundary_schema_flatSearchCutoff_negative POST /v1/schema with flatSearchCutoff=-1 -> log:http=200, body persists flatSearchCutoff=-1"],
+      "chain_broken_at": null,
+      "break_detail": "Chain complete. Config field default=40000; -1 replaces it and is persisted. source validate() contains no flatSearchCutoff range guard (config.go:260-323 does not touch it); runtime search.go consumes raw value.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["FlatSearchCutoff|flatSearchCutoff package-wide", "DefaultFlatSearchCutoff", "flatSearchCutoff in search.go", "flatSearchCutoff validate"],
+      "files_examined": ["entities/vectorindex/hnsw/config.go", "adapters/repos/db/vector/hnsw/search.go", "entities/vectorindex/hnsw/config_test.go"],
+      "source_excerpt": "config.go:34 DefaultFlatSearchCutoff=40000; config.go:201-205 OptionalIntFromMap(\"flatSearchCutoff\", func(v int){uc.FlatSearchCutoff=v}) - verbatim assign, no bound; config.go:260-323 validate() omits flatSearchCutoff. search.go:85-86/122-123: if allowList != nil && !h.forbidFlat && allowList.Len() < flatSearchCutoff - with flatSearchCutoff=-1, condition allowList.Len() < -1 is always false, silently disabling the flat-search optimization for the class.",
+      "call_chain_traced": "POST /schema -> ParseAndValidateConfig assigns flatSearchCutoff=-1 (no bound) -> validate() (no check) -> persisted; at query time search.go reads -1 as cutoff threshold, making the allow-list < -1 branch never true -> flat optimization permanently disabled.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "by-design"],
+      "surviving": "Negative flatSearchCutoff accepted and persisted; no source guard rejects values <=0, and at runtime the negative threshold disables flat-search (allowList.Len() < -1 is unsatisfiable). Deterministic, not environmental.",
+      "note": "contract documents positive default 40000; persisting a negative cutoff violates the field's positive-domain semantics and degrades the flat-search path - api_violates_assertion=true."
+    }
+  }
+}

@@ -1,0 +1,7 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+strict echo: {"enabled": true, "max_collection_vector_size_bytes": 100, "max_collection_payload_size_bytes": 100, "max_points_count": 10}
+below-cap upsert: 200 | +5 beyond point-cap: 200 | 30x200B beyond size caps: 200
+final point count: 41 (caps: points=10, vector bytes=100, payload bytes=100)
+control upsert_max_batchsize=50, batch of 60 -> 400 (enforced)
+VERDICT: DEFECT_FOUND — strict-mode capacity guardrails (max_points_count, max_collection_vector_size_bytes, max_collection_payload_size_bytes) are accepted and echoed but never enforced: writes 11x/16x the point cap and 4.8x+ the byte caps succeed, while sibling guardrail upsert_max_batchsize rejects correctly

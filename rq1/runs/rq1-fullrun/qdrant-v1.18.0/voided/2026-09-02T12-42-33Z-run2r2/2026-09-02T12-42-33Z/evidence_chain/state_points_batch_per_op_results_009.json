@@ -1,0 +1,98 @@
+{
+  "defect_id": "state_points_batch_per_op_results_009",
+  "endpoint": "points+batch (POST /collections/{collection_name}/points/batch)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: both doc domains (api.qdrant.tech, qdrant.tech) are WebFetch-blocked in this environment -> domain_blocked (PARTIAL per spec); no doc_preflight.json sidecar exists anywhere in the plugin tree; in-band contract-time record exists: endpoint_registry points+batch entry has source_status='reachable', verified_at='2026-09-02T12:34:08Z', doc_quote='Operations are executed in order; returns 200 with per-operation results; 404 for a missing collection.' Version: doc_version '1.18.x (versioned v-1-18-x api-reference)' matches target v1.18.0. Content: cannot re-verify the live page (domain_blocked); corroborated by the repo-shipped OpenAPI that the api-reference renders (clone openapi/openapi-points.ytt.yaml:400-412: POST /collections/{collection_name}/points/batch, operationId batch_update, responses array(UpdateResult); UpdateResult = operation_id:integer|null + status:string enum, lib/collection/src/operations/types.rs:469) — consistent with the asserted 'returns 200 with per-operation results'. Note: neither the api-reference face nor the endpoint_registry doc_quote contains ANY statement promising byte-equal raw-vector readback after update_vectors. Endpoint precision: script registered rt.PATHS['batch_update']='/collections/{collection_name}/points/batch' verbatim from raw_knowledge api_endpoints[].",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "DEFECT: (E1) point 901 vector [0.35634834, 0.4454354, 0.5345225, 0.6236096] != [2.0, 2.5, 3.0, 3.5] after update_vectors in the batch — Type4_StateLogicViolation",
+      "secondary_observations": [
+        "[7-op batch] status=200 raw={\"result\":[{\"operation_id\":2,\"status\":\"completed\"},{\"operation_id\":3,\"status\":\"completed\"},{\"operation_id\":4,\"status\":\"completed\"},{\"operation_id\":5,\"status\":\"completed\"},{\"operation_id\":6,\"status\":\"completed\"},{\"operation_id\":7,\"status\":\"completed\"},{\"operation_id\":8,\"status\":\"completed\"}],\"status\":\"ok\",\"time\":0.021675389} — 7 result entries for 7 operations, all completed (behavioral 200-face satisfied)",
+        "[get 901] status=200 raw={\"result\":{\"id\":901,\"payload\":{\"s\":true},\"vector\":[0.35634834,0.4454354,0.5345225,0.6236096]},\"status\":\"ok\"} — payload end-state EXACTLY {\"s\":true} (set_payload op2 + delete_payload 'n' op5 applied in order); readback vector == V2/|V2| with |V2|=sqrt(31.5)=5.6124861 (2.0/5.6124861=0.35634834, 2.5/…=0.4454354, 3.0/…=0.5345225, 3.5/…=0.6236096 — exact to all printed digits), i.e. the update_vectors op DID change the stored vector direction from seed [1.0,0.5,0.75,1.0] (whose unit form is [0.59628,0.29814,0.44721,0.59628], NOT what was read back) to V2's direction",
+        "[get 902] status=404 raw={\"status\":{\"error\":\"Not found: Point with id 902 does not exists!\"},\"time\":0.000311882} — trailing delete op applied",
+        "[E3 count] status=200 raw={\"result\":{\"count\":1},\"status\":\"ok\",\"time\":0.000304222} — end-state count consistent",
+        "MULTI-SCRIPT REPRODUCTION (sibling, same pattern/signature): output_state_points_batch_atomicity_006.log:13 'DEFECT: (CTL) valid update_vectors did not durably apply: vector [0.59344244, 0.5275044, 0.46156633, 0.3956283] != [9.0, 8.0, 7.0, 6.0] — Type4_StateLogicViolation'; observed vector == [9,8,7,6]/sqrt(230) (sqrt(230)=15.1657509; 9/15.1657509=0.59344245, 8/…=0.52750440, 7/…=0.46156635, 6/…=0.39562830) — same Cosine-collection normalization signature (all state_points_batch_* scripts use rt.setup_default(C, DIM, 'Cosine')); atomicity_006's own F-leg (line 14, rejected-batch partial commit) is a SEPARATE observation handled by that candidate's builder",
+        "LIVE COMPARATIVE PROBE (2026-09-04, evidence-builder, qdrant/qdrant:v1.18.0 standalone, localhost:6333, healthz=200) — same value V2=[2.0,2.5,3.0,3.5] via points+batch (face=rest,batch,metric=Cosine): batch-update_vectors -> http=200 result completed; readback vector=[0.35634834,0.4454354,0.5345225,0.6236096] (=V2/|V2|); (face=rest,batch,metric=Euclid, SAME op/value/endpoint): readback vector=[2.0,2.5,3.0,3.5] BYTE-EXACT; (face=rest,non-batch PUT /collections/{name}/points/vectors,metric=Cosine): http=200 completed, readback vector=[0.35634834,0.4454354,0.5345225,0.6236096] (=V2/|V2|) — the substitution tracks the DISTANCE METRIC, not the batch path or the operation kind",
+        "PROBE ROUTING FACT: the non-batch update-vectors face is PUT-only (clone src/actix/api/update_api.rs:113 '#[put(\"/collections/{collection_name}/points/vectors\")]'); a POST to that path 404s with an empty body (observed during probing) — recorded so the auditor does not misread an earlier POST 404 as a missing route"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The 7-op batch was a fully legal request correctly served HTTP 200 with per-op results; the reported violation is an end-state readback comparison (vector != raw V2), not a client error disposition."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_points_batch_per_op_results_009",
+        "state_points_batch_atomicity_006 (CTL control leg, same raw-vs-readback normalization mismatch signature)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_points_batch_001",
+      "assertion_text_quoted": "batch operations are applied sequentially in the order given; each operation reports its own result",
+      "api_violates_assertion": false,
+      "note": "Dispatch constraint_id was empty; the script header pins two co-anchors (qdrant_behavioral_points_batch_001 + qdrant_state_points_batch_001) and the E1 oracle tests end-state application, so the state constraint is the primary ground; its verbatim field is quoted. violates-declaration self-check applied honestly: the observed behavior does not contradict the quote — all 7 ops were applied in order (payload {\"s\":true} exact, 902 deleted, count 1) and each reported its own result; the update_vectors op demonstrably applied (readback direction == V2's). The E1 expectation that the readback vector must equal the RAW V2 byte-for-byte is OUTSIDE the claim domain of both constraints (neither pins vector-fidelity-on-readback) — this is the wrong-citation branch of the self-check: the oracle's guarantee has no constraint clause behind it. Co-anchor qdrant_behavioral_points_batch_001 expected_behavior (verbatim): 'batch update returns HTTP 200 with one result entry per operation; missing collection returns 404' — also satisfied by the observed 200/7-entries response.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: chunk_points+batch units present in structured_contract.json — constraints.state_constraints qdrant_state_points_batch_001 ('batch operations are applied sequentially in the order given; each operation reports its own result') + assertions qdrant_behavioral_points_batch_001 ('returns 200 with per-operation results; 404 when the collection is missing'); dispatch constraint_id field was EMPTY (attack text named the behavioral id only)",
+        "doc: endpoint_registry points+batch (POST /collections/{collection_name}/points/batch, source_status reachable @2026-09-02T12:34:08Z, doc_quote 'Operations are executed in order; returns 200 with per-operation results; 404 for a missing collection.') corroborated by repo OpenAPI openapi-points.ytt.yaml:400-412 (responses array(UpdateResult)); live page re-verification blocked (domain_blocked); NO doc link promises byte-equal raw-vector readback after update_vectors",
+        "script: debate_logs/state_points_batch_per_op_results_009.py builds the 7-op heterogeneous batch (upsert/set_payload/overwrite_payload/update_vectors/delete_payload/clear_payload/delete) in a setup_default(C,4,'Cosine') collection and adds oracle E1 'vc != V2 -> Type4' — a byte-equal raw-vector readback expectation that originates in the script, not in the contract or the doc",
+        "log: all contract-pinned dispositions observed satisfied (200; len(result)==7; statuses strings; operation_ids integers; payload/vector-delete/count end-states exact); the sole DEFECT line (E1) fires solely on the ungrounded byte-equality oracle, with readback == V2/|V2| exactly"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The E1 oracle demands GET readback vector == raw uploaded V2 in a Cosine-metric collection; no contract clause and no documentation link provides that guarantee (both constraints' claims — sequential application + one completed result entry per op — were observed honored). The verdict DEFECT_FOUND therefore rests on a script-invented requirement, not on the contract chain; the observed mismatch is fully explained by metric-level normalization (see source_grounding).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "cosine.*normaliz",
+        "pub enum Distance",
+        "preprocess_vector",
+        "\\.preprocess\\(",
+        "UpdateVectors\\(",
+        "cosine_preprocess",
+        "points/vectors"
+      ],
+      "files_examined": [
+        "lib/segment/src/segment/entry.rs (upsert_point :653-674, update_vectors :676-697)",
+        "lib/segment/src/data_types/named_vectors.rs (NamedVectorStruct::preprocess :296-333, preprocess_dense_vector :335-350)",
+        "lib/segment/src/types.rs (pub enum Distance :308-317, Distance::preprocess_vector :329-342)",
+        "lib/segment/src/spaces/simple.rs (CosineMetric :168-206, cosine_preprocess :228-235)",
+        "lib/collection/src/operations/vector_ops.rs (VectorOperations::UpdateVectors split_by_shard :35-66)",
+        "lib/collection/src/operations/types.rs (UpdateResult :469-475)",
+        "src/actix/api/update_api.rs (PUT /collections/{collection_name}/points/vectors :113)",
+        "openapi/openapi-points.ytt.yaml (batch_update path :400-440)"
+      ],
+      "source_excerpt": "lib/segment/src/segment/entry.rs:676-697 (segment write path — BOTH write faces normalize):\n    fn update_vectors(\n        &mut self,\n        op_num: SeqNumberType,\n        point_id: PointIdType,\n        mut vectors: NamedVectors,\n        hw_counter: &HardwareCounterCell,\n    ) -> OperationResult<bool> {\n        check_named_vectors(&vectors, &self.segment_config)?;\n        vectors.preprocess(|name| self.config().vector_data.get(name).unwrap());   // <- :684\n        let internal_id = self.id_tracker.borrow().internal_id(point_id);\n        match internal_id {\n            None => Err(OperationError::PointIdError { missed_point_id: point_id }),\n            Some(internal_id) => {\n                self.handle_point_version_and_failure(op_num, Some(internal_id), |segment| {\n                    segment.update_vectors(internal_id, op_num, vectors, hw_counter)?;\n                    Ok((true, Some(internal_id)))\n                })\n            }\n        }\n    }\n(identical `vectors.preprocess(...)` call at entry.rs:662 inside upsert_point)\n\nlib/segment/src/types.rs:329-342:\n    pub fn preprocess_vector<T: PrimitiveVectorElement>(&self, vector: DenseVector) -> DenseVector ... {\n        match self {\n            Distance::Cosine => CosineMetric::preprocess(vector),\n            Distance::Euclid => EuclidMetric::preprocess(vector),\n            Distance::Dot => DotProductMetric::preprocess(vector),\n            Distance::Manhattan => ManhattanMetric::preprocess(vector),\n        }\n    }\n\nlib/segment/src/spaces/simple.rs:168-178 + 228-235 (explicit design declaration):\n    /// Equivalent to DotProductMetric with normalization of the vectors in preprocessing.\n    impl Metric<VectorElementType> for CosineMetric {\n        ...\n        fn preprocess(vector: DenseVector) -> DenseVector { ... cosine_preprocess(vector) }\n    }\n    pub fn cosine_preprocess(vector: DenseVector) -> DenseVector {\n        let mut length: f32 = vector.iter().map(|x| x * x).sum();\n        if is_length_zero_or_normalized(length) { return vector; }\n        length = length.sqrt();\n        vector.iter().map(|x| x / length).collect()\n    }\n\nlib/segment/src/data_types/named_vectors.rs:335-350:\n    fn preprocess_dense_vector(dense_vector: DenseVector, config: &VectorDataConfig) -> DenseVector {\n        match config.datatype {\n            Some(VectorStorageDatatype::Float32) | None => config.distance.preprocess_vector::<VectorElementType>(dense_vector),\n            ...\n        }\n    }",
+      "call_chain_traced": "REST POST /collections/{name}/points/batch operations[].update_vectors -> VectorOperations::UpdateVectors (lib/collection/src/operations/vector_ops.rs:38, split_by_shard -> shards) -> SegmentEntry::update_vectors (lib/segment/src/segment/entry.rs:676) -> vectors.preprocess (entry.rs:684) -> NamedVectorStruct::preprocess_dense_vector (named_vectors.rs:335) -> Distance::preprocess_vector (types.rs:329) -> CosineMetric::preprocess (spaces/simple.rs:178) -> cosine_preprocess (simple.rs:228: x /= sqrt(sum(x^2))) -> NORMALIZED vector persisted -> GET point returns the stored normalized vector. Validation IS present (check_named_vectors dims check at entry.rs:683) — what is absent is any promise to store the RAW vector; normalization is applied identically on the upsert path (entry.rs:662) and hence on both REST faces (batch and PUT /points/vectors), exactly matching the live comparative probe (Cosine->normalized, Euclid->byte-exact, both faces).",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "by_design_evidence_note": "Explicit intent evidence per tightened v3.4 rule: spaces/simple.rs:168 doc comment '/// Equivalent to DotProductMetric with normalization of the vectors in preprocessing.' declares the normalization design; cosine_preprocess skips only when is_length_zero_or_normalized (already-unit vectors pass through, e.g. the script's [0.5,0.75,1.0]-style unit seeds would read back unchanged); the same preprocess call sits on every write path. This is NOT an unannotated silent behavior.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service alive and healthy: /healthz=200; every response well-formed; probe reproduced deterministically)",
+        "concurrency (single sequential script, wait=true on all mutations)",
+        "cache_delay (wait=true; readback immediately and stably consistent across 2026-09-02 run and 2026-09-04 probe)",
+        "request_parameter_typo (comparative probe replayed the identical V2 and reproduced BOTH dispositions exactly as the metric predicts)",
+        "transport (all relevant http=200)"
+      ],
+      "surviving": null
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "defect_id": "state_batch_04",
+  "endpoint": "POST /batch/objects",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "constraint_id='batch_partial_commit_consistency' 泛标签，契约中无同名约束。相关锚点：state_invariants weaviate_state_object_count_001（插 N 对象 COUNT 返 N）与 weaviate_state_collection_creation_001。契约 POST /batch/objects 端点已注册（openapi backfill v1.38.1）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "ghost-check class=NoSuchClassX read=200 in_schema=True",
+      "secondary_observations": [
+        "batch status: 200; batch reported: total=25 success=21 errors=4",
+        "err sample: {\"class\": \"StBatD\", ..., \"properties\": {\"num\": \"not-an-int-1\"} ...}",
+        "committed count=20 (reported success=21)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "batch 顶层 200 + 逐项 result 字段报告错误（部分提交语义本身是文档化设计）；异常在于未创建类 NoSuchClassX 的项报 SUCCESS 且类被静默建出。committed=20 vs reported success=21 还有 1 项计数不一致"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/state_batch_04.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "batch_partial_commit_consistency (泛标签；实际引用 weaviate_state_collection_creation_001 + weaviate_state_object_count_001)",
+      "assertion_text_quoted": "weaviate_state_collection_creation_001: 'Collection exists in GET /schema response after POST /schema' / weaviate_state_object_count_001: 'COUNT query returns N after inserting N objects'",
+      "api_violates_assertion": true,
+      "note": "观测为三通道状态分裂：batch 通道对未建类报 SUCCESS（单条 POST 对照组正常 FAILED）、schema 通道类被静默 auto-create 出现、Aggregate COUNT 通道不计入该对象——读写/schema/计数互相矛盾，违反状态一致性不变式。violates=True。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: state_invariants weaviate_state_collection_creation_001 + object_count_001；POST /batch/objects 端点",
+        "doc: openapi batch/objects（部分失败逐项报告语义）",
+        "script: state_batch_04.py 混入 NoSuchClassX 类对象 + 21 合法 + 4 非法 int",
+        "log: batch 200 total=25 success=21 errors=4; NoSuchClassX read=200 in_schema=True; committed=20 vs reported 21"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["autoSchema", "AutoSchemaManager", "AUTOSCHEMA_ENABLED", "createClass auto_schema"],
+      "files_examined": ["usecases/objects/auto_schema.go", "usecases/objects/batch_add.go", "usecases/objects/add.go", "usecases/config/environment.go"],
+      "source_excerpt": "usecases/config/environment.go:851-854:\n  autoSchemaEnabled := true\n  if v := os.Getenv(\"AUTOSCHEMA_ENABLED\"); v != \"\" { autoSchemaEnabled = !(strings.ToLower(v) == \"false\") }\n  config.AutoSchema.Enabled = configRuntime.NewDynamicValue(autoSchemaEnabled)\n\nusecases/objects/auto_schema.go:82-135 autoSchema():\n  enabled := m.config.Enabled.Get(); if !enabled { return 0, nil }\n  ...\n  if schemaClass == nil {\n      schemaClass, schemaVersion, err = m.createClass(ctx, principal, ..., properties)  // 静默建类\n      classes[object.Class] = versioned.Class{...}\n  }\nusecases/objects/batch_add.go:197: batch 路径调用 autoSchemaManager.autoSchema(ctx, principal, true, fetchedClasses, obj) —— allowCreateClass=true。单条 add.go:97 同样调用；单条对照组 FAILED 的差异或来自脚本在单条通道用了不同配置/顺序，需 auditor 复核（batch 与单条走同一 autoSchema 入口）。",
+      "call_chain_traced": "POST /batch/objects → Manager.AddObjects → batch_add.go → autoSchemaManager.autoSchema(allowCreateClass=true) → 不存在则 createClass（静默入 schema）→ 逐项写盘",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "auto-schema 默认开启（AUTOSCHEMA_ENABLED 未设即 true）且 batch 允许静默建类——'类被建出'本身 by-design。surviving 的非平凡部分：(1) 该项报 SUCCESS 而 Aggregate COUNT 不计入（若数据真落盘，count 不一致是缺陷；若没落盘，SUCCESS 是谎报）；(2) committed=20 vs reported success=21 计数差；(3) 单条通道对照组行为与 batch 通道分裂需解释。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "auto_schema_enabled_by_default（建类 by-design 但静默+通道分裂+计数不一致仍需解释；是否缺陷由 auditor 裁）"
+    }
+  },
+  "evidence_weight": "medium-high"
+}

@@ -1,0 +1,72 @@
+{
+  "defect_id": "semantic_aggregate_math_06",
+  "endpoint": "POST /v1/graphql (Aggregate { groupBy: [\"cat\",\"intVal\"] })",
+  "defect_type": "Type2",
+  "evidence_weight": "strong",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "domain_blocked",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "raw_knowledge.md L293-295 仅记录 /graphql/batch 端点，无 groupBy 语义文档。docs.weaviate.io 网络受限。GraphQL schema 本身（源码生成）允许 groupBy 传数组，但 resolver 只取单路径——行为契约层面文档未明确多属性 groupBy 是否支持。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "T5 two-prop groupBy: 200 {} / FAIL: ('T5 multi-prop groupBy rejected with misleading diagnostic (real cause: multi-prop groupBy unsupported; msg claims missing argument)', [{'message': \"could not extract groupBy path: missing an argument after 'intVal'\"}])",
+      "secondary_observations": [
+        "T1 groupBy: 200 {'alpha': 3, 'beta': 2, 'gamma': 1}",
+        "T2 global stats: 200 {\"intVal\": {\"maximum\": 6, \"minimum\": 1}, \"score\": {\"mean\": 30, \"sum\": 180}}",
+        "T3 group alpha mean/sum: 20 60",
+        "T4 group counts: {'alpha': 3, 'beta': 2, 'gamma': 1}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "GraphQL 层错误以 200 + errors[] 数组返回（GraphQL over HTTP 惯例），非 REST 状态码问题。T1-T4 数学全部正确——缺陷仅在 T5 的错误消息误导性。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_aggregate_math_06.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "none_matching",
+      "assertion_text_quoted": "structured_contract.json assertions: 'inferred: POST /graphql should execute GraphQL query'——无 groupBy 语义断言。脚本头: 'Strategy: search_correctness (metamorphic)'。GraphQL API schema（源码 gg_args）将 groupBy 声明为列表类型，暗示多值合法。",
+      "api_violates_assertion": true,
+      "note": "violates=true 限于诊断质量维度：多属性 groupBy 不被支持可以接受，但报错应指出真实原因（多属性 groupBy 不支持/只支持单路径），实际报 'missing an argument after intVal' 把列表第二元素误判为残缺 filter path——误导用户去检查不存在的语法缺失。"
+      ,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: assertions 仅泛化 'execute GraphQL query'——弱锚",
+        "doc: 无 groupBy 语义文档（domain_blocked）——链环缺失",
+        "script: semantic_aggregate_math_06.py L105 q = Aggregate { SemAgg06(groupBy: [\"cat\", \"intVal\"]) {...} }",
+        "log: errors[] 'could not extract groupBy path: missing an argument after intVal'"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "doc 环缺失使'多属性 groupBy 应被支持'无文档依据；但 Type2 诊断缺陷主张不依赖该前提——错误消息与真实失败原因不匹配这一点行为自证。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["could not extract groupBy path", "missing an argument", "extractGroupBy"],
+      "files_examined": [
+        "adapters/handlers/graphql/local/aggregate/resolver.go",
+        "entities/filters/path.go"
+      ],
+      "source_excerpt": "adapters/handlers/graphql/local/aggregate/resolver.go L96-99:\n\tgroupBy, err := extractGroupBy(p.Args, p.Info.FieldName)\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"could not extract groupBy path: %w\", err)\n\t}\nentities/filters/path.go L114-118（错误消息真正产地）:\n\tfor i := 0; i < len(pathElements); i += 2 {\n\t\tlengthRemaining := len(pathElements) - i\n\t\tif lengthRemaining < 2 {\n\t\t\treturn nil, fmt.Errorf(\"missing an argument after '%s'\", pathElements[i])\n\t\t}\npath.go 的 Class→Property 二元组解析逻辑面对 groupBy 单属性列表 ['cat','intVal'] 时把第二个属性名当 class 段消费，剩奇数个元素触发 'missing an argument'——专为 where-filter 跨类引用路径设计的解析器被复用于 groupBy 路径，产生语义错位的消息。",
+      "call_chain_traced": "GraphQL Aggregate resolver → extractGroupBy(p.Args) → path 解析按 (className, propertyName) 步长2消费 → 奇数剩余 → 'missing an argument after X' —— 根因是 groupBy 复用 filter path 解析器，未对'多属性 groupBy'给出专门错误。",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "data_races", "request_typo"],
+      "surviving": "错误消息复用 filter-path 解析器的语义错位（真实缺陷信号存活）"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[url-derived] cluster+status -> /cluster
+ownership tag: bcs1-8a7a97e0
+[constraint quote] response fields: peer_id uint64; raft_state IN {Leader, Follower, Candidate, PreCandidate, Terminated}; commit_index uint64; peers map
+[documented GET /cluster] status=200 raw={"result":{"status":"disabled"},"status":"ok","time":2.433e-6}
+[positive face] 200 observed on single-node deployment (behavioral promise 'HTTP 200 ... valid on single-node deployment' HOLDS this leg)
+[envelope] result:object status:string time:number confirmed
+[grid verdicts] violations=['peer_id MISSING (documented uint64)', "raft_state MISSING (documented enum ['Candidate', 'Follower', 'Leader', 'PreCandidate', 'Terminated'])", 'commit_index MISSING (documented uint64)', 'peers MISSING (documented map)']
+[grid mirror] undocumented extra fields present in result: ['status']
+VERDICT: DEFECT_FOUND (Type4_StateLogicViolation/response-shape conflict) — 200 success payload of cluster+status violates the explicit type constraint qdrant_type_cluster_status_001 (assertion: 'response fields: peer_id uint64; raft_state IN {Leader, Follower, Candidate, PreCandidate, Terminated}; commit_index uint64; peers map'): peer_id MISSING (documented uint64); raft_state MISSING (documented enum ['Candidate', 'Follower', 'Leader', 'PreCandidate', 'Terminated']); commit_index MISSING (documented uint64); peers MISSING (documented map); extra undocumented fields=['status']; measured result={"status": "disabled"}. NOTE(judge): behavioral 200-single-node face itself HOLDS — the divergence is the payload grid; any reduced-payload-for-standalone by-design intent is NOT annotated in the doc grid (source doubt recorded per R7 discipline, not absorbed)

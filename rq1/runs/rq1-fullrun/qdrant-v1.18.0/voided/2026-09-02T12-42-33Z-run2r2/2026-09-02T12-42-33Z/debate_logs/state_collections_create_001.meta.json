@@ -1,0 +1,12 @@
+{
+ "defect_id": "state_collections_create_001",
+ "endpoint": "collections+create",
+ "param": "vectors.size",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "oracle": {
+  "statement": "create -> 200 and readback vectors.size==8 / vectors.distance==Euclid; wait=true upsert of 3 -> count exact result.count==3; after drop -> describe 404 and name absent from list",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

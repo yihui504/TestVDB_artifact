@@ -1,0 +1,7 @@
+CTRL users+create       -> 0 {"code":0,"data":{}}
+CTRL roles+create       -> 0 {"code":0,"data":{}}
+CTRL users+grant_role   -> 0 {"code":0,"data":{}}
+EXP  roles+grant_privilege  -> 65535 {"code":65535,"message":"fail to get authorization from the md, authorization:[token]"}
+EXP  roles+grant_privilege_v2 -> 65535 {"code":65535,"message":"fail to get authorization from the md, authorization:[token]"}
+cross-endpoint divergence: control RBAC endpoints all code 0 while both OperatePrivilege routes fail 65535 'fail to get authorization from the md' for root; source: NewContextWithMetadata skips auth md when username=='' (proxy/util.go:1452) but OperatePrivilege (impl.go:5659) unconditionally requires it
+VERDICT: DEFECT_FOUND

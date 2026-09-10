@@ -1,0 +1,66 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "semantic_collections_list_004",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": "what_developers_prioritize: 'Performance optimization over diagnostic completeness' - don't-care dimension, annotation only, never decides",
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=REFUTED (mechanized, id+quote_ok, violates=false; mechanical B=NOT_TRIGGERED so no CONFLICT) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "mundane_api_semantics",
+      "constraint_category": "other",
+      "category_no_fit_reason": "wrong-verb empty-404 diagnostics-quality claim on the GET-only /collections face - no type/range/state/resource/doc-consistency category covers error-body content on an undocumented verb face",
+      "candidate_class": "rejected",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "A: qdrant_behavioral_collections_list_001, id+quote_ok, violates=false -> REFUTED -> implied NOT_DEFECT; dispatch bound no constraint_id and the primary observation ([leg1 POST /collections] status=404 raw= zero-byte body, log line 8) lies outside the only quotable assertion, which governs the GET-200 face that held at both brackets (baseline and post-probe GET 200 with the 5-name array, log lines 6/12) - chain_broken_at=contract. B=NEUTRAL: honest 4xx, no 2xx masking, no accepted value, HTTP-tautology condition 2 unmet (doc page documents no error-response section), no objective class engaged. C=CONFIRMED (source-verified actix-web 4.13.0 framework-default empty 404 - no default_service registered, src/actix/mod.rs:113-178 - vs handler-level ResponseError JSON bodies, helpers.rs:242-247; no by-design marker) but LOW weight cannot overturn mechanical A; residual OpenAPI 4XX:ErrorResponse-template signal (openapi.lib.yml vs empty body) routed to manual review, not a strict verdict - consistent with the R8 empty-404 pair (boundary_cluster_status_003, semantic_cluster_status_004).",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "defect": 0,
+    "not_defect": 1,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {
+      "doc": 1,
+      "source": 0,
+      "both": 0,
+      "behavior": 0
+    },
+    "root_cause_distribution": {
+      "mundane_api_semantics": 1
+    },
+    "constraint_category_distribution": {
+      "other": 1
+    },
+    "candidate_class_distribution": {
+      "strict_defect": 0,
+      "exploratory_candidate": 0,
+      "rejected": 1
+    }
+  }
+}

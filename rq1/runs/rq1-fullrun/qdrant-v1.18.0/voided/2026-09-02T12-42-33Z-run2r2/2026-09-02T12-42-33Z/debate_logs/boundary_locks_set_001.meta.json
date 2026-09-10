@@ -1,0 +1,17 @@
+{
+  "defect_id": "boundary_locks_set_001",
+  "endpoint": "locks+set",
+  "param": "write / error_message (LocksOption body: write required boolean — missing/null/\"true\"/1/0/[]/{}/empty-body/no-body; error_message string|null — 123/{\"x\":1}/[1]/true)",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "type",
+  "constraint_ids": [
+    "qdrant_type_locks_set_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/post-locks",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "live /locks: the valid-control leg {\"write\": false} must answer 2xx and every one of the 13 type-confused LocksOption legs (write missing/null/\"true\"/1/0/[]/{}/empty-body/no-body; error_message=123/{\"x\":1}/[1]/true) must answer 400/422 — any 2xx on a confused leg = Type1_IllegalSuccess, 5xx with /healthz alive = Type3_RuntimeFailure; if GET+POST /locks both answer a concrete non-2xx status (404 expected on OSS v1.18.0), NO_DEFECT with endpoint-absence evidence (constraint not actuable)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

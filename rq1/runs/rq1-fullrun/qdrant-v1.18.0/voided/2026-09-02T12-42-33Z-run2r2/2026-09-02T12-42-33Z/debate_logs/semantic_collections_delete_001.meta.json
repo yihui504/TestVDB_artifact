@@ -1,0 +1,15 @@
+{
+  "defect_id": "semantic_collections_delete_001",
+  "endpoint": "collections+delete",
+  "param": "collection_name",
+  "expected_defect_type": "Type2_PoorDiagnostics",
+  "strategy": "diagnosis_quality",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_delete_001"
+  ],
+  "oracle": {
+    "statement": "DELETE of a never-created (unique-prefix) name returns 404 whose body names the collection (c1) and states not-found semantics (c2); a generic/bodyless 404 failing c1 or c2 = Type2_PoorDiagnostics (BS-02); the just-deleted name re-DELETE gets the same rubric; GET /collections/{name} 404 scored as the reference face (G9); control delete of an existing collection = 200 + envelope result=true (else setup premise broken)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

@@ -1,0 +1,35 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+G limit=3 control -> status=200
+raw: {"result":[{"id":3,"version":1,"score":1.8554914},{"id":2,"version":1,"score":1.8546512},{"id":7,"version":1,"score":-0.5}],"status":"ok","time":0.001757281}
+G limit=3 control: 200, result len=3 within [1, 3]
+
+B1 limit=1 min closure -> status=200
+raw: {"result":[{"id":3,"version":1,"score":1.8554914}],"status":"ok","time":0.001459817}
+B1 limit=1 min closure: 200, result len=1 within [1, 1]
+
+L1 limit=0 -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [discover_request.limit: value 0 invalid, must be 1 or larger]"},"time":0.0}
+L1 limit=0: 422 clean rejection; diagnostics name the limit parameter
+
+L2 limit=-1 -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 136"},"time":0.0}
+L2 limit=-1: 400 clean rejection; NOTE (strategy5): rejection text names no 'limit' token — diagnostics gap recorded for the judge
+
+L3 limit=null -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: null, expected usize at line 1 column 138"},"time":0.0}
+L3 limit=null: 400 clean rejection; NOTE (strategy5): rejection text names no 'limit' token — diagnostics gap recorded for the judge
+
+L4 limit omitted -> status=400
+raw: {"status":{"error":"Format error in JSON body: missing field `limit` at line 1 column 123"},"time":0.0}
+L4 limit omitted: 400 clean rejection; diagnostics name the limit parameter
+
+L5 limit as STRING '3' -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"3\", expected usize at line 1 column 137"},"time":0.0}
+L5 limit as STRING '3': 400 clean rejection; NOTE (strategy5): rejection text names no 'limit' token — diagnostics gap recorded for the judge
+
+X1 limit=INT_MAX resource -> status=200
+raw: {"result":[{"id":3,"version":1,"score":1.8554914},{"id":2,"version":1,"score":1.8546512},{"id":9,"version":1,"score":-0.5},{"id":7,"version":1,"score":-0.5},{"id":8,"version":1,"score":-0.5},{"id":5,"version":1,"score":-0.5},{"id":6,"version":1,"score":-0.5}],"status":"ok","time":0.002422574}
+VERDICT-relevant: X1 limit=INT_MAX resource: accepted, returned 7 results (<= 9 seeded) — no crash, resource face clean
+VERDICT: NO_DEFECT

@@ -1,0 +1,100 @@
+{
+  "defect_id": "state_percol_payload_overwrite_007",
+  "endpoint": "PUT /collections/{collection_name}/points/payload (payload+overwrite; scope per_collection)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: domain_blocked — no doc_preflight.json sidecar exists anywhere in the plugin tree, and WebFetch of both https://qdrant.tech/documentation/manage-data/points/ and https://api.qdrant.tech/v-1-18-x/api-reference/points/overwrite-payload was refused by network policy ('Unable to verify if domain is safe to fetch') → PARTIAL per spec, not FAIL. version: cited page not loadable and its URL carries no version routing; substituted grounding is the versioned OpenAPI shipped inside the target source tree (docs/redoc/v1.18.x/openapi.json), which corresponds exactly to target v1.18.0 and to the endpoint_registry's 'v-1-18-x api-reference' → PARTIAL. content: that versioned spec documents PUT /collections/{collection_name}/points/payload summary 'Overwrite payload', description 'Replace full payload of points with new one' — the replace semantics the invariant asserts ('keys absent from the request are removed'), matching endpoint_registry doc_quote verbatim in substance → PASS (grounded in the in-repo versioned artifact, not the live page). endpoint: registry entry path 'payload+overwrite', method PUT, matches the actix route at src/actix/api/update_api.rs:227 and the script's registered rt.PATHS['payload_overwrite'] with method PUT → PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "DEFECT: (T1) point 2 vector changed after a payload-scoped overwrite — Type4_StateLogicViolation",
+      "secondary_observations": [
+        "[A baseline] BASEVEC=[0.65759593, 0.65759593, 0.32879797, 0.16439898] (baseline vector captured from point 1 ONLY: script line 328 bv = m[1].get(\"vector\"))",
+        "DEFECT: (T1) point 3 vector changed after a payload-scoped overwrite — Type4_StateLogicViolation (note: T1's overwrite body was ids=[1,2] — point 3 was never written in T1; a never-written point cannot have had its vector changed by T1, proving the flag fires on pre-existing inequality, not mutation)",
+        "[T1 overwrite ids=[1, 2]] status=200 raw={\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.00401597}",
+        "[T1 readback scroll] status=200 raw={\"result\":{\"points\":[{\"id\":1,\"payload\":{\"b\":\"new\",\"num\":7,\"flag\":false},\"vector\":[0.65759593,0.65759593,0.32879797,0.16439898]},... (point 1 — overwritten in T1 — readback vector byte-identical to BASEVEC)",
+        "[T1] OK: 1,2 replaced exactly; 3 untouched",
+        "[T2] OK: point 3 payload is now empty (zero keys)",
+        "[T3] OK: all three points carry exactly C type-strict",
+        "[T3 readback scroll] status=200 raw={\"result\":{\"points\":[{\"id\":1,\"payload\":{\"c\":[1,2],\"geo\":{\"lon\":13.405,\"lat\":52.52}},\"vector\":[0.65759593,0.65759593,0.32879797,0.16439898]},... (point 1 still byte-identical to BASEVEC after three successive overwrites — the only point whose true baseline the oracle holds never drifted)",
+        "[T1 count] status=200 raw={\"result\":{\"count\":3},\"status\":\"ok\",\"time\":0.000085913} (count==3 at T1/T2/T3 — payload writes never created/deleted points)",
+        "script oracle (debate_logs/state_percol_payload_overwrite_007.py:286-296, 328-329): for i in (1, 2, 3): ... if not vec_eq(v if isinstance(v, list) else None, basevec): DEFECTS.append(f\"({tag}) point {i} vector changed after a payload-scoped overwrite — Type4_StateLogicViolation\") — vec_eq tolerance 1e-6, single basevec for all three points",
+        "seed vectors (script line 316-317): [{\"id\": i, \"vector\": [float(i), 1.0, 0.5, 0.25], ...} for i in (1, 2, 3)] on a Cosine collection (rt.setup_default(C, DIM, \"Cosine\")) — L2-normalized reconstruction: p1=[0.65759595,0.65759595,0.32879797,0.16439899]==BASEVEC (float32-exact); p2=[0.86772183,0.43386092,0.21693046,0.10846523] maxdiff_vs_BASEVEC=0.2237; p3=[0.93419873,0.31139958,0.15569979,0.07784989] maxdiff_vs_BASEVEC=0.3462 — points 2/3 can never equal BASEVEC under any behavior, at baseline already (normalization preserves direction)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "no request-side-decidable error involved; all overwrite/scroll/count calls were well-formed legal requests and their HTTP 200 + status ok responses are semantically correct"
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["state_percol_payload_overwrite_007"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_inv_payload_overwrite_readback_001",
+      "assertion_text_quoted": "payload+overwrite (wait=true) leaves the targeted points with exactly the provided payload keys/values; keys absent from the request are removed",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check: the claim's phenomenon (vector mutation) lies OUTSIDE this assertion's constraint domain — the assertion constrains payload keys/values only and says nothing about vectors; every in-domain observation in the log complies exactly (T1 exact replace with seed keys removed + surgical selector, T2 empty-payload closure leaving zero keys, T3 typed rewrite type-strict, count stable at 3), so api_violates_assertion=false is genuine compliance on the assertion's own domain, not a vague judgment",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: state_invariants[4] qdrant_inv_payload_overwrite_readback_001 exists in structured_contract.json (assertion verbatim quoted above; scope per_collection; source_url https://qdrant.tech/documentation/manage-data/points/)",
+        "doc: cited page unreachable from this environment (domain_blocked); content grounding substituted from the versioned OpenAPI shipped in the target source tree (docs/redoc/v1.18.x/openapi.json): PUT /collections/{collection_name}/points/payload 'Overwrite payload' / 'Replace full payload of points with new one' — replace semantics consistent with the assertion",
+        "script: the payload oracle (type_strict_eq readback vs B / {} / C_PL) matches the assertion and PASSED all three faces ('[T1] OK: 1,2 replaced exactly; 3 untouched'; '[T2] OK: point 3 payload is now empty (zero keys)'; '[T3] OK: all three points carry exactly C type-strict'); the DEFECT verdict originates solely from an EXTRA vector-invariance check (check_common/vec_eq, script docstring 'vectors equal the baseline readback') that is NOT grounded in the contract assertion and is implemented as all-points-vs-single-BASEVEC while the three seeded vectors [float(i), 1.0, 0.5, 0.25] differ per point in direction",
+        "log: DEFECT lines '(T1..T3) point 2/3 vector changed after a payload-scoped overwrite' — T1 flags point 3 although T1 wrote only ids=[1,2] (logical impossibility for a mutation claim); point 1, the only point whose baseline the oracle holds, is byte-identical at T1 and T3 readbacks"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The DEFECT signal originates from a script-side oracle defect, not from an API behavior deviation (R27 artifact family, variant form). check_common (script lines 279-296) compares every point's vector against a single baseline BASEVEC captured from point 1 only (line 328: bv = m[1].get(\"vector\")), while the seed vectors [float(i), 1.0, 0.5, 0.25] differ per point in direction; on the Cosine collection the stored vector is the L2-normalized raw vector (source: cosine_preprocess, by-design at upsert), and normalization preserves direction, so points 2/3 read back [0.86772,0.43386,0.21693,0.10847] and [0.93420,0.31140,0.15570,0.07785] — differing from BASEVEC by 0.22/0.35, five orders of magnitude above vec_eq's 1e-6 tolerance, at every checkpoint INCLUDING the pre-overwrite baseline. Per the dispatch's R27 decision rule: the log's own pre-overwrite baseline for the only verifiable point (point 1) shows the normalized vector and the post-overwrite readback is byte-identical → R27 artifact family. The script's docstring even cites the R27 lesson ('vector oracles compare readback-vs-baseline-readback only') but implements a single-vector baseline instead of per-point baselines. The contract assertion's own domain (payload replace semantics) was fully satisfied per the log's own OK lines, and the source call chain shows the overwrite path structurally cannot touch vector storage.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "ReplacePayload (0 hits — wrong variant-name guess, pursued via alternative keywords)",
+        "cosine_preprocess",
+        "overwrite_payload",
+        "SetPayload",
+        "fn overwrite_payload|fn set_payload|fn update_payload",
+        "enum UpdateOperation (0 hits)",
+        "fn set_full_payload",
+        "\\.preprocess\\(",
+        "points/payload"
+      ],
+      "files_examined": [
+        "src/actix/api/update_api.rs (route overwrite_payload, line 227)",
+        "src/common/update.rs (do_overwrite_payload, lines 621-667)",
+        "lib/shard/src/operations/payload_ops.rs (PayloadOps enum + SetPayloadOp, lines 16-94)",
+        "lib/shard/src/update.rs (process_payload_operation 99-151; overwrite_payload 861-886)",
+        "lib/segment/src/segment/entry.rs (upsert_point 653-674; set_full_payload 732-755; set_payload 757-782)",
+        "lib/segment/src/spaces/simple.rs (CosineMetric::preprocess 178-205; cosine_preprocess 228-232; design comment 168)",
+        "lib/collection/src/collection_manager/collection_updater.rs (CollectionUpdater::update dispatch, 41-103)",
+        "lib/collection/src/operations/payload_ops.rs (SplitByShard for PayloadOps)",
+        "docs/redoc/v1.18.x/openapi.json (in-repo versioned API doc for overwrite-payload)"
+      ],
+      "source_excerpt": "1) src/actix/api/update_api.rs:227-231\n#[put(\"/collections/{collection_name}/points/payload\")]\nasync fn overwrite_payload(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    operation: Json<SetPayload>,\n\n2) src/common/update.rs:647-654\n    let operation =\n        CollectionUpdateOperations::PayloadOperation(PayloadOps::OverwritePayload(SetPayloadOp {\n            payload,\n            points,\n            filter,\n            // overwrite operation doesn't support payload selector\n            key: None,\n        }));\n\n3) lib/shard/src/operations/payload_ops.rs:25-26, 85-94\n    /// Overwrite full payload with given keys\n    OverwritePayload(SetPayloadOp),\n...\npub struct SetPayloadOp {\n    pub payload: Payload,\n    /// Assigns payload to each point in this list\n    pub points: Option<Vec<PointIdType>>,\n    pub filter: Option<Filter>,\n    /// Payload selector to indicate property of payload, e.g. `a.b.c`\n    pub key: Option<JsonPath>,\n}   // NO vector field exists anywhere in the operation\n\n4) lib/shard/src/update.rs:861-886 (excerpt)\npub fn overwrite_payload(\n    segments: &SegmentHolder,\n    op_num: SeqNumberType,\n    payload: &Payload,\n    points: &[PointIdType],\n    hw_counter: &HardwareCounterCell,\n) -> OperationResult<usize> {\n    ...\n        let updated_points = segments.apply_points_with_conditional_move(\n            op_num,\n            batch,\n            |id, write_segment| write_segment.set_full_payload(op_num, id, payload, hw_counter),\n            |_, _, old_payload| {\n                *old_payload = payload.clone();\n            },\n            hw_counter,\n        )?;\n\n5) lib/segment/src/segment/entry.rs:732-747\n    fn set_full_payload(\n        &mut self,\n        op_num: SeqNumberType,\n        point_id: PointIdType,\n        full_payload: &Payload,\n        hw_counter: &HardwareCounterCell,\n    ) -> OperationResult<bool> {\n        let internal_id = self.id_tracker.borrow().internal_id(point_id);\n        self.handle_point_version_and_failure(op_num, internal_id, |segment| match internal_id {\n            Some(internal_id) => {\n                segment.payload_index.borrow_mut().overwrite_payload(\n                    internal_id,\n                    full_payload,\n                    hw_counter,\n                )?;\n                segment.version_tracker.set_payload(Some(op_num));\n\n6) lib/segment/src/segment/entry.rs:653-663 (upsert — where preprocessing happens)\n    fn upsert_point(\n        &mut self,\n        op_num: SeqNumberType,\n        point_id: PointIdType,\n        mut vectors: NamedVectors,\n        hw_counter: &HardwareCounterCell,\n    ) -> OperationResult<bool> {\n        debug_assert!(self.is_appendable());\n        check_named_vectors(&vectors, &self.segment_config)?;\n        vectors.preprocess(|name| self.config().vector_data.get(name).unwrap());\n\n7) lib/segment/src/spaces/simple.rs:168-171, 228-232\n/// Equivalent to DotProductMetric with normalization of the vectors in preprocessing.\nimpl Metric<VectorElementType> for CosineMetric {\n...\npub fn cosine_preprocess(vector: DenseVector) -> DenseVector {\n    let mut length: f32 = vector.iter().map(|x| x * x).sum();\n    if is_length_zero_or_normalized(length) {\n        return vector;\n    }   // else divides by sqrt(length) — L2 normalization at write time",
+      "call_chain_traced": "PUT /collections/{name}/points/payload (actix route, src/actix/api/update_api.rs:227) → do_overwrite_payload (src/common/update.rs:621-667) → PayloadOps::OverwritePayload(SetPayloadOp{payload, points, filter, key:None}) — SetPayloadOp carries NO vector field (lib/shard/src/operations/payload_ops.rs:85-94) → CollectionUpdater::update (lib/collection/src/collection_manager/collection_updater.rs:70-77) → process_payload_operation (lib/shard/src/update.rs:137-149) → overwrite_payload (lib/shard/src/update.rs:861-886) → Segment::set_full_payload (lib/segment/src/segment/entry.rs:732-755) → payload_index.borrow_mut().overwrite_payload(internal_id, full_payload, hw_counter) — the write reaches the payload index ONLY; vector storage is never accessed on this path, so the claimed 'vector changed after a payload-scoped overwrite' cannot originate server-side. Separately, vector L2 normalization happens exactly once at upsert: Segment::upsert_point calls vectors.preprocess (entry.rs:662) → CosineMetric::preprocess → cosine_preprocess (simple.rs:178-232), with the explicit design comment at simple.rs:168 ('Equivalent to DotProductMetric with normalization of the vectors in preprocessing') — on a Cosine collection every stored vector, including points 2/3's differently-directed seeds, is normalized at write and then immutable under payload operations (point 1 byte-identical across three overwrites in the log). The six DEFECT lines are fully explained by the oracle comparing points 2/3 against point 1's baseline vector.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service healthy: every call returned 200; no liveness abort needed)",
+        "concurrency (fully sequential script: wait=true on every write plus 0.3s sleeps before readback)",
+        "cache_delay (wait=true forces completed operations; readbacks consistent at every checkpoint)",
+        "request_typo (all requests well-formed and accepted; the payload faces behaved exactly as the contract asserts)"
+      ],
+      "surviving": "script-oracle artifact (R27 family, variant form): the vector oracle compares all three points against a single baseline BASEVEC captured from point 1 only (script line 328), while the seeded vectors [float(i), 1.0, 0.5, 0.25] differ per point in direction; cosine normalization (by-design in source, simple.rs:168 comment) preserves direction, so points 2/3 can never equal BASEVEC (maxdiff 0.2237/0.3462 vs tol 1e-6) — the inequality pre-exists any overwrite, evidenced in-log by the T1 flag on point 3, a point T1 never wrote (ids=[1,2])"
+    }
+  }
+}

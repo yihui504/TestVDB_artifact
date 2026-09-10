@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_r2_partition_alias_index_name_06",
+  "endpoint": "partitions/create (+ aliases/create, indexes/create 对照)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "锚 milvus_type_field_name_rules_001 的 assertion 字面域是 field names；partition/alias/index 命名规则来自同一 limitations.md Resource Naming Rules 段落（语义外延，R2 派发已声明）。三端点均在 endpoint registry（partitions+create / aliases+create / indexes+create）。内容一致性 PARTIAL：字段名约束原文未逐字覆盖 partition 首字符规则差异。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "partitions+create '1bad' -> ok=True raw={\"code\":0,\"data\":{}}",
+      "secondary_observations": [
+        "partitions+create 'my-bad' -> ok=True raw={\"code\":0,\"data\":{}}",
+        "对照组 partitions+create '@bad' -> ok=False code:65535 'first character of a partition name must be an underscore or letter'",
+        "对照组 partitions+create 'bad name' -> ok=False code:65535 'Partition name can only contain numbers, letters and underscores.'（注意消息与实现不符：实现允许 '-'）",
+        "对照组 partitions+create 'b$d' -> ok=False code:65535（字符集）",
+        "对照组 aliases+create '1bad'/'@bad'/'my-bad'/'bad name'/'b$d' 全部 ok=False code:1100",
+        "对照组 indexes+create 五值全部 ok=False code:65535",
+        "对照 'valid_p' -> ok=True（合法对照通过）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "被拒项均 HTTP 200 + code 65535/1100；漏拒项 HTTP 200 + code:0"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_partition_alias_index_name_06.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_field_name_rules_001",
+      "assertion_text_quoted": "field names: ^[A-Za-z_][A-Za-z0-9_]*$, length<=255, enforced at insert-time (dynamic fields included)",
+      "api_violates_assertion": true,
+      "note": "本链用该约束的资源命名语义外延（limitations.md Resource Naming Rules 覆盖 collection/field/partition/alias/db 名）。观测：'1bad'（数字开头）与 'my-bad'（含连字符）被 partitions/create code:0 接受，而 alias/index 通道对同名值正确拒——partition 通道选择性缺失。violates 判定相对外延规则成立；相对 assertion 字面（field names at insert-time）为语义外推，auditor 复核。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_field_name_rules_001（语义外延至 Resource Naming Rules）",
+        "doc: limitations.md Resource Naming Rules（资源名规则段）",
+        "script: boundary_r2_partition_alias_index_name_06.py 三资源 × 5 非法名矩阵",
+        "log: partition '1bad'/'my-bad' code:0；alias 5/5 code:1100 拒；index 5/5 code:65535 拒"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "锚 constraint 的 assertion 字面域为 field names（insert-time），partition 命名属同文档同规则段的外延——契约-观测域不完全重合，链在 doc 环做语义桥接而非逐字锚定（非造假，属弱锚，需 auditor 裁量）。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["validatePartitionTag", "strictCheck", "partition name must be an underscore", "HasLowercase"],
+      "files_examined": [
+        ".milvus-src-2610/internal/proxy/util.go (validatePartitionTag L323-354)",
+        ".milvus-src-2610/internal/proxy/util_test.go (L135-159 validatePartitionTag 断言)"
+      ],
+      "source_excerpt": "internal/proxy/util.go L323-354：\n```go\nfunc validatePartitionTag(partitionTag string, strictCheck bool) error {\n    partitionTag = strings.TrimSpace(partitionTag)\n    if partitionTag == \"\" { ... }\n    if len(partitionTag) > Params.ProxyCfg.MaxNameLength.GetAsInt() { ... }\n    if strictCheck {\n        firstChar := partitionTag[0]\n        if firstChar != '_' && !isAlpha(firstChar) && !isNumber(firstChar) {\n            msg := invalidMsg + \"The first character of a partition name must be an underscore or letter.\"\n            return errors.New(msg)\n        }\n        for i := 1; i < len(partitionTag); i++ {\n            c := partitionTag[i]\n            if c != '_' && !isAlpha(c) && !isNumber(c) && c != '-' {\n                msg := invalidMsg + \"Partition name can only contain numbers, letters and underscores.\"\n                return errors.New(msg)\n            }\n        }\n    }\n    return nil\n}\n```\n两个缺陷信号直接可见：(1) L338 首字符条件含 `!isNumber(firstChar)`——数字开头的 '1bad' 合法通过（对照 validateFieldName L370 无 isNumber，且 alias/index 校验同样无）；(2) L346 循环内 `c != '-'`——连字符 'my-bad' 通过而错误消息宣称 'can only contain numbers, letters and underscores'（消息与实现不符，误导诊断）。util_test.go L135-159 固化了这些行为（assert validatePartitionTag(\"123abc\", true)==Nil 等），属测试固化的历史行为而非注释声明的 by-design。",
+      "call_chain_traced": "REST partitions/create → proxy CreatePartition task → validatePartitionTag(name, strictCheck=true) → 数字首字符与 '-' 被 L338/L346 显式放行。alias/index 通道走各自 ValidateCollectionAlias / index 名校验（log 1100/65535 消息与之对应），三资源规则不一致。",
+      "verification_outcome": "by_design_in_source",
+      "outcome_note": "校验代码存在但规则本身放宽（isNumber 首字符 + 允许 '-'）且有单测固化——是『源码显式如此实现』而非『校验缺失』；是否算违反文档命名规则留给 auditor（文档 side 未逐字取证 partition 条款）。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error", "env", "concurrency", "request_typo"],
+      "surviving": "by_design 抗辩实质存在：validatePartitionTag 的放宽写法 + util_test.go 断言固化（若 auditor 采信 strict 行为系历史兼容设计，则为 NOT_DEFECT 候选；但错误消息与实现矛盾这一点独立成立，或构成 Type2 诊断质量问题）。"
+    }
+  },
+  "evidence_weight": "MODERATE",
+  "evidence_weight_rationale": "log 三资源矩阵对照清晰、源码根因逐行可见（isNumber 首字符 + '-' 放行 + 消息不符 + 测试固化）；扣分：锚 constraint 为语义外延（chain_broken_at=doc 弱锚）、单脚本复现、by_design 抗辩强。"
+}

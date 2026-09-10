@@ -1,0 +1,72 @@
+{
+  "defect_id": "boundary_r2_query_zero_23",
+  "endpoint": "entities+query, entities+search, entities+get",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约 milvus_type_entities_search_001 明确断言 'consistencyLevel IN {Strong,Session,Bounded,Eventually,Customized} else code==1100'（源 handler_v2.go，本地已读）。观测：query/search 带 consistencyLevel='' 返回 code:0 而非 1100 —— 契约文本与行为不一致（空串落入 convertConsistencyLevel 的默认分支而非 else 拒绝分支）。注意断言原文的 enum 否定分支被源码实现为'非空才校验'。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[query consistencyLevel=''] 200 {\"code\":0,\"cost\":0,\"data\":[]} -> DEFECT_FOUND（主观测：空 enum 串未被拒，query 端点）",
+      "secondary_observations": [
+        "[control query] 200 {\"code\":0,\"cost\":0,\"data\":[]}",
+        "[query limit=0] 200 {\"code\":0,\"cost\":0,\"data\":[]} -> DEFECT_FOUND（query 端点 limit=0 与 search 端点 65535 行为分叉）",
+        "[query limit=-1] 200 {\"code\":0,\"cost\":0,\"data\":[]} -> DEFECT_FOUND",
+        "[query offset=-1] 200 {\"code\":0,\"cost\":0,\"data\":[]} -> DEFECT_FOUND",
+        "[search consistencyLevel=''] 200 {\"code\":0,\"cost\":0,\"data\":[]} -> DEFECT_FOUND（双端点复现）",
+        "[get outputFields=[]] 200 {\"code\":0,\"cost\":0,\"data\":[]} -> DEFECT_FOUND"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "空 enum 串与 query 端点 limit/offset 零负值均以 HTTP 200+code:0 接受；search 端点同值返回 65535。"},
+      "reproducibility": "单脚本（consistencyLevel='' 在 query+search 双端点脚本内复现）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_query_zero_23.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_entities_search_001",
+      "assertion_text_quoted": "consistencyLevel IN {Strong,Session,Bounded,Eventually,Customized} else code==1100 (message: consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded)",
+      "api_violates_assertion": true,
+      "note": "空串不属于 enum；按断言字面应 1100，实测 code:0。violates=true 依赖把'' 算入'else'——但源码把空串定义为默认 Bounded（见 source_grounding），契约措辞与实现存在解释空间，auditor 裁量。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_entities_search_001 断言非 enum → 1100",
+        "doc: 契约源 .milvus-src-2616/.../handler_v2.go convertConsistencyLevel 调用点（1081/1156/1489/1678 行）已 Read",
+        "script: boundary_r2_query_zero_23.py 发出 consistencyLevel='' 到 /v2/vectordb/entities/query 与 /search",
+        "log: 双端点 http=200 + code:0（主观测行）——与断言 1100 分支冲突"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "契约 doc 环（handler_v2.go convertConsistencyLevel 空串默认分支）与 log 环（code:0）实际一致——断裂在 contract 断言措辞未排除空串默认行为；即契约 A 层与 B 层间存在解释分歧，非行为链断裂。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["func convertConsistencyLevel", "ConsistencyLevel", "Limit|Offset（query 路径）"],
+      "files_examined": [
+        ".milvus-src-2616/internal/distributed/proxy/httpserver/utils.go",
+        ".milvus-src-2616/internal/distributed/proxy/httpserver/handler_v2.go",
+        ".milvus-src-2616/internal/proxy/task_query.go"
+      ],
+      "source_excerpt": "utils.go:1739-1749: `func convertConsistencyLevel(reqConsistencyLevel string) { if reqConsistencyLevel != \"\" { level, ok := ...value[...]; if !ok { return err }; return level }; // ConsistencyLevel_Bounded default in PyMilvus return commonpb.ConsistencyLevel_Bounded, true, nil }` —— 空串被显式定义为默认 Bounded（by-design 默认分支），非 enum 的非空串（如 'bogus'）才报错。query 路径 handler_v2.go:1092-1097: `if httpReq.Offset > 0 {...}` / `if httpReq.Limit > 0 {...}` —— 零/负 limit/offset 直接被条件过滤静默丢弃。",
+      "call_chain_traced": "query: body → convertConsistencyLevel('')→默认 Bounded → code:0；Offset/Limit <=0 不追加 QueryParams → task_query.go getQueryParams 未收到 LimitKey → 无校验触发（对照 search 路径 handler_v2.go:1537-1538 无条件追加 TopK/Offset → search_util 拒绝）",
+      "verification_outcome": "by_design_in_source",
+      "note": "空串默认化与零值条件过滤均为源码显式分支（非遗漏）；跨端点不对称（query vs search）是结构性差异。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "script_error"],
+      "surviving": "by-design 抗辩（空串=默认 Bounded 模仿 PyMilvus 语义；注释明言）——但契约断言未含此例外，doc/实现/契约三方不一致本身是记录点"
+    }
+  }
+}

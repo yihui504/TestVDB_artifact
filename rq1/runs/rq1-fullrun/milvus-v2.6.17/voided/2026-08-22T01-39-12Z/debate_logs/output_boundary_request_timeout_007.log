@@ -1,0 +1,15 @@
+Request-Timeout='1' (legal int) -> http=200 code=0 elapsed=0.02s raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+Request-Timeout='0' (zero seconds) -> http=408 code=10001 elapsed=0.01s raw={"code":10001,"message":"request timeout"}
+Request-Timeout='-5' (negative) -> http=408 code=10001 elapsed=0.02s raw={"code":10001,"message":"request timeout"}
+Request-Timeout='9223372036854775807' (INT64_MAX) -> http=408 code=10001 elapsed=0.01s raw={"code":10001,"message":"request timeout"}
+Request-Timeout='9223372036854775808' (INT64_MAX+1 overflow) -> http=200 code=0 elapsed=0.02s raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+Request-Timeout='99999999999999999999999' (way overflow) -> http=200 code=0 elapsed=0.02s raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+Request-Timeout='abc' (unparseable) -> http=200 code=0 elapsed=0.02s raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+Request-Timeout='' (empty) -> http=200 code=0 elapsed=0.01s raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+Request-Timeout='1.5' (float) -> http=200 code=0 elapsed=0.02s raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+Request-Timeout=' 1 ' (spaces) -> http=-1 code=None elapsed=0.00s raw=EXC: Invalid leading whitespace, reserved character(s), or return character(s) in header value: ' 1 '
+Request-Timeout='+1' (plus sign) -> http=200 code=0 elapsed=0.02s raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+Request-Timeout='0x10' (hex) -> http=200 code=0 elapsed=0.01s raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+Request-Timeout='１' (fullwidth digit) -> http=-1 code=None elapsed=0.00s raw=EXC: 'latin-1' codec can't encode character '\uff11' in position 0: ordinal not in range(256)
+Request-Timeout='1\x00' (NUL embedded) -> http=400 code=None elapsed=0.01s raw=400 Bad Request
+VERDICT: NO_DEFECT

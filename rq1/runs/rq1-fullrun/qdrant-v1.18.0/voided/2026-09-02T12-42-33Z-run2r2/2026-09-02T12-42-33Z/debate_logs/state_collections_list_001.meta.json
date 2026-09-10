@@ -1,0 +1,17 @@
+{
+  "defect_id": "state_collections_list_001",
+  "endpoint": "collections+list",
+  "param": "result.collections[] entries / name field (create-delete membership tracking through the global list face)",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "count_consistency",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_list_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-collections",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "GET /collections returns exactly 200 with result.collections a JSON array whose entries all carry a non-empty string name; after K=3 successful prefixed creates all K names appear exactly once (missing or duplicated = Type4); after a wait=true point upsert the name still appears exactly once; after a 200-confirmed DELETE the list converges within bounded retries to K-1 prefixed names with the deleted name absent (persistent presence = Type4 zombie); non-200 with /healthz alive = Type4; 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

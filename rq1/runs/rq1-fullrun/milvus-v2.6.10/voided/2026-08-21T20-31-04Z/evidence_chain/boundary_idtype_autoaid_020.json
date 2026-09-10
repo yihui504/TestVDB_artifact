@@ -1,0 +1,68 @@
+{
+ "defect_id": "boundary_idtype_autoaid_020",
+ "endpoint": "collections+create",
+ "defect_type": "Type1",
+ "built_by": "evidence-builder",
+ "steps": {
+  "doc_verification": {
+   "result": "DOC_PARTIAL",
+   "link_reachability": "PASS",
+   "version_match": "PASS",
+   "content_consistency": "PARTIAL",
+   "endpoint_precision": "PASS",
+   "sdk_rest_confusion": false,
+   "detail": "契约无独立 idType 枚举约束（constraint_id 派发为 'type' 组）；实测对照组证实 idType 枚举校验存在（Int32/Bool/Bogus/42 -> 1100/1801）；''/None 走默认 Int64（源码 case \"\", \"Int64\", \"int64\"）；'int64' 小写被显式列为合法别名",
+   "evidence_source": "doc"
+  },
+  "execution_evidence": {
+   "grade": "B",
+   "log_pattern": "idType='int64' -> http=200 ok=True raw={\"code\":0,\"data\":{}}；describe 回读 fields[0].type==\"Int64\"（L5-6）",
+   "secondary_observations": [
+    "idType='' -> http=200 ok=True raw={\"code\":0,\"data\":{}}；describe type==\"Int64\"（默认回退）",
+    "idType=None -> ok=True；describe type==\"Int64\"",
+    "idType='Int32' -> code=1100 \"idType can only be [Int64, VarChar], default: Int64\"",
+    "idType='Bool'/'Bogus' -> code=1100 同文案拒绝",
+    "idType=42 -> code=1801 json unmarshal 类型拒绝",
+    "idType='Int64'/'VarChar' 合法枚举 -> ok=True（对照 PASS）"
+   ],
+   "claim_alignment": "partial",
+   "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "真非法枚举以 200+1100 拒绝；'int64' 被接受是显式别名分支，''被接受是默认分支"},
+   "reproducibility": "单脚本",
+   "script_error": false,
+   "triggering_scripts": ["debate_logs/boundary_idtype_autoaid_020.py"],
+   "evidence_source": "behavior"
+  },
+  "contract_grounding": {
+   "constraint_id": "milvus_type_collections_create_001",
+   "assertion_text_quoted": "dataType IN {Int64,VarChar,FloatVector,...}（schema.fields[].dataType 枚举）",
+   "api_violates_assertion": false,
+   "note": "候选派发的 constraint_id='type' 无 idType 专项断言；就近的 create_001 断言约束 schema.fields[].dataType（首字母大写枚举），不约束顶层 quick-mode idType 别名。'int64' 被接受且 describe 回读 type==Int64（有效枚举值），'' 走文档化默认——violates=False",
+   "evidence_source": "doc"
+  },
+  "chain_trace": {
+   "chain_links": [
+    "contract: type 组（无 idType 别名/默认专项断言）",
+    "doc: handler_v2.go:1745-1760 switch httpReq.IDType 显式分支",
+    "script: boundary_idtype_autoaid_020.py 10 组 idType",
+    "log: 'int64'/'ierto'/''/None -> code=0 + describe Int64；其余非法 -> 1100/1801"
+   ],
+   "chain_broken_at": "contract",
+   "break_detail": "断链在 contract 环：候选攻击的 'int64' 小写别名与 '' 默认接受均为源码显式设计分支，契约层无对应断言（约束域不覆盖），链四环中 contract 环缺位",
+   "evidence_source": "doc+behavior"
+  },
+  "source_grounding": {
+   "grep_queries": ["idType can only be", "case \"\", \"Int64\", \"int64\"", "switch httpReq.IDType"],
+   "files_examined": [
+    "internal/distributed/proxy/httpserver/handler_v2.go (createCollection quick-mode L1744-1760)"
+   ],
+   "source_excerpt": "handler_v2.go L1744-1760:\n\t\tswitch httpReq.IDType {\n\t\tcase \"VarChar\", \"Varchar\":\n\t\t\tidDataType = schemapb.DataType_VarChar ... \n\t\tcase \"\", \"Int64\", \"int64\":\n\t\t\thttpReq.IDType = \"Int64\"\n\t\tdefault:\n\t\t\terr := merr.WrapErrParameterInvalid(\"Int64, Varchar\", httpReq.IDType, \"idType can only be [Int64, VarChar], default: Int64\") ... code 1100\n—— 'int64' 与 '' 均为显式 case 分支（归一化为 Int64），非校验遗漏；大写 'Varchar' 也被别名为 VarChar。",
+   "call_chain_traced": "HTTP create -> createCollection quick-mode -> switch IDType: ''/'Int64'/'int64' -> Int64（别名/默认归一化）-> schema 生成 type=Int64 -> code=0",
+   "verification_outcome": "by_design_in_source",
+   "evidence_source": "source"
+  },
+  "mundane_explanation": {
+   "excluded": ["env", "concurrency", "request_typo"],
+   "surviving": null
+  }
+ }
+}

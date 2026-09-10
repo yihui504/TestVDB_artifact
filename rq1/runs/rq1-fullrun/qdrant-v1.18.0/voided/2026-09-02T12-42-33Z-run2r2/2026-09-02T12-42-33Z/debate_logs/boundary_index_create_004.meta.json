@@ -1,0 +1,15 @@
+{
+ "defect_id": "boundary_index_create_004",
+ "endpoint": "index+create",
+ "param": "field_name",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "strategy2_type_confusion",
+ "constraint_ids": [
+  "qdrant_behavioral_index_create_001",
+  "qdrant_type_index_create_001"
+ ],
+ "oracle": {
+  "statement": "on the live bic004_* collection the legal control full body returns 200 with m_ctrl in readback result.payload_schema; each of the eight required-path/shape violations (field_schema absent/null/{}/[], field_name absent/null/''/123) returns HTTP 400/422 with non-empty diagnostics (2xx + materialized payload_schema key = Type1/Type4-signal; 2xx + no key = silent-drop judge signal; 404 on live collection = SCRIPT_ERROR; 5xx/transport = Type3 with /healthz re-check; empty 4xx body = Type2_PoorDiagnostics)",
+  "source": "docstring"
+ }
+}

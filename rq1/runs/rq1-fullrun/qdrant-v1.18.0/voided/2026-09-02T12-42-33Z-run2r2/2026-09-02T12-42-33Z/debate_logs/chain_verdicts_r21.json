@@ -1,0 +1,36 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "semantic_index_create_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "type tautology"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": null,
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok on qdrant_type_index_create_001, api_violates_assertion=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical, no LLM re-judgment; B=CONFIRMED concurs independently)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A-restatement: constraint qdrant_type_index_create_001 (quote verbatim vs structured_contract assertions entry) asserts field_schema IN the 8-member string enum (or the object-with-type branch per request_required_paths); the observed value [\"keyword\"] is a JSON array, member of neither branch, so api_violates_assertion=true -> CONFIRMED. Execution: log_pattern records [PUT index sic025ff4dd_live/h_arr] schema=[\"keyword\"] -> 200 completed envelope, bracketed by ctrl \"keyword\"->200 and 123/true->400 plus cross-script [] -> 400 (boundary_index_create_004.log:11) - the positional-seq signature, not blanket leniency; source grounding shows untagged PayloadFieldSchema -> KeywordIndexParams accepting the seq positionally via #[serde(default)] trailing fields (types.rs:2275-2280, index.rs:11-37) with verification_outcome=validation_absent and no by-design declaration. B=CONFIRMED (enum/object-union field accepting an out-of-domain array wire shape; same-family [] vs [\"keyword\"] disposition split as supporting signal); C=CONFIRMED (unannotated serde side effect; index.rs:21 comment is an OpenAPI-schema motive, not leniency intent); D=NO_SIGNAL (lenient-filter-parsing stance is a different parameter class and there explicitly declared, here accidental/undeclared).",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 1, "defect": 1, "not_defect": 0, "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {},
+    "constraint_category_distribution": {"type": 1},
+    "candidate_class_distribution": {"strict_defect": 1, "exploratory_candidate": 0, "rejected": 0}
+  }
+}

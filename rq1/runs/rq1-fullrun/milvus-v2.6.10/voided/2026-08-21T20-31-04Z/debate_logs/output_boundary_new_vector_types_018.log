@@ -1,0 +1,13 @@
+create Float16Vector -> ok=False raw={"code":65535,"message":"dimension is not defined in field type params of field vec, check type param `dim` for vector field"}
+create SparseFloatVector -> ok=True raw={"code":0,"data":{}}
+sparse insert dict idx->float -> ok=False raw={"code":1804,"message":"fail to deal the insert data, error: missing vector field: vec: invalid parameter[expected=SparseFloatVector][actual=]"}
+sparse insert list of pairs -> ok=False raw={"code":1804,"message":"fail to deal the insert data, error: missing vector field: vec: invalid parameter[expected=SparseFloatVector][actual=]"}
+sparse insert dense list -> ok=False raw={"code":1804,"message":"fail to deal the insert data, error: missing vector field: vec: invalid parameter[expected=SparseFloatVector][actual=]"}
+sparse insert empty dict -> ok=False raw={"code":1804,"message":"fail to deal the insert data, error: missing vector field: vec: invalid parameter[expected=SparseFloatVector][actual=]"}
+sparse insert negative idx -> ok=False raw={"code":1804,"message":"fail to deal the insert data, error: missing vector field: vec: invalid parameter[expected=SparseFloatVector][actual=]"}
+sparse insert huge idx -> ok=False raw={"code":1804,"message":"fail to deal the insert data, error: missing vector field: vec: invalid parameter[expected=SparseFloatVector][actual=]"}
+sparse insert nan value -> ok=False raw={"code":1804,"message":"fail to deal the insert data, error: missing vector field: vec: invalid parameter[expected=SparseFloatVector][actual=]"}
+sparse insert string value -> ok=False raw={"code":1804,"message":"fail to deal the insert data, error: missing vector field: vec: invalid parameter[expected=SparseFloatVector][actual=]"}
+sparse quick-mode via dimension=8 -> ok=True raw={"code":0,"data":{}}
+NOTE: read-back comparisons printed above; judge against handler_v2.go sparse/f16 format rules
+VERDICT: NO_DEFECT - observational; illegal accepts logged above for judge

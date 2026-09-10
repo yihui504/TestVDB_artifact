@@ -1,0 +1,68 @@
+{
+  "defect_id": "boundary_r2_create_zero_20",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "constraint_id='boundary' 为 gap。最近邻契约 milvus_range_collections_create_005 断言 'numShards <= 16'（上界），无下界（>0）断言。源为本地 clone（已 Read）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[create shardsNum=0] 200 code=0 {\"code\":0,\"data\":{}} -> DEFECT_FOUND（主观测；shardsNum=-1 同型 code:0）",
+      "secondary_observations": [
+        "[control dim=8] 200 {\"code\":0,\"data\":{}}",
+        "[control dim=-1] 200 {\"code\":65535,\"message\":\"invalid dimension: -1. should be in range 2 ~ 32768\"}（对照：dim 下界被正确拒）",
+        "[describe after accept shardsNum=0] 200 {\"code\":0,\"data\":{...\"collectionName\":\"bnd_r2_z_20c\"...}}（集合真实创建成功）",
+        "[describe after accept shardsNum=-1] 200 {...\"collectionName\":\"bnd_r2_z_20d\"...}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "shardsNum 0/-1 以 HTTP 200+code:0 接受并真实建集合；同请求体 dim=-1 则 65535——同一端点内选择性校验。"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_create_zero_20.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_range_collections_create_005 (最近邻；boundary 为 gap)",
+      "assertion_text_quoted": "max shards 16 (proxy.maxShardNum); assertion: numShards <= 16",
+      "api_violates_assertion": false,
+      "note": "断言域仅为上界 numShards<=16；0/-1 满足该断言（未被违反），violates=false 正确——观测暴露的是契约缺下界断言（shardsNum>=1），候选发现的是这个 gap。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 'boundary' 不存在（gap）；最近邻 milvus_range_collections_create_005 只有上界",
+        "doc: 契约源 component_param.go maxShardNum（本地 clone）+ task.go 校验点已 Read",
+        "script: boundary_r2_create_zero_20.py 发出 params.shardsNum=0 / -1",
+        "log: 两次 create http=200 code:0，describe 证实集合建成（主观测行）"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "第一环无下界锚点（gap）；行为环自洽（含建后 describe 复核）。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["ShardsNum", "DefaultShardsNum", "ShardsNum <= 0"],
+      "files_examined": [
+        ".milvus-src-2616/internal/proxy/task.go",
+        ".milvus-src-2616/internal/rootcoord/ddl_callbacks_create_collection.go"
+      ],
+      "source_excerpt": "task.go:395-397 (createCollectionTask.PreExecute): `if t.ShardsNum > Params.ProxyCfg.MaxShardNum.GetAsInt32() { return fmt.Errorf(\"maximum shards's number should be limited to %d\", ...) }` —— 仅上界校验，无 <=0 检查。ddl_callbacks_create_collection.go:47-49 (rootcoord): `if req.GetShardsNum() <= 0 { req.ShardsNum = common.DefaultShardsNum }` —— 非正 shardsNum 在 rootcoord 被静默替换为默认值。",
+      "call_chain_traced": "REST body shardsNum=0/-1 → proxy PreExecute 仅查上界（通过）→ rootcoord broadcastCreateCollectionV1 将 <=0 替换为 DefaultShardsNum → 集合以默认 shard 数建成 → code:0。'疑似静默钳制'被源码证实为 rootcoord 层静默默认化。",
+      "verification_outcome": "by_design_in_source",
+      "note": "静默钳制是源码显式行为（与 rootcoord_mock_test.go:433-436 的测试语义一致）；REST 层确无下界校验（validation_absent at proxy 层 + by_design defaulting at rootcoord 层并存，如实两记）。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（dim 对照组证明校验通道活着）", "concurrency"],
+      "surviving": "by-design 静默默认化抗辩：行为等价于省略 shardsNum；但无任何回显/警告，用户不可感知"
+    }
+  }
+}

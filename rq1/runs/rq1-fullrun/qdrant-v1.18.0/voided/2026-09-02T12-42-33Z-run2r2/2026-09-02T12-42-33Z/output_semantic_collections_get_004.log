@@ -1,0 +1,29 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] describe_collection = /collections/{name} (runtime PATHS; matches raw_knowledge api_endpoints[collections+get].url /collections/{collection_name})
+ownership prefix: scg04ad2f77
+[pre-probe] /healthz status=200 raw=healthz check passed
+[create scg04ad2f77_real] status=200 raw={"result":true,"status":"ok","time":0.342302562}
+[upsert 2 points wait=true] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.006731755}
+[P1 describe scg04ad2f77_real] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":2,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_constr
+[create_alias scg04ad2f77_al1->scg04ad2f77_real] status=200 raw={"result":true,"status":"ok","time":0.020208875}
+[P2 describe scg04ad2f77_al1] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":2,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_constr
+[conform] P2 config.params.vectors identical via alias ({'size': 4, 'distance': 'Cosine'})
+[conform] P2 config.params.shard_number identical via alias (1)
+[conform] P2 config.params.replication_factor identical via alias (1)
+[conform] P2 config.hnsw_config.m identical via alias (16)
+[conform] P2 points_count identical via alias (2)
+[conform] P2 status identical via alias ('green')
+[P3 describe scg04ad2f77_real again] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":2,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_constr
+[conform] P3 result.config deep-equal across repeats
+[P4 list_collections] names=['bcc139b6a8bp2', 'bcc139bc7c6p2', 'scc024_1788393554_legal_1', 'scc024_1788393554_legal_8', 'scc2a_1788393513_35968_shmin', 'scg04ad2f77_real']
+[conform] P4 membership agrees with describe
+[create_alias scg04ad2f77_al2->scg04ad2f77_real] status=200 raw={"result":true,"status":"ok","time":0.019158325}
+[drop scg04ad2f77_real with live alias scg04ad2f77_al2] status=200 raw={"result":true,"status":"ok","time":0.025804681}
+Traceback (most recent call last):
+  File "<HOME>\.claude\plugins\cache\testvdb\testvdb\2.4.0\results\qdrant\v1.18.0\2026-09-02T12-42-33Z\debate_logs\semantic_collections_get_004.py", line 451, in <module>
+    main()
+  File "<HOME>\.claude\plugins\cache\testvdb\testvdb\2.4.0\results\qdrant\v1.18.0\2026-09-02T12-42-33Z\debate_logs\semantic_collections_get_004.py", line 392, in main
+    st, raw = describe_result(al2)
+    ^^^^^^^
+ValueError: too many values to unpack (expected 2)

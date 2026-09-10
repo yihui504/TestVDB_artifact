@@ -1,0 +1,84 @@
+{
+  "defect_id": "boundary_sharding_virtualPerPhysical_014",
+  "endpoint": "POST /schema (shardingConfig.virtualPerPhysicalShards)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约 api_endpoints POST /schema 明确列出 shardingConfig.virtualPerPhysical (type=integer, 默认128, source_url=go-struct usecases/sharding/config/config.go#L21, reachable)。源码 clone 内该文件确认。注意：脚本攻击字段名为 virtualPerPhysicalShards，契约注册名为 virtualPerPhysical——若脚本实际发的是 virtualPerPhysicalShards 而 server 认 virtualPerPhysical，则 200-phantom 有平凡解释（错字段被忽略+默认128持久化），见 source_grounding。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "[zero] vpps=0 -> create=200 persisted=None",
+      "secondary_observations": [
+        "[ctrl] vpps=128 -> create=200 persisted=None",
+        "[neg] vpps=-1 -> create=200 persisted=None",
+        "[huge] vpps=1000000000 -> create=200 persisted=None",
+        "[float] vpps=2.5 -> create=200 persisted=None"
+      ],
+      "claim_alignment": "drifted",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "全部请求 200；但机制已证实为'未知字段忽略'——服务端从未看到 virtualPerPhysicalShards，攻击未触达目标参数。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": [
+        "debate_logs/boundary_sharding_virtualPerPhysical_014.py"
+      ],
+      "note_rerun": "主进程注记：该脚本曾在容器 DOWN 时段假 SCRIPT_ERROR，后重跑为 DEFECT_FOUND；本链以 output log 终态为准（log 内容为重跑后 DEFECT_FOUND 版）。",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "boundary (泛标签；实际引用 api_endpoints POST /schema shardingConfig.virtualPerPhysical integer 默认128)",
+      "assertion_text_quoted": "structured_contract.json: {\"name\": \"shardingConfig.virtualPerPhysical\", \"type\": \"integer\", \"description\": \"每物理分片虚拟分片数（默认 128）\"}",
+      "api_violates_assertion": false,
+      "note": "脚本攻击键 virtualPerPhysicalShards 不在契约约束域（契约注册参数为 shardingConfig.virtualPerPhysical integer）；值未触达服务端字段，无违反发生。violates=False 理由：观测的 200 是未知字段丢弃，非'非法 virtualPerPhysical 值被接受'。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: POST /schema shardingConfig.virtualPerPhysical integer 默认128",
+        "doc: source_url go-struct usecases/sharding/config/config.go#L21 (clone 内验证 DefaultVirtualPerPhysical=128)",
+        "script: boundary_sharding_virtualPerPhysical_014.py 攻击 0/-1/10^9/2.5",
+        "log: 各攻击值 create=200, persisted=None（持久化证实缺环）"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "脚本 :29 发送 shardingConfig:{'virtualPerPhysicalShards': val}，:33 读回同键；服务端字段为 virtualPerPhysical。非法值从未进入解析/校验路径，200 是未知字段被忽略+默认值生效；对照 128 也 persisted=None 即为此证据。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "VirtualPerPhysicalShards (零命中)",
+        "virtualPerPhysical|VirtualPerPhysical (20+命中)",
+        "optionalIntFromMap"
+      ],
+      "files_examined": [
+        "usecases/sharding/config/config.go",
+        "usecases/sharding/config/config_update.go"
+      ],
+      "source_excerpt": "usecases/sharding/config/config.go:\n 22  DefaultVirtualPerPhysical = 128\n 29  VirtualPerPhysical  int    `json:\"virtualPerPhysical\"`\n\n validate() (config.go:59-75) 仅校验 Key=='_id' / Strategy=='hash' / Function=='murmur3'——无 VirtualPerPhysical 范围校验（0/-1/huge 无拒绝路径）。\n\n ParseConfig → optionalIntFromMap(asMap, \"virtualPerPhysical\", func(v int){ out.VirtualPerPhysical = v }) (config.go:98)：接受任意 int；float 需看 optionalIntFromMap 的 json.Number 解析是否报错（未展开，float 2.5 的 200 可能因字段名不匹配根本没进该分支）。\n\n config_update.go:29-32: 更新路径禁止修改 VirtualPerPhysical（attempted change 报错）——进一步说明该字段只在创建时生效。",
+      "call_chain_traced": "POST /schema → schema handler → ParseConfig(shardingConfig) → optionalIntFromMap virtualPerPhysical → validate()（只查 key/strategy/function）→ 落盘 schema",
+      "verification_outcome": "not_applicable_field_mismatch",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "已读脚本证实键名不匹配。validate() 确无 VirtualPerPhysical 范围校验（0/-1 若真触达会被接受——潜在真缺陷），但本次执行的观测不能作为该结论的行为证据。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "cache_delay"
+      ],
+      "surviving": "field_name_mismatch_CONFIRMED（已读脚本正文 boundary_sharding_virtualPerPhysical_014.py:29/33：脚本发送并读回的键均为 'virtualPerPhysicalShards'，而服务端字段是 'virtualPerPhysical'（clone grep 零命中前者，源码 config.go:29 json tag 证实）。非法值被 Go 解码静默丢弃、shardingConfig 走默认 128，create=200 + persisted=None 是未知字段丢弃的标准行为——'200 持久化异常值' 的 claim 不成立）"
+    }
+  },
+  "evidence_weight": "low（攻击未触达目标字段；链在 script 环断裂）"
+}

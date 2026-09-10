@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_facet_005",
+ "endpoint": "facet",
+ "param": "key (count movement under idempotent re-upsert / value-overwrite upsert / key-absent point)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "upsert_idempotence",
+ "constraint_ids": [
+  "qdrant_behavioral_facet_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/points/facet",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "after every leg the facet multiset equals the tracked per-value point frequencies (L1 {A:2,B:3}; L2 {A:3,B:2}; L3 {A:2,B:2,C:1}; L4 {A:2,B:2,C:1} with point count 6) — a stale, inflated, or non-moving count = Type4_StateLogicViolation; 5xx with /healthz alive = Type3_RuntimeFailure",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

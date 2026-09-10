@@ -1,0 +1,73 @@
+{
+  "defect_id": "vein_range_filter_points_count_1",
+  "endpoint": "POST /collections/{collection_name}/points/count",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "domain_blocked",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "WebFetch api.qdrant.tech 被网络策略阻断(domain_blocked, 不视为 FAIL)。版本匹配: contract source_url 为 v-1-18-x 版本化页面, 与 target v1.18.0 major.minor 一致。内容一致性: contract parameters(filter/exact 'default true: exact count (slower)')与 docs 概念页核对 — filtering 文档(concepts_filtering.txt L2016-2022)明确 range 支持 gt/gte/lt/lte 四种比较符且语义为 'lt - less than / lte - less than or equal',即双同向界(lt+lte 或 gt+gte)在文档模型中均为合法且应同时生效(check_range 源码同样四界全部 AND);但文档未对 exact=false 的近似精度给出任何量化保证。端点精确性: points+count 在 contract endpoint_registry 命中(L574-619, POST, source_url=https://api.qdrant.tech/v-1-18-x/api-reference/points/count-points)。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "lt50+lte100: exact=96 approx=192 / gt60+gte70: exact=80 approx=58 → VERDICT: DEFECT_FOUND — count(exact:false) uses only one of two same-direction range bounds; cardinality wrong in both directions",
+      "secondary_observations": [
+        "case A (lt:50, lte:100): exact=96, approx=192 — 误差 +100%, 远超容忍带 max(2, 0.2*96)=19.2; approx≈2倍于 exact, 恰等于 N*num<100 (≈所有 <100 的点), 即估计器只用了宽松界 lte:100 而丢弃紧界 lt:50",
+        "case B (gt:60, gte:70): exact=80, approx=58 — 误差 -27.5%, 超容忍带 max(2, 0.2*80)=16; approx 偏小, 与 case A 反向, 说明取错界方向随界书写顺序/方向变化",
+        "exact:true 结果(96/80)与 random.seed(7) 下 200 点 num∈[0,100] 的期望分布一致, setup 正常, 非 indexing_threshold 延迟问题(脚本 sleep 8s + indexing_threshold=1)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "非错误响应类缺陷: 四次 count 请求均 HTTP 200 正常返回, 缺陷在于 approx 值偏离 exact 基准 — 属行为数值错误而非错误诊断质量问题"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_range_filter_points_count_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "constraint_note": "candidates.jsonl 该条目 constraint_id 为空(vein 挖掘产物, 无 attack-agent constraint 挂接)。以最近的 contract 锚点代替: (a) endpoint_registry 'points+count' 参数定义 'filter: Filter, omitted filter means all points' + 'exact: boolean, default true: exact count (slower)' (structured_contract.json L590-599); (b) behavioral assertion qdrant_behavioral_points_count_001 'count with exact=true gives exact count' (L4634-4643); (c) invariant qdrant_inv_count_after_upsert_001 同源页。claim 现象落在 exact:false 分支, 该分支在 contract 中无显式精度断言 — contract 层只能锚定到 filter 语义(range 四界定义, docs concepts_filtering L2016-2022)。",
+      "assertion_text_quoted": "exact: boolean, required false, 'default true: exact count (slower)' — 即 exact=false 为近似模式; filtering docs: 'The range condition sets the range of possible values for stored payload values... gt - greater than, gte - greater than or equal, lt - less than, lte - less than or equal' — 四界共存时均应参与匹配",
+      "api_violates_assertion": true,
+      "note": "approx 距 exact 偏差 100%/27.5%, 两案例均系统性偏离且方向与'只用两同向界之一'的假设吻合; 若按文档语义四界 AND, exact:false 亦不应产生如此量级偏差(exact 与 approx 查的是同一 filter)。violates=True 的依据是 filter 语义层(range 全部界生效)而非精确度承诺层(contract 未承诺近似精度, auditor 需注意此差异)。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: endpoint_registry points+count (filter/exact 参数) — 存在, constraint_id 为空故以 registry+behavioral assertion 锚定",
+        "doc: api.qdrant.tech count-points 页不可达(domain_blocked); 以本地镜像 concepts_filtering.txt L2016-2022 range 四界语义核对通过",
+        "script: vein_scripts/vein_range_filter_points_count_1.py — PUT 200点(num∈[0,100])+integer index, POST count {exact:true/false} × {lt50+lte100, gt60+gte70}",
+        "log: output_vein_range_filter_points_count_1.log — DEFECT_FOUND, exact=96/80 vs approx=192/58"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "candidates.jsonl 中 constraint_id=''(vein 策略产物无 constraint 挂接), contract→doc 环缺失精确 assertion 锚点; doc 环仅能以 domain-blocked 网络状态+本地文档镜像替代。其余环节(script→log)完整一致。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["estimate_cardinality", "CardinalityEstimation", "range_cardinality", "estimate_filter", "pub struct Range"],
+      "files_examined": [
+        "lib/segment/src/index/field_index/numeric_index/mod.rs (L313-386 range_cardinality, L882-915 estimate_cardinality)",
+        "lib/collection/src/shards/local_shard/shard_ops.rs (L367-389 count: exact 走 read_filtered, 非exact 走 estimate_cardinality)",
+        "lib/collection/src/shards/local_shard/mod.rs (L934-960 estimate_cardinality → segment.estimate_point_count → merge_independent)",
+        "lib/segment/src/index/struct_payload_index.rs (L560-583 estimate_cardinality → estimate_filter)",
+        "lib/segment/src/index/query_estimator.rs (L200-300 estimate_filter/estimate_condition)",
+        "lib/segment/src/types.rs (L2787-2815 Range struct + check_range)"
+      ],
+      "source_excerpt": "lib/segment/src/index/field_index/numeric_index/mod.rs L313-341 (qdrant v1.18.0):\n    fn range_cardinality(&self, range: &RangeInterface) -> OperationResult<CardinalityEstimation> {\n        ...\n        let lbound = if let Some(lte) = range.lte {\n            Included(lte)\n        } else if let Some(lt) = range.lt {\n            Excluded(lt)\n        } else {\n            Unbounded\n        };\n\n        let gbound = if let Some(gte) = range.gte {\n            Included(gte)\n        } else if let Some(gt) = range.gt {\n            Excluded(gt)\n        } else {\n            Unbounded\n        };\n\n        let histogram_estimation = self.get_histogram().estimate(gbound, lbound);\n--- 对照(实际执行过滤的语义) lib/segment/src/types.rs L2806-2813:\n    pub fn check_range(&self, number: T) -> bool {\n        let Self { lt, gt, gte, lte } = self;\n        lt.is_none_or(|x| number < x)\n            && gt.is_none_or(|x| number > x)\n            && lte.is_none_or(|x| number <= x)\n            && gte.is_none_or(|x| number >= x)\n    }",
+      "call_chain_traced": "count API → local_shard/shard_ops.rs count() → if exact {read_filtered(精确过滤, check_range 四界 AND)} else {LocalShard::estimate_cardinality → segment estimate_point_count → StructPayloadIndex::estimate_cardinality → estimate_filter(estimator=condition_cardinality) → NumericIndex::estimate_cardinality → range_cardinality → lbound/gbound 构造: lte 存在则完全忽略 lt(if/else-if), gte 存在则完全忽略 gt → histogram.estimate(gbound, lbound) → CardinalityEstimation.exp 作为 count 返回",
+      "verification_outcome": "validation_absent",
+      "verification_note": "根因实锤: 估计路径 range_cardinality 用 if/else-if 只取每方向一个界(lte 优先于 lt, gte 优先于 gt), 而执行路径 check_range 四界全部 AND。case A (lt50+lte100): 估计只用 lte:100 → approx≈num<100 的全部点(≈192), exact 用四界 AND=96 — 与 log 完全吻合。case B (gt60+gte70): 估计只用 gte:70, exact=gt60∧gte70 有效紧界是 gt:60(num>60, 80点), 近似取 gte:70(num>=70, ≈58) — 方向相反, 与 log(approx=58 < exact=80)吻合。注意: '仅取一界'并非语义错误(lt:50+lte:100 中 lte:100 是被 lt:50 蕴含的宽松界, 取更松者做保守估计是常见设计), 但由此产生 ~100% 的 exp 偏差且 CardinalityEstimation.exp 直接作为 count API 返回值, 无任何精度标注 — 属估计器精度缺陷/Type2 范畴, 是否够格缺陷由 auditor 裁定(by-design 抗辩可能存在: approx 明示不精确)。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env(本地 localhost:6333 正常, 四请求均 200)", "indexing_delay(sleep 8 + indexing_threshold=1, exact 计数与种子期望一致)", "request_typo(同一 filter 对象分别用于 exact/approx)", "concurrency(单线程顺序请求, collection 独立)"],
+      "surviving": "by_design 抗辩: exact:false 文档明示为近似模式, contract 无近似精度承诺; 若 auditor 采纳 'approx 无精度契约' 立场, 此条可能降级为非缺陷。但 100% 偏差源于估计器对冗余界的系统性忽略而非采样噪声, 且双向均可复现。"
+    }
+  }
+}

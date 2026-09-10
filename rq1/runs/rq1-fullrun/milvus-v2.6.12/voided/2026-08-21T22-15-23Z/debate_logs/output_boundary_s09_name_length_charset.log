@@ -1,0 +1,16 @@
+CASE name 255 chars         ok=True | {"code":0,"data":{}}
+CASE name 256 chars         ok=False | {"code":1100,"message":"Invalid collection name: nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+CASE name 1000 chars        ok=False | {"code":1100,"message":"Invalid collection name: nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+CASE name empty             ok=False | {"code":1802,"message":"missing required parameters, error: Key: 'CollectionReq.CollectionName' Error:Field validation for 'Collec
+CASE name with space        ok=False | {"code":1100,"message":"Invalid collection name: bad name. collection name can only contain numbers, letters and underscores: inva
+CASE name starts digit      ok=False | {"code":1100,"message":"Invalid collection name: 9bad. the first character of a collection name must be an underscore or letter: i
+CASE name starts hyphen     ok=False | {"code":1100,"message":"Invalid collection name: -bad. the first character of a collection name must be an underscore or letter: i
+CASE name NUL               ok=False | {"code":1100,"message":"Invalid collection name: bad\u0000name. collection name can only contain numbers, letters and underscores:
+CASE name unicode 中文        ok=False | {"code":1100,"message":"Invalid collection name: coll_中文. collection name can only contain numbers, letters and underscores: inval
+CASE name $gt injection     ok=False | {"code":1100,"message":"Invalid collection name: coll$(whoami). collection name can only contain numbers, letters and underscores:
+CASE field 255 chars        ok=True | {"code":0,"data":{}}
+CASE field 256 chars        ok=False | {"code":1701,"message":"Invalid field name: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+CASE field starts digit     ok=False | {"code":1701,"message":"Invalid field name: 9f. The first character of a field name must be an underscore or letter.: field name i
+CASE field with space       ok=False | {"code":1701,"message":"Invalid field name: bad f. Field name can only contain numbers, letters, and underscores.: field name inva
+CASE field unicode          ok=False | {"code":1701,"message":"Invalid field name: field_中文. Field name can only contain numbers, letters, and underscores.: field name i
+VERDICT_NO_DEFECT

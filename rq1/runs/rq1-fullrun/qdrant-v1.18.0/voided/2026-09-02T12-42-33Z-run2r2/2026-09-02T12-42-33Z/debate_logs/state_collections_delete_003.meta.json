@@ -1,0 +1,18 @@
+{
+ "defect_id": "state_collections_delete_003",
+ "endpoint": "collections+delete",
+ "param": null,
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_delete_001",
+  "qdrant_bc_delete_invisibility_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "pre-delete exact count == 12; post-delete count -> 404; post-recreate exact count == 0; after 1 fresh upsert exact count == 1",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

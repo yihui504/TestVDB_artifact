@@ -1,0 +1,71 @@
+{
+  "defect_id": "vein_rbac_grant_cross_endpoint_001",
+  "endpoint": "roles+grant_privilege (+users+create/roles+create/users+grant_role 对照)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "跨端点一致性无文档明文（vein 类命题本质）；端点均在 endpoint_registry；与 state_rbac_003 共享源码闭环。RBAC 专项文档页未单独核（如实）",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "EXP  roles+grant_privilege  -> 65535 {\"code\":65535,\"message\":\"fail to get authorization from the md, authorization:[token]\"}（同参数族、同凭据、同部署）",
+      "secondary_observations": [
+        "CTRL users+create       -> 0 {\"code\":0,\"data\":{}}",
+        "CTRL roles+create       -> 0 {\"code\":0,\"data\":{}}",
+        "CTRL users+grant_role   -> 0 {\"code\":0,\"data\":{}}",
+        "EXP  roles+grant_privilege_v2 -> 65535 同消息（两条 OperatePrivilege 路由同病）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "5 端点全部 HTTP 200；分歧仅在业务 code"},
+      "reproducibility": "多脚本稳定触发（state_rbac_revocation_immediacy_003 独立脚本同日同模式复现 65535）",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_rbac_grant_cross_endpoint_001.py", "debate_logs/state_rbac_revocation_immediacy_003.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "(no direct constraint — cross_endpoint_divergence vein)",
+      "assertion_text_quoted": "(vein 命题: same param family (privilege/role), same credentials, divergent codes across sibling RBAC endpoints is an inconsistency defect)",
+      "api_violates_assertion": true,
+      "note": "violates=true 依据同参数族跨端点行为分歧（3 code:0 vs 2 恒 65535）+ 源码级根因（OperatePrivilege 独有的 ctx auth-md 硬依赖）；无契约库 constraint——如实标注",
+      "evidence_source": "behavior"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 缺失（vein 类无 constraint_id）",
+        "doc: RBAC 端点族功能语义",
+        "script: vein_rbac_grant_cross_endpoint_001.py 3 CTRL + 2 EXP",
+        "log: CTRL 全 0 / EXP 全 65535 同消息"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "无 constraint 可引（vein 链固有形态）；doc/behavior/source 三环完整",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["OperatePrivilege", "OperateUserRole", "GetCurUserFromContext", "NewContextWithMetadata"],
+      "files_examined": [
+        "internal/distributed/proxy/service.go (L188-198)",
+        "internal/proxy/util.go (L1452-1463)",
+        "pkg/util/contextutil/context_util.go (L86-110)",
+        "internal/proxy/impl.go (L5415+ OperateUserRole 对照 / L5645+ OperatePrivilege / L5581 OperatePrivilegeV2)",
+        "internal/distributed/proxy/httpserver/handler_v2.go (L2454 operateRoleToUser / L2545 operatePrivilegeToRole / L2567 V2)"
+      ],
+      "source_excerpt": "分歧根因（对照式）：operateRoleToUser（handler_v2.go:2454）与 operatePrivilegeToRole（L2545）走同一 wrapperProxy 注入同样的空-username ctx；差异在 impl 层——OperateUserRole（impl.go:5415）不读 ctx 用户直接 mixCoord.OperateUserRole；OperatePrivilege（impl.go:5657）与 OperatePrivilegeV2（impl.go:5581）均 `curUser, err := GetCurUserFromContext(ctx); if err != nil { return merr.Status(err), nil }`，而 GetCurUserFromContext 在 auth-md 缺失时恒错（context_util.go:98）。即：5 个端点同一外部契约形态，仅 2 个在内部链路上无条件依赖 HTTP 层（auth 关闭时）不会提供的元数据。",
+      "call_chain_traced": "见 state_rbac_003（同根因）；本链增量是对照端点证明分歧非凭据/参数问题",
+      "verification_outcome": "validation_absent",
+      "note": "与 state_rbac_003 为同根因双视角（state=僵尸角色后果，vein=跨端点分歧形态），auditor 可合并或分别判定",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["request-typo（对照实验设计排除）", "concurrency"],
+      "surviving": "auth-disabled 部署绑定（同 state_rbac_003）"
+    }
+  },
+  "evidence_weight": "strong（对照设计 + 多脚本复现 + 源码对照式定位；contract 环缺为 vein 类固有）"
+}

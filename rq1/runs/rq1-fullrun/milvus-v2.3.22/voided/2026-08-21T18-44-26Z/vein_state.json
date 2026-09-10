@@ -1,0 +1,32 @@
+{
+  "target": "milvus",
+  "version": "v2.3.22",
+  "session_id": "milvus-2322-r1",
+  "round": 1,
+  "top_endpoints": ["v2/vectordb/collections/get_stats", "v2/vectordb/entities/query", "v2/vectordb/entities/search", "v2/vectordb/collections/create", "v2/vectordb/collections/drop"],
+  "richness_scores": {
+    "v2/vectordb/entities/query": 12.0,
+    "v2/vectordb/entities/search": 12.0,
+    "v2/vectordb/collections/create": 8.0,
+    "v2/vectordb/collections/get_stats": 6.5,
+    "v2/vectordb/collections/drop": 4.0,
+    "v1/vector/query": 7.5,
+    "v1/vector/search": 7.5
+  },
+  "condition_history": [
+    {"endpoint": "v2/vectordb/entities/search", "condition_type": "range_filter", "finding": "NO_DEFECT", "detail": "radius/range_filter coupling correct: L2 requires range_filter<radius, violation -> 65535 assert; range results verified correct"},
+    {"endpoint": "v2/vectordb/collections/get_stats", "condition_type": "cardinality_consistency", "finding": "DEFECT_FOUND", "detail": "rowCount permanently 0 while count(*)=10 and query returns all rows, >30s, control collection same", "script": "vein_stats_rowcount_001.py"},
+    {"endpoint": "v2/vectordb/entities/query", "condition_type": "pagination_cursor", "finding": "DEFECT_FOUND", "detail": "limit=0 silently means unbounded (11 rows returned); search limit=0 IS rejected -> inconsistent", "inspired_by": "cardinality_consistency", "script": "vein_query_limit0_002.py"},
+    {"endpoint": "v2/vectordb/entities/query", "condition_type": "null_check/semantic_validation", "finding": "DEFECT_FOUND", "detail": "filter on nonexistent field -> 200 empty on query AND search; type-mismatch filter errors -> silent swallow only for unknown column", "script": "vein_typo_filter_003.py"},
+    {"endpoint": "v2/vectordb/collections/drop", "condition_type": "state_machine", "finding": "DEFECT_FOUND", "detail": "drop nonexistent -> 200; load nonexistent -> 100; typo'd drop silently 'succeeds'", "script": "vein_drop_idempotent_004.py"},
+    {"endpoint": "v2/vectordb/collections/create", "condition_type": "v1v2_divergence", "finding": "DEFECT_FOUND", "detail": "identical quick-create: v1 autoId=true, v2 autoId=false; same explicit-id row rejected on v1 (1804), accepted on v2", "script": "vein_v1v2_autoid_005.py"},
+    {"endpoint": "v2/vectordb/collections/create", "condition_type": "error_attribution", "finding": "DEFECT_FOUND", "detail": "identical dup create: v2 silent 200, v1 65535 duplicate error; v2 CAN detect dups (diff-param errors); immediate re-create races into misleading 'CreateIndex failed' message", "inspired_by": "v1v2_divergence", "script": "vein_dupcreate_msg_006.py"}
+  ],
+  "by_design_excluded": [
+    {"endpoint": "v2/vectordb/collections/get_stats", "detail": "considered 'bounded consistency lag' but excluded: >30s + release/reload cycle still 0 -> real defect kept"},
+    {"endpoint": "v2/vectordb/entities/query", "condition_type": "count(*) with limit/offset", "detail": "count(*) ignores limit/offset by design (matchCountRule) -> not reported"},
+    {"endpoint": "v2/vectordb/entities/query", "condition_type": "release-then-insert", "detail": "insert on released collection accepted (by design, DML not gated on load) -> not reported"}
+  ],
+  "last_finding": {"endpoint": "v2/vectordb/collections/create", "condition_type": "error_attribution", "finding": "DEFECT_FOUND"},
+  "adjacent_pending": []
+}

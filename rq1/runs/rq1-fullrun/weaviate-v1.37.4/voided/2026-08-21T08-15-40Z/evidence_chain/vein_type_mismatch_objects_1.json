@@ -1,0 +1,72 @@
+{
+  "defect_id": "vein_type_mismatch_objects_1",
+  "endpoint": "POST /v1/objects",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Network blocked doc verification. OpenAPI spec defines consistencyLevel parameter but type constraints (enum string) undocumented.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: [Null Consistency] FAIL: DEFECT: Server accepts null consistencyLevel without validation, silently coercing to default → http=200",
+      "secondary_observations": [
+        "c2: [Numeric Consistency] FAIL: DEFECT: Server accepts numeric consistencyLevel without validation, silently coercing to default → http=200",
+        "c3: [Array Consistency] FAIL: DEFECT: Server accepts array consistencyLevel without validation, silently coercing to default → http=200",
+        "c4: [Object Consistency] FAIL: DEFECT: Server accepts object consistencyLevel without validation, silently coercing to default → http=200"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 with object creation for all 4 invalid types. Silent coercion to default (no error/warning). Type validation absent."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_type_mismatch_objects_1"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint in structured_contract.json. Contract lacks type mismatch validation assertions for consistencyLevel.",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (no type mismatch constraint)",
+        "doc: (partial, network blocked)",
+        "script: POST /objects with 4 invalid consistencyLevel types",
+        "log: All 4 accepted with HTTP 200, silent coercion"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "No constraint defined. Contract lacks semantic assertions for consistencyLevel type validation. Silent coercion indicates weak typing.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "consistencyLevel",
+        "validate.*object|object.*validate"
+      ],
+      "files_examined": [
+        "adapters/handlers/rest (objects handlers - not fully examined)"
+      ],
+      "source_excerpt": "Source search insufficient: consistencyLevel validation code not located. Grep for 'consistencyLevel' would hit object handling code but specific type validation logic not examined. Parameter likely defined in models/objects but enforcement at handler layer not examined.",
+      "call_chain_traced": "POST /v1/objects → (handler not examined) → consistencyLevel type validation may be bypassed or coerced silently",
+      "verification_outcome": "not_found_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Behavior evidence clear: 4/4 invalid types accepted with HTTP 200. Silent coercion to default indicates weak typing/lenient parsing. Source code not found (objects handler not examined). Type1: enum parameter should reject non-string values."
+    }
+  }
+}

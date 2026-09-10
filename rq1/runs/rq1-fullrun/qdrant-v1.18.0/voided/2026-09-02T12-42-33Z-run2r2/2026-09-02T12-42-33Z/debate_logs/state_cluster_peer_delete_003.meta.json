@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_peer_delete_003",
+  "endpoint": "cluster+peer+delete",
+  "param": "peer_id",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "upsert_idempotence",
+  "oracle": {
+    "statement": "repeated DELETE of the same invalid peer id -> both responses 4xx with a consistent disposition family (any 2xx = Type1_IllegalSuccess per the 4xx-on-invalid-peer-id promise; a 4xx-then-5xx flap = Type4_StateLogicViolation with the 5xx leg Type3 only after /healthz liveness); repeated self-removal without force -> both 4xx; force=true vs force=false on one ghost id -> neither face 2xx and no family flip; final GET /cluster peers set unchanged",
+    "source": "docstring"
+  }
+}

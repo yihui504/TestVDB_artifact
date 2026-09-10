@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_clear_003",
+ "endpoint": "payload+clear",
+ "param": null,
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "POST payload/clear with body {} on a collection holding 2 payload-bearing points returns 4xx (per request_required_paths anyOf: points|filter|shard_key); a 200 is adjudicated by scroll readback — payloads still deep-equal baseline after grace polls = Type1_IllegalSuccess (no-op ack on selector-less wipe), any payload gone = Type4_StateLogicViolation (unbounded bulk wipe); 5xx = Type3_RuntimeFailure with /healthz re-check; 4xx without any selector-keyword in the error body = Type2_PoorDiagnostics",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

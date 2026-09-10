@@ -1,0 +1,17 @@
+{
+  "defect_id": "state_collections_list_003",
+  "endpoint": "collections+list",
+  "param": "result.collections[] entries / name field (duplicate-create and recreate-after-delete dedup through the global list face)",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "upsert_idempotence",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_list_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-collections",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "the name appears in result.collections exactly once after create, exactly once after a duplicate create of the same name/body, absent after a 200-confirmed delete (bounded retries), and exactly once after recreate; two entries for the name at any point = Type4 (registry key semantics); two consecutive lists with no mutation in between disagreeing on membership = Type4; non-200 with /healthz alive = Type4; 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

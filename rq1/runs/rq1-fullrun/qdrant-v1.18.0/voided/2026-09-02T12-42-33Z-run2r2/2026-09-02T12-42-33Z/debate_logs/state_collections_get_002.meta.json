@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_get_002",
+ "endpoint": "collections+get",
+ "param": "collection_name (404-with-error-message face: never-created / deleted-ghost)",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "delete_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_get_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "describe(never-created) = 404 with a non-empty error message; describe(existing) = 200; after a 200-confirmed DELETE, describe(deleted) = 404 with error message twice; any 200-with-config on a non-existent name = Type1_IllegalSuccess; non-404 where 404 is pinned or bare 404 without message = Type4; 5xx = Type3 only with /healthz liveness",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

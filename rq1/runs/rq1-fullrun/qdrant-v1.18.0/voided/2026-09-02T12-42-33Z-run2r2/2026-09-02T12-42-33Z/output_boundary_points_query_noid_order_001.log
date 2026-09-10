@@ -1,0 +1,18 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+leg N1 no-query no-prefetch limit=5 -> status=200
+raw: {"result":{"points":[{"id":1,"version":0,"score":1.0},{"id":2,"version":0,"score":1.0},{"id":3,"version":0,"score":1.0},{"id":4,"version":0,"score":1.0},{"id":5,"version":0,"score":1.0}]},"status":"ok","time":0.000457292}
+leg N1 OK: ids [1, 2, 3, 4, 5] ascending
+
+leg N2 fully defaulted body {} -> status=200
+raw: {"result":{"points":[{"id":1,"version":0,"score":1.0},{"id":2,"version":0,"score":1.0},{"id":3,"version":0,"score":1.0},{"id":4,"version":0,"score":1.0},{"id":5,"version":0,"score":1.0},{"id":6,"version":0,"score":1.0},{"id":7,"version":0,"score":1.0},{"id":8,"version":0,"score":1.0},{"id":9,"version":0,"score":1.0},{"id":10,"version":0,"score":1.0}]},"status":"ok","time":0.000420633}
+leg N2 OK: 10 ids ascending: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+leg N3 query=null limit=5 -> status=200
+raw: {"result":{"points":[{"id":1,"version":0,"score":1.0},{"id":2,"version":0,"score":1.0},{"id":3,"version":0,"score":1.0},{"id":4,"version":0,"score":1.0},{"id":5,"version":0,"score":1.0}]},"status":"ok","time":0.00059943}
+leg N3 OK: query=null behaves as missing (ids [1..5] ascending)
+
+leg N4 prefetch-only (query omitted with prefetch) -> status=400
+raw: {"status":{"error":"Bad request: A query is needed to merge the prefetches. Can't have prefetches without defining a query."},"time":0.000094258}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — leg [N4 prefetch-only (query omitted with prefetch)]: the documented query-absent request was REJECTED with 400: {"status":{"error":"Bad request: A query is needed to merge the prefetches. Can't have prefetches without defining a query."},"time":0.000094258}

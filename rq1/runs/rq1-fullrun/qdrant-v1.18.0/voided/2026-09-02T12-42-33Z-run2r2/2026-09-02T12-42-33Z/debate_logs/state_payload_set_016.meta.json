@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_payload_set_016",
+  "endpoint": "payload+set",
+  "param": "payload",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "count_consistency",
+  "oracle": {
+    "statement": "T1 -> 200 and the readback payload deep-equals the sent typed-literal dict (geo {lon:13.405,lat:52.52} untransposed, RFC3339 string 2026-09-02T12:42:33Z, uuid string, arrays [1,2,3]/[alpha,beta] element-exact) with STRICT type identity (int vs float vs bool distinct; silent coercion/drop/transposition = Type4); T2 -> 200 and geo_pin/created updated with all other T1 keys intact; T3a/T3b (string-lon geo, mixed array) -> 4xx with prior state intact OR 200 with EXACTLY what was sent (coerced/dropped value = Type4); vector equal baseline readback (<=1e-6), exact count 1",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

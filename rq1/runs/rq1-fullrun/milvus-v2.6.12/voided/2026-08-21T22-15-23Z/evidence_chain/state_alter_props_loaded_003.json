@@ -1,0 +1,72 @@
+{
+  "defect_id": "state_alter_props_loaded_003",
+  "endpoint": "collections+create",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraint create_007（warmup.* 值 NOT IN {disable,sync} => 1100, source=pkg/common/common.go）在本地 clone 验证存在 ValidateWarmupPolicy；state constraint alter_properties_001（loaded 时改 warmup props => 104）与 log A/B/C 行为一致。create 端点在 registry。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "F create w/ warmup=ASYNC: {\"code\":0,\"data\":{}}（主观测：create 路径接受非法 warmup policy 'ASYNC'，alter 路径同值 1100）",
+      "secondary_observations": [
+        "E warmup=SYNC released: {\"code\":1100,\"message\":\"invalid warmup value for key warmup.vectorIndex: invalid warmup policy: SYNC, must be 'disable' or 'sync': invalid parameter\"}（alter 路径强校验对照）",
+        "E2 warmup=sync released: {\"code\":0,\"data\":{}}（合法值通过）",
+        "A/B/C loaded 态 alter warmup/mmap => code:104 'can not alter warmup properties if collection loaded'（符合 state alter_properties_001）",
+        "D ttl on loaded => {\"code\":0,\"data\":{}}（ttl 不受 loaded 限制，符合预期）",
+        "loadState: LoadStateLoaded（前置确认）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "create 接受非法值 HTTP 200 + code:0；alter 路径同类非法值 HTTP 200 + code:1100"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/state_alter_props_loaded_003.py", "vein_scripts/vein_warmup_bare_key_001.py（C create warmup.vectorIndex=ASYNC: {\"code\":0,\"data\":{}}）"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_collections_create_007",
+      "assertion_text_quoted": "warmup.{scalarField|scalarIndex|vectorField|vectorIndex} value NOT IN {disable, sync} => code==1100 (source: pkg/common/common.go)",
+      "api_violates_assertion": true,
+      "note": "观测值 ASYNC NOT IN {disable,sync} 且端点为 collections+create、key 为 warmup.vectorIndex、返回 code:0 而非 1100——值确在约束域内且被接受，violates=true 成立（对照 semantic 自检：主观测为非法值静默接受，与 must 断言矛盾，二值明确）。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:create_007 要求 warmup.vectorIndex 非法值 => 1100",
+        "doc:common.go ValidateWarmupPolicy 值域 {disable,sync}",
+        "script:create 传 warmup.vectorIndex=ASYNC",
+        "log:{\"code\":0,\"data\":{}}（未拒绝）"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "log 层与契约断言矛盾：create 路径返回 code:0，而 constraint 预期 1100。根源为 create 路径未调用 ValidateWarmupPolicy（task.go:459-468 校验只在 alter 链生效）",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["ValidateWarmupPolicy", "hasWarmupProp", "IsCollectionWarmupKey", "isCollectionLoaded"],
+      "files_examined": [
+        "pkg/common/common.go",
+        "internal/proxy/task.go",
+        "internal/proxy/util.go"
+      ],
+      "source_excerpt": "internal/proxy/task.go:459-468（alter 路径，create 时未执行）:\n\t// Validate warmup policy for all warmup keys\n\tif hasWarmupProp(t.GetProperties()...) {\n\t\tfor _, prop := range t.GetProperties() {\n\t\t\tif common.IsFieldWarmupKey(prop.GetKey()) {\n\t\t\t\treturn merr.WrapErrParameterInvalidMsg(\"warmup key '%s' is only allowed at field level, use warmup.scalarField/warmup.scalarIndex/warmup.vectorField/warmup.vectorIndex at collection level\", prop.GetKey())\n\t\t\t}\n\t\t\tif common.IsCollectionWarmupKey(prop.GetKey()) {\n\t\t\t\tif err := common.ValidateWarmupPolicy(prop.GetValue()); err != nil {\n\t\t\t\t\treturn merr.WrapErrParameterInvalidMsg(\"invalid warmup value for key %s: %s\", prop.GetKey(), err.Error())\n\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\npkg/common/common.go:357-362:\nfunc ValidateWarmupPolicy(value string) error {\n\tif value != WarmupDisable && value != WarmupSync {\n\t\treturn fmt.Errorf(\"invalid warmup policy: %s, must be '%s' or '%s'\", value, WarmupDisable, WarmupSync)\n\t}\n\treturn nil\n}",
+      "call_chain_traced": "ValidateWarmupPolicy 定义于 common.go:357；调用方共 7 处：proxy/task.go:466(alter create-collection-task 之外的 alter task)、1359(alter 集合 props)、1632(field 级 alter)；proxy/util.go:635/694/709(fillFieldInfo 从 TypeParams 提取 warmup 时校验——field 级)；indexparamcheck/index_type.go:108(index 参数路径)。create 请求的 collection 级 properties(warmup.vectorIndex) 未经过以上任何调用点 → ASYNC 在 create 被放行。field 级裸 warmup 在 create 也有 task.go:459 段拦（'only allowed at field level' 文案反向：collection 级出现 field key 时拦），与 vein D 对照(field vec warmup=BOGUS create 即 1100)一致。",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "create/alter 校验不对称（alter 有 ValidateWarmupPolicy、create 无）——无平凡解释可覆盖 E/F 对照组"
+    }
+  }
+}

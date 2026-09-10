@@ -1,0 +1,92 @@
+{
+  "defect_id": "vein_type_mismatch_points_count_2",
+  "endpoint": "POST /collections/{collection_name}/points/count (exact=false, filter.must[].match.value type-mismatched vs field index schema)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "WebFetch 两个文档域(api.qdrant.tech, qdrant.tech)均被网络策略拦截 -> domain_blocked（不视为 FAIL）。本地缓存 raw_knowledge.md（契约上游，版本匹配 1.18.x）证实：(1) Count Points 端点参数 filter + exact(boolean, default true)；(2) 源码 doc comment（lib/shard/src/count.rs CountRequestInternal）：exact=false = 'count approximate number of points faster'，'Approximate count might be unreliable during the indexing process'（仅豁免索引期）；(3) filtering 文档 Match oneOf value (string|int64|bool)——契约允许任意标量类型，未规定跨类型 mismatch 时 approximate 路径行为。版本匹配 PASS（1.18.x == 1.18.0）。内容一致性 PARTIAL：文档无条款授权类型不匹配时返回 ~N/2 常数估计；claim 本质是 approximate 路径对永不可能命中的 filter 返回结构性错误值而非 0。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "num match '50' (str): exact=0 approx=100 （integer 索引字段 num 以字符串 '50' match：exact 路径与 scroll 均为 0，approximate 返回 100 = N/2）",
+      "secondary_observations": [
+        "num match true (bool): exact=0 approx=100 （bool 值对 integer 索引：同模式）",
+        "cat match 5 (int): exact=0 approx=100 （int 值对 keyword 索引：同模式，反向交叉验证）",
+        "CONTROL num match 50 (int): exact=4 approx=4 （同类型对照组两路径一致，排除索引未建/优化中/时序等环境因素）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "请求格式合法（match.value 是契约允许的 string|int|bool 标量），API 返回 HTTP 200 正常 count 值；争议在 approximate 路径返回与 exact/scroll 矛盾的业务值 100（应为 0），非 HTTP 语义问题。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "reproducibility_note": "同一脚本内 3 个独立类型错配方向（str->int, bool->int, int->keyword）全部命中 exact=0/approx=N/2 同模式，对照组排除环境解释；Grep 其余 output_*.log 未发现其他脚本触发本端点同现象（其余 vein 候选覆盖 compound_or/geo/null_check/range_filter），按脚本内多方向稳定复现记 grade B。",
+      "script_error": false,
+      "triggering_scripts": ["vein_type_mismatch_points_count_2"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_count_001",
+      "assertion_text_quoted": "count with exact=true gives exact count; 200 {count}; 404 collection missing (category: HTTP 200 {count}; source_url: https://api.qdrant.tech/v-1-18-x/api-reference/points/count-points)",
+      "api_violates_assertion": true,
+      "note": "候选无 constraint_id（机械提取为空），按端点回查落此断言。violates=True 理由：契约/源码文档定义 exact=false 为同语义更快近似路径，且 Match value 契约域 string|int64|bool 为合法输入；观测中 exact=0 且 scroll=0 而 approximate=100=N/2，approximate 对合法输入返回与 exact 语义结构性矛盾的非保守估计，且无文档豁免条款（'unreliable during indexing' 不适用——对照组证明索引已建且静默）。观测参数在引用断言约束域内（points+count filter/exact）。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_count_001 (points+count exact 语义; structured_contract.json assertions)",
+        "doc: api.qdrant.tech/v-1-18-x/api-reference/points/count-points + lib/shard/src/count.rs CountRequestInternal doc comment（exact=false = approximate faster count）+ filtering docs Match oneOf value string|int64|bool —— WebFetch 域被拦截(domain_blocked)，以本地 raw_knowledge.md(1.18.x) + 源码 doc comment 替代佐证",
+        "script: vein_scripts/vein_type_mismatch_points_count_2.py —— 200 点(num randint 0-100 / cat abc) + integer/keyword 索引，POST points/count 三种类型错配 exact 双路径 + scroll 交叉 + 同类型对照",
+        "log: output_vein_type_mismatch_points_count_2.log —— 三行 exact=0 approx=100 + CONTROL exact=4 approx=4 -> VERDICT: DEFECT_FOUND"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "note": "四环齐全一致：契约定义 count exact 语义 -> 文档/源码注释确认 approximate 为同语义近似 -> 脚本以契约允许的标量类型发起 -> log 显示 approximate 返回 N/2 与 exact=0 矛盾。削弱环节仅 doc 的 domain_blocked，已补强未断链。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "estimate_cardinality (lib/)",
+        "fn estimate_cardinality (lib/segment/src/index/field_index/map_index/mod.rs)",
+        "fn unknown (lib/segment/src/index/field_index/mod.rs)",
+        "fn match_cardinality (lib/segment/src/index/field_index/map_index/mod.rs)",
+        "estimate_cardinality / cardinality.exp (lib/collection/src/shards/local_shard/shard_ops.rs)",
+        "CountRequestInternal exact (lib/shard/src/count.rs)"
+      ],
+      "files_examined": [
+        "lib/shard/src/count.rs (CountRequestInternal exact 语义注释)",
+        "lib/collection/src/shards/local_shard/shard_ops.rs L379-387 (fn count: exact=false -> estimate_cardinality().map(|c| c.exp))",
+        "lib/segment/src/index/struct_payload_index.rs L390-455 (condition_cardinality: Condition::Field -> estimate_field_condition(...).unwrap_or_else(|| CardinalityEstimation::unknown(available)))",
+        "lib/segment/src/index/field_index/mod.rs L68-96 (CardinalityEstimation: exact(count), unknown(total)={min:0, exp:total/2, max:total})",
+        "lib/segment/src/index/field_index/map_index/mod.rs L789-805 (keyword MapIndex estimate_cardinality: Integer/Bool 变体 return None)",
+        "lib/segment/src/index/field_index/map_index/mod.rs L1142-1158 (numeric MapIndex estimate_cardinality: String/Bool 变体 return None)",
+        "lib/segment/src/index/field_index/map_index/mod.rs L300-308 (match_cardinality: get_count_for_value miss -> unwrap_or(0) -> exact(0))"
+      ],
+      "source_excerpt": "// lib/segment/src/index/field_index/map_index/mod.rs:794-805 (keyword MapIndex)\nOk(match &condition.r#match {\n    Some(Match::Value(MatchValue { value })) => match value {\n        ValueVariants::String(keyword) => { /* match_cardinality -> exact(count) */ }\n        ValueVariants::Integer(_) => None,   // <-- int match on keyword index: no estimation\n        ValueVariants::Bool(_) => None,      // <-- bool match on keyword index: no estimation\n    }, ...\n\n// lib/segment/src/index/field_index/mod.rs:82-96\npub const fn unknown(total: usize) -> Self {\n    CardinalityEstimation { primary_clauses: vec![], min: 0, exp: total / 2, max: total }  // <-- N/2\n}\n\n// lib/segment/src/index/struct_payload_index.rs:445-448 (condition_cardinality)\nCondition::Field(field_condition) => self\n    .estimate_field_condition(field_condition, nested_path, hw_counter)?\n    .unwrap_or_else(|| CardinalityEstimation::unknown(self.available_point_count())),\n\n// lib/collection/src/shards/local_shard/shard_ops.rs:384-387 (count, exact=false)\nself.estimate_cardinality(request.filter.as_ref(), &hw_measurement_acc).await\n    .map(|cardinality| cardinality.exp)   // <-- returned directly as count",
+      "call_chain_traced": "POST points/count(exact=false) -> LocalShard::count (shard_ops.rs L384) -> estimate_cardinality -> struct_payload_index.rs condition_cardinality L445 Condition::Field -> estimate_field_condition -> map_index estimate_cardinality L789/L1142：当 match.value JSON 类型与索引 map 泛型 N 不符（int/bool on keyword map；str/bool on numeric map）返回 Ok(None) -> 上层 unwrap_or_else(CardinalityEstimation::unknown(available))，unknown.exp = total/2 -> shard_ops 取 .exp 直接作为 count 返回。对照：exact 路径走 payload query_checker 真值匹配返回 0；同类型匹配走 match_cardinality -> exact(get_count_for_value)。观测值 100 = 200/2 精确吻合，机制闭环。",
+      "verification_outcome": "validation_absent",
+      "verification_detail": "类型不匹配的 match 值在 approximate 估计路径无任何类型检查或显式 0 估计（map_index estimate_cardinality 对非-本类型变体直接 None），调用链无兜底校验；None 被 unknown(total).exp=total/2 静默替换并直接作为 count 返回。非 by_design：源码无注释/文档条款授权类型不匹配时返回半总量；文档仅豁免 indexing 期（对照组排除）。同文件同模式存在保守 0 估计先例（match_cardinality miss 的 unwrap_or(0)），说明精确 0 是邻近可行实现——此处类型分派缺防御导致信息丢失。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "indexing-in-progress（CONTROL exact=4 approx=4 一致 + time.sleep(8) + indexing_threshold=1 已建索引；'unreliable during indexing' 条款不适用）",
+        "environment（exit_code=0，无 REQUEST_ERROR/JSON_DECODE_ERROR，HTTP 全 200）",
+        "concurrency race（单线程顺序请求，无并发写）",
+        "cache delay（同轮 exact 路径已返回正确 0，scroll 交叉验证 0）",
+        "request typo（三组错配方向独立构造，源码机制链完全解释 N/2）"
+      ],
+      "surviving": null,
+      "note": "潜在抗辩：approximate 本是估计值不保证准确。但 unknown().exp=total/2 是与 filter 内容完全无关的常数替换——对永不可能命中的 filter 返回半总量属结构性错误而非估计误差，且与 exact/scroll 行为分裂。此抗辩留给 chain-auditor 终判，如实记录。"
+    }
+  }
+}

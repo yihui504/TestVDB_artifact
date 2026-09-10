@@ -1,0 +1,88 @@
+{
+  "defect_id": "state_collections_delete_003",
+  "endpoint": "collections+delete (verdict-triggering probe: POST /collections/{name}/points/get — points batch-get extension)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "FAIL",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS: behavioral-contract source_url https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection fetched (v1.18.x page; built-in WebFetch was domain_blocked, content obtained via alternate web reader). Version PASS: both doc pages are v1.18.x, matching target v1.18.0. Content PARTIAL: delete-collection page says 'Drops the specified collection and all associated data in it.' (scope limited to the named collection), but the behavioral contract's expected_behavior 'other collection count unchanged' is a derived isolation inference, not verbatim doc text. Endpoint precision FAIL for the operative request: the script's batch-get path /collections/{name}/points/get exists in NO documented API (v1.18.x 'Retrieve points' = POST /collections/:collection_name/points, full API nav checked); contract endpoint_registry entry points+get -> get-points doc page -> POST /collections/{name}/points; source route table has no /points/get route. sdk_rest_confusion=false: the path matches no documented REST or SDK surface; it appears to be a script-invented path.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "batch get B: 404  [empty body — no JSON envelope, no time field] (output_state_collections_delete_003.log:14) -> VERDICT: DEFECT_FOUND (Type3_RuntimeFailure) — batch get B returned 404: [claim body also empty] (log:15). Request construction: debate_logs/state_collections_delete_003.py:122-126 POST /collections/st_cdel_iso_b_1787505187/points/get with {\"ids\":[0..5],\"with_payload\":true}; verdict fired from the script's st!=200 catch-all branch (py:125-126), not from any 5xx observation.",
+      "secondary_observations": [
+        "log:9 delete A: 200 {\"result\":true,...} — compliant with qdrant_state_collections_delete_001 (DELETE existing => 200)",
+        "log:10 get A after delete: 404 {\"status\":{\"error\":\"Not found: Collection `st_cdel_iso_a_1787505187` doesn't exist!\"},\"time\":...} — compliant (inv_collection_gone_after_delete_001); note this REAL handler 404 carries a JSON body, unlike the verdict-triggering empty-body 404",
+        "log:11 count[A]: 404 {JSON body} — compliant (deleted collection)",
+        "log:12-13 count[B]: 200 {\"count\":6} twice — behavioral contract's sibling-count clause SATISFIED both rounds; B was alive milliseconds before the 404",
+        "log:7-8 count[A]=6, count[B]=6 pre-delete — inv_count_after_upsert_001 SATISFIED",
+        "contrast case output_state_collections_delete_001.log: 'probe point_get: 404 {\"status\":{\"error\":\"Not found: ... doesn't exist!\"}}' — genuine handler 404s on this instance always carry JSON bodies"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The (invalid) request was rejected outright with 404 — actix-web framework-level response with EMPTY body for a path/method combination no registered handler accepts; qdrant handler-level errors always carry the JSON envelope {\"status\":{\"error\":...},\"time\":...} (helpers.rs:91-117). At most a diagnostics-quality gap (no JSON error for unmatched routes), not an illegal-accept."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_collections_delete_003"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "(dispatch constraint_id empty; recovered from script header) qdrant_bc_collection_delete_isolation_001",
+      "assertion_text_quoted": "behavioral contract qdrant_bc_collection_delete_isolation_001 — description: \"deleting a collection removes its points; other collections unaffected\"; expected_behavior: \"deleted collection GET => 404; other collection count unchanged\"",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "violates=false because the observation (404 on POST /points/get) is outside this assertion's constraint domain (assertion constrains GET-on-deleted-collection and sibling count), and both clauses of the assertion were in fact satisfied by observed behavior (GET A -> 404 at log:10; sibling B count unchanged 6/6 at log:12-13). The DEFECT verdict originated from a script-side extension check (batch get) issued to an endpoint that does not exist in the v1.18.0 API surface — no assertion in the contract covers that endpoint, and no assertion was violated."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: candidates.jsonl entry for state_collections_delete_003 has constraint_id=\"\" (mechanical extraction dropped it); script header (debate_logs/state_collections_delete_003.py:4-8) declares attack qdrant_bc_collection_delete_isolation_001 + constraint_ids qdrant_state_collections_delete_001 / qdrant_inv_count_after_upsert_001 / qdrant_inv_collection_gone_after_delete_001 — all present in results/qdrant/v1.18.0/structured_contract.json (behavioral_contracts[0], state_constraints, state_invariants)",
+        "doc: delete-collection page (v1.18.x) documents scoped deletion; get-points page documents batch-get as POST /collections/:collection_name/points — the script's /points/get appears in no documentation",
+        "script: raw request = POST http://localhost:6333/collections/st_cdel_iso_b_1787505187/points/get (py:122) — path matches NO route registered in qdrant v1.18.0 source; the correct registered equivalent is POST /collections/{name}/points (retrieve_api.rs:125)",
+        "log: raw 404 empty-body response faithfully logged (log:14); Type3 label emitted by script catch-all branch (py:125-126) on st!=200, although no 5xx was observed"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The verdict-triggering request targets an unregistered endpoint: /collections/{name}/points/get has zero occurrences in the qdrant v1.18.0 tree (repo-wide grep across rs/json/yaml/toml) and zero occurrences in the v1.18.x API reference; the complete actix route table (src/actix, 33 routes under /collections) contains POST /collections/{collection_name}/points (batch get, retrieve_api.rs:125) but nothing at /points/get. The empty-body 404 is therefore the HTTP framework's response for an unhandled path/method combination (app registers no default_service override, src/actix/mod.rs:113-178), not target behavior on the documented API surface. The documented endpoint was never exercised, and every assertion-relevant observation in the same log (A gone with JSON 404, B count unchanged) was compliant. Chain intact from contract->doc, broken at script (invalid request), log layer faithfully recorded what the invalid request returned.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "points/get (repo-wide, *.rs/*.json/*.yaml/*.toml — 0 hits)",
+        "get_points|points_get (lib/api — only grpc proto/qdrant.rs; REST handler in src/actix/api/retrieve_api.rs)",
+        "#(get|post|put|delete|patch)(\"/collections... route enumeration across src/actix (33 /collections routes extracted)",
+        "doesn't exist (lib/storage/src/content_manager/collections_ops.rs:28 — the JSON 404 error string origin)",
+        "MethodNotAllowed|405 (src/actix — 0 hits; no custom method-mismatch handling)"
+      ],
+      "files_examined": [
+        "src/actix/api/retrieve_api.rs (full, 239 lines)",
+        "src/actix/helpers.rs (full, 280 lines)",
+        "src/actix/mod.rs (lines 1-250: app construction, service registration)",
+        "src/actix/api/count_api.rs (route line 16)",
+        "lib/storage/src/content_manager/collections_ops.rs (line 28 vicinity)",
+        "route table across 15 src/actix/api/*.rs files (collections/count/query/recommend/search/update/snapshot/shards/vector_name/discover/facet/local_shard/service/cluster/debug)"
+      ],
+      "source_excerpt": "# src/actix/api/retrieve_api.rs:125-133 + 164-183 (v1.18.0) — the REAL batch-get endpoint:\n#[post(\"/collections/{collection_name}/points\")]           # <- POST /points, NOT /points/get\nasync fn get_points(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    request: Json<PointRequest>,                              # PointRequest{point_request{ids, with_payload, with_vector}, shard_key}\n    params: Query<ReadParams>,\n    ...\n    let res = do_get_points(\n        dispatcher.toc(&auth, &pass),\n        &collection.collection_name,\n        point_request, ... )\n    .await;\n    process_response(res, timing, request_hw_counter.to_rest_api())\n\n# src/actix/mod.rs:167-172 — registration order (no .default_service override anywhere in App builder, lines 113-178):\n    // Ordering of services is important for correct path pattern matching\n    // See: <https://github.com/qdrant/qdrant/issues/3543>\n    .service(scroll_points)\n    .service(count_points)\n    .service(get_point)      # GET /collections/{collection_name}/points/{id}\n    .service(get_points);    # POST /collections/{collection_name}/points\n\n# src/actix/helpers.rs:91-117 — EVERY handler error carries a JSON envelope (so an empty-body 404 cannot come from a qdrant handler):\n    let error = HttpError::from(err);\n    let http_code = error.status_code();\n    let json_body = ApiResponse::<()> { result: None, status: ApiStatus::Error(error.to_string()), time: ..., usage: ... };\n    let mut response_builder = HttpResponse::build(http_code);\n    ... response_builder.json(json_body)\n# helpers.rs:246: StorageError::NotFound { .. } => http::StatusCode::NOT_FOUND  (matches the JSON 404s in log lines 10-11)\n\n# lib/storage/src/content_manager/collections_ops.rs:28 — origin of the JSON 'doesn't exist!' 404 body seen in compliant probes",
+      "call_chain_traced": "Route registration (mod.rs .service(get_points) / configure()) -> get_points handler (retrieve_api.rs:125) -> do_get_points (src/common/query.rs) -> dispatcher.toc().retrieve; error path: any StorageError -> process_response_error -> HttpResponse::build(status).json(envelope) (helpers.rs:91-125). For the request the script actually sent (POST .../points/get): no route matches that path+method in the registered table -> falls through to actix-web 4.13.0 framework default (qdrant sets no default_service) -> 404 with empty body, exactly what the log shows.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "sufficiency_note": "Claim keyword 'points/get' grepped repo-wide: 0 hits — zero-hit query documented. 'get_points' hits pursued: retrieve_api.rs read in full (handler + route confirmed). Route table enumerated exhaustively (33 /collections routes). Zero validations exist to find because the failure is not in validation logic: the requested route simply is not part of the v1.18.0 API surface, and the framework 404 for unhandled routes is by-design behavior.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env: server was alive and serving collection B through a registered route immediately before the 404 (count 200 {count:6} twice, log:12-13); a real outage would yield connection errors / status 0, cf. three sibling scripts' 'WinError 10061 connection refused' logs (output_boundary_collections_create_16.log etc.) which failed at their own run times, not this one",
+        "concurrency: script is strictly sequential; no concurrent writers; delete of A and get on B share no state that could race",
+        "cache_delay: no cache semantics involved in point retrieval"
+      ],
+      "surviving": "script_requested_unregistered_endpoint: POST /collections/{name}/points/get targets a path absent from the entire v1.18.0 REST surface (0 hits repo-wide in source; absent from v1.18.x API reference; contract registry points+get maps to POST /collections/{name}/points). The empty-body 404 is the actix-web framework's by-design response for an unhandled route; the documented batch-get endpoint was never exercised and would very likely have returned 200 with 6 points (B was alive, count=6 verified twice milliseconds earlier). This explanation accounts for the entire observed phenomenon."
+    }
+  }
+}

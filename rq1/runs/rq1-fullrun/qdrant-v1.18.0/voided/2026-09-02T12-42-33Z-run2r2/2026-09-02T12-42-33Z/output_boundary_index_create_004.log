@@ -1,0 +1,22 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[control full valid body] PUT index m_ctrl -> status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.325733292}
+OK(control): valid full body accepted and persisted
+[probe field_schema absent] body={"field_name": "m_no_schema"} -> status=400 raw={"status":{"error":"Bad request: Can't auto-detect field type, please specify `field_schema` in the request"},"time":0.000029836}
+  OK(reject): 'field_schema absent' -> 400 (required-path 400 face)
+[probe field_schema null] body={"field_name": "m_null_schema", "field_schema": null} -> status=400 raw={"status":{"error":"Bad request: Can't auto-detect field type, please specify `field_schema` in the request"},"time":9.223e-6}
+  OK(reject): 'field_schema null' -> 400 (required-path 400 face)
+[probe field_schema {} (type path absent)] body={"field_name": "m_empty_obj", "field_schema": {}} -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 49"},"time":0.0}
+  OK(reject): 'field_schema {} (type path absent)' -> 400 (required-path 400 face)
+[probe field_schema [] (array shape)] body={"field_name": "m_arr_schema", "field_schema": []} -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 50"},"time":0.0}
+  OK(reject): 'field_schema [] (array shape)' -> 400 (required-path 400 face)
+[probe field_name absent] body={"field_schema": {"type": "keyword"}} -> status=400 raw={"status":{"error":"Format error in JSON body: missing field `field_name` at line 1 column 37"},"time":0.0}
+  OK(reject): 'field_name absent' -> 400 (required-path 400 face)
+[probe field_name null] body={"field_name": null, "field_schema": {"type": "keyword"}} -> status=400 raw={"status":{"error":"Format error in JSON body: invalid type: null, expected a string at line 1 column 19"},"time":0.0}
+  OK(reject): 'field_name null' -> 400 (required-path 400 face)
+[probe field_name '' (empty string)] body={"field_name": "", "field_schema": {"type": "keyword"}} -> status=400 raw={"status":{"error":"Format error in JSON body: Invalid json path: '' at line 1 column 17"},"time":0.0}
+  OK(reject): 'field_name '' (empty string)' -> 400 (required-path 400 face)
+[probe field_name 123 (wrong type)] body={"field_name": 123, "field_schema": {"type": "keyword"}} -> status=400 raw={"status":{"error":"Format error in JSON body: invalid type: integer `123`, expected a string at line 1 column 18"},"time":0.0}
+  OK(reject): 'field_name 123 (wrong type)' -> 400 (required-path 400 face)
+OK: control persisted; all 8 required-path/shape violations rejected 400/422
+VERDICT: NO_DEFECT

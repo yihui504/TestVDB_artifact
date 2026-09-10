@@ -1,0 +1,66 @@
+{
+ "defect_id": "semantic_efrecall_06",
+ "endpoint": "entities+search",
+ "defect_type": "Type1",
+ "built_by": "evidence-builder",
+ "steps": {
+  "doc_verification": {
+   "result": "DOC_VERIFIED",
+   "link_reachability": "PASS",
+   "version_match": "PASS",
+   "content_consistency": "PASS",
+   "endpoint_precision": "PASS",
+   "sdk_rest_confusion": false,
+   "detail": "契约参数 searchParams.ef 条目自带 evidence_tier=verified：'REST 层不校验由 segcore/index 层消费；generateSearchParams 透传设计 utils.go:2076-2125'——契约明示透传语义，实测与其一致",
+   "evidence_source": "doc"
+  },
+  "execution_evidence": {
+   "grade": "B",
+   "log_pattern": "bad ef='64' -> HTTP=200 code=0 raw={\"code\":0,\"cost\":0,\"data\":[{\"distance\":0,\"id\":1},{\"id\":47},...],\"topks\":[5]}（字符串 ef 静默接受，结果与 int ef 同）",
+   "secondary_observations": [
+    "ef=128 top5: [1, 47, 169, 160, 103] code=0（合法对照 PASS）",
+    "ef=16 top5: [1, 47, 169, 160, 103] code=0（与 ef=128 同序——201 条数据小集合下 ef 不敏感，recall 单调性对照不可区分）",
+    "ef=-1 case 未在 log 中出现（脚本在 '64' 命中后 sys.exit(1)，-1 分支未执行）"
+   ],
+   "claim_alignment": "aligned",
+   "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "非法类型 ef 以 200+code:0 静默接受并强转；无任何告警"},
+   "reproducibility": "单脚本",
+   "script_error": false,
+   "triggering_scripts": ["debate_logs/semantic_efrecall_06.py"],
+   "evidence_source": "behavior"
+  },
+  "contract_grounding": {
+   "constraint_id": "searchParams.ef (api_endpoints[entities+search].parameters, verified tier)",
+   "assertion_text_quoted": "HNSW 查询 ef（searchParams 透传键，REST 层不校验由 segcore/index 层消费；generateSearchParams 透传设计 utils.go:2076-2125）",
+   "api_violates_assertion": false,
+   "note": "契约自身断言'REST 层不校验'——字符串 ef='64' 被接受与契约明示的透传设计一致（violates=False）。观测的 exact-match 语义面（强转 ef）是契约未承诺的诊断性/类型严格性问题，属 judge 语义层",
+   "evidence_source": "doc"
+  },
+  "chain_trace": {
+   "chain_links": [
+    "contract: searchParams.ef verified 透传条目",
+    "doc: utils.go generateSearchParams L2076-2125（注释 'after 2.5.2, all parameters of search_params can be written into one layer'）",
+    "script: semantic_efrecall_06.py L81-88 searchParams:{\"ef\": \"64\"}",
+    "log: bad ef='64' -> code=0"
+   ],
+   "chain_broken_at": null,
+   "break_detail": null,
+   "evidence_source": "doc+behavior"
+  },
+  "source_grounding": {
+   "grep_queries": ["generateSearchParams", "\"ef\"", "deepEqual", "json.Marshal(paramsMap)"],
+   "files_examined": [
+    "internal/distributed/proxy/httpserver/utils.go (generateSearchParams L2076-2125)",
+    "internal/core/src/query/PlanProto.cpp (search_params JSON 透传 L63-70)"
+   ],
+   "source_excerpt": "utils.go generateSearchParams L2115-2126:\n\tbs, _ := json.Marshal(paramsMap)\n\tsearchParams = append(searchParams, &commonpb.KeyValuePair{Key: Params, Value: string(bs)})\n\tfor key, value := range reqSearchParams {\n\t\tif key != Params { ... searchParams = append(searchParams, &commonpb.KeyValuePair{Key: key, Value: fmt.Sprintf(\"%v\", value)}) }\n\t}\n—— 任意 searchParams 键值以 fmt.Sprintf(\"%v\") 字符串化透传（\"64\" 与 64 同样变成 \"64\"），无类型/schema 校验；下游 PlanProto.cpp L63-70 nlohmann::json::parse(search_params) 后交 knowhere（thirdparty，非 Go 侧可验）。REST 层无 ef 类型校验是注释自证的兼容设计。",
+   "call_chain_traced": "HTTP search -> generateSearchParams: ef 字符串化 -> kvp(Params, {\"ef\":\"64\"}) + kvp(ef,\"64\") -> proxy -> PlanProto search_params_ json -> knowhere HNSW（字符串'64'由 knowhere 配置解析层强转）",
+   "verification_outcome": "by_design_in_source",
+   "evidence_source": "source"
+  },
+  "mundane_explanation": {
+   "excluded": ["env", "concurrency", "request_typo"],
+   "surviving": null
+  }
+ }
+}

@@ -1,0 +1,54 @@
+{
+  "defect_id": "semantic_error_diag_1",
+  "endpoint": "collections+drop (vs describe/has/get_stats/search/insert/load)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraint state_collections_describe_001 (nonexistent collection => code 100) matches describe/get_stats/search/insert/load observations verbatim; state_collections_drop_001 only says drop succeeds from any load state (silent on nonexistent). Contract has no line demanding drop return 100 - the 5-vs-1 inconsistency is synthesis-level (error_diag_quality).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "drop nonexistent                           http=200 code=0 msg=None ... DEFECT: ('drop nonexistent: code 0 expected 100', '')",
+      "secondary_observations": ["describe nonexistent http=200 code=100 'can't find collection[database=default][collection=no_such]'", "has nonexistent (expect has:false) http=200 code=0 msg=None - has returns false-ish success (contract-consistent probe)", "get_stats/search/insert/load all code=100 collection not found", "create dbName nonexistent code=800; search bad consistencyLevel code=1100; insert wrong dim code=1804; index describe 700; alias alter 1600; malformed json 1801; missing param 1802 - all other error-diag cells well-formed"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "every error in the matrix is HTTP 200 + business code; drop is the sole cell with NO error at all (code 0) for a client-referencing-nonexistent-target"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["semantic_error_diag_1", "vein_dbname_cross_endpoint_1 (db-level analog, same code 0)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_state_collections_describe_001",
+      "assertion_text_quoted": "NOT exists(collection) AND describe => code==100 ... (coupled reference milvus_state_collections_drop_001: 'drop succeeds from any load state')",
+      "api_violates_assertion": false,
+      "note": "no quoted constraint demands drop(nonexistent) => 100; the quoted describe assertion behaved correctly. violates=false against quoted text - the claim rests on cross-endpoint error-diag uniformity (5 siblings 100, drop 0), a contract-gap synthesis. Recorded for auditor.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:describe_001 code 100 family (describe/get_stats/search/insert/load confirmed)", "doc:drop_collection_task.go:54-55 ErrCollectionNotFound -> errIgnoredDropCollection; root_coord.go:959-962 -> merr.Success()", "script:semantic_error_diag_1.py 14-cell error-diag matrix incl. drop nonexistent", "log:5 cells code 100, drop code 0, DEFECT recorded"],
+      "chain_broken_at": "doc",
+      "break_detail": "same as vein_dbname: no drop-specific contract line; defect claim rests on consistency synthesis + source-confirmed deliberate ignore.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["errIgnoredDropCollection (3 sites)", "ErrCollectionNotFound drop path", "has nonexistent (proxy has path returns success+false)"],
+      "files_examined": ["internal/rootcoord/drop_collection_task.go:42-58", "internal/rootcoord/root_coord.go:950-967", "internal/rootcoord/meta_table.go:58"],
+      "source_excerpt": "drop_collection_task.go:53-57: if err != nil { if errors.Is(err, merr.ErrCollectionNotFound) || errors.Is(err, merr.ErrDatabaseNotFound) { return errIgnoredDropCollection } return err }; root_coord.go:959-962 converts it to merr.Success(). Identical root cause as vein_dbname_cross_endpoint_1 (collection-level instead of db-level). Contrast: describe/get_stats/search/insert/load paths propagate merr.ErrCollectionNotFound as code 100.",
+      "call_chain_traced": "drop(nonexistent coll) -> validate -> GetCollectionByName ErrCollectionNotFound -> errIgnoredDropCollection -> Success code 0",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (5 sibling 100s same server)", "typo (same collection name across cells)"],
+      "surviving": "strong by-design (idempotent drop, explicit source intent); surviving surface is error-diag quality only: caller cannot distinguish 'dropped' from 'never existed' (contrast: has endpoint returns has:false informatively)"
+    },
+    "evidence_weight": "high factual (14-cell matrix + explicit source); FOR DEFECT low-to-medium (by-design, Type2 diagnostics framing)"
+  }
+}

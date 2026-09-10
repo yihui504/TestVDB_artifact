@@ -1,0 +1,14 @@
+{
+ "defect_id": "boundary_index_create_009",
+ "endpoint": "index+create",
+ "param": null,
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "strategy1_behavioral_triangle",
+ "constraint_ids": [
+  "qdrant_behavioral_index_create_001"
+ ],
+ "oracle": {
+  "statement": "FACE 200: valid keyword index returns 200 with the field key present in readback result.payload_schema (200 without key = Type4_StateLogicViolation; envelope object-form {status: string, operation_id: int|null} asserted softly, boolean-result divergence = R9 measured-only note); FACE 400: {type: bogus} returns 400/422 with non-empty diagnostics (empty body = Type2_PoorDiagnostics; 2xx = Type1_IllegalSuccess); FACE 404: identical valid body on a missing collection returns 404 exactly (200 = Type1, 400 = Type4 face-split violation; 5xx = Type3 with /healthz re-check); post: missing collection still 404, healthz 200",
+  "source": "docstring"
+ }
+}

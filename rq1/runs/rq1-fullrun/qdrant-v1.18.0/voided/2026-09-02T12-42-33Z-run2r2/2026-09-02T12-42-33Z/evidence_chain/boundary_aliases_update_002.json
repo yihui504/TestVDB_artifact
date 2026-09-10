@@ -1,0 +1,98 @@
+{
+  "defect_id": "boundary_aliases_update_002",
+  "endpoint": "aliases+update (POST /collections/aliases)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar existed anywhere in the tree, so live fetch was attempted; WebFetch was blocked twice at the domain-safety layer (api.qdrant.tech, network restriction — domain_blocked event on that channel) and an MCP web-reader fallback channel fetched the page successfully (rendered page + .md version both read), so the URL is verified reachable with full content. Version: page selector and URL both v1.18.x, target v1.18.0 — major.minor matched. Content: the page documents `actions` (required) as 'list of object or object or object' with exactly three single-key variants (CreateAliasOperation/DeleteAliasOperation/RenameAliasOperation, each inner field required) and their single-key cURL examples — the schema face the claim attacks is real; BUT the page prose never states 'exactly one operation key per element', documents only the 200 response (in-tree docs/redoc/v1.18.x/openapi.json adds only a generic default/4XX error bucket, no explicit 400 for malformed shapes), and the cited constraint's 404/500 clauses are not visible in the fetched page prose (they exist in raw_knowledge.json pipeline capture and as the source's runtime 404 check). In-tree formal schema is anyOf (permissive: a multi-key element matches >=1 variant and is formally valid), not oneOf. Endpoint: registry aliases+update = POST /collections/aliases with actions required and response result:boolean — exactly what the script called and observed.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "probe[double-key-element] -> status=200 / raw: {\"result\":true,\"status\":\"ok\",\"time\":0.015951735} (output_boundary_aliases_update_002.log L36-37; payload per script L166-168 was ONE element carrying BOTH keys: {\"create_alias\":{collection_name,alias_name},\"delete_alias\":{alias_name}})",
+      "secondary_observations": [
+        "rest, same-log contrast: probe[unknown-action-key] -> status=400 raw: {\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum AliasOperations at line 1 column 98\"}} (L33-34) — the same enum DOES reject an unknown single key with 400, while a double-VALID-key element passes 200 (first variant wins)",
+        "rest, same-log: probe[actions-empty-array] -> status=200 ... 'OK: empty batch 200 no-op, zero state change' (L21-23) — the oracle pre-accepted empty batch as documented-tolerable",
+        "state effect: 'VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — invalid actions shape [double-key-element] accepted 200 (silently passed serde validation); prefix-owned state now: [\\'bau29c6e20d7y\\']' (L38) — alias bau29c6e20d7y leaked into state: create_alias half applied, delete_alias half of the SAME element silently dropped",
+        "rest, cross-script reproduction: output_semantic_aliases_update_006.log L15 '11 double discriminator create_alias+delete_alias: status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.015827218}' — same endpoint, same double-key pattern, independent script family",
+        "grpc face: live comparison unobtainable in this REST-only sandbox — face_unavailable; in-source proto (lib/api/src/grpc/proto/collections.proto L813-819) defines message AliasOperations { oneof action {...} } so a double-key element is structurally unrepresentable on gRPC (REST/JSON face only)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Strictly stronger than a business error code: the schema-invalid request (element carrying two operation keys) returned HTTP 200 with a SUCCESS envelope {\"result\":true,\"status\":\"ok\"} and a real state mutation — no error signal of any kind; the client's delete_alias instruction was silently discarded."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_aliases_update_002",
+        "semantic_aliases_update_006"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_aliases_update_001",
+      "assertion_text_quoted": "returns 200 ok; 404 on create_alias of a missing collection; 404/500 on delete_alias of an unknown alias",
+      "api_violates_assertion": false,
+      "note": "Violates-declaration self-check applied: the observed phenomenon (200 + result:true on a shape-invalid element) does not contradict the quoted text — after serde untagged first-match deserialization the effective batch was a create_alias on an EXISTING collection, which the assertion's own text says returns 200; no missing-collection create and no unknown-alias delete was involved, so the 404/500 clauses are untouched. The norm the claim actually attacks (element-key exclusivity, oneOf per element) is OUTSIDE this constraint's domain — it is carried by the co-anchored registry face (endpoint_registry aliases+update: parameter type 'array[create_alias|delete_alias|rename_alias]', request_required_paths actions[].{create_alias,delete_alias,rename_alias}), and even that face is formally permissive: in-tree OpenAPI uses anyOf (docs/redoc/v1.18.x/openapi.json L11109) and the published page documents no 400 for this endpoint. Constraint citation should be read as the shape face, not the status-code face. The surviving behavioral hazard for the auditor: half of a client's element-level instructions silently executed, half silently dropped, zero diagnostics.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_aliases_update_001 present (structured_contract.json L7594-7606) plus registry entry aliases+update (L3878-3932: POST /collections/aliases, actions required array[create_alias|delete_alias|rename_alias], request_required_paths for the three variant subtrees)",
+        "doc: source_url https://api.qdrant.tech/v-1-18-x/api-reference/aliases/update-aliases reachable (WebFetch channel domain_blocked x2; MCP web-reader fallback succeeded; rendered page + .md read); version v1.18.x matches v1.18.0; page documents actions as required list of 3 single-key variant objects; CAVEAT: no explicit 'exactly one key per element' prose, only 200 response documented, in-tree schema is anyOf (permissive) — the doc is silent on, not contradictory to, the observed acceptance",
+        "script: debate_logs/boundary_aliases_update_002.py L166-168 sends {\"actions\":[{\"create_alias\":{...},\"delete_alias\":{...}}]} (single double-key element) to POST /collections/aliases, with positive controls and a GET /aliases state check as oracle",
+        "log: output_boundary_aliases_update_002.log L36-38 shows status=200 {\"result\":true} and leaked alias 'bau29c6e20d7y' (create applied, delete dropped); reproduced by output_semantic_aliases_update_006.log L15 — matches the dispatch claim exactly"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "AliasOperations (files_with_matches, whole clone)",
+        "enum AliasOperations (lib/)",
+        "collections/aliases (whole clone)",
+        "update_aliases|ChangeAliasesOperation (src/actix/api/collections_api.rs)",
+        "struct ChangeAliasesOperation|actions: (lib/storage/src/content_manager/collection_meta_ops.rs)",
+        "enum CollectionMetaOperations|ChangeAliases\\( (lib/storage/src/content_manager/collection_meta_ops.rs)",
+        "AliasOperations:: (lib/storage/src/content_manager/toc/)",
+        "Valid<|validate\\( (src/actix/api/collections_api.rs)",
+        "message AliasOperations (lib/api/src/grpc/proto/collections.proto)",
+        "\\\"AliasOperations\\\": \\{ (docs/redoc/v1.18.x/openapi.json)",
+        "def test_|actions|double|create_alias (tests/openapi/test_alias.py)"
+      ],
+      "files_examined": [
+        "lib/storage/src/content_manager/collection_meta_ops.rs",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs",
+        "src/actix/api/collections_api.rs",
+        "lib/api/src/grpc/proto/collections.proto",
+        "docs/redoc/v1.18.x/openapi.json",
+        "openapi/openapi-collections.ytt.yaml",
+        "tests/openapi/test_alias.py"
+      ],
+      "source_excerpt": "// lib/storage/src/content_manager/collection_meta_ops.rs L43-47, L78-86, L347-353\n#[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct CreateAliasOperation {          // no #[serde(deny_unknown_fields)]\n    pub create_alias: CreateAlias,\n}\n...\n/// Group of all the possible operations related to collection aliases\n#[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\n#[serde(untagged)]                          // <- first matching variant wins; extra keys silently dropped\npub enum AliasOperations {\n    CreateAlias(CreateAliasOperation),\n    DeleteAlias(DeleteAliasOperation),\n    RenameAlias(RenameAliasOperation),\n}\n...\n/// Alias changes are atomic, meaning that no collection modifications can happen between\n/// alias operations.\npub struct ChangeAliasesOperation {\n    pub actions: Vec<AliasOperations>,\n}\n\n// src/actix/api/collections_api.rs L180-196\n#[post(\"/collections/aliases\")]\nasync fn update_aliases(\n    dispatcher: web::Data<Dispatcher>,\n    operation: Json<ChangeAliasesOperation>,   // plain actix Json extractor; no Valid<> validator, no .validate() call on this path\n    Query(query): Query<WaitTimeout>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Responder {\n    let response = dispatcher\n        .submit_collection_meta_op(\n            CollectionMetaOperations::ChangeAliases(operation.0), ...)\n        .await;\n    process_response(response, timing, None)\n}\n\n// lib/storage/src/content_manager/toc/collection_meta_ops.rs L299-338 (application loop)\nasync fn update_aliases(&self, operation: ChangeAliasesOperation) -> Result<bool, StorageError> {\n    let collection_lock = self.collections.write().await;\n    let mut alias_lock = self.alias_persistence.write().await;\n    for action in operation.actions {          // elements already deserialized to exactly one variant\n        match action {\n            AliasOperations::CreateAlias(CreateAliasOperation { create_alias: CreateAlias { collection_name, alias_name } }) => {\n                collection_lock.validate_collection_exists(&collection_name)?;   // source of the documented 404\n                collection_lock.validate_collection_not_exists(&alias_name)?;\n                alias_lock.insert(alias_name, collection_name)?;\n            }\n            AliasOperations::DeleteAlias(...) => { alias_lock.remove(&alias_name)?; }\n            AliasOperations::RenameAlias(...) => { alias_lock.rename_alias(&old_alias_name, new_alias_name)?; }\n        };\n    }\n    Ok(true)\n}\n\n// docs/redoc/v1.18.x/openapi.json L11107-11120 (formal schema face)\n\"AliasOperations\": { \"description\": \"Group of all the possible operations related to collection aliases\",\n  \"anyOf\": [ {\"$ref\": \"#/components/schemas/CreateAliasOperation\"}, {\"$ref\": \".../DeleteAliasOperation\"}, {\"$ref\": \".../RenameAliasOperation\"} ] }\n// \"CreateAliasOperation\": { \"type\": \"object\", \"required\": [\"create_alias\"], ... } — no additionalProperties:false\n\n// lib/api/src/grpc/proto/collections.proto L813-819 (gRPC face is structurally exclusive)\nmessage AliasOperations { oneof action { CreateAlias create_alias = 1; RenameAlias rename_alias = 2; DeleteAlias delete_alias = 3; } }",
+      "call_chain_traced": "actix Json<ChangeAliasesOperation> extractor (collections_api.rs:180-196, no validator extractor, no .validate() call) -> serde deserializes actions:Vec<AliasOperations> via #[serde(untagged)] (collection_meta_ops.rs:81): variants tried in declaration order, CreateAlias matches the double-key element first and the sibling delete_alias key is silently discarded (untagged enums cannot carry deny_unknown_fields, and no variant struct sets it either) -> dispatcher.submit_collection_meta_op(CollectionMetaOperations::ChangeAliases) -> toc update_aliases (toc/collection_meta_ops.rs:307-336) iterates the already-deserialized variants: CreateAlias applied (alias_lock.insert:319; validate_collection_exists:316 is the documented 404 check), DeleteAlias arm never runs because the delete instruction never existed post-deserialization. This exactly reproduces the observed state leak (alias bau29c6e20d7y created, delete half dropped, 200 true). The same enum DOES reject unknown keys / wrong types with 400 'data did not match any variant of untagged enum AliasOperations' (log L25-35) — so validation exists for variant *selection* but is absent for variant-key *exclusivity within one element*. gRPC face: proto oneof makes the double-key shape unrepresentable there. tests/openapi/test_alias.py covers alias CRUD ordering only; no test pins multi-key element behavior.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "verification_detail": "No element-key-exclusivity validation exists anywhere on the REST path (handler, deserializer, or apply loop) — that specific validation is absent, which mechanically explains the observation. Two honesty caveats for the auditor: (1) no explicit by-design declaration exists either (no comment/docstring/maintainer citation saying multi-key tolerance is intended — by_design_in_source therefore NOT supportable; the closest comment '*Operation wrapper structure is only required for better OpenAPI generation' L32 concerns wrapper naming, not key exclusivity); (2) the requirement itself is only implied: the published page and in-tree OpenAPI use anyOf without additionalProperties:false, so a double-key element is formally schema-valid — the 'invalid shape' premise rests on the oneOf-per-element reading (registry parameter type array[create_alias|delete_alias|rename_alias] + request_required_paths) rather than on an explicit documented rejection promise.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (positive controls passed: create 200, alias observable in GET /aliases, delete 200; exit_code=0)",
+        "concurrency (strictly sequential probes, write-locked apply loop, no parallel access)",
+        "script_error (script reached its oracle verdict; no TypeError/SCRIPT_ERROR markers in log)",
+        "request_typo (payload is exactly the scripted double-key element; independently reproduced by semantic_aliases_update_006)"
+      ],
+      "surviving": "Mechanical cause confirmed in source: serde untagged first-match + no deny_unknown_fields silently discards all but the first variant key of an element (lib/storage/src/content_manager/collection_meta_ops.rs:81). Whether this tolerance is intended is undetermined: no explicit by-design declaration found, and the formal schema face (anyOf) is permissive — auditor must weigh the silent half-application of client instructions against a schema that never explicitly forbids multi-key elements."
+    }
+  }
+}

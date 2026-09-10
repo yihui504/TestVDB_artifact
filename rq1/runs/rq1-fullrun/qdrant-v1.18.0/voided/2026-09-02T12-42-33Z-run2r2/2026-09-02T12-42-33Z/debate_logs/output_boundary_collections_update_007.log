@@ -1,0 +1,12 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[probe max_segment_size=0 (min-1)] PATCH optimizers_config.max_segment_size=0 -> status=422
+OK(reject): 'max_segment_size=0 (min-1)' -> 422: {"status":{"error":"Validation error in JSON body: [optimizers_config.max_segment_size: value 0 invalid, must be 1 or larger]"},"time":0.0}
+[probe max_segment_size=-1 (negative)] PATCH optimizers_config.max_segment_size=-1 -> status=400
+OK(reject): 'max_segment_size=-1 (negative)' -> 400: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 45"},"time":0.0}
+[probe max_segment_size=1 (at-min)] PATCH optimizers_config.max_segment_size=1 -> status=200 raw={"result":true,"status":"ok","time":0.012804909}
+OK(echo): after 'max_segment_size=1 (at-min)' readback optimizer_config.max_segment_size=1 (present=True)
+[probe max_segment_size=100 (mid-range)] PATCH optimizers_config.max_segment_size=100 -> status=200 raw={"result":true,"status":"ok","time":0.015667742}
+OK(echo): after 'max_segment_size=100 (mid-range)' readback optimizer_config.max_segment_size=100 (present=True)
+OK: max_segment_size 0/-1 rejected (400/422); 1 and 100 accepted with result true
+VERDICT: NO_DEFECT

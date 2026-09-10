@@ -1,0 +1,79 @@
+{
+  "defect_id": "state_percol_create_queryable_001",
+  "endpoint": "per_collection (lifecycle scope; failing call: POST /collections/{collection_name}/points/get — a route that does not exist in qdrant v1.18.0; the documented batch-get face is POST /collections/{collection_name}/points)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "FAIL",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: domain_blocked — WebFetch refused both qdrant.tech and api.qdrant.tech (network restriction), no doc_preflight.json sidecar exists in the contract dir; recorded PARTIAL per rule, not FAIL. Version: constraint source_url is a concept doc with no version routing (normal), but its api-reference anchor is versioned (v-1-18-x) and matches target 1.18; local substitute used — the repo's own published spec snapshot docs/redoc/v1.18.x/openapi.json (info.version=v1.18.x). Content: cannot fetch the concept page online, but the repo-internal v1.18.x spec + raw_knowledge + endpoint_registry jointly document get_points ('Get points', 'Retrieve multiple points by specified IDs') at POST /collections/{collection_name}/points — no documentation source places batch get at /points/get. Endpoint precision: FAIL — the one request that produced the verdict (POST .../points/get) exists in no registry entry, no spec, and no server route; all faces the assertion enumerates (collections list/details, exists, queries) are registry-grounded and all returned 200 in the same log.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "DEFECT: (data batch get) expected 200 on the queryable face, got 404 — Type4_StateLogicViolation — raw=  [log line 22; the request behind it, line 20: [data batch get] status=404 raw= after '[data upsert] status=200 raw={\"result\":{\"operation_id\":1,\"status\":\"completed\"}...}' and '[post-data count] OK: count=1']",
+      "secondary_observations": [
+        "output_state_percol_create_queryable_001.log:20 [data batch get] status=404 raw=  (EMPTY body — contrast the JSON-envelope 404 of a known route at line 6: [pre describe] status=404 raw={\"status\":{\"error\":\"Not found: Collection `spcq1_1788466150_33668_col` doesn't exist!\"}...})",
+        "output_state_percol_create_queryable_001.log:21 [data single get] status=200 raw={\"result\":{\"id\":1,\"payload\":{\"city\":\"berlin\",\"n\":1},\"vector\":[0.18257418,0.36514837,0.5477225,0.73029673]},\"status\":\"ok\",...}  (same point, single-get face 200)",
+        "output_state_percol_create_queryable_001.log:8 [post exists] status=200 raw={\"result\":{\"exists\":true},\"status\":\"ok\",...}  (assertion face compliant)",
+        "output_state_percol_create_queryable_001.log:11 [post list] OK: name present; line 19 [post-data count] OK: count=1  (assertion faces compliant)",
+        "sibling output_state_percol_point_delete_gone_005.log:8 [C1 batch get all 6] status=404 raw= -> line 10 VERDICT: SCRIPT_ERROR  (same self-registered URL at debate_logs/state_percol_point_delete_gone_005.py:96)",
+        "sibling output_state_percol_point_delete_concurrent_006.log:31 [batch get all] status=404 raw= -> line 35 VERDICT: NO_DEFECT  (same self-registered URL at debate_logs/state_percol_point_delete_concurrent_006.py:100)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "POST to a URL with no registered actix service returns 404 with an EMPTY body — actix-web's built-in NotFound responder; src/actix/mod.rs registers no default_service. This is plain 4xx semantics, not 2xx masking. The empty body distinguishes it from qdrant's JSON-envelope 404s on existing routes (compare log line 6). Grade A is the mechanical multi-script upgrade (same URL, same 404-empty pattern in 3 logs), but all three scripts carry the identical copied line rt.PATHS[\"get_points\"] = \"/collections/{collection_name}/points/get\" — one common-origin template, not independent discoveries — and the three dispositions diverge: DEFECT_FOUND (this script) / SCRIPT_ERROR (gone_005) / NO_DEFECT (concurrent_006)."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["state_percol_create_queryable_001", "state_percol_point_delete_gone_005", "state_percol_point_delete_concurrent_006"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_inv_create_queryable_001",
+      "assertion_text_quoted": "created collection appears in the collections list and details; exists result.exists=true; queries against the name return 200",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check resolved per rule: every face the assertion enumerates returned 200 in the same log (list contains name at line 11; exists=true at line 8; details/describe 200 at line 9; queries: count/scroll/query 200 at lines 12/14/16; single get 200 at line 21). The single 404 came from a URL outside the assertion's constraint domain — it is not a documented query face in raw_knowledge.json (line 720: points+get url=/collections/{collection_name}/points), not in endpoint_registry, not in the published v1.18.x spec, and has no route on the server. The documented batch-get face was never called; its handler accepts the script's exact body (PointRequest serde-flattens ids/with_payload, lib/collection/src/operations/types.rs:561-579). No in-chain observation shows a documented face failing, hence the honest declaration is 'outside the constraint domain', not 'value genuinely compliant'.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_inv_create_queryable_001 present in structured_contract.json state_invariants (scope per_collection, source_url https://qdrant.tech/documentation/manage-data/collections/) — link present. NOTE: candidates.jsonl carried constraint_id=\"\" (dispatch-list truncation); the script header (debate_logs/state_percol_create_queryable_001.py:6 '# constraint_ids: qdrant_inv_create_queryable_001') supplies the real one and it resolves in the contract.",
+        "doc: raw_knowledge.json:719-721 points+get = POST /collections/{collection_name}/points, source_url https://api.qdrant.tech/v-1-18-x/api-reference/points/get-points; endpoint_registry points+get doc_quote '200 array of Record; missing ids are simply absent from the result, not an error' — link present (online fetch domain_blocked; repo-internal docs/redoc/v1.18.x/openapi.json agrees).",
+        "script: debate_logs/state_percol_create_queryable_001.py:92-95 registers rt.PATHS[\"get_points\"] = \"/collections/{collection_name}/points/get\" with a comment claiming VERBATIM from raw_knowledge — BROKEN LINK: raw_knowledge.json line 720 says \"/collections/{collection_name}/points\" (no /get suffix); the comment's quoted url does not exist in raw_knowledge.json.",
+        "log: the 404-empty response is genuine server output (actix unmatched-route default), and DEFECT_FOUND (line 23) rests entirely on it — but the request never reached a handler, so the verdict measures the script's URL construction, not the constraint's phenomenon."
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "Script line 95 self-registered a batch-get URL that contradicts the very raw_knowledge entry its comment cites (verbatim-quote claim is false: raw_knowledge.json:720 has no /get suffix). qdrant v1.18.0 has no route at /collections/{collection_name}/points/get (grep 'points/get' = zero hits across the whole clone; handler is at retrieve_api.rs:125 #[post(\"/collections/{collection_name}/points\")]), so actix returned its default 404 empty body, which the script classified as a cross-face state-logic violation. Same broken line copied into 2 sibling scripts.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["points/get (whole tree, all file types)", "get_points|GetPoints", "rpc Get \\( (proto)", "\"/collections/\\{collection_name\\}/points\"", "pub struct PointRequest \\{", "default_service|NormalizePath (src/actix/mod.rs)"],
+      "files_examined": [
+        "src/actix/api/retrieve_api.rs (full read; handler + route attributes)",
+        "src/actix/mod.rs (lines 115-184; app service registration, no default_service)",
+        "openapi/openapi-points.ytt.yaml (lines 1-60; spec source: /collections/{collection_name}/points post = Get points)",
+        "docs/redoc/v1.18.x/openapi.json (parsed paths; published v1.18.x spec snapshot)",
+        "lib/collection/src/operations/types.rs (lines 561-579; PointRequest/PointRequestInternal)",
+        "lib/api/src/grpc/proto/points_service.proto (lines 8-26; rpc Get, no http annotation)",
+        "results/qdrant/v1.18.0/raw_knowledge.json (lines 719-760; points+get entry)"
+      ],
+      "source_excerpt": "src/actix/api/retrieve_api.rs:125-133 —\n#[post(\"/collections/{collection_name}/points\")]\nasync fn get_points(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    request: Json<PointRequest>,\n    params: Query<ReadParams>,\n    service_config: web::Data<ServiceConfig>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Responder {\n\nsrc/actix/mod.rs:167-172 —\n                // Ordering of services is important for correct path pattern matching\n                // See: <https://github.com/qdrant/qdrant/issues/3543>\n                .service(scroll_points)\n                .service(count_points)\n                .service(get_point)\n                .service(get_points);\n(no .default_service(...) anywhere in the app builder — unmatched routes fall through to actix-web's built-in 404 empty-body responder)\n\nopenapi/openapi-points.ytt.yaml:32-38 —\n  /collections/{collection_name}/points:\n    post:\n      tags:\n        - Points\n      summary: Get points\n      description: Retrieve multiple points by specified IDs\n      operationId: get_points\n\ndocs/redoc/v1.18.x/openapi.json (parsed) —\nPOST /collections/{collection_name}/points  operationId=get_points summary='Get points'\nGET /collections/{collection_name}/points/{id}  operationId=get_point summary='Get point'\n(no path '/collections/{collection_name}/points/get' anywhere in the spec)\n\nlib/collection/src/operations/types.rs:561-568 —\npub struct PointRequest {\n    #[serde(flatten)]\n    #[validate(nested)]\n    pub point_request: PointRequestInternal,\n    /// Specify in which shards to look for the points, if not specified - look in all shards\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub shard_key: Option<ShardKeySelector>,\n}\n(PointRequestInternal: pub ids: Vec<PointIdType>, pub with_payload: Option<WithPayloadInterface>, ... — the script's body {\"ids\":[1],\"with_payload\":true} deserializes cleanly via the serde flatten, so the identical request against the documented route would have been served.)",
+      "call_chain_traced": "HTTP POST -> actix route table (src/actix/mod.rs:169-172 registers scroll/count/get_point/get_points; ordering comment cites issue #3543) -> get_points handler (retrieve_api.rs:125) -> Json<PointRequest> validation -> do_get_points (src/common/query.rs, imported at retrieve_api.rs:30) -> toc.retrieve. The script's URL /collections/{name}/points/get matches NO service in the table: grep 'points/get' returns zero hits across the entire v1.18.0 clone (rust, yaml, json, proto), so the request never entered this chain and received actix's built-in empty-body 404.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "validation_present in the behavioral sense: the constraint-promised queryable faces are all implemented and registered in v1.18.0 — including the batch-get face at POST /collections/{collection_name}/points, which is simultaneously evidenced by the handler attribute, the app service registration, the repo's own ytt spec source, the published v1.18.x redoc snapshot, and raw_knowledge.json:720. The observed 404 did not come from any of these faces; it came from a URL the script invented. Not marked by_design_in_source: the empty-body 404 on unknown routes is framework (actix-web) default behavior, not an explicitly declared qdrant design decision — and no maintainer intent statement is needed, because no documented face failed.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (all other faces returned 200 in the same log; service alive throughout — no 5xx, no transport failures)", "concurrency (single sequential request, no racing writers)", "cache_delay (read-after-write consistency proven by count=1 and single-get 200 in the same second)", "server_state (collection demonstrably existed and was queryable on every documented face)"],
+      "surviving": "script_constructed_url_error: the script registered a nonexistent batch-get URL (/collections/{collection_name}/points/get, debate_logs/state_percol_create_queryable_001.py:95) while falsely claiming the registration was VERBATIM from raw_knowledge (raw_knowledge.json:720 carries /collections/{collection_name}/points with no /get suffix); the 404-empty is actix's unmatched-route default. The identical wrong line appears in two sibling scripts (state_percol_point_delete_gone_005.py:96, state_percol_point_delete_concurrent_006.py:100), whose logs show the same 404-empty with divergent dispositions (SCRIPT_ERROR / NO_DEFECT). This explanation survives every check performed."
+    }
+  }
+}

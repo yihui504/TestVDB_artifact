@@ -1,0 +1,17 @@
+{
+  "defect_id": "semantic_index_delete_001",
+  "endpoint": "index+delete",
+  "param": "field_name",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "behavioral_contract",
+  "constraint_ids": [
+    "qdrant_behavioral_index_delete_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/indexes/delete-field-index",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "DELETE of an existing index returns 200 with result:object envelope AND the field disappears from describe result.payload_schema (200-without-removal = Type4 silent no-op); DELETE of a non-existent index (ghost + payload-only flavors) on the existing collection returns 200 twice each (4xx = Type1_IllegalRejection); DELETE on a never-created collection returns exactly 404 twice (200 = Type1_IllegalSuccess phantom); control create+delete 200 with stable absence and points_count still 3; 5xx with healthy /healthz = Type3; transport/setup = SCRIPT_ERROR (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

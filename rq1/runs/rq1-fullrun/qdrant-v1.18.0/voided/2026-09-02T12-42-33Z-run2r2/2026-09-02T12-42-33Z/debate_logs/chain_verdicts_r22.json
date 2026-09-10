@@ -1,0 +1,37 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "boundary_index_delete_004",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED -> implied_verdict=DEFECT -> final=DEFECT (mechanized layer; no LLM re-judgment)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED: qdrant_behavioral_index_delete_001 (contract assertions/45, quote verbatim vs expected_behavior) with api_violates_assertion=true — primary log_pattern shows field_name=' ' answered 400 'Invalid json path' on a live index-less collection against the unconditional '(existing or not) returns HTTP 200' promise (unicode/dotdot/ctrl/NUL legs concur). B=NEUTRAL (no objective constraint class: string charset grammar, not numeric/enum/type; index+create face rejects the same values so family and faces are consistent; HTTP transport proper 400+descriptive body), C=WEAK_REFUTED (parse.rs:99-103 quoting tests prove designed grammar but no explicit declaration covering the unpublished-schema/unconditional-200 conflict), D=NO_SIGNAL (no cognition anchor for path-param JsonPath grammar enforcement). Source doubt exists — openapi-collections.ytt.yaml:207-212 publishes field_name as unconstrained string and the grammar-legal a*1024 leg got the promised 200 — doc-underspecification flagged for manual main-process review; mechanized implied_verdict=DEFECT stands.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "defect": 1,
+    "not_defect": 0,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {},
+    "root_cause_distribution": {},
+    "constraint_category_distribution": {"state": 1},
+    "candidate_class_distribution": {"strict_defect": 1, "exploratory_candidate": 0, "rejected": 0}
+  }
+}

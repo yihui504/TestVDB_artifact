@@ -1,0 +1,14 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+leg 1 baseline true -> status=200
+raw: {"result":[{"id":1,"payload":{"a":1,"b":2,"c":3,"nested":{"k":"v"}}},{"id":2,"payload":{}}],"status":"ok","time":0.000174802}
+leg 1 OK: baseline true returns full payload
+leg 2 include[a,c] -> status=200
+leg 2 OK: include projects exactly {a,c}
+leg 3 exclude[a] -> status=200
+leg 3 OK: exclude leaves exactly b,c,nested
+leg 4 exclude-all -> status=200
+leg 4 OK: exclude-all yields empty payload object
+leg 5 include-on-empty -> status=200
+leg 5 OK: empty payload stays empty under include; no vector leak
+VERDICT: NO_DEFECT

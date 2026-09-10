@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_update_009",
+ "endpoint": "aliases+update",
+ "param": null,
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "behavioral_contract",
+ "oracle": {
+  "statement": "pre-switch: count through 'live' == 2 == count(A) (observation tool calibrated, else SCRIPT_ERROR before mutating); switch batch [delete_alias live, create_alias live->B] returns 200 with result:boolean; post-switch ALL faces agree on the NEW target with no intermediate state: global list has exactly ONE 'live' entry bound to B, per-collection face of B contains 'live', per-collection face of A does not, and count through 'live' == 5 == count(B) != count(A); any face disagreement (old binding visible, duplicate entries, alias missing on a face, reads still hitting A or 404) = Type4_StateLogicViolation contradicting \"alias operations in one request are applied atomically - no intermediate state is observable\"; 5xx on any face = Type3 (healthz rechecked)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

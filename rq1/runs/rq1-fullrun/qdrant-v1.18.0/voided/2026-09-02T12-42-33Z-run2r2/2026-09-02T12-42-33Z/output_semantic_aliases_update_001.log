@@ -1,0 +1,13 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+setup upsert s2au1_1788363009_ca: status=200 raw={"result":{"operation_id":1,"status":"acknowledged"},"status":"ok","time":0.000888368}
+setup upsert s2au1_1788363009_cb: status=200 raw={"result":{"operation_id":1,"status":"acknowledged"},"status":"ok","time":0.000306695}
+arrange live->CA: status=200 raw={"result":true,"status":"ok","time":0.012523074}
+baseline scroll via s2au1_1788363009_live: status=200 ids=[1, 2, 3, 4, 5]
+attack switch batch [delete live + create live->CB]: status=200 raw={"result":true,"status":"ok","time":0.026263044}
+count via s2au1_1788363009_live after switch: status=200 count=5 raw={"result":{"count":5},"status":"ok","time":0.000202177}
+scroll via s2au1_1788363009_live after switch: status=200 ids=[101, 102, 103, 104, 105]
+direct scroll of s2au1_1788363009_ca after switch: status=200 ids=[1, 2, 3, 4, 5]
+list_aliases after switch: status=200 raw={"result":{"aliases":[{"alias_name":"s2au1_1788363009_live","collection_name":"s2au1_1788363009_cb"}]},"status":"ok","time":8.726e-6}
+prefix-scope advertised map: [('s2au1_1788363009_live', 's2au1_1788363009_cb')]
+VERDICT: NO_DEFECT

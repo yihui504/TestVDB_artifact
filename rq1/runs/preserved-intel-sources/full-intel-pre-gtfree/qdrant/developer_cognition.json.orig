@@ -1,0 +1,118 @@
+{
+  "blindspot_indicators": [
+    "Parameter validation on filter/condition APIs (min_should, value_count)",
+    "HNSW approximation edge cases in offset-based pagination",
+    "WAL replay state consistency (point resurrection)",
+    "Concurrent shard worker restart safety (try_join_all cancellation)",
+    "TLS/auth edge cases in cluster p2p communication",
+    "Snapshot compatibility across different platforms (Windows Docker)",
+    "Silent failure in recommend API with missing point IDs",
+    "Replica consistency reporting discrepancies",
+    "Optimizer worker restart partial progress states",
+    "Memory allocator compatibility (jemalloc on large page sizes)",
+    "Payload-only collections: creating a collection without vector configuration is a supported use case, errors surface on first vector use (maintainers: 'not an unusable collection, it allows payload-only collection'; named-vector CRUD added on top)",
+    "Lenient filter parsing: null / single-object / array forms are all accepted by design for filter condition fields (maintainers: 'This is fine and expected... it would be a breaking change'; source supports all three forms)",
+    "Batch operations are not promised to be atomic: users must assume partial application and retry (idempotent write design) (maintainers: 'batch operations are not promissed to be atomic')"
+  ],
+  "what_developers_prioritize": [
+    "Data consistency and persistence over API strictness",
+    "Production stability over edge case handling",
+    "Performance optimization over diagnostic completeness",
+    "API backward compatibility over strict validation",
+    "Cluster communication over single-node correctness"
+  ],
+  "recurring_patterns": [
+    {
+      "pattern": "Pagination API contract violations",
+      "count": 88
+    },
+    {
+      "pattern": "Filter condition validation gaps",
+      "count": 51
+    },
+    {
+      "pattern": "WAL replay state inconsistency",
+      "count": 67
+    },
+    {
+      "pattern": "Concurrent worker safety",
+      "count": 55
+    },
+    {
+      "pattern": "Memory/platform compatibility",
+      "count": 15
+    }
+  ],
+  "high_frequency_shapes": [
+    {
+      "pattern": "error_handling",
+      "count": 95
+    },
+    {
+      "pattern": "api_contract_violation",
+      "count": 88
+    },
+    {
+      "pattern": "state_consistency",
+      "count": 67
+    },
+    {
+      "pattern": "concurrency_race",
+      "count": 55
+    },
+    {
+      "pattern": "parameter_validation",
+      "count": 51
+    },
+    {
+      "pattern": "resource_management",
+      "count": 42
+    },
+    {
+      "pattern": "authentication_authorization",
+      "count": 18
+    },
+    {
+      "pattern": "memory_management",
+      "count": 15
+    }
+  ],
+  "by_design_patterns": [
+    {
+      "pattern": "HNSW approximation duplicates in pagination",
+      "developer_stance": "Accepted limitation of approximate search",
+      "source_issues": [
+        9523
+      ],
+      "should_report": false
+    },
+    {
+      "pattern": "Large page sizes on aarch64 with jemalloc",
+      "developer_stance": "External dependency limitation",
+      "source_issues": [
+        3831,
+        4298,
+        6512,
+        7246
+      ],
+      "should_report": false
+    }
+  ],
+  "low_priority_patterns": [
+    {
+      "pattern": "Documentation typos",
+      "count": 25
+    },
+    {
+      "pattern": "User questions/how-to",
+      "count": 43
+    }
+  ],
+  "developer_cognition_signals": {
+    "blindspot_indicators": [
+      "Payload-only collections: creating a collection without vector configuration is a supported use case, errors surface on first vector use (maintainers: 'not an unusable collection, it allows payload-only collection'; named-vector CRUD added on top)",
+      "Lenient filter parsing: null / single-object / array forms are all accepted by design for filter condition fields (maintainers: 'This is fine and expected... it would be a breaking change'; source supports all three forms)",
+      "Batch operations are not promised to be atomic: users must assume partial application and retry (idempotent write design) (maintainers: 'batch operations are not promissed to be atomic')"
+    ]
+  }
+}

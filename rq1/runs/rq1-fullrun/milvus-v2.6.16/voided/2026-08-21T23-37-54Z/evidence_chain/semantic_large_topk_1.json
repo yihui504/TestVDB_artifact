@@ -1,0 +1,54 @@
+{
+  "defect_id": "semantic_large_topk_1",
+  "endpoint": "collections+create / entities+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraints large_topk_semantics (range_003 quota coupling, source quota_param.go v2.6.14+ present in 2.6.16 clone) + create_009; endpoints in registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "F create with properties: 200 {\"code\":0,\"data\":{}} / F query_mode persisted via create-time properties: False [{'key': 'timezone', 'value': 'UTC'}] ... A normal limit=20000: 200 {\"code\":65535\",\"message\":\"topk [20000] is invalid, it should be in range [1, 16384], but got 20000\"} ... DEFECT: create-time properties.query_mode silently discarded ... VERDICT: DEFECT_FOUND",
+      "secondary_observations": ["mk alter qm sm_ltk_large : 200 {\"code\":0\"} then A large limit=20000: 200 {\"code\":0...} - alter-path control succeeds", "D offset+limit==1000000: 200 code 0; D offset==1000000: 200 {\"code\":65535\",\"message\":\"offset+topk [1000001] is invalid, ... [1, 1000000]\"} - alter-path boundaries match contract exactly (both edges)", "B normal vs large ids[:10] identical - result ordering unaffected"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "create accepted-but-ineffective is 200/code 0; the failure surfaces later as 200/65535 on search with a message that does not mention the dropped property"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["semantic_large_topk_1", "boundary_querymode_02"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_range_entities_search_003",
+      "assertion_text_quoted": "query_mode==large_topk: 1 <= limit <= 1000000 AND 1 <= limit+offset <= 1000000; else 65535 'it should be in range [1, 1000000], but got %d' (live v2.6.16 confirmed via alter path)",
+      "api_violates_assertion": true,
+      "note": "observation: collection created with query_mode=large_topk still enforces 16384 cap - the coupled precondition (query_mode set at create) is not honored; the alter-path half of the assertion is confirmed correct by the control. violates=True for create-path carrier.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:search_003 large_topk coupling + create_009 create carrier", "doc:quota_param.go LargeTopKLimit/LargeMaxQueryResultWindow; task_search.go:171", "script:semantic_large_topk_1.py create sm_ltk_large with properties -> describe -> search limit=20000", "log:F persisted False; A normal 65535 [1,16384]; DEFECT recorded"],
+      "chain_broken_at": "script",
+      "break_detail": "same REST create drop as boundary_querymode_02 (independent script, same phenomenon); full behavioral triangulation present (persisted-readback + both boundary edges + alter control).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["largeTopKEnabled", "LargeTopKLimit (quota_param.go)", "query_mode handler_v2.go (zero hits)", "CollectionReq struct"],
+      "files_examined": ["internal/proxy/task_search.go:171", "internal/distributed/proxy/httpserver/handler_v2.go:1786-1792,2019-2049", "internal/distributed/proxy/httpserver/request_v2.go:643-656", "pkg/common/common.go:528-531"],
+      "source_excerpt": "task_search.go:171 t.largeTopKEnabled = collectionInfo.queryMode == common.QueryModeLargeTopK; common.go:528-531 IsQueryModeLargeTopK reads the persisted property kvs. Property persistence only occurs via alter path (CollectionReqWithProperties request_v2.go:80-84 is bound to alter_properties route, NOT create route which binds CollectionReq at handler_v2.go:183).",
+      "call_chain_traced": "create properties -> gin unmarshal into CollectionReq (no Properties field) -> drop; alter_properties -> CollectionReqWithProperties (has Properties) -> alterCollectionTask -> persisted -> task_search largeTopKEnabled=true",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "timing (describe is immediate post-create)", "concurrency"],
+      "surviving": "'create is not the intended carrier, alter is' by-design defense - contradicted by contract api_endpoints text but is a genuine auditor question; recorded"
+    },
+    "evidence_weight": "high (independent reproduction with describe read-back and dual-edge boundary verification)"
+  }
+}

@@ -1,0 +1,24 @@
+CASE nprobe=0         status=200 code=0 | {"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+CASE nprobe=-1        status=200 code=0 | {"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+CASE nprobe=1e9       status=200 code=0 | {"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+CASE ef=0             status=200 code=0 | {"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+CASE ef=-5            status=200 code=0 | {"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+CASE radius=-1e308    status=200 code=0 | {"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+CASE radius=1e308     status=200 code=0 | {"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+CASE truncated        status=200 | {"code":1801,"message":"can only accept json format request, error: invalid character ':' after array element"}
+CASE trailing comma   status=200 | {"code":1801,"message":"can only accept json format request, error: invalid character '}' looking for beginning of object key stri
+CASE single quotes    status=200 | {"code":1801,"message":"can only accept json format request, error: invalid character '\\'' looking for beginning of object key st
+CASE NUL in body      status=200 | {"code":1801,"message":"can only accept json format request, error: invalid character '\\x00' in string literal"}
+CASE radius=NaN raw   status=200 | {"code":1801,"message":"can only accept json format request, error: invalid character 'N' looking for beginning of value"}
+CASE radius=Inf raw   status=200 | {"code":1801,"message":"can only accept json format request, error: invalid character 'I' looking for beginning of value"}
+CASE NaN vector raw   status=200 | {"code":1801,"message":"can only accept json format request, error: invalid character 'N' looking for beginning of value"}
+CASE HNSW M=0 efC=0  ok=False | {"code":1100,"message":"Out of range in json: param 'efConstruction' (0) should be in range [1, 2147483647]: invalid parameter[exp
+CASE HNSW huge M/efC ok=False | {"code":1100,"message":"Error in static knowhere::Status knowhere::Config::FormatAndCheck(const knowhere::Config\u0026, knowhere::
+VERDICT_NO_DEFECT

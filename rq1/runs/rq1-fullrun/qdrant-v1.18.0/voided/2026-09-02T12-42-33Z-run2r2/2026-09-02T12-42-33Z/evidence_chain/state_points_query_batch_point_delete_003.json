@@ -1,0 +1,100 @@
+{
+  "defect_id": "state_points_query_batch_point_delete_003",
+  "endpoint": "points+query+batch (POST /collections/{collection_name}/points/query/batch)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: both cited domains (api.qdrant.tech, qdrant.tech) are network-blocked at audit time -> domain_blocked (PARTIAL, not FAIL); the endpoint_registry sidecar for points+query+batch records verified_at 2026-09-02T12:34:08Z with doc_quote 'Executes multiple queries in one call; returns 200 with a list of per-query results; 404 for a missing collection.' (reachable at contract build time). version: batch api-ref URL is versioned v-1-18-x matching target v1.18.0 (PASS for that link) but the grounding constraint qdrant_state_points_query_001 cites the versionless https://qdrant.tech/documentation/search/search/ ('current (site latest; no version archive)') -> PARTIAL overall. content: live prose unverifiable (blocked); neither the contract's captured by-id prose nor the in-tree v1.18.0 OpenAPI source (lib/api/src/rest/schema.rs VectorInput has no Id-variant description) promises or forbids that a by-id referenced point appears in its own result set -> PARTIAL. endpoint: exact registry match for points+query+batch (POST, same source_url) -> PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "DEFECT: (P) by-id search of live id 10 did not return it (got [13, 11, 12]) — Type4_StateLogicViolation",
+      "secondary_observations": [
+        "[P batch by-id [10, 11, 12, 13]] status=200 raw={\"result\":[{\"points\":[{\"id\":13,\"version\":1,\"score\":0.0},{\"id\":11,\"version\":1,\"score\":0.0},{\"id\":12,\"version\":1,\"score\":0.0}]},{\"points\":[{\"id\":13,\"version\":1,\"score\":0.0},{\"id\":10,\"version\":1,\"score\":0.0},{\"id\":12,\"version\":1,\"score\":0.0}]},... — each of the 4 by-id entries returned the OTHER three one-hot points at score 0.0 and omitted its searched id (primary phenomenon's raw response)",
+        "[P-seed count] status=200 raw={\"result\":{\"count\":4},\"status\":\"ok\",\"time\":0.000210661} — pre-state correct",
+        "[del delete [12, 13]] status=200 raw={\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.004608157} — delete applied",
+        "[del count] status=200 raw={\"result\":{\"count\":2},\"status\":\"ok\",\"time\":0.000095012} — 4-to-2 count arithmetic CORRECT (no arithmetic defect)",
+        "[corroborate GET 12] status=404 raw={\"status\":{\"error\":\"Not found: Point with id 12 does not exists!\"},\"time\":0.000196393} — deletion visible on the GET face",
+        "[mixed batch by-id [10, 12, 11]] status=404 raw={\"status\":{\"error\":\"Not found: No point with id 12 found\"},\"time\":0.000188076} — deleted id NOT served inside any 200; NO ghost read occurred (whole-batch rejection instead)",
+        "[mixed] whole-batch 404 rejection — accepted disposition (per-entry error granularity is not promised); recorded, no claim — script honestly recorded this leg as non-claim",
+        "[pos2 batch by-id [10, 11]] status=200 raw={\"result\":[{\"points\":[{\"id\":11,\"version\":1,\"score\":0.0}]},{\"points\":[{\"id\":10,\"version\":1,\"score\":0.0}]}],\"status\":\"ok\",\"time\":0.001160783} — survivors served, no over-deletion; self-exclusion persists post-delete",
+        "[final count] status=200 raw={\"result\":{\"count\":2},\"status\":\"ok\",\"time\":0.000162772} — final state consistent",
+        "cross-script, output_state_points_query_batch_alignment_002.log: [single-face by-id 1] status=200 raw={\"result\":{\"points\":[{\"id\":5,\"version\":1,\"score\":1.0},{\"id\":2,\"version\":1,\"score\":0.0},{\"id\":6,\"version\":1,\"score\":0.0}]}} — the twin point sharing the queried point's vector scores 1.0 (stored vector IS used) while the searched id itself is absent — same phenomenon, batch face, other script",
+        "cross-script, output_semantic_points_query_byid_lookup_001.log: VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — L1: by-id lookup of 301 must rank by 301's stored vector ([301, 302, 303, 304, 305] by graded distance), got [302, 303, 304, 305] — same self-exclusion on the single-query face (points+query), other script",
+        "cross-script, output_state_points_query_batch_lifecycle_006.log: DEFECT: (post-cycle) by-id entry for seeded id 11 returned ids [12, 13, 15] — incoherent fresh state — Type4_StateLogicViolation — same self-exclusion on the batch face, other script"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The mixed batch referencing a deleted point id (request-side-decidable client error) was refused with HTTP 404 and a diagnostic body ('Not found: No point with id 12 found'), not 2xx-with-business-code; all other responses were genuine 200 successes carrying well-formed results."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_points_query_batch_point_delete_003",
+        "state_points_query_batch_alignment_002",
+        "state_points_query_batch_lifecycle_006",
+        "semantic_points_query_byid_lookup_001"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_points_query_001",
+      "assertion_text_quoted": "by-id query uses the referenced point's stored vector; if it does not match the using vector characteristics the request errors",
+      "api_violates_assertion": false,
+      "note": "Verified against candidates: the script-declared qdrant_behavioral_points_query_batch_001 ('200 with one result per search') was SATISFIED by the raw responses (len(result)==4 and len(result)==2 both held), so the DEFECT cannot rest on it; the failing oracle leg (searched id must appear in its own entry) rests on the by-id semantics of qdrant_state_points_query_001, whose assertion pins (a) stored-vector usage — corroborated, not contradicted: alignment_002 shows the twin vector scoring 1.0 — and (b) the mismatch-error branch. The observed phenomenon (referenced point absent from its own result set) is outside the quoted assertion's promise domain: no clause of the quote is contradicted by the observation, and the source shows the absence is a deliberate must_not HasId exclusion filter, hence violates=False on outside-the-domain grounds rather than 'compliant value' grounds.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_points_query_001 present in structured_contract.json state_constraints (raw substring of its assertion verified verbatim); script-declared qdrant_behavioral_points_query_batch_001 present in assertions",
+        "doc: state constraint cites https://qdrant.tech/documentation/search/search/ (contract records source_status degraded, source_verified false); batch assertion cites https://api.qdrant.tech/v-1-18-x/api-reference/query/batch-query (endpoint_registry verified_at 2026-09-02T12:34:08Z); neither captured prose promises that a by-id referenced point appears in its own results",
+        "script: debate_logs/state_points_query_batch_point_delete_003.py sends {\"searches\":[{\"query\":<pid>,\"limit\":3}]} by-id batches on POST /collections/{name}/points/query/batch — inside the constraint's by-id domain; delete legs used wait=true with GET/count corroboration",
+        "log: exit 1, VERDICT: DEFECT_FOUND; all six DEFECT lines rest on by-id self-exclusion; the dispatched delete-consistency legs (4-to-2 arithmetic, GET 404, mixed whole-reject) are clean and were honestly recorded in the log"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The DEFECT verdict's oracle expectation ('each by-id entry contains its searched id') is script-derived and is carried by no clause of the cited constraint texts: qdrant_state_points_query_001 pins stored-vector usage and the mismatch-error branch (both corroborated as holding), qdrant_behavioral_points_query_batch_001 pins 200-with-one-result-per-search (held: len==4, len==2). The observed self-exclusion phenomenon therefore has no contract ground, and source forensics shows it is a deliberate exclusion filter — the contract link does not support the log's Type4 claim.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "VectorInput::Id",
+        "get_referenced_ids",
+        "exclude_referenced_ids",
+        "No point with id",
+        "query/batch",
+        "QueryInterface"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/universal_query/collection_query.rs (L107-159 try_into_scoring_query / ids_into_vectors; L525-535 exclude_referenced_ids; L657-677 get_referenced_point_ids_on_collection; L679-740 try_into_shard_request)",
+        "lib/api/src/rest/schema.rs (L550-601 QueryRequestInternal / QueryRequestBatch / QueryInterface; L537-547 VectorInput)",
+        "lib/shard/src/query/query_enum.rs (L9-16 QueryEnum::Nearest)",
+        "src/actix/api/query_api.rs (L110-155 POST /collections/{collection_name}/points/query/batch — converts every search before executing)",
+        "lib/collection/src/operations/types.rs (L901-916 PointNotFound error text 'No point with id {missed_point_id} found')",
+        "lib/collection/src/common/fetch_vectors.rs (L410-439 referenced-id resolver requests)"
+      ],
+      "source_excerpt": "lib/collection/src/operations/universal_query/collection_query.rs L525-535:\n    /// Exclude the referenced ids by editing the filter.\n    fn exclude_referenced_ids(ids: Vec<ExtendedPointId>, filter: Option<Filter>) -> Option<Filter> {\n        let ids: AHashSet<_> = ids.into_iter().collect();\n\n        if ids.is_empty() {\n            return filter;\n        }\n\n        let id_filter = Filter::new_must_not(Condition::HasId(HasIdCondition::from(ids)));\n        Some(id_filter.merge_owned(filter.unwrap_or_default()))\n    }\n\nL657-677 (excerpt):\n    fn get_referenced_point_ids_on_collection(&self, collection: &str) -> Vec<PointIdType> {\n        let mut refs = Vec::new();\n        ...\n        if !lookup_other_collection && let Some(Query::Vector(vector_query)) = &self.query {\n            if let VectorQuery::Nearest(VectorInputInternal::Id(id)) = vector_query {\n                refs.push(*id);\n            }\n            refs.extend(vector_query.get_referenced_ids())\n        };\n\nL679-708:\n    /// Substitutes all the point ids in the request with the actual vectors, as well as editing filters so that ids are not included in the response.\n    pub fn try_into_shard_request(\n        self,\n        collection_name: &str,\n        ids_to_vectors: &ReferencedVectors,\n    ) -> CollectionResult<ShardQueryRequest> {\n        ...\n        // Edit filter to exclude all referenced point ids (root and nested) on the searched collection\n        // We do not want to exclude vector ids from different collection via lookup_from.\n        let referenced_point_ids = self.get_referenced_point_ids_on_collection(collection_name);\n\n        let filter = exclude_referenced_ids(referenced_point_ids, self.filter);",
+      "call_chain_traced": "REST {\"query\": <point_id>} -> lib/api/src/rest/schema.rs QueryInterface::Nearest(VectorInput::Id) -> src/actix/api/query_api.rs query_points_batch converts EVERY search of the batch up-front (L135-155; one failing conversion rejects the whole batch -> the mixed leg's 404) -> CollectionQueryRequest::try_into_shard_request (collection_query.rs L680): (1) get_referenced_point_ids_on_collection collects the by-id query's own id (L665-667); (2) exclude_referenced_ids merges a Filter::new_must_not(HasId) so the referenced point can never be served (L525-535, applied at L708); (3) ids_into_vectors resolves the id to its stored vector, plain QueryEnum::Nearest(vector) search (L226-239) — a deleted id cannot be resolved and raises PointNotFound 'No point with id N found' (types.rs L908), which is the ghost-read prevention the mixed leg hit.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env: all requests answered with clean 200/404, no 5xx and no transport failure, no liveness issue",
+        "concurrency: strictly sequential legs; all mutations sent with wait=true",
+        "cache/visibility delay: exact count dropped 4-to-2 immediately and GET of deleted id 12 returned 404",
+        "request-parameter typo: script source shows well-formed searches arrays; PATHS registration verified in log line 3"
+      ],
+      "surviving": "by-design: try_into_shard_request deliberately excludes all referenced point ids from query results via a must_not HasId filter — the function doc comment states the intent verbatim ('editing filters so that ids are not included in the response'), fully explaining the primary observation"
+    }
+  }
+}

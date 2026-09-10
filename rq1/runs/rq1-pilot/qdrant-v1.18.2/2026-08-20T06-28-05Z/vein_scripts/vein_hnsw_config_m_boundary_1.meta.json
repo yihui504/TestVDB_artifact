@@ -1,0 +1,91 @@
+{
+  "defect_id": "vein_hnsw_config_m_boundary_1",
+  "endpoint": "collections+create",
+  "condition_type": "range_filter",
+  "defect_type": "Type1_IllegalSuccess",
+  "severity": "P1_High",
+  "strategy": "vein_range_filter",
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "session_id": "qdrant-v1.18.2-2026-08-20T06-28-05Z",
+  "round": 4,
+  "test_summary": {
+    "test_case": "hnsw_config.m parameter accepts 0 without validation in PUT /collections/{collection}",
+    "expected_behavior": "Should return 400 Bad Request - m=0 is below documented minimum [2, 100]",
+    "actual_behavior": "Returns 200 OK, creates collection with invalid m=0",
+    "parameter_path": "hnsw_config.m",
+    "parameter_type": "integer",
+    "invalid_value_tested": 0,
+    "http_status": 200,
+    "response_excerpt": "{\"result\":true,\"status\":\"ok\"}"
+  },
+  "control_group": {
+    "valid_value_tested": 16,
+    "valid_value_result": "200 OK",
+    "invalid_negative_tested": -1,
+    "invalid_negative_result": "400 (correctly rejected)",
+    "control_outcome": "PASS"
+  },
+  "threat_model_reference": {
+    "blindspot": "BS-04",
+    "blindspot_name": "Boundary Default Optimism",
+    "description": "Team assumes users provide reasonable values - boundary conditions like 0 trusted to default or framework validation",
+    "historical_defect_count": 55,
+    "reference_issues": [
+      9149,
+      9017,
+      9027
+    ],
+    "attack_strategy": "boundary_value_attack"
+  },
+  "bug_shape": {
+    "shape_id": "qdrant-parameter-validation-numeric-boundary",
+    "shape_type": "numeric_boundary",
+    "root_cause_category": "parameter_validation",
+    "affected_layer": "request_parsing"
+  },
+  "contract_reference": {
+    "constraint_id": "qdrant_range_create_collection_001",
+    "assertion": "hnsw_config.m >= 2 AND hnsw_config.m <= 100",
+    "constraint_type": "range_constraint",
+    "evidence_tier": "explicit"
+  },
+  "evidence": {
+    "defect_found": true,
+    "novelty": "LIKELY_NOVEL_INSTANCE",
+    "cross_db_applicable": true,
+    "related_to_known_issues": "Similar to #9149 (shard_number=0 accepted) - same BS-04 pattern",
+    "validation": {
+      "contract_constraint": "m >= 2 AND m <= 100",
+      "expected_http_code": 400,
+      "actual_http_code": 200,
+      "negative_control": "-1 correctly rejected with 400"
+    }
+  },
+  "defect_details": {
+    "parameter_name": "m",
+    "parameter_location": "hnsw_config object in collection creation",
+    "parameter_schema": {
+      "type": "integer",
+      "required": false,
+      "default_value": 16,
+      "description": "HNSW max connections per node",
+      "documented_range": "[2, 100]"
+    },
+    "invalid_value": 0,
+    "should_reject_because": "0 is below minimum [2, 100] - violates explicit contract constraint",
+    "why_accepted": "Boundary validation gap - 0 not checked against minimum",
+    "impact": "Creates collection with invalid HNSW configuration, potentially causing search issues or crashes"
+  },
+  "submission_readiness": {
+    "has_clear_violation": true,
+    "has_contract_reference": true,
+    "has_control_group": true,
+    "has_reproducible_steps": true,
+    "estimated_success_probability": 0.8,
+    "justification": "Matches BS-04 pattern - boundary value 0 not validated, similar to #9149 (shard_number=0)"
+  },
+  "generated_at": "2026-08-20T18:34:00Z",
+  "generated_by": "attack-vein v2.5.2 (Round 4)",
+  "param": "hnsw_config.m"
+}

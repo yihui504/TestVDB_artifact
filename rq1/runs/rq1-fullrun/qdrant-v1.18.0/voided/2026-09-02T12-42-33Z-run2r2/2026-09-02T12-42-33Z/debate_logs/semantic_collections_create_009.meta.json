@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_collections_create_009",
+  "endpoint": "collections+create",
+  "param": "hnsw_config",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "illegal_rejection",
+  "oracle": {
+    "statement": "the all-minima hnsw_config create (m=0, ef_construct=4, full_scan_threshold=10, max_indexing_threads=0, payload_m=0) returns 200 result=true (any 4xx = Type1_IllegalRejection; 5xx with /healthz alive = Type3_RuntimeFailure) and describe echoes hnsw_config.m==0, ef_construct==4, payload_m==0 (mismatch on a default-distinguishable field = Type4_StateLogicViolation; full_scan_threshold and auto-resolved max_indexing_threads recorded) - constraint qdrant_range_collections_create_002",
+    "source": "docstring"
+  }
+}

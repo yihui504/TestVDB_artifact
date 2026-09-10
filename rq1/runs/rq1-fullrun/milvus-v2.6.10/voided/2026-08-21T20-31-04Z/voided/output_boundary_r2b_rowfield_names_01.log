@@ -1,0 +1,16 @@
+insert row key '1abc' -> http=200 ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+insert row key 'my-key' -> http=200 ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[2]}}
+insert row key 'a b' -> http=200 ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[3]}}
+insert row key 'f$eld' -> http=200 ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[4]}}
+insert row key '中文字段' -> http=200 ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[5]}}
+readback '1abc' -> ok=False value=None raw={"code":65535,"message":"parse output field name failed: 1abc"}
+readback 'my-key' -> ok=False value=None raw={"code":65535,"message":"parse output field name failed: my-key"}
+readback 'a b' -> ok=False value=None raw={"code":65535,"message":"parse output field name failed: a b"}
+readback 'f$eld' -> ok=False value=None raw={"code":65535,"message":"parse output field name failed: f$eld"}
+readback '中文字段' -> ok=False value=None raw={"code":65535,"message":"parse output field name failed: 中文字段"}
+DEFECT: insert accepted key '1abc' but output_fields readback rejects it: {"code":65535,"message":"parse output field name failed: 1abc"}
+DEFECT: insert accepted key 'my-key' but output_fields readback rejects it: {"code":65535,"message":"parse output field name failed: my-key"}
+DEFECT: insert accepted key 'a b' but output_fields readback rejects it: {"code":65535,"message":"parse output field name failed: a b"}
+DEFECT: insert accepted key 'f$eld' but output_fields readback rejects it: {"code":65535,"message":"parse output field name failed: f$eld"}
+DEFECT: insert accepted key '中文字段' but output_fields readback rejects it: {"code":65535,"message":"parse output field name failed: 中文字段"}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess / asymmetric row-key handling)

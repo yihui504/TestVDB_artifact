@@ -1,0 +1,69 @@
+{
+  "defect_id": "vein_pagination_cursor_scroll_order_7",
+  "endpoint": "POST /collections/{collection_name}/points/scroll",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "WebFetch api.qdrant.tech 被 domain_blocked（网络受限，非 FAIL）；版本匹配 PASS（raw_knowledge 记录 Doc Version 1.18.x, URL v-1-18-x）；内容一致性 PASS——cached raw_knowledge.md L228 原文 'state: pagination via next_page_offset in response; exhausted when null' 与 scroll 端点绑定；端点精确性 PASS——candidates/meta.json endpoint 'POST /collections/{collection_name}/points/scroll' 在 contract endpoint_registry 中有 'points+scroll' 条目（doc_quote 'Scroll through all points page-by-page'）。注意：raw_knowledge 与 contract 均未明示 order_by 与 next_page_offset 的交互语义（order_by 模式下 next_page_offset 恒 null 是否文档承诺分页），此为文档盲区。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "order_by walk: total=70 unique=70 (data=200)",
+      "secondary_observations": [
+        "plain walk: total=200 (data=200)",
+        "VERDICT: DEFECT_FOUND — scroll+order_by returns next_page_offset=null before exhausting data (70/200 retrievable); pagination cursor lost"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "主观测非错误响应类：scroll+order_by 请求返回 HTTP 200（脚本 s==200 分支继续累计），违规体现在响应体 next_page_offset=null 且 points 数(70) < 全集(200)，属静默行为契约违规而非错误码语义问题"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_pagination_cursor_scroll_order_7"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "raw_knowledge.md points/scroll 约束（L228）: 'state: pagination via next_page_offset in response; exhausted when null'。注：candidates.jsonl 中 constraint_id 为空串——该 scroll 分页约束未进入 structured_contract.json 的 constraints/assertions 正式条目（contract 仅含 collections_create 系约束与 points_query 系 assertions），只能以 raw_knowledge.md 原文为契约依据。",
+      "api_violates_assertion": true,
+      "note": "判定理由：观测 next_page_offset=null 时数据未耗尽（70/200 可取），与 'exhausted when null' 字面语义直接矛盾，观测与约束引用同域（同端点同分页字段），violates=true 成立。但见 source_grounding：源码显示该行为为显式 by-design 分支，violates 成立不等于非 by-design。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: candidates.jsonl constraint_id 为空；structured_contract.json 无 scroll 分页正式约束；退而引用 raw_knowledge.md L228 'pagination via next_page_offset; exhausted when null'",
+        "doc: raw_knowledge.md 缓存自 https://api.qdrant.tech/v-1-18-x/api-reference/points/scroll-points（WebFetch 直连被 domain_blocked，未获取在线原文复核）",
+        "script: vein_scripts/vein_pagination_cursor_scroll_order_7.py — 建 vein_r2c7 200 点 + ts datetime 索引，order_by={key:ts,direction:desc} limit=70 分页游走，对照组无 order_by 同 limit 游走",
+        "log: 'order_by walk: total=70 unique=70 (data=200)' + 'plain walk: total=200 (data=200)' + VERDICT: DEFECT_FOUND"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "constraint_id 为空——scroll 分页约束未被 formalizer 升格为 structured_contract.json 正式条目，契约环只能落在 raw_knowledge.md 半正式层；doc 环因 domain_blocked 未能在线复核原文（有缓存引文，非断链而是降级）；script/log 环完整且主观测/对照组齐全。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["next_page_offset", "order_by.is_some", "pub struct OrderBy", "ScrollResult", "start_from", "fn scroll_by"],
+      "files_examined": [
+        "lib/collection/src/collection/point_ops.rs (L367-405)",
+        "lib/collection/src/shards/local_shard/shard_ops.rs (L222-296)",
+        "lib/collection/src/operations/types.rs (L524-530 ScrollResult)",
+        "lib/segment/src/data_types/order_by.rs (L100-132)",
+        "openapi/openapi-main.ytt.yaml (L266 ScrollRequest ref)"
+      ],
+      "source_excerpt": "// vdb_src/qdrant/v1.18.0/lib/collection/src/collection/point_ops.rs:392-405\nlet next_page_offset = if points.len() < limit || order_by.is_some() {\n    // This was the last page\n    None\n} else {\n    // remove extra point, it would be a first point of the next page\n    Some(points.pop().unwrap().id)\n};\nOk(ScrollResult { points, next_page_offset })\n\n// vdb_src/qdrant/v1.18.0/lib/collection/src/shards/local_shard/shard_ops.rs:236-240\n// Validate user did not try to use an id offset with order_by\nif order_by.is_some() && offset.is_some() {\n    return Err(CollectionError::bad_input(\"Cannot use an `offset` when using `order_by`. The alternative for paging is to use `order_by.start_from` and a filter to exclude the IDs that you've already seen for the `order_by.start_from` value\".to_string()));\n};\n\n// vdb_src/qdrant/v1.18.0/lib/segment/src/data_types/order_by.rs:109-110\n/// Which payload value to start scrolling from. Default is the lowest value for `asc` and the highest for `desc`\npub start_from: Option<StartFrom>,",
+      "call_chain_traced": "REST scroll → Collection::scroll_by (point_ops.rs) → 聚合各 shard scroll_by 结果 kmerge_by(order_value,id) → take(limit) → next_page_offset 计算：order_by.is_some() 时硬编码 None（无任何条件分支可产生游标）。LocalShard::scroll_by (shard_ops.rs) 显式拒绝 offset+order_by 组合并给出替代方案：'use order_by.start_from and a filter to exclude the IDs that you've already seen'。OrderBy 结构含 start_from 字段（order_by.rs），即 order_by 模式的分页设计路径为 start_from+filter 而非 offset 游标。",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "param_typo"],
+      "surviving": "by_design：源码 point_ops.rs:394 '|| order_by.is_some()' 显式使 order_by 模式下 next_page_offset 恒为 None；且 shard_ops.rs:237 拒绝 offset+order_by 并在错误消息中给出官方替代分页方案（start_from+filter）。观测现象 100% 由该设计分支解释。残余争议点仅剩：API 文档（raw_knowledge 摘要）对 scroll 分页 'exhausted when null' 的陈述未区分 order_by 模式，存在文档-实现语义落差（silent truncation of walk-based pagination），这是 Type2/文档问题而非校验缺失。"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "boundary_aliases_list_002",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": null,
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment; mechanical B NOT_TRIGGERED so no CONFLICT)"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "mundane_api_semantics",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Claimed dimension is error-diagnostics quality on an undocumented query face; the only extracted unit is a success-shape behavioral assertion, and the vendor OpenAPI 4XX/ErrorResponse clause was never extracted as a constraint.",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null,
+                       "signal": null,
+                       "rationale": null},
+      "rationale": "A: qdrant_behavioral_aliases_list_001, id+quote_ok (assertion 'HTTP 200 with an array of alias/collection-name pairs' verified as contract original, success-shape only), violates=false -> REFUTED; baseline parameterless GET /aliases returns exactly the asserted 200+array, and the probed collection_name query param exists only as the registry's 'openapi (mechanical backfill)' entry (contract lines 3834-3837), contradicted by the live doc page and the vendor's own v1.18.x OpenAPI which declare GET /aliases parameterless. Source: get_aliases (collections_api.rs:48-57) has no Query extractor, so the 400/empty body is a pre-router actix-http request-line overflow (correlated in-chain: 1MB via body face -> 200, short query values incl. NUL -> 200), not a qdrant diagnostic path — no objective constraint class attaches to an undocumented face (B=NEUTRAL), source shows no by-design annotation (C=WEAK_REFUTED), and cognition has no anchor for this phenomenon (priorities hit 'performance over diagnostic completeness' degrades confidence only). Chain broken at contract (grounding gap transcribed: assertion grounds neither query-param validation nor diagnostics quality); residual signal recorded for manual review, not a ruling: the vendor OpenAPI's 4XX->ErrorResponse declaration (openapi.json:2391-2400) could ground a diagnostics constraint but was never extracted — flagged under category other.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 1, "defect": 0, "not_defect": 1, "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 0, "both": 1, "behavior": 0},
+    "root_cause_distribution": {"mundane_api_semantics": 1},
+    "constraint_category_distribution": {"other": 1},
+    "candidate_class_distribution": {"strict_defect": 0, "exploratory_candidate": 0, "rejected": 1}
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_points_search_003",
+  "endpoint": "points+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Constraint qdrant_range_search_points_001 exists in contract with assertion 'limit >= 1 AND limit <= 1000'. Source URL reachable. Content explicitly documents limit range [1, 1000]. Endpoint matches contract registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: search request with limit=1001 → http=200, Body={'result': [{'id': 1, 'version': 1, 'score': 0.99999994}], 'status': 'ok', 'time': 0.001514896}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 with status='ok' indicates successful acceptance of invalid limit value"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_points_search_003.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_search_points_001",
+      "assertion_text_quoted": "limit >= 1 AND limit <= 1000",
+      "api_violates_assertion": true,
+      "note": "API accepts limit=1001 with HTTP 200, violating upper bound constraint",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_search_points_001",
+        "doc:https://api.qdrant.tech/api-reference/points/search-points (assertion: limit ∈ [1, 1000])",
+        "script:debate_logs/boundary_points_search_003.py (line 103: limit=1001)",
+        "log:output_boundary_points_search_003.log (HTTP 200, status='ok')"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "limit.*1000|1000.*limit",
+        "validate.*range.*limit",
+        "QueryRequestInternal.*limit"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs",
+        "src/common/inference/query_requests_rest.rs",
+        "lib/collection/src/operations/universal_query/collection_query.rs",
+        "lib/storage/src/audit_reader.rs"
+      ],
+      "source_excerpt": "From lib/api/src/rest/schema.rs:\n\n    /// Max number of points to return. Default is 10.\n    #[validate(range(min = 1))]\n    pub limit: Option<usize>,\n\nNote: Validation only enforces min=1, no max=1000 check present. Compare with audit_reader.rs which has explicit MAX_LIMIT=10_000 enforcement.\n\nFrom lib/collection/src/operations/universal_query/collection_query.rs:\n\n    pub const DEFAULT_LIMIT: usize = 10;\n\nNo maximum limit constant defined for query operations.",
+      "call_chain_traced": "REST schema (schema.rs) defines limit validation with min=1 only → No max bound enforcement → Request accepted with limit=1001 → HTTP 200 returned",
+      "verification_outcome": "validation_absent",
+      "note": "Source code shows REST schema validation only enforces limit >= 1 (range(min = 1)). No corresponding max=1000 validation exists, unlike audit_reader.rs which explicitly enforces MAX_LIMIT. The constraint exists in documentation but not in request validation logic.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "缓存延迟"],
+      "surviving": "validation_absent"
+    }
+  }
+}

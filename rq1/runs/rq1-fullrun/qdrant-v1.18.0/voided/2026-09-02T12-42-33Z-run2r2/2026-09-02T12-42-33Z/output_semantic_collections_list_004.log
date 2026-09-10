@@ -1,0 +1,13 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] list_collections = /collections (runtime PATHS; matches raw_knowledge api_endpoints[collections+list].url /collections, method GET, parameters = api-key header only)
+ownership prefix: scl04d04e6e
+[pre-probe] /healthz status=200 raw=healthz check passed
+[baseline GET /collections] status=200 raw={"result":{"collections":[{"name":"bcc139b6a8bp2"},{"name":"bcc139bc7c6p2"},{"name":"scc024_1788393554_legal_1"},{"name":"scc024_1788393554_legal_8"},{"name":"scc2a_1788393513_35968_shmin"}]},"status":"ok","time":0.000016852}
+[baseline] prefix-scope=[]
+[leg1 POST /collections] status=404 raw=
+[leg1] rejected with 404; diagnostic=None
+[leg2 GET /collections junk-params] status=200 raw={"result":{"collections":[{"name":"bcc139b6a8bp2"},{"name":"bcc139bc7c6p2"},{"name":"scc024_1788393554_legal_1"},{"name":"scc024_1788393554_legal_8"},{"name":"scc2a_1788393513_35968_shmin"}]},"status":"ok","time":3.725e-6}
+[leg2] 200 disposition with intact array; prefix-scope=[]
+[post-probe GET /collections] status=200 raw={"result":{"collections":[{"name":"bcc139b6a8bp2"},{"name":"bcc139bc7c6p2"},{"name":"scc024_1788393554_legal_1"},{"name":"scc024_1788393554_legal_8"},{"name":"scc2a_1788393513_35968_shmin"}]},"status":"ok","time":4.014e-6}
+VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics: POST on the GET-only listing face was rejected with HTTP 404 but the body carries NO diagnostic text (empty/missing error message) - the user cannot tell which method/parameter is wrong: '')

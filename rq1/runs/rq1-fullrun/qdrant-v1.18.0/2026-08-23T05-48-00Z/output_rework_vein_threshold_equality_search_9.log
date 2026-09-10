@@ -1,0 +1,16 @@
+create: 200
+upsert: 200
+search baseline: http=200 n=1 top_score=1.0 id=1
+search  th=1.0: http=200 n=0
+search  th=1.01: http=200 n=1 scores=[1.0]
+search  th=0.99: http=200 n=0
+Traceback (most recent call last):
+  File "<stdin>", line 27, in <module>
+  File "<stdin>", line 27, in <listcomp>
+TypeError: string indices must be integers
+recreate: 409
+upsert: 200
+query th=1.0: http=200 body={"result":{"points":[]},"status":"ok","time":0.000884029}
+query th=1.01: http=200 body={"result":{"points":[{"id":1,"version":2,"score":1.0}]},"status":"ok","time":0.00029395}
+query baseline: http=200 body={"result":{"points":[{"id":1,"version":2,"score":1.0}]},"status":"ok","time":0.00065733}
+cleanup: 200

@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_telemetry_004",
+  "endpoint": "telemetry",
+  "param": "details_level",
+  "expected_defect_type": "Type2_PoorDiagnostics",
+  "strategy": "diagnosis_quality",
+  "oracle": {
+    "statement": "with control GET /telemetry = 200, the legs details_level=11 and details_level=-1 answer 4xx (a 200 = Type1_IllegalSuccess - the documented 0..10 window not enforced; 5xx with /healthz alive = Type3_RuntimeFailure) and each 4xx body scores >= 1 on the Type2 rubric (param_named or format_hint or actionable; score 0 = Type2_PoorDiagnostics); a non-200 control = SCRIPT_ERROR honest exit (constraint qdrant_type_telemetry_001)",
+    "source": "docstring"
+  }
+}

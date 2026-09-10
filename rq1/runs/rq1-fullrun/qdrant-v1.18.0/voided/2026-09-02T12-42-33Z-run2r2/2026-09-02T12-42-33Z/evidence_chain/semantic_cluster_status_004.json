@@ -1,0 +1,87 @@
+{
+  "defect_id": "semantic_cluster_status_004",
+  "endpoint": "cluster+status (GET /cluster; probed undocumented face: POST /cluster empty body)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PARTIAL",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json exists in the contract directory; WebFetch was domain-blocked (api.qdrant.tech) but the page was retrieved via the alternate web-reader tool — title 'Check cluster status | Qdrant | API Reference' (PASS). Version: URL segment v-1-18-x, page header 'v1.18.x', target v1.18.0 — major.minor match (PASS). Content: the page documents exactly one operation, GET /cluster -> '200 Retrieved' with usage/time/status/result (example result {\"status\":\"disabled\"}), consistent with both contract chunk units on the success face; but the page contains NO statement about wrong-method requests or any 4xx error face, so the candidate's claim (diagnostic quality of a wrong-method refusal) has no doc prose grounding either way (PARTIAL). Endpoint precision: endpoint_registry maps cluster+status -> GET /cluster; the probe hit the same path with POST, an undocumented verb face of the documented path — deliberate attack face, outside the registered operation (PARTIAL).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[L1 POST /cluster (empty body)] status=404 raw= ; [L1 POST /cluster (empty body) rubric] 4xx refusal status=404 rubric_score=0/3 raw=",
+      "secondary_observations": [
+        "[pre-matrix control GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":3.476e-6}  (rest face: documented GET control satisfied)",
+        "[bracket-L1 control GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.201e-6}  (rest face: bracket control)",
+        "rest face sibling script boundary_cluster_status_003, original lines: [verb PUT /cluster] -> status=404 raw= ; [verb DELETE /cluster] -> status=404 raw= ; [verb PATCH /cluster] -> status=404 raw=  (same path, other undocumented verbs — identical empty-404 disposition)",
+        "live re-probe 2026-09-03 (127.0.0.1:6333, /healthz 200 first): POST /cluster -> [status=404 size=0] — exact reproduction of the primary observation; GET /cluster -> [status=200 size=62] body {\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.447e-6}",
+        "live comparative contrast 2026-09-03: GET /collections/scs4_nonexistent_ghost -> [status=404 size=100] body {\"status\":{\"error\":\"Not found: Collection `scs4_nonexistent_ghost` doesn't exist!\"},\"time\":5.648e-6} — handler-level 404 names the resource and cause (would score >=1 on the Type-2 rubric), while wrong-verb 404s carry zero bytes: disposition difference is face-structural, not content-dependent",
+        "live family probe 2026-09-03: POST /telemetry -> [status=404 size=0] ; POST /cluster/metadata/keys/xyz -> [status=404 size=0] — empty-404 is family-wide for unrouted (path,method) requests",
+        "grpc face: not probed (face_unavailable — no gRPC client used by this script family; recorded honestly)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "Wrong-method request (request-side-decidable client error) refused with a proper HTTP 404 status; the deficiency claimed is the zero-byte body (no problem/format/action element), not the status-code semantics — contrast with Qdrant handler-level 404s which return diagnostic JSON bodies."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["semantic_cluster_status_004", "boundary_cluster_status_003"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_status_001",
+      "assertion_text_quoted": "returns 200 with cluster info; valid on single-node deployments",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check: the claim's phenomenon is a diagnostics-quality judgment on a REFUSAL (404 empty body), not silent acceptance of an illegal value, so violates=False is not a conservative dodge here. The quoted assertion (qdrant_behavioral_cluster_status_001, description field verbatim) governs only the GET success face, which the deployment satisfies (control GET /cluster -> 200 with a result object, twice in the log and again live). The observed POST /cluster face lies outside the quoted assertion's constraint domain, and a full scan of structured_contract.json (all six constraint categories + assertions) found NO unit covering wrong-verb error-face diagnostics for cluster+status or any endpoint. The chunk's other unit qdrant_type_cluster_status_001 (response-shape: peer_id/raft_state/commit_index/peers), also self-anchored in the script header line 6, likewise covers only the 200 response face. The DEFECT claim's sole normative ground is the attack framework's Type-2 rubric (in-script oracle, script lines 37-45: 'each 4xx body scores >= 1 on the Type2 rubric ... score 0 = an opaque empty/generic body = Type2_PoorDiagnostics'), which is a framework-level standard, not contract text.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: dispatch constraint_id is the empty string; chunk_cluster+status carries exactly two units — qdrant_type_cluster_status_001 (200 response shape: peer_id/raft_state/commit_index/peers) and qdrant_behavioral_cluster_status_001 (200 success on single-node) — neither covers wrong-verb error-face diagnostics; structured_contract.json contains no diagnostics/rubric constraint for this or any face",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/distributed/cluster-status documents exactly one operation (GET /cluster -> 200 Retrieved, example result {\"status\":\"disabled\"}); no error responses and no wrong-method behavior are documented — the doc is silent on the claimed face (silent, not contradictory)",
+        "script: debate_logs/semantic_cluster_status_004.py sends POST /cluster with empty body as matrix leg L1 (lines 230-238), rubric oracle declared at lines 37-45, defect('Type2_PoorDiagnostics') exits on rubric_score==0 (line 210); control-before/after GET brackets confirm the documented face stays 200",
+        "log: primary observation [L1 POST /cluster (empty body)] status=404 raw= with rubric_score=0/3 -> VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics); exit code 1; reproduced identically by boundary_cluster_status_003 (POST/PUT/DELETE/PATCH all 404 empty) and by live re-probe on 2026-09-03 (POST /cluster -> 404 size=0)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The claimed behavior — poor diagnostics on the wrong-verb error face of /cluster — is covered by no contract unit: the dispatched constraint_id is empty, and the two chunk_cluster+status units govern only the GET 200 success/response face, which the deployment satisfies (control probes 200 + result object). The DEFECT verdict rests solely on the attack framework's Type-2 rubric (an in-script oracle), so the contract->claim link is absent. The doc link is present but silent on the claimed face; script and log links are intact and mutually consistent, and the phenomenon itself is genuine, deterministic, and multi-source reproduced.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "\"/cluster\" (path <DESKTOP>/vdb_src/qdrant/v1.18.0/src)",
+        "fn cluster_status (path src/)",
+        "default_service|MethodNotAllowed|method_not_allowed (path src/actix)",
+        "App::new|\\.wrap|configure|default (path src/actix/mod.rs)",
+        "StorageError|error|time (path src/actix/helpers.rs)"
+      ],
+      "files_examined": [
+        "src/actix/api/cluster_api.rs (full, 303 lines)",
+        "src/actix/mod.rs (lines 90-189)",
+        "src/actix/helpers.rs (lines 40-114)"
+      ],
+      "source_excerpt": "src/actix/api/cluster_api.rs:49-73 — the ONLY route on the exact /cluster path:\n  49  #[get(\"/cluster\")]\n  50  fn cluster_status(\n  51      dispatcher: web::Data<Dispatcher>,\n  52      ActixAuth(auth): ActixAuth,\n  53  ) -> impl Future<Output = HttpResponse> {\n  54      helpers::time(async move {\n  55          auth.check_global_access(AccessRequirements::new(), \"cluster_status\")?;\n  56          Ok(dispatcher.cluster_status())\n  57      })\n  58  }\n  60  #[post(\"/cluster/recover\")]        <- different sub-path, not /cluster\n  75  #[delete(\"/cluster/peer/{peer_id}\")] <- different sub-path, not /cluster\n\nsrc/actix/api/cluster_api.rs:293-302 — route registration:\n 293  pub fn config_cluster_api(cfg: &mut web::ServiceConfig) {\n 294      cfg.service(cluster_status)\n 295          .service(remove_peer)\n 296          .service(recover_current_peer)\n 297          .service(get_cluster_telemetry)\n 298          .service(get_cluster_metadata_keys)\n 299          .service(get_cluster_metadata_key)\n 300          .service(update_cluster_metadata_key)\n 301          .service(delete_cluster_metadata_key);\n 302  }\n\nsrc/actix/mod.rs:113-172 (excerpt) — App construction: middleware and configure() calls only, NO .default_service() override anywhere:\n 113      let mut app = App::new()\n 114          .wrap(Compress::default())\n ...          .wrap(NormalizePath::trim())\n ...          .wrap(Logger::default() ...)\n 150          .configure(config_collections_api)\n 154          .configure(config_cluster_api)\n ...          .service(get_points);\n             (grep for default_service|MethodNotAllowed|method_not_allowed across src/actix returned ZERO hits)\n\nsrc/actix/helpers.rs:91-114 (excerpt) — Qdrant's own error renderer, which DOES produce diagnostic JSON bodies, never runs for unrouted requests:\n  91  pub fn process_response_error_with_inference_usage(\n  92      err: StorageError, ...\n  99      let error = HttpError::from(err);\n 100      let http_code = error.status_code();\n 102      let json_body = ApiResponse::<()> {\n 103          result: None,\n 104          status: ApiStatus::Error(error.to_string()),\n 105          time: timing.elapsed().as_secs_f64(),",
+      "call_chain_traced": "POST /cluster -> actix-web 4.13.0 router: the only registration on the exact /cluster path is #[get(\"/cluster\")] cluster_status (cluster_api.rs:49, registered at 294); attribute-macro routes carry the method as a resource-level guard, so a POST matches no resource and falls through to the App default. App::new() in src/actix/mod.rs:113-172 installs only middleware + configure()/service() registrations — no .default_service() override and no wrap that renders bodies for unrouted requests (grep zero hits) — so the framework default (404 Not Found, empty body) is returned verbatim. Qdrant's diagnostic error path (helpers.rs:91-114 process_response_error -> {status:{error:...},time} JSON) executes only inside routed handlers; live contrast confirms the split: handler-level 404 GET /collections/{missing} returns a 100-byte diagnostic JSON naming the resource, while every wrong-verb request (POST /cluster, POST /telemetry, POST /cluster/metadata/keys/xyz) returns 404 with size=0. Caveat recorded honestly: the actix-web crate source is not available locally (cargo registry cache holds only the index), so the framework-side default-404 code itself could not be quoted; the mechanism is established from the qdrant-side files plus the family-wide live pattern.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "Outcome reasoning: no code anywhere in the target attaches a diagnostic body to unrouted/wrong-method requests — the rubric-required handling is absent (validation_absent). NOT marked by_design_in_source: the empty 404 is inherited from the web framework's default with no Qdrant-side override, and the source carries no explicit intent marker (no 'intentionally'/'by design'/'we don't guarantee' comment) for this behavior, which the v3.4 tightened rule requires. Grep hits on \"/cluster\" and cluster_status were pursued and read in full; the zero-hit grep on default_service is itself the finding and was verified by reading the complete App construction.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env: /healthz 200 at pre-probe and /healthz-style controls around every leg; control GET /cluster 200 at both brackets; identical 404 across two scripts on 2026-09-02 and live re-probe on 2026-09-03",
+        "concurrency: sequential single request, no shared state involved in a routing refusal",
+        "request_typo: request verified from script source (debate_logs/semantic_cluster_status_004.py lines 230-238) to be exactly POST {runtime path cluster_status} with empty JSON body",
+        "cache_delay: refusal is stateless routing behavior, bit-identical across attempts 14+ hours apart"
+      ],
+      "surviving": "actix-web framework default: the empty-body 404 is inherited from the web framework's unrouted-request fallback, not written by any Qdrant statement — Qdrant merely does not override default_service and ships no intent marker; whether a framework-inherited diagnostics gap on an undocumented verb face counts as a target defect (and whether the Type-2 rubric without contract-text support suffices) is left for the chain-auditor. Secondary surviving consideration: the claimed face is entirely undocumented, so no documentation expectation is violated."
+    }
+  }
+}

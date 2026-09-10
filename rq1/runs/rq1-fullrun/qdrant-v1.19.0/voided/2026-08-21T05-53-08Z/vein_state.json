@@ -1,0 +1,95 @@
+{
+  "target": "qdrant",
+  "version": "v1.19.0",
+  "session_dir": "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\results\\qdrant\\v1.19.0\\2026-08-21T05-53-08Z",
+  "round": 2,
+  "top_endpoints": [
+    "POST /collections/{collection_name}/points/count",
+    "POST /collections/{collection_name}/points/query",
+    "POST /collections/{collection_name}/points/search"
+  ],
+  "richness_scores": {
+    "POST /collections/{collection_name}/points/count": 7.0,
+    "POST /collections/{collection_name}/points/query": 8.5,
+    "POST /collections/{collection_name}/points/search": 8.0
+  },
+  "shape_sources": {
+    "POST /collections/{collection_name}/points/count": {
+      "shape_type": "cardinality_oracle",
+      "known_instance_issue": 10096,
+      "attack_strategy_hint": "exact:true vs exact:false cardinality estimation on count endpoint with indexed vs unindexed filters"
+    },
+    "POST /collections/{collection_name}/points/query": {
+      "shape_type": "type_confusion",
+      "known_instance_issue": 9420,
+      "attack_strategy_hint": "filter.should=null and filter.must_not=object type confusion"
+    },
+    "POST /collections/{collection_name}/points/search": {
+      "shape_type": "numeric_boundary",
+      "known_instance_issue": 4321,
+      "attack_strategy_hint": "limit boundary and indexed filter bounds validation"
+    }
+  },
+  "condition_history": [
+    {
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "null_check",
+      "finding": "DEFECT_FOUND",
+      "detail": "is_null filter on 'city' field: exact=true=4, exact=false=5, scroll=4 (25% divergence)"
+    },
+    {
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "range_filter",
+      "finding": "NO_DEFECT",
+      "detail": "age range filter: exact=true=5, exact=false=5, scroll=5 (0% divergence)"
+    },
+    {
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "detail": "age field with string value 'thirty': exact=true=0, exact=false=7 (silent type acceptance)"
+    },
+    {
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "compound_and",
+      "finding": "DEFECT_FOUND",
+      "detail": "compound AND on age+score range: exact=true=3, exact=false=4, scroll=3 (33% divergence)"
+    },
+    {
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "is_empty",
+      "finding": "DEFECT_FOUND",
+      "detail": "is_empty estimator: exact=false undercounts by 35% across all sizes (10/50/100/200). exact=true correctly counts MISSING+NULL (7/34/67/134), but exact=false returns only MISSING count (4/22/44/88). Systematic estimator bias confirmed.",
+      "round": 2,
+      "r2_objective": "Deepen from R1 is_null finding to test is_empty condition class across multi-scale variants"
+    }
+  ],
+  "last_finding": {
+    "endpoint": "POST /collections/{collection_name}/points/count",
+    "condition_type": "is_empty",
+    "finding": "DEFECT_FOUND",
+    "detail": "is_empty estimator: exact=false undercounts by 35% across all sizes (10/50/100/200). exact=true correctly counts MISSING+NULL (7/34/67/134), but exact=false returns only MISSING count (4/22/44/88). Systematic estimator bias confirmed.",
+    "round": 2,
+    "r2_objective": "Deepen from R1 is_null finding to test is_empty condition class across multi-scale variants"
+  },
+  "adjacent_pending": [
+    "match_any",
+    "range_filter",
+    "compound_and",
+    "compound_or",
+    "nested_filter",
+    "geo_filter"
+  ],
+  "round_focus": "cardinality_oracle_deepening",
+  "defect_candidates": [
+    {
+      "defect_id": "vein_cardinality_oracle_is_empty_matrix_1",
+      "condition_class": "is_empty",
+      "round": 2,
+      "severity": "Type2_PoorDiagnostics",
+      "confidence": "HIGH",
+      "cross_size_validation": "PASS - consistent bias across 4 sizes",
+      "control_group_validation": "PASS - scroll ground truth confirms exact=true baseline"
+    }
+  ]
+}

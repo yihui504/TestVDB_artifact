@@ -1,0 +1,627 @@
+{
+  "_meta": {
+    "target": "weaviate",
+    "version": "1.38.2",
+    "generated_at": "2026-07-06T20:10:00.000000Z",
+    "source_data": {
+      "total_issues_analyzed": 172,
+      "positive_issues": 92,
+      "negative_issues": 0,
+      "invalid_issues": 80,
+      "merged_prs_analyzed": 0,
+      "bug_shapes_extracted": 5
+    },
+    "data_sources": [
+      "intelligence/weaviate/bug_shapes.json",
+      "intelligence/weaviate/classified_issues.json",
+      "intelligence/weaviate/developer_cognition.json",
+      "THEORETICAL_FRAMEWORK.md",
+      "results/weaviate/v1.38.2/structured_contract.json"
+    ],
+    "ttl_hours": 720
+  },
+  "attack_surface": {
+    "high_priority_areas": [
+      {
+        "area": "Request Parameter Validation",
+        "rationale": "Most prevalent defect category - 42 instances in bug_shapes BS-004 affecting request_parsing layer. Historical pattern shows empty vectors, negative values, and invalid configurations accepted without validation.",
+        "historical_defect_count": 42,
+        "bug_shapes": ["BS-004"],
+        "defect_types": ["Type1_IllegalSuccess"],
+        "mapped_contract_endpoints": [
+          "batch+objects",
+          "objects",
+          "schema",
+          "graphql"
+        ],
+        "blindspots": ["BS-01", "BS-04", "BS-05"],
+        "attack_order": [
+          {
+            "strategy": "type_confusion",
+            "blindspot": "BS-01",
+            "constraints": ["vector_type", "filter_type", "property_type"]
+          },
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": ["limit_range", "offset_range", "negative_integers"]
+          },
+          {
+            "strategy": "semantic",
+            "blindspot": "BS-05",
+            "constraints": ["behavioral_response_code", "error_message_clarity"]
+          }
+        ]
+      },
+      {
+        "area": "Concurrency Race Conditions",
+        "rationale": "Critical storage engine defects - 15 instances in BS-002 causing tenant state corruption, data loss after crashes, and panic during restart. Affects multi-tenant collections and async indexing.",
+        "historical_defect_count": 15,
+        "bug_shapes": ["BS-002"],
+        "defect_types": ["Type1_IllegalSuccess", "Type4_StateViolation"],
+        "mapped_contract_endpoints": [
+          "schema+{className}+tenants",
+          "backups+{backend}",
+          "replication+replicate"
+        ],
+        "blindspots": ["BS-03"],
+        "attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "blindspot": "BS-03",
+            "constraints": ["tenant_deletion", "backup_cancellation", "async_indexing"]
+          }
+        ]
+      },
+      {
+        "area": "Error Handling and Diagnostics",
+        "rationale": "17 instances in BS-003 showing poor error messages, incorrect batch limits, and configuration validation gaps. Error quality directly impacts debuggability.",
+        "historical_defect_count": 17,
+        "bug_shapes": ["BS-003"],
+        "defect_types": ["Type2_PoorDiagnostics"],
+        "mapped_contract_endpoints": [
+          "objects",
+          "batch+objects",
+          "schema"
+        ],
+        "blindspots": ["BS-02"],
+        "attack_order": [
+          {
+            "strategy": "semantic",
+            "blindspot": "BS-02",
+            "constraints": ["error_message_content", "configuration_validation"]
+          }
+        ]
+      }
+    ],
+    "medium_priority_areas": [
+      {
+        "area": "State Consistency in Data Access",
+        "rationale": "13 instances in BS-005 showing query result inconsistencies, property configuration not respected, and vector search correctness issues. Affects hybrid search and filtering.",
+        "historical_defect_count": 13,
+        "bug_shapes": ["BS-005"],
+        "defect_types": ["Type4_StateViolation"],
+        "mapped_contract_endpoints": [
+          "graphql",
+          "objects",
+          "objects+{className}+{id}"
+        ],
+        "blindspots": ["BS-03"],
+        "attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "blindspot": "BS-03",
+            "constraints": ["hybrid_search", "filter_consistency", "vector_configuration"]
+          }
+        ]
+      },
+      {
+        "area": "Boundary Handling in Vector Search",
+        "rationale": "5 instances in BS-001 showing flat search failures with bias dimensions, property-level vectorization not respected, and metadata filtering errors. Critical for search correctness.",
+        "historical_defect_count": 5,
+        "bug_shapes": ["BS-001"],
+        "defect_types": ["Type1_IllegalSuccess"],
+        "mapped_contract_endpoints": [
+          "graphql",
+          "objects+{className}+{id}"
+        ],
+        "blindspots": ["BS-04"],
+        "attack_order": [
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": ["vector_dimensions", "similarity_thresholds", "quantization_parameters"]
+          }
+        ]
+      }
+    ],
+    "low_priority_areas": []
+  },
+  "defect_criteria": {
+    "confirmed_defect_patterns": [
+      {
+        "pattern": "Empty vector [] accepted in batch/objects but rejected in singular POST /v1/objects",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "High",
+        "rationale": "Direct violation of API contract - batch endpoint should reject invalid vectors same as singular endpoint"
+      },
+      {
+        "pattern": "shardingConfig.desiredCount accepts negative values but rejects zero",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "High",
+        "rationale": "Negative shard counts are physically impossible but accepted without validation"
+      },
+      {
+        "pattern": "TTL context canceled mid-deletion leaves tenant permanently HOT",
+        "classification": "Type4_StateViolation",
+        "severity_default": "Critical",
+        "rationale": "System state corruption preventing tenant management operations"
+      },
+      {
+        "pattern": "Negative ef value (-1) accepted in vectorIndexConfig without validation",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "High",
+        "rationale": "Invalid configuration parameter accepted causing undefined behavior"
+      },
+      {
+        "pattern": "Gemini embedding MaxObjectsPerBatch is 150; should be 100 per documentation",
+        "classification": "Type2_PoorDiagnostics",
+        "severity_default": "Medium",
+        "rationale": "Configuration inconsistency causing operational failures"
+      },
+      {
+        "pattern": "Flat exact dot search flips Top-1 after appending large common bias dimension",
+        "classification": "Type4_StateViolation",
+        "severity_default": "High",
+        "rationale": "Search result correctness directly impacts application logic"
+      },
+      {
+        "pattern": "Property-level skip_vectorization not respected after collection creation",
+        "classification": "Type4_StateViolation",
+        "severity_default": "High",
+        "rationale": "Configuration promise violated causing unexpected resource usage"
+      },
+      {
+        "pattern": "Nested AND/OR filters silently ignore child filter errors when concurrency budget is 1",
+        "classification": "Type2_PoorDiagnostics",
+        "severity_default": "Medium",
+        "rationale": "Silent failure mode prevents debugging of filter issues"
+      }
+    ],
+    "by_design_behaviors": [
+      {
+        "pattern": "Behaviors that match documented API specifications exactly",
+        "specific_example": "GET /objects with limit=100 returns exactly 100 objects when available; if 50 objects exist, returns 50. Pagination behavior matches OpenAPI spec.",
+        "source_issue_numbers": [],
+        "affected_endpoints": ["All API endpoints"],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "If the behavior matches the documented specification exactly, it is considered correct even if unexpected. Verify documentation matches implementation instead."
+      },
+      {
+        "pattern": "Error messages that are technically correct but lack contextual detail",
+        "specific_example": "POST /objects with invalid vector returns HTTP 400 with 'invalid vector' message. Per maintainer stance, this indicates the error category correctly even if parameter details aren't specified.",
+        "source_issue_numbers": [],
+        "affected_endpoints": ["All data endpoints"],
+        "verdict": "REPORT_AS_P3",
+        "rationale": "Team historically deprioritizes diagnostic quality improvements. Report as low priority with focus on actionability."
+      },
+      {
+        "pattern": "Async indexing completion time under normal operational conditions",
+        "specific_example": "POST /objects with vectorizer module returns 202 Accepted. Indexing completes in background. Timing varies by load and hardware.",
+        "source_issue_numbers": [],
+        "affected_endpoints": ["objects", "batch+objects"],
+        "verdict": "VERIFY_FIRST",
+        "rationale": "Async behavior is by design. Verify operation completes within documented SLAs before reporting."
+      }
+    ],
+    "wontfix_patterns": [
+      {
+        "pattern": "Extreme concurrency scenarios requiring coordinated node failure",
+        "rationale": "Team acknowledges but deprioritizes due to low practical impact in production deployments with proper redundancy",
+        "action": "REPORT as P3 — include reproduction steps and mitigation recommendations"
+      },
+      {
+        "pattern": "Error message verbosity beyond category-level indication",
+        "rationale": "Team deprioritizes diagnostic quality improvements. Focus on actionability over detail",
+        "action": "REPORT as P3 — include suggested message text that improves debuggability"
+      },
+      {
+        "pattern": "Documentation typos in non-critical paths",
+        "rationale": "Acknowledged but low priority fix unless it causes operational confusion",
+        "action": "REPORT as P3 — include corrected documentation text"
+      }
+    ]
+  },
+  "trust_boundaries": {
+    "trusted": [
+      {
+        "component": "Internal RAFT consensus communication",
+        "rationale": "Authenticated cluster-internal protocol for replication coordination"
+      },
+      {
+        "component": "Admin API endpoints with OIDC authentication",
+        "rationale": "Requires authentication and authorization via configured identity provider"
+      },
+      {
+        "component": "Local filesystem backend for backups",
+        "rationale": "Controlled access within container/pod namespace"
+      }
+    ],
+    "untrusted": [
+      {
+        "component": "Public REST API endpoints",
+        "rationale": "Exposed to external clients, potentially accessible without authentication depending on configuration"
+      },
+      {
+        "component": "GraphQL query interface",
+        "rationale": "Accepts arbitrary queries from clients, query complexity can impact system stability"
+      },
+      {
+        "component": "SDK client input",
+        "rationale": "Client-controlled data including vectors, properties, and filter expressions"
+      },
+      {
+        "component": "Batch object import payloads",
+        "rationale": "User-provided data at scale can stress validation logic"
+      }
+    ],
+    "assumptions": [
+      "Docker network is isolated from unauthorized access",
+      "Authentication is handled by OIDC provider when configured",
+      "Backup storage backends (S3, GCS, Azure) enforce their own access controls",
+      "Client applications validate their own inputs before transmission",
+      "Kubernetes/Docker network policies restrict pod-to-pod communication"
+    ]
+  },
+  "cognitive_blindspots": {
+    "blindspots": [
+      {
+        "blindspot_id": "BS-01",
+        "name": "Parameter Coercion Trust",
+        "description": "Developers over-trust framework-level type coercion and automatic validation in request parsing, assuming invalid inputs will be rejected before business logic",
+        "evidence": {
+          "historical_defects": 42,
+          "representative_issues": [11981, 11729, 11436, 11325, 10771],
+          "developer_acknowledgment_rate": 1.0,
+          "root_cause": "parameter_validation",
+          "affected_layer": "request_parsing"
+        },
+        "typical_manifestation": "REST handler accepts parameters via framework binding without explicit validation logic, allowing empty vectors, negative integers, and null values to propagate to business logic",
+        "attack_strategies": ["type_confusion_attack", "missing_param_attack", "null_coercion_attack"],
+        "defense_recommendation": "Add explicit parameter validation middleware at API boundaries that enforces type, range, and required field constraints before business logic",
+        "cross_db_transferable": true,
+        "applicable_dbs": ["milvus", "qdrant", "weaviate", "pgvector"],
+        "severity_impact": "P0/P1"
+      },
+      {
+        "blindspot_id": "BS-02",
+        "name": "Error Message Negligence",
+        "description": "Developers focus on success paths and crash prevention, treating error messages as implementation details rather than user-facing diagnostics",
+        "evidence": {
+          "historical_defects": 17,
+          "representative_issues": [11275, 10258, 9340, 8912, 8425],
+          "developer_acknowledgment_rate": 0.95,
+          "root_cause": "error_handling",
+          "affected_layer": "business_logic"
+        },
+        "typical_manifestation": "Errors return generic 'Invalid request' or 'Internal error' without specifying which parameter failed or why, making debugging client-side issues difficult",
+        "attack_strategies": ["error_quality_evaluation", "diagnostic_gap_analysis"],
+        "defense_recommendation": "Establish error message quality standards requiring: parameter name, expected value range, actual received value, and corrective action for all 4xx responses",
+        "cross_db_transferable": true,
+        "applicable_dbs": ["milvus", "qdrant", "weaviate", "pgvector"],
+        "severity_impact": "P2"
+      },
+      {
+        "blindspot_id": "BS-03",
+        "name": "Concurrency Blindness",
+        "description": "Developers underestimate data consistency issues in concurrent operations, assuming linearizability where the implementation only provides eventual consistency",
+        "evidence": {
+          "historical_defects": 15,
+          "representative_issues": [11055, 10581, 9918, 9368, 9320],
+          "developer_acknowledgment_rate": 1.0,
+          "root_cause": "concurrency_race",
+          "affected_layer": "storage_engine"
+        },
+        "typical_manifestation": "Concurrent tenant deletion + TTL cancellation leaves tenant in HOT state; async indexing interrupted by restart never completes; backup during collection deletion causes data loss",
+        "attack_strategies": ["state_consistency_attack", "race_condition_exploration", "operation_cancellation_race"],
+        "defense_recommendation": "Add transactional bounds or compensating transactions for state-changing operations; implement operation fencing to prevent conflicting concurrent state modifications",
+        "cross_db_transferable": true,
+        "applicable_dbs": ["milvus", "qdrant", "weaviate", "pgvector"],
+        "severity_impact": "P0/P1"
+      },
+      {
+        "blindspot_id": "BS-04",
+        "name": "Boundary Default Optimism",
+        "description": "Developers assume users won't input extreme values, relying on default value handling rather than explicit boundary validation",
+        "evidence": {
+          "historical_defects": 5,
+          "representative_issues": [11668, 11667, 8621, 8035, 6491],
+          "developer_acknowledgment_rate": 1.0,
+          "root_cause": "boundary_handling",
+          "affected_layer": "data_access"
+        },
+        "typical_manifestation": "Negative ef=-1, limit=-100, desiredCount=-1 accepted without validation; dimension=0 causes infinite loops; bias dimensions violate mathematical invariants",
+        "attack_strategies": ["boundary_value_attack", "negative_value_attack", "extreme_input_attack"],
+        "defense_recommendation": "Add explicit min/max validation for all numeric parameters with documented ranges; validate mathematical invariants (dimension > 0, count >= 0) at API entry point",
+        "cross_db_transferable": true,
+        "applicable_dbs": ["milvus", "qdrant", "weaviate", "pgvector"],
+        "severity_impact": "P1"
+      },
+      {
+        "blindspot_id": "BS-05",
+        "name": "Documentation Contract Drift",
+        "description": "Implementation changes outpace documentation updates, creating discrepancies between documented API behavior and actual runtime behavior",
+        "evidence": {
+          "historical_defects": 13,
+          "representative_issues": [10231, 9801, 9447, 8914, 8425],
+          "developer_acknowledgment_rate": 0.85,
+          "root_cause": "state_consistency",
+          "affected_layer": "data_access"
+        },
+        "typical_manifestation": "Documentation says parameter X is required but it's optional; behavior changed in v1.33 but docs reference v1.30; error messages don't match documented examples",
+        "attack_strategies": ["api_contract_validation", "behavioral_drift_detection", "documentation_compliance_check"],
+        "defense_recommendation": "Treat documentation as executable contract; add CI tests that validate documented examples against actual API responses; auto-generate docs from OpenAPI spec",
+        "cross_db_transferable": true,
+        "applicable_dbs": ["milvus", "qdrant", "weaviate", "pgvector"],
+        "severity_impact": "P1/P2"
+      }
+    ],
+    "attack_strategy_mapping": {
+      "BS-01": {
+        "primary_attack_agent": "attack-boundary",
+        "strategy_focus": "Type confusion + missing parameters + null coercion"
+      },
+      "BS-02": {
+        "primary_attack_agent": "attack-semantic",
+        "strategy_focus": "Error message quality evaluation"
+      },
+      "BS-03": {
+        "primary_attack_agent": "attack-state",
+        "strategy_focus": "Concurrent race exploration + state consistency"
+      },
+      "BS-04": {
+        "primary_attack_agent": "attack-boundary",
+        "strategy_focus": "Boundary values + negative extremes + mathematical invariants"
+      },
+      "BS-05": {
+        "primary_attack_agent": "attack-semantic",
+        "strategy_focus": "API contract validation + behavioral drift detection"
+      }
+    }
+  },
+  "attack_priority_map": {
+    "endpoints": [
+      {
+        "endpoint": "batch+objects",
+        "overall_priority": "critical",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-01", "BS-02", "BS-05"],
+          "historical_defect_count": 42,
+          "contract_constraint_count": 8,
+          "cross_db_vulnerability_score": 0.95
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "type_confusion",
+            "constraints": ["vector_type", "object_properties"],
+            "blindspot": "BS-01"
+          },
+          {
+            "strategy": "boundary",
+            "constraints": ["batch_size_limits", "vector_dimensions"],
+            "blindspot": "BS-04"
+          },
+          {
+            "strategy": "semantic",
+            "constraints": ["error_message_clarity", "response_consistency"],
+            "blindspot": "BS-02"
+          }
+        ]
+      },
+      {
+        "endpoint": "schema+{className}+tenants",
+        "overall_priority": "high",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-03"],
+          "historical_defect_count": 15,
+          "contract_constraint_count": 5,
+          "cross_db_vulnerability_score": 0.90
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "constraints": ["tenant_deletion", "ttl_cancellation", "backup_conflict"],
+            "blindspot": "BS-03"
+          }
+        ]
+      },
+      {
+        "endpoint": "graphql",
+        "overall_priority": "high",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-04", "BS-05"],
+          "historical_defect_count": 18,
+          "contract_constraint_count": 12,
+          "cross_db_vulnerability_score": 0.85
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "boundary",
+            "constraints": ["limit_range", "vector_dimensions", "filter_parameters"],
+            "blindspot": "BS-04"
+          },
+          {
+            "strategy": "semantic",
+            "constraints": ["behavioral_response_code", "contract_compliance"],
+            "blindspot": "BS-05"
+          }
+        ]
+      },
+      {
+        "endpoint": "objects",
+        "overall_priority": "high",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-01", "BS-02", "BS-05"],
+          "historical_defect_count": 35,
+          "contract_constraint_count": 10,
+          "cross_db_vulnerability_score": 0.88
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "type_confusion",
+            "constraints": ["vector_type", "property_validation"],
+            "blindspot": "BS-01"
+          },
+          {
+            "strategy": "boundary",
+            "constraints": ["pagination_limits", "offset_ranges"],
+            "blindspot": "BS-04"
+          },
+          {
+            "strategy": "semantic",
+            "constraints": ["error_message_quality", "documentation_drift"],
+            "blindspot": "BS-05"
+          }
+        ]
+      },
+      {
+        "endpoint": "backups+{backend}",
+        "overall_priority": "medium",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-03"],
+          "historical_defect_count": 8,
+          "contract_constraint_count": 6,
+          "cross_db_vulnerability_score": 0.75
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "constraints": ["backup_cancellation", "collection_deletion", "restore_conflicts"],
+            "blindspot": "BS-03"
+          }
+        ]
+      }
+    ],
+    "global_strategy_weights": {
+      "boundary_attacks": 0.40,
+      "type_confusion_attacks": 0.25,
+      "state_consistency_attacks": 0.20,
+      "semantic_contract_attacks": 0.15
+    }
+  },
+  "judge_enhancements": {
+    "severity_calibration": {
+      "by_design_behaviors": {
+        "action": "AUTO_DOWNGRADE_TO_TRIVIAL",
+        "rationale": "Developer team explicitly stated behaviors matching documentation are correct by design"
+      },
+      "historical_high_severity_patterns": {
+        "action": "CONFIRM_SEVERITY",
+        "rationale": "Patterns matching 5+ historically fixed bugs are confirmed High/Critical severity"
+      },
+      "wontfix_patterns": {
+        "action": "DOWNGRADE_TO_P3",
+        "rationale": "Team has historically deprioritized this class of issue"
+      },
+      "error_quality_issues": {
+        "action": "CALIBRATE_TO_P2_OR_P3",
+        "rationale": "Team deprioritizes diagnostic quality; assess based on actionability and user impact"
+      }
+    },
+    "novelty_context": {
+      "recently_fixed_patterns": [
+        {
+          "pattern": "Empty vector validation in batch endpoints",
+          "last_fixed": "2024-06",
+          "status": "addressed"
+        },
+        {
+          "pattern": "Negative value validation in configuration",
+          "last_fixed": "2024-05",
+          "status": "partially_addressed"
+        },
+        {
+          "pattern": "Tenant deletion state consistency",
+          "last_fixed": "2024-04",
+          "status": "ongoing_monitoring"
+        }
+      ],
+      "known_ongoing_issues": [
+        11740,
+        11730,
+        11401,
+        11660,
+        11657
+      ]
+    },
+    "submission_success_probability": {
+      "high": [
+        {
+          "condition": "Type1_IllegalSuccess + parameter validation gap",
+          "probability": 0.90,
+          "reason": "Historically well-received; clear contract violation with actionable fix"
+        },
+        {
+          "condition": "Type4_StateViolation + concurrent operations",
+          "probability": 0.85,
+          "reason": "Critical data integrity issue; team prioritizes correctness"
+        },
+        {
+          "condition": "Type1_IllegalSuccess + boundary value acceptance",
+          "probability": 0.82,
+          "reason": "Direct violation of API specification; easy to reproduce and fix"
+        }
+      ],
+      "medium": [
+        {
+          "condition": "Type2_PoorDiagnostics + error message quality",
+          "probability": 0.45,
+          "reason": "Team historically deprioritizes diagnostics quality"
+        },
+        {
+          "condition": "Type4_StateViolation + extreme concurrency scenario",
+          "probability": 0.50,
+          "reason": "Acknowledged but deprioritized due to low practical impact"
+        }
+      ],
+      "low": [
+        {
+          "condition": "Behavior matching documented specification",
+          "probability": 0.05,
+          "reason": "Considered correct by design; documentation mismatch treated as doc issue"
+        },
+        {
+          "condition": "Type2_PoorDiagnostics + minor usability improvement",
+          "probability": 0.25,
+          "reason": "Quality of life improvements deprioritized over correctness fixes"
+        }
+      ]
+    },
+    "submission_guidance": {
+      "required_evidence": [
+        "Minimal reproduction script (MRE) that triggers the defect",
+        "Expected vs actual behavior with documentation references",
+        "Weaviate version and environment details",
+        "For state violations: before/after state showing the corruption"
+      ],
+      "recommended_format": {
+        "title": "[Bug] <summary of violation>",
+        "body": [
+          "**Description**: Clear statement of defect",
+          "**Documentation Reference**: Link to official docs being violated",
+          "**Steps to Reproduce**: Numbered minimal steps",
+          "**Expected Behavior**: What docs say should happen",
+          "**Actual Behavior**: What actually happens (with logs/output)",
+          "**Environment**: Weaviate version, deployment type",
+          "**Impact**: Why this matters (data loss, crash, incorrect results, etc.)"
+        ]
+      },
+      "pitfalls_to_avoid": [
+        "Reporting behaviors that match documentation as bugs",
+        "Submitting error quality issues without suggested improvement text",
+        "Reporting extreme concurrency scenarios without mitigation strategies",
+        "Omitting reproduction steps for state corruption issues"
+      ]
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "defect_id": "semantic_points_search_hnsw_ef_002",
+  "endpoint": "points+search",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation partially accessible: api.qdrant.tech domain blocked. structured_contract shows ef_construct range [10, 1000] at collection creation (qdrant_range_create_collection_002), but no explicit range documented for search-time hnsw_ef values or their relationship to ef_construct.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "INFO: Large hnsw_ef=1000000 accepted and returns 5 results | INFO: Small hnsw_ef=1 accepted and returns 5 results | Top 3 IDs with ef=10: [2, 3, 1] | Top 3 IDs with ef=100: [2, 3, 1] | INFO: Omitted params uses default, returns 3 results | DEFECT_FOUND (Type4_StateLogicViolation) — Top result should be id=1 (exact match), got 2",
+      "secondary_observations": ["EF value changes (1, 10, 100, 1000000) don't affect top-3 ranking consistency", "Default params (no hnsw_ef) returns different result count (3 vs 5)"],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "All hnsw_ef values (1, 10, 100, 1000000) accepted with 200 OK + results. No validation errors returned despite extreme values (1, 1000000) being outside reasonable HNSW ef ranges."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_points_search_hnsw_ef_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_002",
+      "assertion_text_quoted": "hnsw_config.ef_construct (index build speed/accuracy) ∈ [10, 1000]",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_002 (ef_construct ∈ [10, 1000])",
+        "doc:api.qdrant.tech (ef_construct range documented, search-time hnsw_ef relationship unspecified)",
+        "script:semantic_points_search_hnsw_ef_002 (tests hnsw_ef=1, 10, 100, 1000000)",
+        "log:all values accepted, top result should be id=1 but got 2 (state violation)"
+      ],
+      "chain_broken_at": "doc+log",
+      "break_detail": "Chain broken at doc+log: 1) Documentation lacks behavioral contract specifying hnsw_ef range relationship to ef_construct [10, 1000]. 2) Log shows state violation (exact match id=1 not ranked top) suggesting search quality issue independent of ef value. API accepts extreme values (ef=1, ef=1000000) violating expected HNSW parameters.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "pub hnsw_ef",
+        "search_max_hnsw_ef",
+        "ef_construct"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs",
+        "lib/collection/src/operations/types.rs",
+        "lib/storage/src/content_manager/toc/create_collection.rs"
+      ],
+      "source_excerpt": "pub struct SearchParams {\n    /// Params relevant to HNSW index\n    /// Size of the beam in a beam-search. Larger the value - more accurate the result, more time required for search.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub hnsw_ef: Option<usize>,\n    ...\n}\n\n...\n\n/// Max HNSW ef value allowed in search parameters.\npub search_max_hnsw_ef: Option<usize>,\n\n...\n\n// Collection creation HNSW config\npub ef_construct: Option<NonZeroUsize>,  // Range [10, 1000] per contract",
+      "call_chain_traced": "SearchParams.hnsw_ef (unvalidated Option<usize>) → no runtime enforcement of [min, max] → CollectionParams.search_max_hnsw_ef optional (None by default) → search accepts any usize (1, 1000000). State logic violation (exact match not top) suggests separate ranking issue.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Two distinct issues: 1) Range validation absent (ef=1 and ef=1000000 accepted). 2) State logic violation (exact match id=1 not ranked top) - persists regardless of ef value, indicating search quality/ranking bug independent of parameter validation."
+    }
+  }
+}

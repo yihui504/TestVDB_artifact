@@ -1,0 +1,70 @@
+{
+ "defect_id": "semantic_limitdefault_08",
+ "endpoint": "entities+search",
+ "defect_type": "Type2",
+ "built_by": "evidence-builder",
+ "steps": {
+  "doc_verification": {
+   "result": "DOC_VERIFIED",
+   "link_reachability": "PASS",
+   "version_match": "PASS",
+   "content_consistency": "PARTIAL",
+   "endpoint_precision": "PASS",
+   "sdk_rest_confusion": false,
+   "detail": "constraint milvus_range_entities_search_001 断言越界报 'it should be in range [1, 16384], but got %d'——实测消息为 'offset+topk [17000] is invalid, it should be in range [1, 16384], but got 17000'（含前缀但语义一致）且 code=65535 非 1100；契约未指定越界 code 值，断言主文（范围+消息主干）成立",
+   "evidence_source": "doc"
+  },
+  "execution_evidence": {
+   "grade": "B",
+   "log_pattern": "limit+offset=17000 -> code=65535 raw={\"code\":65535,\"message\":\"offset+topk [17000] is invalid, it should be in range [1, 16384], but got 17000\"}（HTTP 200）",
+   "secondary_observations": [
+    "limit=1 -> code=0 topks=[1]（合法对照 PASS）",
+    "limit=5 / limit=16384 -> code=0（16384 边界内 PASS）",
+    "limit 类型混淆面（\"5\"/5.0/True）与 exprParams 面：脚本在 65535 判定后 sys.exit(1)，第3/4部分未执行——log 中无对应行"
+   ],
+   "claim_alignment": "partial",
+   "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "范围违规以 200+65535（泛化错误码）而非 1100/专门码返回——Type2 诊断面：消息具体但错误码泛化"},
+   "reproducibility": "单脚本",
+   "script_error": false,
+   "triggering_scripts": ["debate_logs/semantic_limitdefault_08.py"],
+   "evidence_source": "behavior"
+  },
+  "contract_grounding": {
+   "constraint_id": "milvus_range_entities_search_001",
+   "assertion_text_quoted": "1 <= limit + offset <= 16384 else error 'it should be in range [1, 16384], but got %d'",
+   "api_violates_assertion": false,
+   "note": "17000 越界被拒绝且消息含断言文案主干——范围校验生效，violates=False；缺陷面在错误码泛化（65535 而非 1100 语义的 invalid parameter），属诊断质量（Type2）",
+   "evidence_source": "doc"
+  },
+  "chain_trace": {
+   "chain_links": [
+    "contract: milvus_range_entities_search_001 (limit+offset<=16384 + 消息模板)",
+    "doc: quota_param.go TopKLimit 默认 16384（constraint source_url）",
+    "script: semantic_limitdefault_08.py L61-71 limit=16000+offset=1000",
+    "log: limit+offset=17000 -> code=65535"
+   ],
+   "chain_broken_at": null,
+   "break_detail": null,
+   "note": "四环一致（消息逐字匹配）；仅错误码与断言暗示的 1100 家族不符——码泛化如实记录",
+   "evidence_source": "doc+behavior"
+  },
+  "source_grounding": {
+   "grep_queries": ["it should be in range", "TopKLimit", "validateLimit", "offset+topk", "65535"],
+   "files_examined": [
+    "internal/proxy/util.go (validateLimit L196-201, checkLimit L185-193)",
+    "pkg/util/paramtable/quota_param.go (TopKLimit 默认 16384)",
+    "pkg/util/merr/errors.go (L141 ErrParameterInvalid=1100)",
+    "internal/core/src/query/PlanProto.cpp（topk 透传）"
+   ],
+   "source_excerpt": "internal/proxy/util.go L196-201:\nfunc validateLimit(limit int64) error {\n\ttopKLimit := Params.QuotaConfig.TopKLimit.GetAsInt64()\n\tif limit <= 0 || limit > topKLimit {\n\t\treturn fmt.Errorf(\"it should be in range [1, %d], but got %d\", topKLimit, limit)\n\t}\n\treturn nil\n}\n—— Go proxy 侧有校验且消息匹配；实测返回的 'offset+topk [%d] is invalid, it should be in range...' 前缀形态与 code 65535 未在 Go proxy 层找到（core C++ 源树 grep 'offset+topk'/'but got' 无命中，knowhere/segcore 为预编译 thirdparty）——该错误形态产生于 Go 层之外的下标校验（header-only/thirdparty 或未随树源码），65535 为兜底码。",
+   "call_chain_traced": "HTTP search(limit,offset) -> wrapperProxyWithLimit -> proxy searchTask（Go 侧 validateLimit 路径与实测消息前缀不完全一致）-> 下层（segcore/knowhere thirdparty）range 检查 -> 65535 泛化错误码透出",
+   "verification_outcome": "not_found_in_source",
+   "sufficiency_check": "grep_zero_hits",
+   "evidence_source": "source"
+  },
+  "mundane_explanation": {
+   "excluded": ["env", "concurrency", "request_typo"],
+   "surviving": "范围校验本身有效（17000 被拒+具体消息）；存活面仅为错误码泛化 65535（诊断质量），无非法成功"
+  }
+ }
+}

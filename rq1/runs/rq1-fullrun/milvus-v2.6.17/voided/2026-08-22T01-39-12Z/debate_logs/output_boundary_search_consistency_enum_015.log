@@ -1,0 +1,31 @@
+consistencyLevel='Strong' (Strong (valid)) -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+consistencyLevel='Bounded' (Bounded (valid)) -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+consistencyLevel='strong' (strong lowercase) -> code=1100 raw={"code":1100,"message":"consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded, err:parameter:'strong' is incorrect, please check it: invalid parameter"}
+consistencyLevel='' (empty) -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+consistencyLevel='Foo' (Foo) -> code=1100 raw={"code":1100,"message":"consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded, err:parameter:'Foo' is incorrect, please check it: invalid parameter"}
+consistencyLevel=None (null) -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+consistencyLevel=1 (int 1) -> code=1801 raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number into Go struct field SearchReqV2.consistencyLevel of type string"}
+  NOTE: rejected code=1801 != 1100 (Type2 candidate)
+consistencyLevel={'v': 'Strong'} (nested dict) -> code=1801 raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal object into Go struct field SearchReqV2.consistencyLevel of type string"}
+  NOTE: rejected code=1801 != 1100 (Type2 candidate)
+searchParams nprobe -1 -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+searchParams nprobe 0 -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+searchParams nprobe 1e9 -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+searchParams nprobe abc -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+searchParams nprobe null -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+searchParams ef -5 -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+searchParams level 99 -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+DEFECT: consistencyLevel='' accepted (code 0), contract requires 1100
+DEFECT: consistencyLevel=None accepted (code 0), contract requires 1100
+VERDICT: DEFECT_FOUND (Type1/Type3) - invalid consistencyLevel/searchParams accepted

@@ -1,0 +1,74 @@
+{
+  "defect_id": "vein_batchdelete_stopword_500_02",
+  "endpoint": "DELETE /v1/batch/objects",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint_id vein_stopword_error_channel 为 vein 探索性约束（非结构化契约内置）；核心断言（停用词项属用户输入，应结构化报错而非 5xx）有行为对照支撑；endpoint_registry 含 DELETE /batch/objects",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "batch delete stopword: 500 {\"error\":[{\"message\":\"batch delete objects: cannot find objects: find matching doc ids in shard \\\"l1HZo8cATnEq\\\": docIds: invalid search term, only stopwords pr",
+      "secondary_observations": [
+        "control non-stopword: 200",
+        "control graphql stopword structured: 200 stopword-err-present: True"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "同停用词错误：REST batch delete → HTTP 500（server fault 信号）；GraphQL → HTTP 200 + errors 字段（结构化非 5xx）。同一输入错误跨 API 面分类不一致",
+        "graphql_parallel": "GraphQL 通道对同一 filter 返回 200 + 结构化 errors —— 独立证据面佐证该错误本可结构化处理"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_batchdelete_stopword_500_02.py", "vein_scripts/vein_batchdelete_validation_channel_01.py (同端点 500 模式)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_stopword_error_channel",
+      "assertion_text_quoted": "filter 值全停用词属 caller-input 错误，应返回结构化 4xx/错误负载而非 5xx（与 GraphQL 通道一致）",
+      "api_violates_assertion": true,
+      "note": "观测 500 + 'docIds: invalid search term' 为唯一错误信号；该错误源自用户 filter 输入。violates=True",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:vein_stopword_error_channel（推断性）",
+        "doc:错误源 ErrOnlyStopwords 为面向用户的可配置项提示（'Stopwords can be configured in class.invertedIndexConfig.stopwords'）—— 消息本身面向 caller",
+        "script:vein_batchdelete_stopword_500_02.py valueText='the' + 两对照组",
+        "log:500 docIds: invalid search term, only stopwords provided / control graphql 200+errors"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["invalid search term", "ErrOnlyStopwords", "only stopwords"],
+      "files_examined": [
+        "adapters/repos/db/inverted/searcher.go (L110-112)",
+        "usecases/objects/batch_delete.go (L97-103)",
+        "adapters/repos/db/batch.go (L197-199)",
+        "adapters/handlers/rest/handlers_batch_objects.go (L183-197)"
+      ],
+      "source_excerpt": "adapters/repos/db/inverted/searcher.go L110-111:\nvar ErrOnlyStopwords = fmt.Errorf(\"invalid search term, only stopwords provided. \" +\n\t\"Stopwords can be configured in class.invertedIndexConfig.stopwords\")\n传播链：searcher ErrOnlyStopwords → idx.findUUIDs → db/batch.go L197-199 errors.Wrapf(err, \"cannot find objects\") → usecases/objects/batch_delete.go L99 fmt.Errorf(\"batch delete objects: %w\", err)（未包 ErrInvalidUserInput）→ handlers_batch_objects.go default → 500。",
+      "call_chain_traced": "ErrOnlyStopwords 定义为普通 error（非 ErrInvalidUserInput 语义类型），REST 错误映射 switch（仅识别 ErrInvalidUserInput/ErrMultiTenancy/Forbidden）落到 default InternalServerError；GraphQL 面在 resolver 层把同一错误转为 errors 字段（200），故两 API 面行为分裂",
+      "verification_outcome": "validation_absent",
+      "note": "错误有检出且有面向用户的文案，但未挂 ErrInvalidUserInput 类型 → 5xx 通道。与 vein_batchdelete_validation_channel_01 同根因（错误分类缺失），不同触发值",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

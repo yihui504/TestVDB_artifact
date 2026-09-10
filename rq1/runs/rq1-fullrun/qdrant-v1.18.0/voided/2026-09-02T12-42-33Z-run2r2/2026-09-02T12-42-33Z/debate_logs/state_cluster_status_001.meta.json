@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_status_001",
+  "endpoint": "cluster+status",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "count_consistency",
+  "oracle": {
+    "statement": "documented no-body GET /cluster -> 200 with result object; baseline and final probes carry all four documented ClusterStatus fields (peer_id int>=0, raft_state in enum, commit_index int>=0, peers dict) — missing/mistyped = Type4; every phase probe (after create / upsert 8 / index create / delete 4 / verified drop) returns 200 with key set and status value identical to baseline (flip = Type4); count controls 8 then 4 (drift = Type4); any 5xx = Type3 only after /healthz 200",
+    "source": "docstring"
+  }
+}

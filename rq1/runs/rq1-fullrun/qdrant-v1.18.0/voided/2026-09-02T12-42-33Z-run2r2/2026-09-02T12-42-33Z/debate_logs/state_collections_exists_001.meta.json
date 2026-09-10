@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_exists_001",
+ "endpoint": "collections+exists",
+ "param": "collection_name (exists verdict across the CRUD lifecycle)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_exists_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/collection-exists",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "never-created -> 200 + result.exists=false; live -> 200 + result.exists=true (invariant under point CRUD); post-delete -> 200 + result.exists=false; recreated -> 200 + result.exists=true; non-200/wrong verdict/shape violation = Type4, 5xx = Type3 after /healthz",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

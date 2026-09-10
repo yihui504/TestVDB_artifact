@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_collection_info_001",
+  "endpoint": "cluster+collection+info",
+  "param": "shard_count",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "type",
+  "oracle": {
+    "statement": "existing collection -> GET /cluster/collection/{name} returns 200 whose result object contains peer_id:int, shard_count:int>=0, local_shards/remote_shards/shard_transfers/resharding_operations:arrays; any missing field / wrong type / negative shard_count = Type4_StateLogicViolation (constraint qdrant_type_cluster_collection_info_001); 5xx = Type3_RuntimeFailure (healthz rechecked)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

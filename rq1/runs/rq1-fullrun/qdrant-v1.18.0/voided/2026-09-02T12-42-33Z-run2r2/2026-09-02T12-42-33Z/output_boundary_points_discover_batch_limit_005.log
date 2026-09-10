@@ -1,0 +1,38 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+G limit=1 (min closure) -> status=200
+raw: {"result":[[{"id":4,"version":1,"score":0.75}]],"status":"ok","time":0.001144259}
+G guard: limit=1 accepted, inner exactly 1 (boundary closure)
+
+B1 limit=0 -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [searches[0].discover_request.limit: value 0 invalid, must be 1 or larger]"},"time":0.0}
+B1 limit=0: 422 clean rejection; diagnostics name the limit construct
+
+B2 limit=-1 -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 40"},"time":0.0}
+B2 limit=-1: 400 clean rejection; diagnostics name the limit construct
+
+B3 limit=-100 -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid value: integer `-100`, expected usize at line 1 column 42"},"time":0.0}
+B3 limit=-100: 400 clean rejection; diagnostics name the limit construct
+
+B4 limit missing -> status=400
+raw: {"status":{"error":"Format error in JSON body: missing field `limit` at line 1 column 27"},"time":0.0}
+B4 limit missing: 400 clean rejection; diagnostics name the limit construct
+
+B5 limit='3' (string) -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"3\", expected usize at line 1 column 41"},"time":0.0}
+B5 limit='3' (string): 400 clean rejection; NOTE (strategy5): rejection text names no limit-family token — diagnostics gap recorded for the judge
+
+B6 limit=3.5 (float) -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: floating point `3.5`, expected usize at line 1 column 41"},"time":0.0}
+B6 limit=3.5 (float): 400 clean rejection; NOTE (strategy5): rejection text names no limit-family token — diagnostics gap recorded for the judge
+
+B7 limit=null -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: null, expected usize at line 1 column 42"},"time":0.0}
+B7 limit=null: 400 clean rejection; NOTE (strategy5): rejection text names no limit-family token — diagnostics gap recorded for the judge
+
+M1 mixed batch (limit=2 + limit=0) -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [searches[1].discover_request.limit: value 0 invalid, must be 1 or larger]"},"time":0.0}
+M1: whole-batch clean rejection (atomic 400) — alignment contract upheld
+VERDICT: NO_DEFECT

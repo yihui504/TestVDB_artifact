@@ -1,0 +1,17 @@
+{
+  "defect_id": "boundary_locks_set_003",
+  "endpoint": "locks+set",
+  "param": "write / error_message (behavioral 200 promise on 3 valid LocksOption shapes; malformed-stream robustness: truncated JSON, NUL binary, array body, string body, 100k error_message, unknown extra field)",
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "behavioral",
+  "constraint_ids": [
+    "qdrant_behavioral_locks_set_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/post-locks",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "live /locks: each of the 3 valid bodies (write:false; write:true+error_message then released; write:false+error_message:null) must answer 2xx — any non-2xx = Type4 (200 promise broken, 5xx+alive = Type3); each of the 6 malformed-stream legs (truncated JSON, NUL binary, array body, string body, 100k error_message, unknown extra field) must answer 2xx or a clean 4xx — 5xx or transport with /healthz alive = Type3_RuntimeFailure, and a 2xx that moves result.write (read via live GET /locks) = Type1_IllegalSuccess; post-matrix valid POST still 2xx (degraded face = Type3); if GET+POST /locks both answer concrete non-2xx (404 expected on OSS v1.18.0), NO_DEFECT with endpoint-absence evidence (assertion not actuable)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

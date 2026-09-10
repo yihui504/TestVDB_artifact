@@ -1,0 +1,11 @@
+CASE frac_int_id    status=200 ok=False | {"code":1100,"message":"invalid parameter, error: invalid int64 id at index 0: 1.5 has fractional part"}
+CASE int_as_str     status=200 ok=True | {"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+CASE bool_id        status=200 ok=False | {"code":1100,"message":"invalid parameter, error: invalid id type at index 0: expected int64, got bool"}
+CASE null_in_ids    status=200 ok=False | {"code":1100,"message":"invalid parameter, error: invalid id type at index 0: expected int64, got \u003cnil\u003e"}
+CASE mixed          status=200 ok=False | {"code":1100,"message":"invalid parameter, error: invalid int64 id at index 1: abc, error: strconv.ParseInt: parsing \"abc\": invalid syntax"}
+CASE nested_arr     status=200 ok=False | {"code":1100,"message":"invalid parameter, error: invalid id type at index 0: expected int64, got []interface {}"}
+CASE ids_not_array  status=200 ok=False | {"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number into Go struct field SearchReqV2.ids of type []interface {}"}
+CASE valid          status=200 ok=True | {"code":0,"cost":0,"data":[{"distance":0,"id":1}],"topks":[1]}
+
+VERDICT_NO_DEFECT

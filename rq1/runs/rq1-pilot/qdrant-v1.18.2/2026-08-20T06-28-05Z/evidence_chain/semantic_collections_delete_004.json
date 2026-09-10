@@ -1,0 +1,74 @@
+{
+  "defect_id": "semantic_collections_delete_004",
+  "endpoint": "collections+delete",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation reachable (api.qdrant.tech), version 1.19.x matches target v1.18.2. Documentation specifies delete endpoint exists but does NOT explicitly state expected behavior for deleting already-deleted collections. Behavioral contract qdrant_behavioral_delete_invisibility_001 from structured_contract.json states 'get collection returns 404' after delete, but does not specify idempotency behavior for re-delete operations.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Second delete status: 200; Raw: {\"result\":false,\"status\":\"ok\",\"time\":0.000049881}",
+      "secondary_observations": ["First delete succeeded (status 200, result:true)", "Second delete on already-deleted collection returned status 200 with result:false"],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Second delete returned HTTP 200 with body {\"result\":false,\"status\":\"ok\"} - client error (deleting non-existent collection) returned as 2xx success status, distinguishing by result:false vs result:true"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_collections_delete_004.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_delete_invisibility_001",
+      "assertion_text_quoted": "Deleted collection should not be visible in get collection and list collections; scenario: Delete collection -> get collection -> collection not in list; expected_behavior: get collection returns 404, list collections does not include deleted collection",
+      "api_violates_assertion": true,
+      "note": "Contract specifies POST-DELETE visibility (get returns 404) but does not specify RE-DELETE behavior. However, accepting re-delete with 200+result:false violates idempotency expectation - deleted collection should return 404 if it doesn't exist.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_behavioral_delete_invisibility_001 (expected: get returns 404 after delete)",
+        "doc:https://api.qdrant.tech/api-reference/collections/delete-collection (no explicit idempotency spec)",
+        "script:semantic_collections_delete_004.py (first delete, then second delete on same collection)",
+        "log:Second delete status: 200, Raw:{\"result\":false,\"status\":\"ok\"}"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "delete.*collection",
+        "result.*false",
+        "validate_collection_exists",
+        "StorageError::NotFound"
+      ],
+      "files_examined": [
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs",
+        "lib/storage/src/content_manager/collections_ops.rs",
+        "src/actix/api/collections_api.rs",
+        "src/actix/helpers.rs",
+        "lib/storage/src/content_manager/errors.rs"
+      ],
+      "source_excerpt": "File: lib/storage/src/content_manager/toc/collection_meta_ops.rs\nLines 215-300 (delete_collection function):\n\n```rust\npub(super) async fn delete_collection(\n    &self,\n    collection_name: &str,\n) -> Result<bool, StorageError> {\n    // ... lock acquisition ...\n\n    let removed_opt = self.collections.write().await.remove(collection_name);\n    if let Some(removed) = removed_opt {\n        // Collection found - perform graceful shutdown\n        // ... cleanup logic ...\n        result = true;  // Line 275\n    } else {\n        // Line 276-289: Collection NOT found - treat as already deleted\n        if collection_path.exists() {\n            log::warn!(\n                \"Collection {collection_name} is not loaded, but its directory still exists. Deleting it.\"\n            );\n            to_delete = Some(safe_delete_in_tmp(&collection_path, &safe_delete_path)?);\n        } else {\n            to_delete = None;  // Line 285\n        }\n        result = false;  // Line 288 - KEY: Returns Ok(false) without NotFound error\n    }\n    // ...\n    Ok(result)  // Line 299 - Returns Ok(true) or Ok(false) as HTTP 200\n}\n```\n\nFile: lib/storage/src/content_manager/collections_ops.rs (Lines 25-32):\n```rust\nfn validate_collection_exists(&self, collection_name: &str) -> Result<(), StorageError> {\n    if !self.collection_exists(collection_name) {\n        return Err(StorageError::not_found(format!(\n            \"Collection `{collection_name}` doesn't exist!\"\n        )));\n    }\n    Ok(())\n}\n```\n\nFile: src/actix/helpers.rs (Lines 80-89):\n```rust\npub fn process_response<T>(\n    response: Result<T, StorageError>,\n    timing: Instant,\n    hardware_usage: Option<HardwareUsage>,\n) -> HttpResponse\nwhere\n    T: Serialize,\n{\n    process_response_with_inference_usage(response, timing, hardware_usage, None)\n}\n```",
+      "call_chain_traced": "API Handler (collections_api.rs:160-178) calls dispatcher.submit_collection_meta_op(DeleteCollectionOperation) -> TableOfContent.perform_collection_meta_op (collection_meta_ops.rs:78-81) calls self.delete_collection (collection_meta_ops.rs:215-300) -> Returns Ok(bool) where bool=true if deleted, bool=false if not found -> process_response (helpers.rs:80-89) converts Ok(bool) to HTTP 200 with ApiResponse {result: Some(bool), status: Ok} -> No StorageError::NotFound is ever thrown for missing collection",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "State logic violation confirmed - deleting already-deleted collection returns success (200 OK) instead of expected 404 Not Found or error. Source code analysis reveals this is BY-DESIGN idempotency: the delete_collection handler deliberately returns Ok(false) (HTTP 200 with result:false) when collection is not found, rather than throwing StorageError::NotFound which would map to HTTP 404. The validate_collection_exists method exists but is NOT called before delete operation. This design allows idempotent delete operations but violates REST semantics where DELETE on non-existent resource should return 404."
+    }
+  }
+}

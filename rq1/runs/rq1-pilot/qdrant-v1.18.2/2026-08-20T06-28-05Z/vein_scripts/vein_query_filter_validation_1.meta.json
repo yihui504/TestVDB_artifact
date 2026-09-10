@@ -1,0 +1,57 @@
+{
+  "defect_id": "vein_query_filter_validation_1",
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "endpoint": "POST /collections/{collection}/points/query",
+  "condition_type": "query_filter_validation",
+  "strategy": "vein_query_filter",
+  "finding": "Query endpoint silently accepts invalid filter structures and null values, returning full results instead of validation errors",
+  "defect_type": "Type1_IllegalSuccess",
+  "severity": "P0_Critical",
+  "expected_behavior": "API should reject null filters, invalid structures, and null queries with 400 errors",
+  "actual_behavior": "Returns 200 OK with full/unfiltered result sets, silently accepting invalid input",
+  "endpoint_tested": "POST /collections/{collection}/points/query",
+  "critical_issues": [
+    {
+      "issue": "filter=null",
+      "description": "Returns all points instead of 400 Bad Request",
+      "severity": "Critical"
+    },
+    {
+      "issue": "filter.should=null",
+      "description": "Returns all points instead of 400 Bad Request",
+      "severity": "Critical",
+      "reference_issues": [
+        9418,
+        9420
+      ]
+    },
+    {
+      "issue": "filter.must_not=object",
+      "description": "Object type (not array) returns results instead of 400",
+      "severity": "Critical",
+      "reference_issue": 9419
+    },
+    {
+      "issue": "query=null",
+      "description": "Returns results with score=1.0 instead of 400 Bad Request",
+      "severity": "Critical"
+    }
+  ],
+  "defect_count": 4,
+  "bug_shape": "qdrant-parameter-validation-numeric-boundary + qdrant-type-coercion-type-confusion",
+  "threat_model_reference": "Hist 67 - Parameter Validation (88 historical instances)",
+  "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+  "reference_issues": [
+    9418,
+    9419,
+    9420
+  ],
+  "novelty": "CONFIRMED_BS01_PATTERN",
+  "submission_probability": "Very High (0.95)",
+  "severity_justification": "P0_Critical because this is threat_model #1 priority endpoint (Hist 67) with 88 historical defect instances, affects all query operations, and exposes entire database to unauthorized data access via filter bypass.",
+  "script_path": "vein_scripts/vein_query_filter_validation_1.py",
+  "generated_by": "attack-vein v2.5.2",
+  "generated_at": "2026-08-20T18:00:00Z",
+  "param": "filter"
+}

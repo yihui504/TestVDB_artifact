@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_points_recommend_concurrent_005",
+  "endpoint": "points+recommend",
+  "param": null,
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "concurrent",
+  "oracle": {
+    "statement": "during the reader-vs-delete race every recommend response is 200 (result an array) or 4xx — 5xx with /healthz alive = Type3_RuntimeFailure, 200 with non-array result = Type4 result-completeness violation; post-race exact count == 12 (24-12); recommend(positive=[deleted 101]) -> 4xx (200 = ghost, Type4); recommend(positive=[survivor 113]) -> 200 non-empty; final /healthz 200",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

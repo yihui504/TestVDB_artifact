@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_exists_002",
+ "endpoint": "collections+exists",
+ "param": "collection_name (post-delete exists verdict vs describe/list faces)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "delete_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_exists_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/collection-exists",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "after a 200-confirmed delete (and after a redundant delete) exists answers exactly 200 + result.exists=false while describe is non-200 and the name is absent from GET /collections; after recreate all three faces report present together; violations = Type4, 5xx = Type3 after /healthz",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

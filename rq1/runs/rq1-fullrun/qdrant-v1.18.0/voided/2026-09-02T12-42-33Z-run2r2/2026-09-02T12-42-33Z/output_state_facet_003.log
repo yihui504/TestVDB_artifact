@@ -1,0 +1,18 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[setup index] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.7066557}
+[setup upsert] status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.010907204}
+[A default-10] facet limit=None status=200 raw={"result":{"hits":[{"value":"v1","count":25},{"value":"v2","count":24},{"value":"v3","count":23},{"value":"v4","count":22},{"value":"v5","count":21},{"value":"v6","count":20},{"value":"v7","count":19},{"value":"v8","count":18},{"value":"v9","count":17},{"value
+[A] OK: omitted limit -> exactly the top-10 multiset (default 10)
+[B limit=1] facet limit=1 status=200 raw={"result":{"hits":[{"value":"v1","count":25}]},"status":"ok","time":0.000946097}
+[B] OK: limit=1 -> single hit v1:25 (minimum-limit closure)
+[C limit=5] facet limit=5 status=200 raw={"result":{"hits":[{"value":"v1","count":25},{"value":"v2","count":24},{"value":"v3","count":23},{"value":"v4","count":22},{"value":"v5","count":21}]},"status":"ok","time":0.001657259}
+[C2 limit=25] facet limit=25 status=200 raw={"result":{"hits":[{"value":"v1","count":25},{"value":"v2","count":24},{"value":"v3","count":23},{"value":"v4","count":22},{"value":"v5","count":21},{"value":"v6","count":20},{"value":"v7","count":19},{"value":"v8","count":18},{"value":"v9","count":17},{"value
+[C] OK: counts invariant across limit=5 and limit=25 readouts
+[D limit=50] facet limit=50 status=200 raw={"result":{"hits":[{"value":"v1","count":25},{"value":"v2","count":24},{"value":"v3","count":23},{"value":"v4","count":22},{"value":"v5","count":21},{"value":"v6","count":20},{"value":"v7","count":19},{"value":"v8","count":18},{"value":"v9","count":17},{"value
+[D] OK: limit=50 above cardinality -> all 25 values, no error
+[E limit=0] status=422 raw={"status":{"error":"Validation error in JSON body: [facet_request.limit: value 0 invalid, must be 1 or larger]"},"time":0.0}
+[E limit=0] OK: rejected with 422 (minimum-1 range enforced)
+[E limit=-1] status=400 raw={"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 43"},"time":0.0}
+[E limit=-1] OK: rejected with 400 (minimum-1 range enforced)
+VERDICT: NO_DEFECT

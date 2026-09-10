@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_delete_003",
+ "endpoint": "payload+delete",
+ "param": "keys",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "each of the three boundary bodies — {\"points\":[1],\"keys\":[]}, {\"points\":[1]} and {\"keys\":[\"city\"]} — returns a 4xx reject (keys required per endpoint spec; selector anyOf per request_required_paths); any 200 is adjudicated by scroll readback after grace polls — payloads still deep-equal baseline = Type1_IllegalSuccess (no-op ack on vacuous/selector-less delete), any payload key gone = Type4_StateLogicViolation (unbounded key-wipe); 5xx = Type3_RuntimeFailure with /healthz re-check; a 4xx whose error body names none of keys/points/filter = Type2_PoorDiagnostics (constraint qdrant_state_payload_delete_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

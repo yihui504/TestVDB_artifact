@@ -1,0 +1,17 @@
+{
+  "endpoint": "index+create",
+  "constraint_ids": [
+    "qdrant_type_index_create_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/indexes/create-field-index",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "every legal PayloadSchemaType member (keyword, integer, float, geo, text, bool, datetime, uuid, string form) and every legal text tokenizer (prefix, whitespace, word, multilingual, inside {'type':'text'}) answers HTTP 200 on a self-created collection and echoes the matching data_type in describe result.payload_schema (non-200 on a legal member = Type1_IllegalRejection documented-domain drift BS-05; 200 with wrong/missing data_type echo = Type4 200-without-echo family; tokenizer compared only when the describe entry exposes it, deeper keys measured-only); final describe holds exactly 12 index fields; 5xx with healthy /healthz = Type3_RuntimeFailure; transport/setup failure = SCRIPT_ERROR (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  },
+  "defect_id": "semantic_index_create_003",
+  "param": "field_schema",
+  "expected_defect_type": "Type1_IllegalRejection",
+  "strategy": "illegal_rejection"
+}

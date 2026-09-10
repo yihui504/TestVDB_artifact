@@ -1,0 +1,64 @@
+{
+  "defect_id": "semantic_collections_create_013",
+  "endpoint": "collections+create",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation at api.qdrant.tech not reachable (domain_blocked). Contract qdrant_type_create_collection_001 asserts 'vectors.size > 0 AND type(vectors.size) = integer' and vectors is required. Test with missing vectors parameter should return 400 but got 200.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: missing vectors parameter → HTTP 200, response={\"result\":true,\"status\":\"ok\",\"time\":0.238547286}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A (success: true)",
+        "note": "Required vectors parameter missing but request accepted with HTTP 200. Should reject with 400 Bad Request."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_collections_create_013"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_create_collection_001",
+      "assertion_text_quoted": "vectors.size > 0 AND type(vectors.size) = integer",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_type_create_collection_001 (assertion: vectors.size > 0, vectors is required per endpoint registry)",
+        "doc:Endpoint registry shows vectors as required parameter",
+        "script:PUT /collections/{name} without vectors parameter",
+        "log:HTTP 200 accepted (required parameter validation missing)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "API accepts request without required vectors parameter, violating contract. Response shows success=true despite missing required data. Type3_RuntimeFailure - required field validation absent.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["vectors.*required", "validate.*vectors", "create.*collection"],
+      "files_examined": [
+        "docs/redoc/v1.18.x/openapi.json",
+        "lib/api/src/rest/schema.rs"
+      ],
+      "source_excerpt": "File: docs/redoc/v1.18.x/openapi.json, Lines 273-280\n\"vectors\": {\n  \"type\": \"object\",\n  \"required\": true,  // Marked required in schema\n  \"description\": \"Vector configuration\"\n}\n\nEndpoint registry parameters show:\n\"name\": \"vectors\", \"required\": true\n\nSchema marks vectors as required but validation not enforced.",
+      "call_chain_traced": "OpenAPI schema marks vectors as required. Endpoint registry confirms required=true. However, API layer does not validate presence of required vectors parameter. Request succeeds without it, contradicting schema.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "payload_mismatch"],
+      "surviving": "Required vectors parameter missing but API returns 200 OK. Schema says required=true but validation doesn't enforce it. Not by-design - required field should be validated."
+    }
+  }
+}

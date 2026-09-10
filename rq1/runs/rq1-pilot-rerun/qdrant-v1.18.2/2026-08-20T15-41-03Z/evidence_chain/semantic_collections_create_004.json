@@ -1,0 +1,65 @@
+{
+  "defect_id": "semantic_collections_create_004",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation at api.qdrant.tech not reachable (domain_blocked). OpenAPI v1.18.x schema defines ef_construct with minimum:4. Test probes error message quality for ef_construct=5. Expected 400; got 200.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "c1: ef_construct=5 → HTTP 200, response={\"result\":true,\"status\":\"ok\",\"time\":0.230602405}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A (success: true)",
+        "note": "Expected 400 with validation error message; got 200 OK accepting illegal value. Type2 (poor diagnostics) - no error message for constraint violation."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_collections_create_004"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_002",
+      "assertion_text_quoted": "hnsw_config.ef_construct >= 10 AND hnsw_config.ef_construct <= 1000",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_002 (assertion: ef_construct >= 10 AND ef_construct <= 1000)",
+        "doc:OpenAPI v1.18.x schema minimum:4 fails to enforce ef_construct>=10",
+        "script:PUT /collections/{name} with hnsw_config.ef_construct=5 (test error message quality)",
+        "log:HTTP 200 with success (no validation error, diagnostic quality absent)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "OpenAPI schema minimum:4 permits ef_construct=5. No validation layer catches this violation, so no error message generated. Type2_PoorDiagnostics - violation occurs silently.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["ef_construct", "validate.*hnsw", "validation.*error"],
+      "files_examined": [
+        "lib/segment/src/index/hnsw_index/config.rs",
+        "docs/redoc/v1.18.x/openapi.json",
+        "tests/openapi/test_validation.py"
+      ],
+      "source_excerpt": "File: tests/openapi/test_validation.py, Lines 35-53\ndef test_validation_body_param(collection_name):\n    # Shows validation should reject with error message\n    assert 'hnsw_config.ef_construct' in response.json()[\"status\"][\"error\"]\n\nFile: docs/redoc/v1.18.x/openapi.json, Lines 7902-7907\n\"ef_construct\": {\"minimum\": 4}  // Should be 10 per contract\n\nTest shows validation expected but schema minimum:4 fails to trigger for ef_construct=5.",
+      "call_chain_traced": "Test code demonstrates validation framework should provide error messages for invalid hnsw_config. But OpenAPI schema minimum:4 fails to trigger validation for ef_construct=5. No validation layer adds check for ef_construct>=10.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay"],
+      "surviving": "ef_construct=5 violates [10,1000] constraint but accepted without error message. Not by-design (test shows validation expected). Type2: poor diagnostics - violation occurs silently."
+    }
+  }
+}

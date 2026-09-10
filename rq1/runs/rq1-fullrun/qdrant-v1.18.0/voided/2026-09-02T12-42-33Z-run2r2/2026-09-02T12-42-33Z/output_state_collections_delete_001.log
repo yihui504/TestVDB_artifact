@@ -1,0 +1,11 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[A delete-never-created] status=200 raw={"result":false,"status":"ok","time":0.000058973}
+[B create] status=200 raw={"result":true,"status":"ok","time":0.281567509}
+[B describe-sanity] status=200
+[C delete-existing] status=200 raw={"result":true,"status":"ok","time":0.008724591}
+[D double-delete] status=200 raw={"result":false,"status":"ok","time":0.000032225}
+[E recreate] status=200 raw={"result":true,"status":"ok","time":0.259317389}
+DEFECT: (A) DELETE never-created collection returned 200 (assertion pins 404, NOT 200) — Type1_IllegalSuccess — raw={"result":false,"status":"ok","time":0.000058973} (qdrant_behavioral_collections_delete_001)
+DEFECT: (D) DELETE of the already-deleted name returned 200->200 2xx (expected 404; the first 200-confirmed delete left the name answering) — Type1_IllegalSuccess — raw={"result":false,"status":"ok","time":0.000032225} (qdrant_behavioral_collections_delete_001)
+VERDICT: DEFECT_FOUND

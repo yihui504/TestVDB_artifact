@@ -1,0 +1,72 @@
+{
+  "defect_id": "boundary_aliases_collection_list_002",
+  "endpoint": "aliases+collection+list (GET /collections/{collection_name}/aliases)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json record exists for THIS exact URL in the current 2.4.0 contract (the P1.0 sidecar under 2.3.0/results covers old-style .md URLs only and predates this contract); my own WebFetch re-verification of https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases (html and .md) was blocked at the domain-safety check ('Unable to verify if domain api.qdrant.tech is safe to fetch ... network restrictions') -> domain_blocked, recorded PARTIAL, not FAIL; the contract's own document_metadata records a successful pipeline fetch of the v-1-18-x api-reference site at 2026-09-02T11:51:12Z and source_status=reachable, so the URL was reachable at contract time. Version match: PASS — source_url carries the versioned 'v-1-18-x' prefix; contract doc_version '1.18.x (versioned v-1-18-x api-reference)'; raw_knowledge provenance states the API contract was taken from strictly version-aligned v-1-18-x OpenAPI shards because GitHub latest (v1.19.0) != target 1.18. Content consistency: PARTIAL — clause 1 of the assertion ('200 with a list of {alias, collection_name}') matches the version-aligned OpenAPI (openapi-collections.ytt.yaml:399-413, 200 -> CollectionsAliasesResponse{aliases:[{alias_name,collection_name}]}, lib/collection/src/operations/types.rs:1767-1774); clause 2 ('404 for an unknown collection') is NOT literally in the OpenAPI operation, which documents only 200 plus a generic 4XX error bucket (openapi.lib.yml:1-35), and live behavior contradicts it (unknown collection name on this endpoint returns 200 with empty aliases — see sibling 004 log and my live probe), so the '404 unknown collection' phrasing is at best an inference, not the doc's own words; the api-reference page prose itself was not independently verifiable (domain_blocked). Endpoint precision: PASS — contract endpoint_registry entry 'aliases+collection+list' (GET, same source_url, doc_quote 'Returns 200 with a list of {alias, collection_name}; 404 for an unknown collection.', verified_at 2026-09-02T12:34:08) matches the assertion's endpoint and the script's target.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "GET /collections//aliases (empty collection_name) -> status=200  [next line:] raw: {\"result\":{\"status\":\"green\",\"optimizer_status\":\"ok\",\"indexed_vectors_count\":0,\"points_count\":0,\"segments_count\":8,\"config\":{\"params\":{\"vectors\":{},\"shard_number\":1,... (log line 3-4, output_boundary_aliases_collection_list_002.log)",
+      "secondary_observations": [
+        "live face=rest: GET /collections//aliases -> status=200 body=collection-info of a collection literally named 'aliases' ({\"result\":{\"status\":\"green\",...,\"segments_count\":8,...}) — byte-identical prefix to the run-time log body; a collection named 'aliases' exists in the persistent sandbox (GET /collections lists it)",
+        "live face=rest: GET /collections/aliases (single slash, describe route) -> status=200 body identical to the empty-segment response -> the double-slash URL was normalized to /collections/aliases and served by GET /collections/{collection_name}, NOT by GET /collections/{collection_name}/aliases",
+        "live face=rest: GET /collections/aliases/aliases (genuine aliases endpoint on existing collection) -> status=200 {\"result\":{\"aliases\":[]},\"status\":\"ok\"} — the constraint's endpoint returns an {\"aliases\":[]}-shaped body, which the empty-segment response is NOT",
+        "live face=rest: GET /collections/zz_missing_collection_probe (describe route, missing collection) -> status=404 {\"status\":{\"error\":\"Not found: Collection `zz_missing_collection_probe` doesn't exist!\"}} — the describe route (which the normalized URL actually hits) 404s when the coincidentally-named collection is absent",
+        "sibling 003 face=rest: GET /collections/<256-char>/aliases -> status=422 {\"status\":{\"error\":\"Validation error in path parameters: [collection_name: value ... invalid, must be from 1 to 255 characters]\"}} — qdrant's path extractor DOES enforce min length 1 on collection_name when a value actually reaches it",
+        "sibling 004 face=rest: GET /collections/bacl4missing_4f9dbd2e1eca4104baa8047e278af4b3/aliases (unknown collection) -> status=200 {\"result\":{\"aliases\":[]}} — unknown collections on the aliases endpoint get 200 empty list, contradicting the assertion's '404 for an unknown collection' clause",
+        "historical (2026-08-24 sandbox, debate_logs/boundary_collections_get_name_edge.py): probe name='aliases' -> 404 'Not found: Collection `aliases` doesn't exist!' — the collection named 'aliases' did NOT exist on that earlier sandbox, so the same empty-segment request would have been 404 (script would self-report NO_DEFECT); the DEFECT_FOUND verdict is contingent on leftover sandbox state",
+        "historical (same 2026-08-24 script): [empty-name] GET /collections/ (empty name on describe face) -> 200 list-route collision — recorded there as exploratory route-collision, not a defect; precedent that empty path segments never reach collection_name parameter validation"
+      ],
+      "claim_alignment": "drifted",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The malformed request shape (empty path segment in /collections//aliases) was neither rejected with 4xx nor flagged by any business error code: qdrant's registered actix NormalizePath::trim() middleware silently merged the empty segment, the URL became /collections/aliases, and the request was answered 200 with a plain success body of a DIFFERENT resource (collection-info of the leftover collection named 'aliases'). The claim's 'illegal value accepted with 200' reads this success as the aliases endpoint accepting collection_name=''; the response body itself disproves that reading (it is not an aliases-list body)."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["boundary_aliases_collection_list_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_aliases_collection_list_001",
+      "assertion_text_quoted": "returns 200 with a list of {alias, collection_name}; 404 for an unknown collection",
+      "api_violates_assertion": false,
+      "note": "Verbatim quote above is exactly the assertion's description field in structured_contract.json (assertions[49]); for context, its companion expected_behavior field reads 'existing collection: HTTP 200 with its aliases; unknown collection: HTTP 404' and source_url is https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases. The claim's 'empty collection_name' never materialized as a collection_name parameter on the constrained endpoint: actix NormalizePath::trim() (registered in src/actix/mod.rs:121) collapsed the empty middle segment so the request was routed to GET /collections/{collection_name} (describe face) with name='aliases' and answered 200 from a leftover collection of that exact name; the aliases endpoint and its CollectionPath validation (length min 1, api/mod.rs:46-53) were never exercised, so the observed value is outside the constraint's parameter domain and no violation of this assertion occurred on this request — the 200 is another endpoint's success contingent on sandbox state.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_behavioral_aliases_collection_list_001 (assertions[49]; endpoint 'aliases+collection+list'; GET /collections/{collection_name}/aliases)",
+        "doc:https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases (versioned v-1-18-x; reachable per contract fetch 2026-09-02T11:51:12Z; my re-verify domain_blocked; OpenAPI-level content: 200 aliases list + generic 4XX, no literal 404 promise)",
+        "script:boundary_scripts/boundary_aliases_collection_list_002.py (GET /collections//aliases; oracle 2xx/3xx -> Type1_IllegalSuccess; ran clean, exit 0)",
+        "log:output_boundary_aliases_collection_list_002.log (status=200; body = describe-face collection-info of collection 'aliases', not an aliases-list body)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "The verdict link is broken: the log's DEFECT_FOUND (Type1_IllegalSuccess) is premised on 'empty collection_name accepted with 200', but the log's own response body shows the request was served by a different endpoint (collection-info describe face) for the leftover collection named 'aliases' after the empty path segment was normalized away — the constrained aliases endpoint never parsed an empty collection_name and never produced this response. Secondary break: doc link is partial (assertion clause '404 for an unknown collection' is not the OpenAPI's words and live behavior contradicts it for genuine unknown names — 200 empty aliases, sibling 004). The Type1 verdict is an artifact of (a) deliberate URL normalization middleware and (b) leftover sandbox state; on the 2026-08-24 sandbox (no 'aliases' collection) the identical request returned 404 and the script would have self-reported NO_DEFECT.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["aliases (src/actix, case-insensitive)", "do_list_collection_aliases (src/)", "struct CollectionPath (src/)", "must be from 1 to 255 (lib/ src/)", "NormalizePath|normalize|middleware (src/actix)", "CollectionsAliasesResponse / struct AliasDescription (lib/)", "collection_name}/aliases + aliases (openapi/)", "collections// (results logs, reproducibility)"],
+      "files_examined": ["src/actix/mod.rs", "src/actix/api/collections_api.rs", "src/actix/api/mod.rs", "src/common/collections.rs", "openapi/openapi-collections.ytt.yaml", "openapi/openapi.lib.yml", "lib/collection/src/operations/types.rs"],
+      "source_excerpt": "src/actix/mod.rs:119-122: '// api_key middleware ... .wrap(ConditionEx::from_option(...))  // Normalize path  .wrap(NormalizePath::trim())  .wrap(Condition::new(settings.service.enable_cors, cors))' — qdrant deliberately registers actix-web 4.13 NormalizePath::trim(), which merges duplicate slashes, so '/collections//aliases' is rewritten to '/collections/aliases' before route matching.\nsrc/actix/api/mod.rs:46-53: '/// A collection path with basic validation ... struct CollectionPath { #[validate(length(min = 1, max = 255), custom(function = \"validate_collection_name_legacy\"))] collection_name: String, }' — the required min-length-1 validation exists and produces the observed 422 class ('Validation error in path parameters ... must be from 1 to 255 characters', sibling 003) whenever a value actually reaches the extractor.\nsrc/actix/api/collections_api.rs:59-75: '#[get(\"/collections/{collection_name}\")] async fn get_collection(...) -> do_get_collection(...)' (describe face) vs lines 94-109: '#[get(\"/collections/{collection_name}/aliases\")] async fn get_collection_aliases(... Path<CollectionPath> ...) -> do_list_collection_aliases(...)' — the two routes the normalized URL could hit; the describe route is the one that answered.\nsrc/common/collections.rs:167-188: 'pub async fn do_list_collection_aliases(toc, auth, collection_name) -> Result<CollectionsAliasesResponse, StorageError> { ... let aliases = toc.collection_aliases(&collection_pass, access).await?...map(|alias| AliasDescription { alias_name: alias, collection_name: collection_name.to_string() }).collect(); Ok(CollectionsAliasesResponse { aliases }) }' — no collection-existence check: unknown names yield 200 with an empty aliases list (as sibling 004 and live probe observed), i.e., the assertion's '404 unknown collection' clause has no implementation behind it.\nopenapi/openapi-collections.ytt.yaml:399-413: GET /collections/{collection_name}/aliases, description 'Get list of all aliases for a collection', collection_name path required:true type string (no minLength/maxLength in spec); openapi.lib.yml:1-35 response macro: 200 CollectionsAliasesResponse + generic 4XX error + default error (no literal 404).\nlib/collection/src/operations/types.rs:1767-1774: 'pub struct AliasDescription { pub alias_name: String, pub collection_name: String }' inside CollectionsAliasesResponse — the documented 200 item shape.",
+      "call_chain_traced": "HTTP request /collections//aliases -> actix NormalizePath::trim() middleware (src/actix/mod.rs:121, registered with explicit '// Normalize path' comment) merges the empty segment -> route GET /collections/{collection_name} (collections_api.rs:59) matches with collection_name='aliases' -> do_get_collection returns 200 collection-info of the existing leftover collection 'aliases'. The constrained route GET /collections/{collection_name}/aliases (collections_api.rs:94) is never matched and Path<CollectionPath> validation (length min=1; api/mod.rs:46-53) is never applied to an empty value; empty names can never reach it through the raw path. Separately, do_list_collection_aliases (common/collections.rs:167) performs no existence check, so real unknown names get 200 empty lists (assertion clause-2 mismatch, belongs to sibling 004's chain).",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env — the 200 is contingent on a leftover collection literally named 'aliases' in the persistent sandbox (absent on the 2026-08-24 sandbox, where the identical request would 404 and the script would self-report NO_DEFECT); not a property of empty-name handling", "by-design URL normalization — qdrant deliberately registers actix NormalizePath::trim() (src/actix/mod.rs:120-121, '// Normalize path'), whose documented behavior merges duplicate slashes before routing"],
+      "surviving": null
+    }
+  }
+}

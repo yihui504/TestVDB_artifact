@@ -1,0 +1,81 @@
+{
+  "defect_id": "vein_query_limit_semantic_drift_4",
+  "endpoint": "entities+query (vs entities+search)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "官方约束 milvus_range_entities_search_001 (limit+offset in [1,16384]) 显式限定 entities+search；query 侧无对应 range 约束——契约本身即体现不对称（覆盖缺口）。vein 契约 vein_query_limit_semantic_drift 主张两入口应一致。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "PASS query_limit0_returns_all 10 — query limit=0 返回全部 10 行（应拒绝或空）；对照 PASS control_search_limit0_rejected {'code': 65535, 'topk [0] is invalid...'}",
+      "secondary_observations": [
+        "PASS query_limit_neg_returns_all 10 — limit=-5 同样全表",
+        "PASS query_offset_neg_ignored {'code': 0, 'cost': 0, 'data': [3 rows]} — offset=-5 当 0 用"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "query 侧非法值无任何错误（200+code:0 全表）；search 侧同值 200+65535——同参数同值跨端点行为分裂。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_scripts/vein_query_limit_semantic_drift_4.py",
+        "debate_logs/boundary_topk_limit_013.py (search 侧 65535 拒绝对照)",
+        "debate_logs/semantic_limitdefault_08.log (limit 默认语义邻证)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_query_limit_semantic_drift",
+      "assertion_text_quoted": "query 与 search 共享 limit/offset 语义约束（1<=limit+offset<=16384）；search 侧拒绝的非法值 query 侧不得静默接受为全表/当 0",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates=True 理由：query limit=0/-5 静默全表、offset=-5 当 0（code:0），同值 search 65535——'不得静默接受'被直接观测否定。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: vein_query_limit_semantic_drift + 官方 milvus_range_entities_search_001 (仅 search 侧)",
+        "doc: 官方约束可达且与 search 侧源码/行为一致",
+        "script: vein_query_limit_semantic_drift_4.py 四断言双端点对照",
+        "log: query 全表 code:0 vs search 65535 原文并列"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "validateLimit 调用点（仅 search_util.go 命中）",
+        "parseQueryParams internal/proxy/task_query.go",
+        "httpReq.Limit > 0 handler_v2.go:1074 (query 路由)",
+        "typeutil.Unlimited 定义"
+      ],
+      "files_examined": [
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go:1045-1080 (query handler：if httpReq.Limit > 0 才下发 LimitKey)",
+        ".milvus-src-2610/internal/proxy/task_query.go:169-260 (parseQueryParams：limit 未提供→typeutil.Unlimited=-1)",
+        ".milvus-src-2610/internal/proxy/util.go:180-201 (validateMaxQueryResultWindow/validateLimit 定义)",
+        ".milvus-src-2610/pkg/util/typeutil/type.go:78 (Unlimited int64 = -1)",
+        ".milvus-src-2610/internal/proxy/search_util.go:138-221 (search 侧调用 validateLimit 全套)"
+      ],
+      "source_excerpt": "// handler_v2.go:1071-1076 (query 入口——负/零 limit 直接不下发)\n\tif httpReq.Offset > 0 {\n\t\treq.QueryParams = append(req.QueryParams, &commonpb.KeyValuePair{Key: proxy.OffsetKey, ...})\n\t}\n\tif httpReq.Limit > 0 && !matchCountRule(httpReq.OutputFields) {\n\t\treq.QueryParams = append(req.QueryParams, &commonpb.KeyValuePair{Key: proxy.LimitKey, ...})\n\t}\n// task_query.go:218-219: limit = typeutil.Unlimited(-1) 初始；limitStr 解析后仅当 isLimitProvided 才走 validateMaxQueryResultWindow",
+      "call_chain_traced": "query: handler_v2.go:1074 仅 Limit>0 下发 → limit=0/-5 不进 QueryParams → task_query parseQueryParams 视为未提供 → Unlimited=-1 → 全表。offset=-5 因 handler 只在 Offset>0 下发而被静默丢弃。search: search_util.go:192/221/602 对 topk/offset 强制 validateLimit/validateMaxQueryResultWindow。漂移根因=query 路由层用 '>0' 过滤替代校验，非法值与'未提供'不可区分。",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

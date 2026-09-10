@@ -1,0 +1,18 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['count', 'create_collection', 'drop_collection', 'query', 'upsert_points']
+[liveness access-5xx-it6] healthz probe required
+[liveness access-5xx-it6] healthz status=200 raw=healthz check passed
+[liveness access-5xx-it20] healthz probe required
+[liveness access-5xx-it20] healthz status=200 raw=healthz check passed
+[lifecycle] final create status=409
+[race] finished in 3.9s; status tally: {'create_200': 10, 'create_409': 1, 'drop_200': 10, 'query_200': 6, 'query_404': 32, 'query_500': 2}
+[race] 5xx events (2): [(6, 500, '{"status":{"error":"Service internal error: Expected at least one response for one query"},"time":0.030939471}'), (20, 500, '{"status":{"error":"Service internal error: Expected at least one response for one query"},"time":0.000296758}')]
+[race] other-than-200/404 events (0): []
+[post-cycle seed] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.004313319}
+[post-cycle count] status=200 raw={"result":{"count":5},"status":"ok","time":0.000217897}
+[post-cycle] OK: count == 5
+[post-cycle by-id query 11] status=200 raw={"result":{"points":[{"id":12,"version":1,"score":0.9938837},{"id":13,"version":1,"score":0.9701425},{"id":15,"version":1,"score":0.11043153}]},"status":"ok","time":0.000465347}
+[post-cycle] OK: by-id query works on fresh state
+DEFECT: (race) access query returned 5xx 2 times with /healthz alive during collection drop/create churn — should be graceful 404, not internal error — Type3_RuntimeFailure — sample=[(6, 500, '{"status":{"error":"Service internal error: Expected at least one response for one query"},"time":0.030939471}'), (20, 500, '{"status":{"error":"Service internal error: Expected at least one response for one query"},"time":0.000296758}')]
+VERDICT: DEFECT_FOUND

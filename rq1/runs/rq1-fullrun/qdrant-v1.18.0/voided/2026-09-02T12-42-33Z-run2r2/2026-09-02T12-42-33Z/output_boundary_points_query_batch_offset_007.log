@@ -1,0 +1,20 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+BASE single-face ordering -> status=200
+raw: {"result":{"points":[{"id":4,"version":1,"score":0.999992},{"id":5,"version":1,"score":0.9999875},{"id":6,"version":1,"score":0.999982},{"id":7,"version":1,"score":0.99997556},{"id":8,"version":1,"score":0.99996805},{"id":9,"version":1,"score":0.9999596},{"id":3,"version":1,"score":0.0029999868},{"i
+BASE live-measured ordering L = [4, 5, 6, 7, 8, 9, 3, 2, 1]
+
+O1 batch offset=3 -> status=200; single parity -> 200
+batch raw: {"result":[{"points":[{"id":7,"version":1,"score":0.99997556},{"id":8,"version":1,"score":0.99996805},{"id":9,"version":1,"score":0.9999596}]}],"status":"ok","time":0.000395194}
+single raw: {"result":{"points":[{"id":7,"version":1,"score":0.99997556},{"id":8,"version":1,"score":0.99996805},{"id":9,"version":1,"score":0.9999596}]},"status":"ok","time":0.000355311}
+O1 upheld: batch page-2 [7, 8, 9] == single [7, 8, 9] == L[3:6]
+
+Oneg offset=-1 -> batch status=400, single status=400
+batch raw: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 84"},"time":0.0}
+single raw: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 70"},"time":0.0}
+Oneg: clean rejection on both faces (batch=400, single=400)
+
+Ohuge offset=999999999 -> batch status=200
+raw: {"result":[{"points":[]}],"status":"ok","time":0.001610147}
+Ohuge upheld: 200 with empty page (legal)
+VERDICT: NO_DEFECT

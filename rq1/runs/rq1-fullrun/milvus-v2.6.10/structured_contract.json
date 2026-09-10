@@ -1,0 +1,3153 @@
+{
+ "target": "milvus",
+ "version": "v2.6.10",
+ "cache_ttl_hours": 168,
+ "cached_at": "2026-08-22T00:00:00Z",
+ "sdk": {
+  "package": "pymilvus",
+  "version": "2.6.10",
+  "install_command": "pip install pymilvus==2.6.10"
+ },
+ "docker": {
+  "repo": "milvusdb/milvus",
+  "available_tags": [
+   "v2.6.10",
+   "v2.6.12",
+   "v2.6.16",
+   "v2.6.17"
+  ]
+ },
+ "api_endpoints": [
+  {
+   "path": "collections+list",
+   "method": "POST",
+   "category": "schema",
+   "description": "List collections",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "collections+has",
+   "method": "POST",
+   "category": "schema",
+   "description": "Check collection existence",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+describe",
+   "method": "POST",
+   "category": "schema",
+   "description": "Describe collection schema",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+get_stats",
+   "method": "POST",
+   "category": "schema",
+   "description": "Get collection stats (row_count)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+get_load_state",
+   "method": "POST",
+   "category": "admin",
+   "description": "Get collection/partition load state",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionNames",
+     "type": "array<string>",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "collections+create",
+   "method": "POST",
+   "category": "schema",
+   "description": "Create collection (quick or full schema mode)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "dimension",
+     "type": "int",
+     "required": false
+    },
+    {
+     "name": "idType",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "autoID",
+     "type": "bool",
+     "required": false,
+     "default_value": false
+    },
+    {
+     "name": "metricType",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "primaryFieldName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "vectorFieldName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "schema",
+     "type": "object",
+     "required": false
+    },
+    {
+     "name": "indexParams",
+     "type": "array<object>",
+     "required": false
+    },
+    {
+     "name": "params",
+     "type": "object",
+     "required": false
+    },
+    {
+     "name": "description",
+     "type": "string",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "collections+drop",
+   "method": "POST",
+   "category": "schema",
+   "description": "Drop collection (atomic; release not required first)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+truncate",
+   "method": "POST",
+   "category": "admin",
+   "description": "Truncate collection (new in 2.6 line)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+rename",
+   "method": "POST",
+   "category": "schema",
+   "description": "Rename collection",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "newCollectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+load",
+   "method": "POST",
+   "category": "admin",
+   "description": "Load collection into memory",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+refresh_load",
+   "method": "POST",
+   "category": "admin",
+   "description": "Refresh load after schema change (2.6)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+release",
+   "method": "POST",
+   "category": "admin",
+   "description": "Release collection from memory",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+alter_properties",
+   "method": "POST",
+   "category": "admin",
+   "description": "Alter collection properties",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "properties",
+     "type": "object",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+drop_properties",
+   "method": "POST",
+   "category": "admin",
+   "description": "Drop collection properties",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "propertyKeys",
+     "type": "array<string>",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+compact",
+   "method": "POST",
+   "category": "admin",
+   "description": "Trigger compaction",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+get_compaction_state",
+   "method": "POST",
+   "category": "admin",
+   "description": "Get compaction state",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "collections+flush",
+   "method": "POST",
+   "category": "admin",
+   "description": "Flush collection(s) to persist",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionNames",
+     "type": "array<string>",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+add_function",
+   "method": "POST",
+   "category": "schema",
+   "description": "Add function (BM25/embedding)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "function",
+     "type": "object",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+alter_function",
+   "method": "POST",
+   "category": "schema",
+   "description": "Alter function",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "functionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "function",
+     "type": "object",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+drop_function",
+   "method": "POST",
+   "category": "schema",
+   "description": "Drop function (json tag quirk: capital-F FunctionName)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "FunctionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "collections+fields+alter_properties",
+   "method": "POST",
+   "category": "schema",
+   "description": "Alter field properties",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "collections+fields+add",
+   "method": "POST",
+   "category": "schema",
+   "description": "Add field via dynamic schema (2.6)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "databases+create",
+   "method": "POST",
+   "category": "admin",
+   "description": "Database management: create",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "databases+drop",
+   "method": "POST",
+   "category": "admin",
+   "description": "Database management: drop",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "databases+drop_properties",
+   "method": "POST",
+   "category": "admin",
+   "description": "Database management: drop_properties",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "databases+list",
+   "method": "POST",
+   "category": "admin",
+   "description": "Database management: list",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "databases+describe",
+   "method": "POST",
+   "category": "admin",
+   "description": "Database management: describe",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "databases+alter",
+   "method": "POST",
+   "category": "admin",
+   "description": "Database management: alter",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "databases+alter_properties",
+   "method": "POST",
+   "category": "admin",
+   "description": "Database management: alter_properties",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "entities+insert",
+   "method": "POST",
+   "category": "data",
+   "description": "Insert entities",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "data",
+     "type": "array<object>",
+     "required": true,
+     "description": "rows: fieldName/value pairs; pk + vector required per row, dim must match schema"
+    }
+   ]
+  },
+  {
+   "path": "entities+upsert",
+   "method": "POST",
+   "category": "data",
+   "description": "Upsert entities",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "data",
+     "type": "array<object>",
+     "required": true
+    },
+    {
+     "name": "partialUpdate",
+     "type": "bool",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "entities+delete",
+   "method": "POST",
+   "category": "data",
+   "description": "Delete entities by filter expression",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "filter",
+     "type": "string",
+     "required": true,
+     "description": "boolean expression, e.g. id in [1,2] or scalar filters; id field removed from v2 struct"
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "exprParams",
+     "type": "object",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "entities+get",
+   "method": "POST",
+   "category": "data",
+   "description": "Get entities by primary key",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "id",
+     "type": "any",
+     "required": true,
+     "description": "pk value or array of pk values"
+    },
+    {
+     "name": "outputFields",
+     "type": "array<string>",
+     "required": false,
+     "default_value": [
+      "*"
+     ]
+    },
+    {
+     "name": "consistencyLevel",
+     "type": "string",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "entities+query",
+   "method": "POST",
+   "category": "data",
+   "description": "Query entities by filter",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "filter",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "outputFields",
+     "type": "array<string>",
+     "required": false
+    },
+    {
+     "name": "limit",
+     "type": "int",
+     "required": false
+    },
+    {
+     "name": "offset",
+     "type": "int",
+     "required": false
+    },
+    {
+     "name": "orderBy",
+     "type": "object",
+     "required": false
+    },
+    {
+     "name": "consistencyLevel",
+     "type": "string",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "entities+search",
+   "method": "POST",
+   "category": "search",
+   "description": "Vector search",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "data",
+     "type": "array<vector>",
+     "required": true,
+     "description": "query vector(s); dim must match schema"
+    },
+    {
+     "name": "annsField",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "partitionNames",
+     "type": "array<string>",
+     "required": false
+    },
+    {
+     "name": "filter",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "groupingField",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "groupSize",
+     "type": "int",
+     "required": false
+    },
+    {
+     "name": "strictGroupSize",
+     "type": "bool",
+     "required": false
+    },
+    {
+     "name": "limit",
+     "type": "int",
+     "required": false,
+     "default_value": 100,
+     "description": "server injects default 100 when omitted; limit+offset must be within [1,16384]"
+    },
+    {
+     "name": "offset",
+     "type": "int",
+     "required": false
+    },
+    {
+     "name": "outputFields",
+     "type": "array<string>",
+     "required": false
+    },
+    {
+     "name": "searchParams",
+     "type": "object",
+     "required": false,
+     "description": "nprobe/ef/level/radius/range_filter/search_list (index-type dependent)"
+    },
+    {
+     "name": "consistencyLevel",
+     "type": "string",
+     "required": false,
+     "enum_values": [
+      "Strong",
+      "Session",
+      "Bounded",
+      "Eventually",
+      "Customized"
+     ]
+    },
+    {
+     "name": "exprParams",
+     "type": "object",
+     "required": false
+    },
+    {
+     "name": "functionScore",
+     "type": "object",
+     "required": false
+    },
+    {
+     "name": "searchParams.ef",
+     "type": "integer",
+     "required": false,
+     "description": "HNSW 查询 ef（searchParams 透传键，REST 层不校验由 segcore/index 层消费；generateSearchParams 透传设计 utils.go:2076-2125）",
+     "evidence_tier": "verified",
+     "source_url": "go-func: internal/distributed/proxy/httpserver/utils.go#L2076 generateSearchParams 透传",
+     "source_status": "reachable",
+     "source_verified": true
+    }
+   ]
+  },
+  {
+   "path": "entities+advanced_search",
+   "method": "POST",
+   "category": "search",
+   "description": "Hybrid multi-vector search (alias of hybrid_search)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "entities+hybrid_search",
+   "method": "POST",
+   "category": "search",
+   "description": "Hybrid multi-vector search with rerank",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "search",
+     "type": "array<object>",
+     "required": true,
+     "description": "[]SubSearchReq: {data(required), annsField?, metricType?, filter?, limit?, params?}"
+    },
+    {
+     "name": "rerank",
+     "type": "object",
+     "required": false,
+     "description": "{strategy, params}"
+    },
+    {
+     "name": "limit",
+     "type": "int",
+     "required": false,
+     "default_value": 100
+    },
+    {
+     "name": "offset",
+     "type": "int",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "partitions+list",
+   "method": "POST",
+   "category": "admin",
+   "description": "Partition management: list",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "partitions+has",
+   "method": "POST",
+   "category": "admin",
+   "description": "Partition management: has",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "partitions+get_stats",
+   "method": "POST",
+   "category": "admin",
+   "description": "Partition management: get_stats",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "partitions+create",
+   "method": "POST",
+   "category": "admin",
+   "description": "Partition management: create",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "partitions+drop",
+   "method": "POST",
+   "category": "admin",
+   "description": "Partition management: drop",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "partitions+load",
+   "method": "POST",
+   "category": "admin",
+   "description": "Load partitions",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionNames",
+     "type": "array<string>",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "partitions+release",
+   "method": "POST",
+   "category": "admin",
+   "description": "Release partitions",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "partitionNames",
+     "type": "array<string>",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "indexes+list",
+   "method": "POST",
+   "category": "index",
+   "description": "List indexes",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "indexes+describe",
+   "method": "POST",
+   "category": "index",
+   "description": "Describe index (async build; poll state; not found -> 700)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "indexName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "timestamp",
+     "type": "int",
+     "required": false
+    }
+   ]
+  },
+  {
+   "path": "indexes+create",
+   "method": "POST",
+   "category": "index",
+   "description": "Create index (async)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "indexParams",
+     "type": "array<object>",
+     "required": true,
+     "description": "[{fieldName(req), indexName?, metricType?, indexType?, params{M,efConstruction,nlist}}]"
+    }
+   ]
+  },
+  {
+   "path": "indexes+drop",
+   "method": "POST",
+   "category": "index",
+   "description": "Drop index",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "indexName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "indexes+alter_properties",
+   "method": "POST",
+   "category": "index",
+   "description": "Alter index properties",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "indexes+drop_properties",
+   "method": "POST",
+   "category": "index",
+   "description": "Drop index properties",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "aliases+list",
+   "method": "POST",
+   "category": "admin",
+   "description": "Alias management: list",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "aliasName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "aliases+describe",
+   "method": "POST",
+   "category": "admin",
+   "description": "Alias management: describe",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "aliasName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "aliases+create",
+   "method": "POST",
+   "category": "admin",
+   "description": "Alias management: create",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "aliasName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "aliases+drop",
+   "method": "POST",
+   "category": "admin",
+   "description": "Alias management: drop",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "aliasName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "aliases+alter",
+   "method": "POST",
+   "category": "admin",
+   "description": "Alter alias target",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "aliasName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "users+list",
+   "method": "POST",
+   "category": "admin",
+   "description": "User management: list",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "users+describe",
+   "method": "POST",
+   "category": "admin",
+   "description": "User management: describe",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "users+create",
+   "method": "POST",
+   "category": "admin",
+   "description": "User management: create",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "users/update_password",
+   "method": "POST",
+   "category": "admin",
+   "description": "User management: update_password",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "users+drop",
+   "method": "POST",
+   "category": "admin",
+   "description": "User management: drop",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "users+grant_role",
+   "method": "POST",
+   "category": "admin",
+   "description": "User management: grant_role",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "users+revoke_role",
+   "method": "POST",
+   "category": "admin",
+   "description": "User management: revoke_role",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "roles+list",
+   "method": "POST",
+   "category": "admin",
+   "description": "Role/RBAC management: list",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "roles+describe",
+   "method": "POST",
+   "category": "admin",
+   "description": "Role/RBAC management: describe",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "roles+create",
+   "method": "POST",
+   "category": "admin",
+   "description": "Role/RBAC management: create",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "roles+drop",
+   "method": "POST",
+   "category": "admin",
+   "description": "Role/RBAC management: drop",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "roles+grant_privilege",
+   "method": "POST",
+   "category": "admin",
+   "description": "Role/RBAC management: grant_privilege",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "roles+revoke_privilege",
+   "method": "POST",
+   "category": "admin",
+   "description": "Role/RBAC management: revoke_privilege",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "roles+grant_privilege_v2",
+   "method": "POST",
+   "category": "admin",
+   "description": "Role/RBAC management: grant_privilege_v2",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "roles+revoke_privilege_v2",
+   "method": "POST",
+   "category": "admin",
+   "description": "Role/RBAC management: revoke_privilege_v2",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "privilege_groups+create",
+   "method": "POST",
+   "category": "admin",
+   "description": "Privilege group management: create",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "privilege_groups+drop",
+   "method": "POST",
+   "category": "admin",
+   "description": "Privilege group management: drop",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "privilege_groups+list",
+   "method": "POST",
+   "category": "admin",
+   "description": "Privilege group management: list",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "privilege_groups+add_privileges_to_group",
+   "method": "POST",
+   "category": "admin",
+   "description": "Privilege group management: add_privileges_to_group",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "privilege_groups+remove_privileges_from_group",
+   "method": "POST",
+   "category": "admin",
+   "description": "Privilege group management: remove_privileges_from_group",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "jobs+import+list",
+   "method": "POST",
+   "category": "admin",
+   "description": "Import job: list",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "jobs+import+create",
+   "method": "POST",
+   "category": "admin",
+   "description": "Import job: create",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "jobs+import+get_progress",
+   "method": "POST",
+   "category": "admin",
+   "description": "Import job: get_progress",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "jobs+import+describe",
+   "method": "POST",
+   "category": "admin",
+   "description": "Import job: describe",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "resource_groups+create",
+   "method": "POST",
+   "category": "admin",
+   "description": "Resource group management: create",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "resource_groups+drop",
+   "method": "POST",
+   "category": "admin",
+   "description": "Resource group management: drop",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "resource_groups+alter",
+   "method": "POST",
+   "category": "admin",
+   "description": "Resource group management: alter",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "resource_groups+describe",
+   "method": "POST",
+   "category": "admin",
+   "description": "Resource group management: describe",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "resource_groups+list",
+   "method": "POST",
+   "category": "admin",
+   "description": "Resource group management: list",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "resource_groups+transfer_replica",
+   "method": "POST",
+   "category": "admin",
+   "description": "Resource group management: transfer_replica",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "segments+describe",
+   "method": "POST",
+   "category": "admin",
+   "description": "Get segments info",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "quotacenter+describe",
+   "method": "POST",
+   "category": "admin",
+   "description": "Describe quota center",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "common+run_analyzer",
+   "method": "POST",
+   "category": "admin",
+   "description": "Run analyzer (BM25 full-text pipeline)",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "v1+collections+list",
+   "method": "POST",
+   "category": "schema",
+   "description": "v1 legacy: list collections (GET; success code 200) [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": []
+  },
+  {
+   "path": "v1+collections+create",
+   "method": "POST",
+   "category": "schema",
+   "description": "v1 legacy: create collection (required [collectionName, dimension]; missing -> code 1802) [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "dimension",
+     "type": "int",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v1+collections+describe",
+   "method": "POST",
+   "category": "schema",
+   "description": "v1 legacy: describe collection (GET ?collectionName=) [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v1+collections+drop",
+   "method": "POST",
+   "category": "schema",
+   "description": "v1 legacy: drop collection [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v1+insert",
+   "method": "POST",
+   "category": "data",
+   "description": "v1 legacy: insert [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v1+upsert",
+   "method": "POST",
+   "category": "data",
+   "description": "v1 legacy: upsert [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v1+search",
+   "method": "POST",
+   "category": "search",
+   "description": "v1 legacy: search (requires [collectionName, vector]) [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "vector",
+     "type": "array<float>",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v1+get",
+   "method": "POST",
+   "category": "data",
+   "description": "v1 legacy: get by id [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v1+query",
+   "method": "POST",
+   "category": "data",
+   "description": "v1 legacy: query [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "v1+delete",
+   "method": "POST",
+   "category": "data",
+   "description": "v1 legacy: delete [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  },
+  {
+   "path": "api_v1+management",
+   "method": "POST",
+   "category": "admin",
+   "description": "Legacy /api/v1/* management surface (~47 routes: collection/partition/alias/index CRUD, entities insert/delete, search, query, persist, import, credential, replicas, metrics, compaction, load-balance, health). Envelope: commonpb.Status {errorCode, reason}; HTTP 400 IllegalArgument / 500 UnexpectedError / 200 success",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable"
+  },
+  {
+   "path": "collections+count",
+   "method": "POST",
+   "category": "data",
+   "description": "Count cardinality surface: collections/get_stats returns rowCount (HTTPReturnRowCount constant.go:181); milvus v2 exposes row count via get_stats. Registered as count alias for cardinality queries.",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "source_status": "reachable",
+   "parameters": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    }
+   ]
+  }
+ ],
+ "endpoint_registry": [
+  {
+   "path": "collections+list",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "List collections",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+has",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Check collection existence",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+describe",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Describe collection schema",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+get_stats",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Get collection stats (row_count)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+get_load_state",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Get collection/partition load state",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+create",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Create collection (quick or full schema mode)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+drop",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Drop collection (atomic; release not required first)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+truncate",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Truncate collection (new in 2.6 line)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+rename",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Rename collection",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+load",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Load collection into memory",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+refresh_load",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Refresh load after schema change (2.6)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+release",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Release collection from memory",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+alter_properties",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Alter collection properties",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+drop_properties",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Drop collection properties",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+compact",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Trigger compaction",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+get_compaction_state",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Get compaction state",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+flush",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Flush collection(s) to persist",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+add_function",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Add function (BM25/embedding)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+alter_function",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Alter function",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+drop_function",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Drop function (json tag quirk: capital-F FunctionName)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+fields+alter_properties",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Alter field properties",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+fields+add",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Add field via dynamic schema (2.6)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "databases+create",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Database management: create",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "databases+drop",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Database management: drop",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "databases+drop_properties",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Database management: drop_properties",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "databases+list",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Database management: list",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "databases+describe",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Database management: describe",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "databases+alter",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Database management: alter",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "databases+alter_properties",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Database management: alter_properties",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "entities+insert",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Insert entities",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "entities+upsert",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Upsert entities",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "entities+delete",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Delete entities by filter expression",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "entities+get",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Get entities by primary key",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "entities+query",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Query entities by filter",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "entities+search",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Vector search",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "entities+advanced_search",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Hybrid multi-vector search (alias of hybrid_search)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "entities+hybrid_search",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Hybrid multi-vector search with rerank",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "partitions+list",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Partition management: list",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "partitions+has",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Partition management: has",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "partitions+get_stats",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Partition management: get_stats",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "partitions+create",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Partition management: create",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "partitions+drop",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Partition management: drop",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "partitions+load",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Load partitions",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "partitions+release",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Release partitions",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "indexes+list",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "List indexes",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "indexes+describe",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Describe index (async build; poll state; not found -> 700)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "indexes+create",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Create index (async)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "indexes+drop",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Drop index",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "indexes+alter_properties",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Alter index properties",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "indexes+drop_properties",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Drop index properties",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "aliases+list",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Alias management: list",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "aliases+describe",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Alias management: describe",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "aliases+create",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Alias management: create",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "aliases+drop",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Alias management: drop",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "aliases+alter",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Alter alias target",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "users+list",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "User management: list",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "users+describe",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "User management: describe",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "users+create",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "User management: create",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "users/update_password",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "User management: update_password",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "users+drop",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "User management: drop",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "users+grant_role",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "User management: grant_role",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "users+revoke_role",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "User management: revoke_role",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "roles+list",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Role/RBAC management: list",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "roles+describe",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Role/RBAC management: describe",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "roles+create",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Role/RBAC management: create",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "roles+drop",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Role/RBAC management: drop",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "roles+grant_privilege",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Role/RBAC management: grant_privilege",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "roles+revoke_privilege",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Role/RBAC management: revoke_privilege",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "roles+grant_privilege_v2",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Role/RBAC management: grant_privilege_v2",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "roles+revoke_privilege_v2",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Role/RBAC management: revoke_privilege_v2",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "privilege_groups+create",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Privilege group management: create",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "privilege_groups+drop",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Privilege group management: drop",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "privilege_groups+list",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Privilege group management: list",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "privilege_groups+add_privileges_to_group",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Privilege group management: add_privileges_to_group",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "privilege_groups+remove_privileges_from_group",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Privilege group management: remove_privileges_from_group",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "jobs+import+list",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Import job: list",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "jobs+import+create",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Import job: create",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "jobs+import+get_progress",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Import job: get_progress",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "jobs+import+describe",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Import job: describe",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "resource_groups+create",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Resource group management: create",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "resource_groups+drop",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Resource group management: drop",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "resource_groups+alter",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Resource group management: alter",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "resource_groups+describe",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Resource group management: describe",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "resource_groups+list",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Resource group management: list",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "resource_groups+transfer_replica",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Resource group management: transfer_replica",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "segments+describe",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Get segments info",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "quotacenter+describe",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Describe quota center",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "common+run_analyzer",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Run analyzer (BM25 full-text pipeline)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1+collections+list",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "v1 legacy: list collections (GET; success code 200) [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1+collections+create",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "v1 legacy: create collection (required [collectionName, dimension]; missing -> code 1802) [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1+collections+describe",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "v1 legacy: describe collection (GET ?collectionName=) [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1+collections+drop",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "v1 legacy: drop collection [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1+insert",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "v1 legacy: insert [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1+upsert",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "v1 legacy: upsert [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1+search",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "v1 legacy: search (requires [collectionName, vector]) [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1+get",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "v1 legacy: get by id [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1+query",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "v1 legacy: query [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "v1+delete",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "v1 legacy: delete [v1 legacy envelope: success code 200, mixed with merr codes on error]",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "api_v1+management",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Legacy /api/v1/* management surface (~47 routes: collection/partition/alias/index CRUD, entities insert/delete, search, query, persist, import, credential, replicas, metrics, compaction, load-balance, health). Envelope: commonpb.Status {errorCode, reason}; HTTP 400 IllegalArgument / 500 UnexpectedError / 200 success",
+   "verified_at": "2026-08-22T00:00:00Z"
+  },
+  {
+   "path": "collections+count",
+   "method": "POST",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "doc_version": "v2.6.10",
+   "doc_quote": "Get collection stats including rowCount (HTTPReturnRowCount)",
+   "verified_at": "2026-08-22T00:00:00Z"
+  }
+ ],
+ "constraints": {
+  "type_constraints": [
+   {
+    "constraint_id": "milvus_type_collections_create_001",
+    "endpoint": "collections+create",
+    "description": "schema.fields[].dataType must be one of the string enum values",
+    "assertion": "dataType IN {Int64,VarChar,FloatVector,BinaryVector,Float16Vector,BFloat16Vector,SparseFloatVector,Bool,Int8,Int16,Int32,Float,Double,Array,JSON}",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_collections_create_002",
+    "endpoint": "collections+create",
+    "description": "schema.fields[].fieldName and dataType are required in FieldSchema",
+    "assertion": "fieldName != null AND dataType != null",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_collections_create_003",
+    "endpoint": "collections+create",
+    "description": "quick mode and full schema mode conflict -> code 1100 invalid parameter",
+    "assertion": "NOT(dimension set AND schema set) else code==1100",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_entities_insert_001",
+    "endpoint": "entities+insert",
+    "description": "data rows must contain primary key and vector fields matching schema; wrong dim -> ErrInvalidInsertData",
+    "assertion": "each row has pk field AND vector field with dim == schema dim, else error",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_entities_search_001",
+    "endpoint": "entities+search",
+    "description": "consistencyLevel must be in enum; invalid -> code 1100",
+    "assertion": "consistencyLevel IN {Strong,Session,Bounded,Eventually,Customized} else code==1100 (message: consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded)",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_collections_create_004",
+    "endpoint": "collections+create",
+    "description": "SparseFloatVector literal JSON input format",
+    "assertion": "sparse vector rows accepted via sparse float vector JSON input format in REST insert",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_collections_create_005",
+    "endpoint": "collections+create",
+    "description": "BinaryVector dimension must be a multiple of 8",
+    "assertion": "BinaryVector dim % 8 == 0",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/paramtable/component_param.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_collections_create_006",
+    "endpoint": "collections+create",
+    "description": "Array dataType requires elementDataType",
+    "assertion": "dataType==Array IMPLIES elementDataType != null",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_type_entities_delete_001",
+    "endpoint": "entities+delete",
+    "description": "filter is a boolean expression string and is the required delete selector (id removed from v2 struct)",
+    "assertion": "filter != null AND is valid boolean expr",
+    "type": "type_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   }
+  ],
+  "range_constraints": [
+   {
+    "constraint_id": "milvus_range_entities_search_001",
+    "endpoint": "entities+search",
+    "description": "topK limit: limit+offset must be in [1, TopKLimit=16384] (quotaAndLimits.limits.topK default 16384)",
+    "assertion": "1 <= limit + offset <= 16384 else error 'it should be in range [1, 16384], but got %d'",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/paramtable/quota_param.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_range_entities_search_002",
+    "endpoint": "entities+search",
+    "description": "limit default 100 injected by server when omitted",
+    "assertion": "limit omitted => effective limit == 100",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_range_collections_create_001",
+    "endpoint": "collections+create",
+    "description": "vector dimension max 32768 (proxy.maxDimension)",
+    "assertion": "dim <= 32768",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/paramtable/component_param.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_range_collections_create_002",
+    "endpoint": "collections+create",
+    "description": "collection/field/partition/alias/db name max length 255 (proxy.maxNameLength)",
+    "assertion": "len(name) <= 255",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/paramtable/component_param.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_range_collections_create_003",
+    "endpoint": "collections+create",
+    "description": "max fields per collection 64 (proxy.maxFieldNum); max vector fields 4 (proxy.maxVectorFieldNum)",
+    "assertion": "numFields <= 64 AND numVectorFields <= 4",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/paramtable/component_param.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_range_collections_create_004",
+    "endpoint": "collections+create",
+    "description": "VarChar max_length default 65535 (proxy.maxVarCharLength, 2.4.19+ hotfix value)",
+    "assertion": "max_length <= 65535",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/paramtable/component_param.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_range_users_create_001",
+    "endpoint": "users+create",
+    "description": "password min 6 (proxy.minPasswordLength), max 72 (bcrypt); username max 32",
+    "assertion": "6 <= len(password) <= 72 AND len(username) <= 32",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/paramtable/component_param.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_range_collections_create_005",
+    "endpoint": "collections+create",
+    "description": "max shards 16 (proxy.maxShardNum)",
+    "assertion": "numShards <= 16",
+    "type": "range_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/paramtable/component_param.go",
+    "source_status": "reachable",
+    "source_verified": true
+   }
+  ],
+  "state_constraints": [
+   {
+    "constraint_id": "milvus_state_collections_load_001",
+    "endpoint": "collections+load",
+    "description": "load on already-loaded collection -> code 104 collection already loaded",
+    "assertion": "state==Loaded AND load => code==104",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/merr/errors.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_state_collections_load_002",
+    "endpoint": "entities+search",
+    "description": "search/query on not-loaded collection -> code 101 collection not loaded",
+    "assertion": "state!=Loaded AND (search|query) => code==101",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/merr/errors.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_state_collections_describe_001",
+    "endpoint": "collections+describe",
+    "description": "describe/get on nonexistent collection -> code 100 collection not found (HTTP 200)",
+    "assertion": "NOT exists(collection) AND describe => code==100",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/merr/errors.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_state_collections_drop_001",
+    "endpoint": "collections+drop",
+    "description": "drop is atomic and does not require release first",
+    "assertion": "drop succeeds from any load state",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_state_collections_get_load_state_001",
+    "endpoint": "collections+get_load_state",
+    "description": "LoadState enum: LoadStateNotExist/LoadStateNotLoad/LoadStateLoading/LoadStateLoaded; per-collection and per-partition",
+    "assertion": "load_state IN {LoadStateNotExist,LoadStateNotLoad,LoadStateLoading,LoadStateLoaded}",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_state_indexes_create_001",
+    "endpoint": "indexes+create",
+    "description": "index building is async: create returns immediately; poll describe for state; index not found -> 700",
+    "assertion": "create returns before build completes; NOT built AND describe => code==700",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    "source_status": "reachable",
+    "source_verified": true
+   },
+   {
+    "constraint_id": "milvus_state_aliases_create_001",
+    "endpoint": "aliases+create",
+    "description": "alias state machine: already exist -> 1602; not found -> 1600; alias==collectionName conflict -> 1601",
+    "assertion": "alias states map to codes 1600/1601/1602",
+    "type": "state_constraint",
+    "evidence_tier": "explicit",
+    "source_url": ".milvus-src-2610/pkg/util/merr/errors.go",
+    "source_status": "reachable",
+    "source_verified": true
+   }
+  ]
+ },
+ "assertions": [
+  {
+   "assertion_id": "milvus_behavioral_envelope_001",
+   "endpoint": "collections+list",
+   "description": "v2 envelope success code is 0 (merr.Code(nil)), not 200",
+   "category": "behavioral",
+   "expected_behavior": "success response is {\"code\":0,\"data\":...}; live confirmed collections/list -> {\"code\":0,\"data\":[]}",
+   "evidence_tier": "explicit",
+   "source_url": "live instance http://localhost:19530 (v2.6.10)",
+   "source_verified": true
+  },
+  {
+   "assertion_id": "milvus_behavioral_envelope_002",
+   "endpoint": "collections+has",
+   "description": "missing required parameter -> HTTP 200 + code 1802",
+   "category": "behavioral",
+   "expected_behavior": "HTTP status 200 with {\"code\":1802,\"message\":\"missing required parameters, error: ...\"}; live confirmed",
+   "evidence_tier": "explicit",
+   "source_url": "live instance http://localhost:19530 (v2.6.10)",
+   "source_verified": true
+  },
+  {
+   "assertion_id": "milvus_behavioral_envelope_003",
+   "endpoint": "entities+insert",
+   "description": "malformed JSON / wrong content type -> HTTP 200 + code 1801",
+   "category": "behavioral",
+   "expected_behavior": "HTTP 200 with {\"code\":1801,\"message\":\"can only accept json format request, ...\"}; live confirmed",
+   "evidence_tier": "explicit",
+   "source_url": "live instance http://localhost:19530 (v2.6.10)",
+   "source_verified": true
+  },
+  {
+   "assertion_id": "milvus_behavioral_envelope_004",
+   "endpoint": "collections+describe",
+   "description": "resource not found -> HTTP 200 + code 100",
+   "category": "behavioral",
+   "expected_behavior": "HTTP 200 with {\"code\":100,\"message\":\"can't find collection[database=default][collection=...]\"}; live confirmed",
+   "evidence_tier": "explicit",
+   "source_url": "live instance http://localhost:19530 (v2.6.10)",
+   "source_verified": true
+  },
+  {
+   "assertion_id": "milvus_behavioral_envelope_005",
+   "endpoint": "collections+list",
+   "description": "HTTP status is 200 for almost ALL business responses including errors; only unknown route gives HTTP 404",
+   "category": "behavioral",
+   "expected_behavior": "error discrimination must use JSON code field, not HTTP status; unknown route -> 404 page not found; auth middleware rejections 1800/1400 also non-200",
+   "evidence_tier": "explicit",
+   "source_url": "live instance http://localhost:19530 (v2.6.10)",
+   "source_verified": true
+  },
+  {
+   "assertion_id": "milvus_behavioral_envelope_006",
+   "endpoint": "v1+collections+list",
+   "description": "v1 legacy envelope: success code 200 (dual-envelope coexistence)",
+   "category": "behavioral",
+   "expected_behavior": "GET /v1/vector/collections -> {\"code\":200,\"data\":[]}; but v1 errors use merr codes (POST /v1/vector/collections/create {} -> code 1802)",
+   "evidence_tier": "explicit",
+   "source_url": "live instance http://localhost:19530 (v2.6.10)",
+   "source_verified": true
+  },
+  {
+   "assertion_id": "milvus_behavioral_envelope_007",
+   "endpoint": "entities+search",
+   "description": "invalid consistencyLevel -> code 1100",
+   "category": "behavioral",
+   "expected_behavior": "code 1100, message consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded",
+   "evidence_tier": "explicit",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "source_verified": true
+  },
+  {
+   "assertion_id": "milvus_behavioral_entities_insert_001",
+   "endpoint": "entities+insert",
+   "description": "insert returns {insertCount, insertIds}",
+   "category": "behavioral",
+   "expected_behavior": "success: code 0 with insertCount and insertIds",
+   "evidence_tier": "explicit",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "source_verified": true
+  },
+  {
+   "assertion_id": "milvus_behavioral_collections_get_stats_001",
+   "endpoint": "collections+get_stats",
+   "description": "get_stats returns row_count",
+   "category": "behavioral",
+   "expected_behavior": "row_count reflects entity count",
+   "evidence_tier": "explicit",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "source_verified": true
+  },
+  {
+   "assertion_id": "milvus_behavioral_search_default_001",
+   "endpoint": "entities+search",
+   "description": "search limit default 100 when omitted (server injects)",
+   "category": "behavioral",
+   "expected_behavior": "omitting limit yields up to 100 results (by-design default injection)",
+   "evidence_tier": "explicit",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+   "source_verified": true
+  }
+ ],
+ "behavioral_contracts": [
+  {
+   "contract_id": "milvus_bc_envelope_v2_001",
+   "description": "v2 RESTful error envelope model (differs from 2.3-era knowledge)",
+   "scenario": "any /v2/vectordb/* endpoint with business error (missing param 1802, bad JSON 1801, not found 100, invalid param 1100, not loaded 101, already loaded 104, alias 1600/1601/1602, auth 1800/1400)",
+   "expected_behavior": "HTTP 200 with {code: <non-zero merr code>, message}; success is HTTP 200 {code:0, data}. Only unknown route -> HTTP 404 'page not found'. Discriminate on JSON code, never HTTP status.",
+   "related_endpoints": [
+    "collections+list",
+    "collections+create",
+    "entities+search",
+    "entities+insert"
+   ],
+   "source_url": "live instance http://localhost:19530 (v2.6.10)"
+  },
+  {
+   "contract_id": "milvus_bc_envelope_v1_002",
+   "description": "v1 legacy envelope coexistence (dual envelope)",
+   "scenario": "/v1/vector/* endpoints",
+   "expected_behavior": "success code 200 (GET /v1/vector/collections -> {code:200,data:[]}); errors use merr codes (create missing required -> 1802). Do not assume a single envelope across v1 and v2 surfaces. /api/v1/* management surface uses commonpb.Status {errorCode, reason} with HTTP 400/500.",
+   "related_endpoints": [
+    "v1+collections+list",
+    "v1+collections+create",
+    "api_v1+management"
+   ],
+   "source_url": "live instance http://localhost:19530 (v2.6.10)"
+  },
+  {
+   "contract_id": "milvus_bc_crud_visibility_001",
+   "description": "create->query visibility",
+   "scenario": "create collection, then has/describe/get_load_state",
+   "expected_behavior": "after successful create (code 0), has returns {has:true} and describe returns schema; get_load_state reports LoadStateNotLoad until load() called",
+   "related_endpoints": [
+    "collections+create",
+    "collections+has",
+    "collections+describe",
+    "collections+get_load_state"
+   ],
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go"
+  },
+  {
+   "contract_id": "milvus_bc_delete_invisibility_001",
+   "description": "delete->query invisibility",
+   "scenario": "insert entities, delete by filter, then query same filter",
+   "expected_behavior": "deleted entities no longer returned by query/search after delete succeeds (code 0)",
+   "related_endpoints": [
+    "entities+insert",
+    "entities+delete",
+    "entities+query"
+   ],
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go"
+  },
+  {
+   "contract_id": "milvus_bc_load_release_001",
+   "description": "load/release state machine",
+   "scenario": "create -> search (not loaded) -> load -> search -> load again -> release -> search",
+   "expected_behavior": "search before load -> code 101; after load -> success; load on loaded -> code 104; after release -> search -> code 101 again",
+   "related_endpoints": [
+    "collections+load",
+    "collections+release",
+    "collections+refresh_load",
+    "entities+search"
+   ],
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go"
+  }
+ ],
+ "state_invariants": [
+  {
+   "invariant_id": "milvus_inv_created_visible_001",
+   "description": "after collections/create succeeds (code 0), the collection is queryable",
+   "assertion": "create.code==0 => collections/has {has:true} AND collections/list contains name",
+   "scope": "global",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go"
+  },
+  {
+   "invariant_id": "milvus_inv_dropped_absent_001",
+   "description": "after collections/drop succeeds, the collection does not exist",
+   "assertion": "drop.code==0 => collections/has {has:false} AND collections/describe -> code 100",
+   "scope": "global",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go"
+  },
+  {
+   "invariant_id": "milvus_inv_count_consistency_001",
+   "description": "insert N entities -> row_count reflects N",
+   "assertion": "insert N rows (code 0) => collections/get_stats row_count increases by N (subject to flush/visibility semantics)",
+   "scope": "per_collection",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go"
+  },
+  {
+   "invariant_id": "milvus_inv_upsert_atomic_001",
+   "description": "upsert by pk replaces entity atomically; subsequent get returns new values",
+   "assertion": "upsert(pk=X, new values).code==0 => entities/get id=X returns new values",
+   "scope": "per_collection",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go"
+  },
+  {
+   "invariant_id": "milvus_inv_index_async_001",
+   "description": "index create is async: create.code==0 does not imply index finished building",
+   "assertion": "indexes/create.code==0 => poll indexes/describe until state finished before searching on that index",
+   "scope": "per_collection",
+   "source_url": ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go"
+  }
+ ],
+ "data_types": [
+  {
+   "name": "CollectionReq",
+   "description": "v2 create collection request: quick mode (dimension+primaryFieldName+vectorFieldName) or full schema mode; conflicting modes -> 1100",
+   "fields": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "dbName",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "dimension",
+     "type": "int",
+     "required": false
+    },
+    {
+     "name": "autoID",
+     "type": "bool",
+     "required": false
+    },
+    {
+     "name": "schema",
+     "type": "CollectionSchema",
+     "required": false
+    },
+    {
+     "name": "indexParams",
+     "type": "array<IndexParam>",
+     "required": false
+    }
+   ]
+  },
+  {
+   "name": "FieldSchema",
+   "description": "schema field; dataType string enum covers scalar (Bool/Int8/Int16/Int32/Int64/Float/Double/VarChar/JSON/Array+elementDataType) and vector (FloatVector/BinaryVector/Float16Vector/BFloat16Vector/SparseFloatVector) types",
+   "fields": [
+    {
+     "name": "fieldName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "dataType",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "elementDataType",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "isPrimary",
+     "type": "bool",
+     "required": false
+    },
+    {
+     "name": "isPartitionKey",
+     "type": "bool",
+     "required": false
+    },
+    {
+     "name": "isClusteringKey",
+     "type": "bool",
+     "required": false
+    },
+    {
+     "name": "elementTypeParams",
+     "type": "object",
+     "required": false
+    },
+    {
+     "name": "nullable",
+     "type": "bool",
+     "required": false
+    },
+    {
+     "name": "defaultValue",
+     "type": "any",
+     "required": false
+    }
+   ]
+  },
+  {
+   "name": "SparseFloatVector",
+   "description": "sparse float vector; REST JSON input format {index: value} map per row; 2.6 supports in REST schema creation and insert"
+  },
+  {
+   "name": "Float16Vector",
+   "description": "float16 vector type (2.6 REST schema support)"
+  },
+  {
+   "name": "BFloat16Vector",
+   "description": "bfloat16 vector type (2.6 REST schema support)"
+  },
+  {
+   "name": "SearchReqV2",
+   "description": "v2 search request; searchParams keys are index-type dependent: {nprobe, ef, level, radius, range_filter, search_list}",
+   "fields": [
+    {
+     "name": "collectionName",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "data",
+     "type": "array<vector>",
+     "required": true
+    },
+    {
+     "name": "searchParams",
+     "type": "object",
+     "required": false
+    },
+    {
+     "name": "limit",
+     "type": "int",
+     "required": false
+    },
+    {
+     "name": "filter",
+     "type": "string",
+     "required": false
+    },
+    {
+     "name": "consistencyLevel",
+     "type": "string",
+     "required": false
+    }
+   ]
+  },
+  {
+   "name": "HybridSearchReq",
+   "description": "multi-vector search: search[] SubSearchReq + rerank{strategy,params}; advanced_search and hybrid_search alias the same handler"
+  },
+  {
+   "name": "V2Envelope",
+   "description": "v2 response envelope: success {code:0, data}; error {code:<merr>, message}. merr codes: 0 success, 100 collection not found, 101 not loaded, 104 already loaded, 700 index not found, 1100 invalid parameter, 1600/1601/1602 alias errors, 1800 auth, 1801 non-JSON, 1802 missing params"
+  },
+  {
+   "name": "V1Envelope",
+   "description": "v1 legacy envelope: success code 200; errors merr codes (1802 etc.); /api/v1 management uses commonpb.Status {errorCode, reason}"
+  },
+  {
+   "name": "IndexParam",
+   "description": "index definition: fieldName(required), indexName, metricType, indexType (AUTOINDEX/HNSW/DISKANN/IVF_FLAT/IVF_SQ8/GPU_IVF_*), params {M, efConstruction, nlist}"
+  }
+ ],
+ "_passport": {
+  "schema_version": "2.0",
+  "contract_hash": "sha256:82a6847add402b6f5a82ea75a3ec6041c3fcecef017edfc72dc49e13c18c8323",
+  "contract_hash_algorithm": "sha256",
+  "source": {
+   "doc_urls": [
+    ".milvus-src-2610/internal/distributed/proxy/httpserver/handler.go",
+    ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v1.go",
+    ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go",
+    ".milvus-src-2610/pkg/util/merr/errors.go",
+    ".milvus-src-2610/pkg/util/paramtable/component_param.go",
+    ".milvus-src-2610/pkg/util/paramtable/quota_param.go",
+    "live instance http://localhost:19530 (v2.6.10)"
+   ],
+   "doc_version": "v2.6.10",
+   "crawl_method": "manual",
+   "crawled_at": "2026-08-22T00:00:00Z"
+  },
+  "generation": {
+   "knowledge_extractor_agent": "testvdb:knowledge-extractor",
+   "contract_formalizer_agent": "testvdb:contract-formalizer",
+   "generated_at": "2026-08-22T00:00:00Z",
+   "cache_ttl_hours": 168
+  },
+  "integrity": {
+   "verified": true,
+   "verified_at": "2026-08-22T00:00:00Z",
+   "core_crud_coverage_pct": 100.0,
+   "endpoint_count": 100,
+   "constraint_count": 24
+  },
+  "note": " [R2-rerun 2026-08-22: 回滚两条查 GT issue 后补的断言（用户拍板 B）——盲注重跑]"
+ }
+}

@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_points_query_batch_upsert_idem_004",
+  "endpoint": "points+query+batch",
+  "param": "searches",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "upsert_idempotence",
+  "oracle": {
+    "statement": "duplicate upserts of id 500 leave exact count == 1; every batch -> 200 len(result)==2 with the by-id entry returning exactly id 500; batch by-id vector readback == concurrent GET with_vector read-back baseline (R27); post-overwrite readbacks differ from pre-overwrite read-back (stale = Type4); 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

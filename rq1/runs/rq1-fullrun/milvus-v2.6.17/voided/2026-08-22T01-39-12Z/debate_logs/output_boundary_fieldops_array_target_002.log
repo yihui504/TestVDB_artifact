@@ -1,0 +1,21 @@
+ARRAY_APPEND on title -> code=1100 raw={"code":1100,"message":"op ARRAY_APPEND requires Array field, but field \"title\" is VarChar: invalid parameter"}
+  LEAK-CHECK: field title now = 't' (should be untouched)
+ARRAY_REMOVE on title -> code=1100 raw={"code":1100,"message":"op ARRAY_REMOVE requires Array field, but field \"title\" is VarChar: invalid parameter"}
+  LEAK-CHECK: field title now = 't' (should be untouched)
+ARRAY_APPEND on meta -> code=1100 raw={"code":1100,"message":"op ARRAY_APPEND requires Array field, but field \"meta\" is JSON: invalid parameter"}
+  LEAK-CHECK: field meta now = '{"k": 1}' (should be untouched)
+ARRAY_REMOVE on meta -> code=1100 raw={"code":1100,"message":"op ARRAY_REMOVE requires Array field, but field \"meta\" is JSON: invalid parameter"}
+  LEAK-CHECK: field meta now = '{"k": 1}' (should be untouched)
+ARRAY_APPEND on vec -> code=1804 raw={"code":1804,"message":"fail to deal the insert data, error: Mismatch type float32 with value string \"at index 1: mismatched type with value\\n\\n\\t[\\\"x\\\"]\\n\\t.^...\\n\": invalid parameter[expected=FloatVector][a
+  NOTE: rejected but message lacks 'requires Array field' (Type2 candidate)
+  LEAK-CHECK: field vec now = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1] (should be untouched)
+ARRAY_REMOVE on vec -> code=1804 raw={"code":1804,"message":"fail to deal the insert data, error: Mismatch type float32 with value string \"at index 1: mismatched type with value\\n\\n\\t[\\\"x\\\"]\\n\\t.^...\\n\": invalid parameter[expected=FloatVector][a
+  NOTE: rejected but message lacks 'requires Array field' (Type2 candidate)
+  LEAK-CHECK: field vec now = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1] (should be untouched)
+ARRAY_APPEND on dyn -> code=1100 raw={"code":1100,"message":"field \"dyn\" not found in collection schema: invalid parameter"}
+  NOTE: rejected but message lacks 'requires Array field' (Type2 candidate)
+  LEAK-CHECK: field dyn now = 5 (should be untouched)
+ARRAY_REMOVE on dyn -> code=1100 raw={"code":1100,"message":"field \"dyn\" not found in collection schema: invalid parameter"}
+  NOTE: rejected but message lacks 'requires Array field' (Type2 candidate)
+  LEAK-CHECK: field dyn now = 5 (should be untouched)
+VERDICT: NO_DEFECT

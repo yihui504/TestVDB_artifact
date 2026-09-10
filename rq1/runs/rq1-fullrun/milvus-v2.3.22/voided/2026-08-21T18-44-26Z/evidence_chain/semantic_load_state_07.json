@@ -1,0 +1,73 @@
+{
+  "defect_id": "semantic_load_state_07",
+  "endpoint": "v2/vectordb/collections/create + get_load_state（explicit-schema 路径）",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "reanchored": "R2 消解重锚 2026-08-22：milvus_inv_load_lifecycle 已加 v2 auto-load 例外；A/D/chain 层按修订后契约重写，B/C 观测原样保留",
+  "evidence_weight": "high",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "修订后 invariant milvus_inv_load_lifecycle 描述域包含 v2 create 路径的无条件 auto-load（'v2 create 路径尾部无条件 LoadCollection（handler_v2.go:1165，quick/explicit 两分支汇合）= auto-load 例外；显式 load/release 语义仅约束 v1 路径与显式调用'）。实测行为（v2 explicit-schema 建表+索引后未调 load 即 LoadStateLoaded/progress 100）恰好落入该例外域——行为与修订后契约一致，不再存在契约自冲突。source_url handler_v2.go reachable，版本 v2.3.22 精确匹配，端点 v2/vectordb/collections/create + get_load_state 在 endpoint_registry 查表命中",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "state_before_load: 200 {\"code\":200,\"data\":{\"loadProgress\":100,\"loadState\":\"LoadStateLoaded\"},\"message\":\"\"}（主观测：建表+索引后未调 load 即 Loaded/progress 100）",
+      "secondary_observations": [
+        "OBSERVATION: explicit-schema collection auto-Loaded without explicit load call (v2 create+index path)",
+        "load: 200 后 state 仍 LoadStateLoaded progress 100（显式 load 幂等）",
+        "release: 200；state_after_release: {\"loadState\":\"LoadStateNotLoad\"}（release 状态机正确）",
+        "search_after_release: http=200 body={\"code\":101,\"message\":\"failed to search: collection not loaded[collection=468539281521145714]\"}（NotLoad 下 search 被正确拒，对照）",
+        "topk3: distance=1/4/9（L2 语义正常）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "release 后 search 拒绝为 HTTP 200 + code 101；主观测为状态机语义（无错误返回）"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_load_state_07.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_inv_load_lifecycle",
+      "assertion_text_quoted": "loadState in [NotLoad, Loading, Loaded]; after release loadState == NotLoad; search before Loaded fails（R2 消解 2026-08-22：v2 create 路径尾部无条件 LoadCollection（handler_v2.go:1165，quick/explicit 两分支汇合）= auto-load 例外；显式 load/release 语义仅约束 v1 路径与显式调用）",
+      "api_violates_assertion": false,
+      "note": "主观测（v2 explicit-schema create 后未调 load 即 Loaded）落在修订后契约显式声明的 v2 auto-load 例外域内，故 violates=false：约束未被违反，例外条款正是该现象的规范描述。chain 内其余观测（release→NotLoad、NotLoad 下 search 拒 code 101、Loaded 下 search 正常）均与 invariant 主句一致——此判定不是'值被接受了但大概不算违反'的模糊保守，而是例外条款域内的精确匹配",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_inv_load_lifecycle（R2 修订版：v2 create auto-load 例外 + 显式 load/release 语义）",
+        "doc: handler_v2.go:1165-1175 reachable，v2 create 尾部无条件 LoadCollection（quick 1117-1133 / explicit 1134-1163 两分支汇合后）——例外条款的 source 依据",
+        "script: semantic_load_state_07.py explicit-schema 建表+索引 → 立即 get_load_state",
+        "log: state_before_load → LoadStateLoaded progress=100（主观测）；release→NotLoad；NotLoad search→code 101（次观测）——全部观测与修订后契约逐条吻合"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["LoadCollection", "loadReq := &milvuspb.LoadCollectionRequest", "wrapperReturnDefault"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go:932-970",
+        "internal/distributed/proxy/httpserver/handler_v2.go:1100-1175",
+        "internal/distributed/proxy/httpserver/handler_v1.go:225-273",
+        "internal/distributed/proxy/httpserver/handler_v2_test.go:470-476"
+      ],
+      "source_excerpt": "handler_v2.go:1164-1175（createCollection 尾部，两条分支汇合后）:\n\tloadReq := &milvuspb.LoadCollectionRequest{\n\t\tDbName:         dbName,\n\t\tCollectionName: httpReq.CollectionName,\n\t}\n\tstatusResponse, err := wrapperProxy(..., \"/milvus.proto.milvus.MilvusService/LoadCollection\", ...)\n\tif err == nil {\n\t\tc.JSON(http.StatusOK, wrapperReturnDefault())\n\t}\n——无论 quick-create(1117-1133) 还是 explicit-schema/indexParams(1134-1163) 分支，最后都无条件调用 LoadCollection。v1 路径 handler_v1.go:261-264 同构。官方测试 handler_v2_test.go:475 `mp.EXPECT().LoadCollection(...).Return(commonSuccessStatus, nil).Times(6)` 把无条件 load 固化为预期行为",
+      "call_chain_traced": "v2 create（任意 schema 形态）→ CreateCollection(1111) → index 分支 → LoadCollection(1165-1171) 无条件执行 → get_load_state 立即观察 Loaded。R2 重评：该实现即修订后契约例外条款的直接 source 对应（条款明确引用 handler_v2.go:1165）；行为、源码、契约三者在例外域内闭合",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

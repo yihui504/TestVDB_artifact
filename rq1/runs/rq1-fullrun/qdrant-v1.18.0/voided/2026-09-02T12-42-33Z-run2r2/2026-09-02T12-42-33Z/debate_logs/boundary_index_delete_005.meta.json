@@ -1,0 +1,15 @@
+{
+ "defect_id": "boundary_index_delete_005",
+ "endpoint": "index+delete",
+ "param": "timeout",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "strategy1_query_param_boundary",
+ "constraint_ids": [
+  "qdrant_behavioral_index_delete_001",
+  "qdrant_state_index_delete_001"
+ ],
+ "oracle": {
+  "statement": "on a live never-indexed bidl5_* collection, valid query legs (wait=true / wait=false / ordering=strong / combined) each return exactly 200 (non-200 = Type1 legal-input-rejected signal); coercion/boundary legs (wait=yes/1, timeout=0/-1/i32max/20-digit-overflow/abc, ordering=bogus) accept 200 or clean 4xx measured-only; any 5xx = Type3 with /healthz re-check; read-timeout with /healthz alive on a no-wait leg = server-side hang = Type3_RuntimeFailure; query params sent via URL query string, never body",
+  "source": "docstring"
+ }
+}

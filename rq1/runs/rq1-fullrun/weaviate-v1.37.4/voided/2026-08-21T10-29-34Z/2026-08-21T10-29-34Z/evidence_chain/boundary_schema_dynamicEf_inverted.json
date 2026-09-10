@@ -1,0 +1,88 @@
+{
+  "defect_id": "boundary_schema_dynamicEf_inverted",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Assertion weaviate_inferred_hnsw_ef_pairing_001 is evidence_tier=inferred (behavioral), source_url points to github.com config.go which WebFetch blocks (domain_blocked->PARTIAL). Local clone verified as exact v1.37.4 (git tag). Source does NOT contain any Min<=Max enforcement for dynamicEfMin/dynamicEfMax (config.go validate() skips them) - so the claimed assertion is not corroborated as enforced in source, consistent with the defect.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: dynamicEfMin=250, dynamicEfMax=100 -> http=200, body persists both as given (status 200, VERDICT: DEFECT_FOUND)",
+      "secondary_observations": [
+        "inverted Min(250) > Max(100) accepted and returned in schema response, no 4xx/5xx, no rejection"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 success; the invalid inverted-paired EF values (Min>Max) are persisted in the response body as a successful schema create rather than being rejected with a client error"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_dynamicEf_inverted",
+        "boundary_schema_dynamicEfMin_negative",
+        "boundary_schema_dynamicEfMin_zero",
+        "boundary_schema_dynamicEfMax_negative",
+        "boundary_schema_dynamicEf_equal",
+        "boundary_schema_dynamicEfMinOnly",
+        "boundary_schema_dynamicEfMaxOnly"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_inferred_hnsw_ef_pairing_001",
+      "assertion_text_quoted": "dynamicEfMin and dynamicEfMax represent paired EF parameters where Min <= Max",
+      "expected_behavior_quoted": "dynamicEfMin value should be less than or equal to dynamicEfMax value",
+      "api_violates_assertion": true,
+      "note": "Verbatim quotes from structured_contract.json assertions[0] (description at line 2918, expected_behavior at line 2920). Observed Min=250 > Max=100 directly violates the Min<=Max pairing constraint (both values inside the constraint domain).",
+      "evidence_source": "doc",
+      "assertion_id": "weaviate_inferred_hnsw_ef_pairing_001"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:weaviate_inferred_hnsw_ef_pairing_001 (Min<=Max) -> doc:assertion inferred, source=config.go -> script:boundary_schema_dynamicEf_inverted POST /v1/schema with dynamicEfMin=250, dynamicEfMax=100 -> log:http=200, body persists Min=250 Max=100"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "Four links complete and consistent: contract asserts Min<=Max, script submits Min=250 Max=100, HTTP 200 persists them verbatim, source validate() contains no Min<=Max check.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "DynamicEfMin|DynamicEfMax in entities/vectorindex/hnsw/config.go",
+        "dynamicEfMin/dynamicEfMax package-wide",
+        "validate() body",
+        "DynamicEFMin|DynamicEFMax in adapters/repos/db/vector/hnsw"
+      ],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go",
+        "entities/vectorindex/common/config.go",
+        "entities/vectorindex/dynamic/config.go",
+        "adapters/repos/db/vector/hnsw/config_update.go",
+        "adapters/repos/db/vector/hnsw/index.go",
+        "entities/vectorindex/hnsw/config_test.go"
+      ],
+      "source_excerpt": "config.go:54-58 struct tags dynamicEfMin/dynamicEfMax/flatSearchCutoff; config.go:183-187 OptionalIntFromMap(\"dynamicEfMax\") and 189-193 OptionalIntFromMap(\"dynamicEfMin\") assign via setFn verbatim with NO lower/upper bound (common/config.go:45-76 OptionalIntFromMap: line 74 setFn(int(asInt64)) direct assign, only guard is int64 overflow->MaxInt64 at lines 64-69); config.go:260-323 validate() checks maxConnections>=4 (262-267)/<=2047 (269-274), efConstruction>=4 (276-281), filterStrategy enum (283-285) but NOT dynamicEfMin<=dynamicEfMax ordering nor positivity; config_update.go:104-105 atomic.StoreInt64(&h.efMin, DynamicEFMin); atomic.StoreInt64(&h.efMax, DynamicEFMax) with no clamp or order swap; index.go:366-367 efMin=int64(uc.DynamicEFMin), efMax=int64(uc.DynamicEFMax). Dynamic index (entities/vectorindex/dynamic/config.go) delegates to hnsw.ParseAndValidateConfig.",
+      "call_chain_traced": "POST /schema -> schema vectorindex config parse -> hnsw.ParseAndValidateConfig (config.go:140) -> OptionalIntFromMap (common/config.go:45-76, line 74 direct assign) -> UserConfig.validate() (config.go:260-323, skips dynamicEf fields) -> persisted; runtime index.go:366-367/config_update.go:104-105 store DynamicEFMin/Max verbatim as efMin/efMax.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "by-design"
+      ],
+      "surviving": "No code path rejects or re-normalizes inverted dynamicEfMin/Max; persistence is direct, so inverted Min>Max is a genuine acceptance of an invalid configuration pair.",
+      "note": "config.go validate() has no dynamicEfMin/dynamicEfMax bound or ordering check; consumed verbatim in index.go/config_update.go."
+    }
+  }
+}

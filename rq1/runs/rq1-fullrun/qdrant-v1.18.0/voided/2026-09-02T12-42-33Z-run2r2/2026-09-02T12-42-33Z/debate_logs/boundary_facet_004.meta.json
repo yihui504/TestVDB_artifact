@@ -1,0 +1,11 @@
+{
+ "defect_id": "boundary_facet_004",
+ "endpoint": "facet",
+ "param": "key",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "strategy1_behavioral_positive",
+ "oracle": {
+  "statement": "on a live bfa004_* collection (genre keyword-indexed alpha=10/beta=8/gamma=5/delta=2; region unindexed): facet key=genre -> HTTP 200 with result.hits exactly {alpha:10,beta:8,gamma:5,delta:2} (wrong length/counts/malformed entries on 200 = Type4; 4xx = Type1_IllegalRejection); facet key=region -> HTTP 400/422 (2xx whose hits contradict the fixture = Type1_IllegalSuccess wrong result); facet on nonexistent collection -> HTTP 404 (200 = Type1_IllegalSuccess); 5xx with /healthz alive = Type3",
+  "source": "docstring"
+ }
+}

@@ -1,0 +1,75 @@
+{
+  "defect_id": "boundary_replicationFactor_003",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": true,
+      "detail": "constraint weaviate_type_create_collection_004 断言 replicationFactor 为 integer；官方 REST spec（本地 clone entities/models/replication_config.go）中 ReplicationConfig 的字段为 json:\"factor\"——文档键 replicationFactor 在 REST 模型中不存在，仅出现在集群内部 state（usecases/sharding/state.go json:\"replicationFactor\"）。契约与文档/SDK 存在键名混淆，但'该键被静默丢弃'这一现象本身与 REST 模型核对一致",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[rf3] cfg={'replicationFactor': 3} -> create=200 persisted_factor=1 err= / DEFECT[rf3] Type1_IllegalSuccess: documented replicationFactor=3 accepted but silently dropped (factor=1, no 4xx)",
+      "secondary_observations": [
+        "[alias3] cfg={'factor': 3} -> create=422 persisted_factor=None err={\"allowed\":null,\"error\":[{\"message\":\"init sharding state: could not find enough weaviate nodes for replication: 1 availa...",
+        "[ctrl] cfg={'replicationFactor': 1} -> create=200 persisted_factor=1 err=",
+        "[neg] cfg={'replicationFactor': -1} -> create=200 persisted_factor=1 err=",
+        "[float] cfg={'replicationFactor': 1.5} -> create=200 persisted_factor=1 err=",
+        "[str] cfg={'replicationFactor': '3'} -> create=200 persisted_factor=1 err=",
+        "[big] cfg={'replicationFactor': 16384} -> create=200 persisted_factor=1 err=",
+        "[null] cfg={'replicationFactor': None} -> create=200 persisted_factor=1 err="
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "两键校验不对称的核心证据：别名键 factor=3 走 422（单节点无法满足），文档键 replicationFactor=3 静默 200 且持久化 factor=1——未知字段被 REST 层吞掉而非拒绝"
+      },
+      "reproducibility": "单脚本（7 个变体值全部一致 silent-drop，确定性）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_replicationFactor_003.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_type_create_collection_004",
+      "assertion_text_quoted": "replicationFactor is integer",
+      "api_violates_assertion": true,
+      "note": "契约断言 replicationFactor 为受类型校验的 integer 字段；观测显示该键任意值（float/str/负数）均被 200 接受且不生效（persisted factor=1）——类型校验对该键完全缺失，violates=True",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_type_create_collection_004 'replicationFactor is integer'",
+        "doc: REST 模型 entities/models/replication_config.go 仅定义 json:\"factor\"；json:\"replicationFactor\" 仅在内部 state.go",
+        "script: boundary_replicationFactor_003.py 8 组 cfg 变体 POST /schema",
+        "log: rf3/neg/float/str/big 全部 200+persisted_factor=1；对照 alias3(factor)=422"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["json:\\\"replicationFactor\\\"|json:\\\"factor\\\"", "could not find enough weaviate nodes for replication", "FactualReplicationFactor"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\entities\\models\\replication_config.go (全文)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\usecases\\sharding\\state.go (L40, L292 附近)"
+      ],
+      "source_excerpt": "entities/models/replication_config.go L35-38:\n\t// Number of times a collection (class) is replicated (default: 1).\n\tFactor int64 `json:\"factor,omitempty\"`\n\nusecases/sharding/state.go L40:\n\tReplicationFactor   int64               `json:\"replicationFactor\"`\nL292: return nil, fmt.Errorf(\"could not find enough weaviate nodes for replication: %d available, %d requested\", len(names), f)",
+      "call_chain_traced": "POST /schema body.replicationConfig.replicationFactor → go-swagger 模型 ReplicationConfig 仅有 factor 字段，replicationFactor 为未知键被反序列化静默丢弃（无 additionalProperties:false 拒绝）→ factor 保持默认 1 持久化；当用户用 factor=3 时才进入 state.go L292 节点数校验 → 422",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["请求参数笔误（键名即官方文档键，非笔误）", "env（对照 factor 键正确 422 证明链路正常）"],
+      "surviving": "silent-drop 机制为 go-swagger 生成模型的通用未知字段忽略行为（by-design 宽松反序列化），但文档键与 REST 模型键不一致导致的用户数据意图丢失是 surviving 现象"
+    }
+  }
+}

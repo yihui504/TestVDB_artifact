@@ -1,0 +1,14 @@
+{"defect_id": "milvus_043", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "包内契约仅有 ef/nprobe 取值范围与集合加载状态等 9 条约束，无任何 groupSize/strictGroupSize 断言，observed 返回 15 条（每 cat 3 条）无法与包内任何契约断言比对，证据不足以判定违反契约。"}
+{"defect_id": "qdrant_001", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "wait=true 时同一空向量被 400 拒绝，wait=false 返回的 200 仅是 status=acknowledged（排队确认），随后 GET 显示 points_count=0 表明非法点最终未入库，包内契约无『异步确认必须同步完成校验』的断言。"}
+{"defect_id": "qdrant_002", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "包内唯一 hnsw 约束是『hnsw_ef 仅在 exact=false 时适用』，未定义 hnsw_ef 的取值下界，behavioral_008 的『4XX on invalid params』缺少『hnsw_ef=0 属非法』的契约依据，证据不足。"}
+{"defect_id": "qdrant_003", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "score_threshold=2.0 时 score=1.0 的点被过滤为空、-0.5 时被返回，完全符合阈值过滤语义，未违反包内任何契约断言。"}
+{"defect_id": "qdrant_004", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "3 维向量在 wait=false 下返回 200 acknowledged 但 GET 显示 points_count=0（未入库），wait=true 下正确 400 拒绝，非法数据未落地且包内无异步路径必须同步校验的断言。"}
+{"defect_id": "qdrant_005", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "shard_number=0 与 -1 分别被 422/400 拒绝，恰好履行契约断言『shard_number >= 1』，observed 行为符合而非违反契约。"}
+{"defect_id": "qdrant_006", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "filter color=red 精确返回 4 条红色点，无该字段的点被正确排除且 missing_payload_ids=[]，符合 must 匹配语义，无契约违反。"}
+{"defect_id": "qdrant_007", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "批量 upsert 含非法维度向量时返回 400 且 count 保持 3（全部未应用），同时满足包内『atomic all-or-none』与『on error 可能 none』两条断言，错误被正确上报，无违反。"}
+{"defect_id": "qdrant_008", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "cat_a 恰有 25 个点，scroll limit=100 返回全部 25 条且 next_page_offset=null，分页语义正确履行 behavioral_009『200 with points list and next_page_offset』，无违反。"}
+{"defect_id": "qdrant_009", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "契约 qdrant_state_create_collection_001 明文允许『无向量配置的集合支持 payload-only 操作，向量错误在首次向量操作时浮现』，observed 创建 200 + 插入 400『Not existing vector name error』与该断言一致。"}
+{"defect_id": "qdrant_010", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "与 qdrant_009 同理：契约明文允许无向量配置的集合在创建后存在并在首次向量操作时报错，observed 完全符合 qdrant_state_create_collection_001。"}
+{"defect_id": "qdrant_011", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "包内无任何关于 filter 子句取 null 时应返回 4XX 的断言，should=null 被宽松忽略并返回全部点，证据不足以判定违反契约。"}
+{"defect_id": "qdrant_012", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "must_not 以对象（非数组）形式传入被宽松接受且语义正确（排除了 tag=x 的点 1），包内无 filter 结构类型断言，无契约被违反。"}
+{"defect_id": "qdrant_013", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "包内无 query=null 应拒绝的断言，behavioral_011 要求的『200 with result points』被满足，证据不足以判定违反契约。"}

@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_set_003",
+ "endpoint": "payload+set",
+ "param": "payload",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "faces u1 (uid='not-a-uuid'), u2 (uid=42), a1 (tags=[1,'ams'] mixed-type), a2 (nested arrays), a3 (tags=[null]) each return 4xx via payload+set (wait=true query; unnamed 4xx = NOTE only per R29); with all five rejected the uuid channel control matches exactly [7]; any 200 on u1/u2/a1/a2/a3 stops the script — byte-equal persist = Type1_IllegalSuccess, escalated to Type3_RuntimeFailure (with /healthz re-check) if the follow-on match filter or typed index build returns 5xx, or Type4_StateLogicViolation on a silently wrong match set; distorted readback = Type4; the a4 empty-array posture face accepts 4xx or 200-with-byte-equal-persist (both NOTE, R28 norm) — only 5xx or distortion there is a defect; transport failure = SCRIPT_ERROR with /healthz re-check (constraint qdrant_type_payload_set_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,92 @@
+{
+  "defect_id": "semantic_points_query_variant_domain_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type4_StateLogicViolation (as claimed by script; for auditor re-check)",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No doc_preflight.json sidecar exists in the contract dir, so live WebFetch re-verification was attempted: both api.qdrant.tech and qdrant.tech are network-restricted in this environment (domain_blocked -> PARTIAL, not FAIL); the contract's own build-time records carry the reachability burden: structured_contract.json endpoint_registry[points+query] has source_status=reachable with verified_at=2026-09-02T12:34:08Z (8 min before session start) and the constraint qdrant_type_points_query_001 carries source_status=reachable. Version: source_url path v-1-18-x matches target v1.18.0 (doc_version '1.18.x'). Content: the cited assertion (query variant oneOf domain) IS grounded in the cached documentation layer (raw_knowledge.json documents the query field as 'oneOf nearest/recommend/discover/context/order_by/fusion/sample/neartext/nearimage', and the registry doc_quote documents the 200 QueryResponse{result:[ScoredPoint]}/400/404 envelope) — but the claim's expected value (Euclid self-match score must equal 1.0, i.e. a 1/(1+d) score convention) appears NOWHERE in the cached doc layer (grep of raw_knowledge.json for '1/(1', '1 + d', 'score is' = 0 hits; only 2 'Euclid' mentions, both enum listings, neither about score semantics), so the claim phenomenon is not doc-grounded. Endpoint: points+query POST with the same source_url is present in endpoint_registry. Aggregate: PARTIAL (live link domain_blocked + claim-side doc grounding absent).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "P1 nearest -> status=200 | raw: {\"result\":{\"points\":[{\"id\":101,\"version\":1,\"score\":0.0},{\"id\":104,\"version\":1,\"score\":1.7320508},{\"id\":109,\"version\":1,\"score\":2.236068}]},\"status\":\"ok\",\"time\":0.000330274}",
+      "secondary_observations": [
+        "rest | output_semantic_points_query_params_bounds_001.log leg B1 (same endpoint, Euclid collection, exact=true): raw scores [0.0, 1.4142135, 2.828427, 3.0, 4.1231055, 5.3851647, 6.0, ...] = raw Euclid distances (self-match 0.0), script expected 1/(1+d)=1.0 for the self-match",
+        "rest | output_semantic_points_query_exact_pagination_001.log leg C1 (same endpoint, Euclid collection, points at integer distances b=0..7 from query): raw scores [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0] = raw Euclid distances; script verdict line asserts 'C1: scores must be 1/(1+distance): expected [1.0, 0.5, ...], got [0.0, 1.0, 2.0]'",
+        "rest | ranking itself is CORRECT in all three observations: top-1 is the exact self-match (id 101 / 301 / 401) and the remaining points are ordered by ascending distance; only the score CONVENTION (raw distance d returned instead of legacy 1/(1+d)) differs from the scripts' oracle",
+        "comparative-forensics: face_unavailable — sandbox exposes only the REST face (no gRPC/SDK face to cross-check score convention); no Dot/Cosine same-family control leg (where a self-match would score 1.0) exists in any of the three scripts' logs, so an in-chain same-value cross-metric comparison cannot be quoted"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The P1 request is a fully legal nearest query (documented variant, valid dim-4 vector, exact=true, limit=3) answered 200; no client-side-decidable error is involved, so no 2xx-vs-4xx semantics question arises."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_points_query_variant_domain_001",
+        "semantic_points_query_params_bounds_001",
+        "semantic_points_query_exact_pagination_001"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_points_query_001",
+      "assertion_text_quoted": "query variant domain: nearest | recommend | discover | context | order_by | fusion | sample | neartext | nearimage (oneOf; neartext/nearimage are inference variants)",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check: the claim's phenomenon (self-match score=0.0 instead of 1.0) lies OUTSIDE this assertion's constraint domain — the assertion constrains which query variant keys are legal (oneOf membership), and the observed request {\"query\":{\"nearest\":[0,0,0,0]},\"params\":{\"exact\":true},\"limit\":3} used a documented variant, was accepted 200, and executed correctly (top-1 = self-match id 101, ascending-distance ordering), i.e. it is COMPLIANT with the cited assertion. No alternative constraint citation exists: all six constraint groups (type/range/state/resource_bound/doc_consistency/other) and all points+query assertions were enumerated and NONE covers Euclid score semantics or any score formula. The expected score 1.0 is therefore script-internal (legacy 1/(1+d) convention), derived from neither the contract nor the cached documentation. violates=false is the honest value: the observed parameter is compliant with the quoted constraint domain and with every other contract constraint.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_points_query_001 exists in structured_contract.json constraints.type_constraints (endpoint points+query, evidence_tier explicit, source_url https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points) — LINK PRESENT",
+        "doc: the cited api-reference documents the variant oneOf ('oneOf nearest/recommend/discover/context/order_by/fusion/sample/neartext/nearimage' in cached raw_knowledge.json) and the 200/400/404 envelope (registry doc_quote, verified_at 2026-09-02T12:34:08Z); live re-fetch domain_blocked; the doc says NOTHING about Euclid score values — LINK PRESENT for the assertion, ABSENT for the claim's score-1.0 expectation",
+        "script: debate_logs/semantic_points_query_variant_domain_001.py sends the variant-domain-conformant request BUT its P1 oracle 'top-1 must be id 101 score 1.0 Euclid' (script line 204: abs(score-1.0)>1e-6 -> Type4 fail) is an expectation found nowhere upstream (not in qdrant_type_points_query_001, not in any constraint, not in the doc snapshot) — LINK BROKEN: ungrounded oracle injected at the script layer; also note the early return after the P1 fail means legs P2-P7/N1-N4 (the actual variant-domain closure the constraint is about) never executed in this run",
+        "log: output_semantic_points_query_variant_domain_001.log verdict DEFECT_FOUND (Type4_StateLogicViolation) rests solely on the score!=1.0 oracle; the raw response itself is envelope-conformant (200, result.points[ScoredPoint]) and ranking-correct — the verdict pattern is real but its premise is the broken script link"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The DEFECT_FOUND verdict derives from an oracle (Euclid self-match score must equal 1.0) that enters the chain only at the script layer: it is present in neither the cited constraint qdrant_type_points_query_001 (variant oneOf domain only), nor any other constraint in the contract, nor the cached documentation. The doc->contract half of the chain is sound for what the constraint actually asserts; the contract->log half silently widens the constraint into a score-semantics claim it never made. Secondary note: the constraint's own subject (variant-domain closure, legs N1/N3/N4) was never tested because the script returns immediately after the P1 failure.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "euclid (files_with_matches, lib/segment/src/spaces/*)",
+        "postprocess (content, lib/segment/src)",
+        "postprocess_score (content, lib/**)",
+        "fn similarity|1.0 /|distance( in spaces/simple.rs",
+        "distance_order|ScoredPoint|pub score (lib/segment/src/types.rs)",
+        "1.0 / (1.0 + (whole tree, legacy-formula check -> only unrelated turboquant erf constants))"
+      ],
+      "files_examined": [
+        "lib/segment/src/spaces/simple.rs",
+        "lib/segment/src/spaces/metric.rs",
+        "lib/segment/src/spaces/simple_sse.rs",
+        "lib/segment/src/types.rs",
+        "lib/collection/src/shards/local_shard/search.rs",
+        "lib/segment/src/index/vector_index_search_common.rs",
+        "openapi/openapi.lib.yml"
+      ],
+      "source_excerpt": "(clone at tag v1.18.0, commit db3fca3, shallow)\n\n[1] lib/segment/src/spaces/simple.rs:214-219 — internal score is NEGATIVE SQUARED distance:\n    pub fn euclid_similarity(v1: &[VectorElementType], v2: &[VectorElementType]) -> ScoreType {\n        -v1.iter()\n            .zip(v2)\n            .map(|(a, b)| (a - b).powi(2))\n            .sum::<ScoreType>()\n    }\n\n[2] lib/segment/src/spaces/metric.rs:8-22 — trait declares the semantics:\n    pub trait Metric<T: PrimitiveVectorElement> {\n        fn distance() -> Distance;\n        /// Greater the value - closer the vectors\n        fn similarity(v1: &[T], v2: &[T]) -> ScoreType;\n        ...\n    pub trait MetricPostProcessing {\n        /// correct metric score for displaying\n        fn postprocess(score: ScoreType) -> ScoreType;\n    }\n\n[3] lib/segment/src/spaces/simple.rs:74-78 — Euclid display transform = raw distance:\n    impl MetricPostProcessing for EuclidMetric {\n        fn postprocess(score: ScoreType) -> ScoreType {\n            score.abs().sqrt()\n        }\n    }\n\n[4] lib/segment/src/types.rs:319-327 — dispatch on the Distance enum:\n    impl Distance {\n        pub fn postprocess_score(&self, score: ScoreType) -> ScoreType {\n            match self {\n                Distance::Cosine => CosineMetric::postprocess(score),\n                Distance::Euclid => EuclidMetric::postprocess(score),\n                Distance::Dot => DotProductMetric::postprocess(score),\n                Distance::Manhattan => ManhattanMetric::postprocess(score),\n            }\n        }\n\n[5] lib/collection/src/shards/local_shard/search.rs:155-166 — the universal-query API path applies it for the nearest variant, with an explicit intent comment:\n                let processed_res = vector_res.into_iter().map(|mut scored_point| {\n                    match req.query {\n                        QueryEnum::Nearest(_) => {\n                            scored_point.score = distance.postprocess_score(scored_point.score);\n                        }\n                        // Don't post-process if we are dealing with custom scoring\n                        QueryEnum::RecommendBestScore(_)\n                        | QueryEnum::RecommendSumScores(_)\n                        | QueryEnum::Discover(_)\n                        | QueryEnum::Context(_)\n                        | QueryEnum::FeedbackNaive(_) => {}\n                    };\n                    scored_point\n                });\n\n[6] lib/segment/src/types.rs:344-349 — Euclid score ordering is explicitly 'smaller is better' (a distance, not a similarity):\n        pub fn distance_order(&self) -> Order {\n            match self {\n                Distance::Cosine | Distance::Dot => Order::LargeBetter,\n                Distance::Euclid | Distance::Manhattan => Order::SmallBetter,\n            }\n        }\n\n[7] lib/segment/src/types.rs:373-381 — the public response field is documented as the distance:\n    /// Search result\n    pub struct ScoredPoint {\n        /// Point id\n        pub id: PointIdType,\n        /// Point version\n        pub version: SeqNumberType,\n        /// Points vector distance to the query vector\n        pub score: ScoreType,\n\n[8] lib/segment/src/spaces/simple_sse.rs:52-60 — SIMD path returns the same -sum(d^2) (no legacy inversion anywhere in the tree):\n        let mut result = hsum128_ps_sse(sum128_1) + ... ;\n        for i in 0..n - m { result += (*ptr1.add(i) - *ptr2.add(i)).powi(2); }\n        -result",
+      "call_chain_traced": "euclid_similarity (simple.rs:214, internal score = -Sigma((a-b)^2); trait doc 'Greater the value - closer the vectors') -> Distance::postprocess_score (types.rs:320, Euclid -> EuclidMetric::postprocess) -> postprocess = score.abs().sqrt() (simple.rs:74-78, trait doc 'correct metric score for displaying') -> local_shard/search.rs:156-158 applies it on QueryEnum::Nearest with the comment 'Don't post-process if we are dealing with custom scoring' -> API ScoredPoint.score documented as 'Points vector distance to the query vector' (types.rs:380-381) and Distance::Euclid = Order::SmallBetter (types.rs:347). Net displayed score for an Euclid nearest query = raw Euclidean distance d: self-match d=0 -> score 0.0, and the observed 1.7320508 / 2.236068 are exactly sqrt(3) / sqrt(5), the seeded distances of ids 104/109 from the query vector [0,0,0,0]. The legacy 1/(1+d) convention the script assumed exists nowhere in the v1.18.0 tree (whole-tree grep for '1.0 / (1.0 +' hits only unrelated turboquant erf approximations).",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "by_design_evidence_note": "Explicit intent evidence per the v3.4 tightened rule: (a) docstring on MetricPostProcessing 'correct metric score for displaying' + Euclid impl score.abs().sqrt() — the displayed score is intentionally the processed (raw-distance) value; (b) field docstring 'Points vector distance to the query vector' on ScoredPoint.score — the API score is declared to BE the distance; (c) inline comment 'Don't post-process if we are dealing with custom scoring' — deliberate per-variant handling; (d) Distance::Euclid -> Order::SmallBetter — smaller-score-is-better is coherent only with a distance-valued score. This is not bare unannotated behavior.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (scores computed exactly match seeded distances: 0, sqrt(3), sqrt(5); deterministic single-request run, exit code 0)",
+        "concurrency (single sequential request; no race surface)",
+        "request-parameter typo (request is a well-formed documented nearest query; ranking result is correct)"
+      ],
+      "surviving": "by-design / expectation-side mismatch: the script's oracle assumed the legacy 1/(1+d) Euclid similarity convention, which is present in neither the v1.18.0 contract, nor the cached documentation, nor the v1.18.0 source; the observed raw-distance score (self-match 0.0) is the designed display semantics of qdrant v1.18.0 per source_grounding. The DEFECT_FOUND therefore does not survive as an API defect against any contract constraint — it is an oracle-convention mismatch, reproduced identically in two sibling scripts (params_bounds_001 leg B1, exact_pagination_001 leg C1), both of which share the same ungrounded 1/(1+d) assumption."
+    }
+  }
+}

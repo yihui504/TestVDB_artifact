@@ -1,0 +1,16 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[positive valid create] status=200 raw={"result":true,"status":"ok","time":0.013368295}
+[list_aliases] status=200 raw={"result":{"aliases":[{"alias_name":"sau2_1788365147_6072_al1","collection_name":"sau2_1788365147_6072_colA"}]},"status":"ok","time":0.000219408}
+positive control OK: sau2_1788365147_6072_al1->sau2_1788365147_6072_colA
+[N1 create-on-missing] status=404 raw={"status":{"error":"Not found: Collection `sau2_1788365147_6072_no_such_col` doesn't exist!"},"time":0.000089725}
+N1 verdict: OK — N1 create-on-missing: 404 matches the promise [404]
+[N2 delete-unknown] status=200 raw={"result":true,"status":"ok","time":0.000098373}
+N2 verdict: DEFECT — N2 delete-unknown: returned 200 but the assertion promises failure [404, 500] — Type1_IllegalSuccess raw={"result":true,"status":"ok","time":0.000098373}
+[N3 rename-unknown] status=404 raw={"status":{"error":"Not found: Alias sau2_1788365147_6072_ren_old does not exists!"},"time":0.000090007}
+N3 verdict: OK — N3 rename-unknown: 404 matches the promise [404, 500]
+[list_aliases] status=200 raw={"result":{"aliases":[{"alias_name":"sau2_1788365147_6072_al1","collection_name":"sau2_1788365147_6072_colA"}]},"status":"ok","time":0.000179541}
+post-failure residue check OK: no phantom rows
+control alias intact: sau2_1788365147_6072_al1->sau2_1788365147_6072_colA
+DEFECT: N2 delete-unknown: returned 200 but the assertion promises failure [404, 500] — Type1_IllegalSuccess raw={"result":true,"status":"ok","time":0.000098373}
+VERDICT: DEFECT_FOUND

@@ -1,0 +1,307 @@
+{
+ "auditor": "chain-auditor",
+ "target": "milvus",
+ "version": "v2.6.16",
+ "self_check": "PASS",
+ "verdicts": [
+  {
+   "defect_id": "boundary_querymode_01",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: 机械B=CONFIRMED(HTTP 2xx+code 0 且契约声称65535拒绝) → final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "create properties.query_mode='bogus' 返回 200 code 0，契约 create_009 断言应 65535；根因 request_v2.go:643 无 Properties 字段+handler 白名单不含 query_mode，alter 对照同值被拒。机械B触发 HTTP语义恒真。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_querymode_02",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: 机械B=CONFIRMED → final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "合法值 large_topk 于 create 亦被静默丢弃（describe 读回无该属性、limit 仍受 16384 上限），alter 路径同操作成功——create 承载无效。机械B触发。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_querymode_03",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "枚举闭集"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: LLM兜底B=CONFIRMED(枚举闭集,机械未触发但判据命中) → final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "params 载体同样 code 0 接受 query_mode='bogus'；query_mode 取值域为闭集{unset,large_topk}（common.go:516 校验存在但 REST 白名单绕过），枚举外值被接受即客观违规，alter 对照 65535。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "semantic_large_topk_1",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: 机械B=CONFIRMED → final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "create 带 query_mode=large_topk 后 search limit=20000 仍报 65535（cap 16384），因属性未持久化（describe 读回 False）；task_search.go:171 依赖持久化属性，transport 丢弃使其永不激活。机械B触发。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "state_query_mode_alter_1",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=CONFIRMED(机械,id+quote一致) → implied=DEFECT → final=DEFECT, LLM无权改判"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "观察B：已建索引 collection alter query_mode 返回 code 0，契约 querymode_001 断言应 702， squarely 在域内。链内记录 changed-flag 微观解释与同值重复疑点，建议主进程人工复核，但机械A定案不可翻。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_query_mode_maturity_1",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: 机械B=CONFIRMED → final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "T1 create bogus code 0 vs CONTROL alter 同值 65535，同参数跨端点校验不对称（两套 REST struct：CollectionReq vs CollectionReqWithProperties）；T2 junk 属性经 alter 持久化为链内辅助观察。机械B触发。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_dbname_cross_endpoint_1",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "source",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "REFUTED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=REFUTED(机械,id+quote一致,create_002 域内行为正确) → implied=NOT_DEFECT → final=NOT_DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": "mundane_api_semantics",
+   "rationale": "16 端点 dbName 矩阵唯 drop code 0，源码三处显式 errIgnoredDropCollection（meta_table.go:58 注释'not found, so it can be ignored'）= 幂等 by-design；契约无 drop 域内拒绝断言，A 机械定案 NOT_DEFECT。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "semantic_error_diag_1",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "source",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: B=NEUTRAL(无契约/文档声称 drop 错误响应形态,HTTP语义两条件缺一)、D=NO_SIGNAL(BDP-4 非现象级匹配)、C=REFUTED(源码显式 by-design) → final=NOT_DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": "mundane_api_semantics",
+   "rationale": "drop 不存在 collection code 0 与 dbName 链同根因 errIgnoredDropCollection（drop_collection_task.go:53-57 显式吞掉 CollectionNotFound），源码 by-design；兄弟端点 100/800 不一致是事实但无契约断言，C=REFUTED 定案。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "state_truncate_lifecycle_1",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "doc",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "REFUTED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "WEAK_REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=REFUTED(机械,truncate_001 三后置条件全 PASS) → implied=NOT_DEFECT → final=NOT_DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": "eventual_consistency",
+   "rationale": "truncate 契约三后置条件（rowCount==0/schema/load）日志全过；claimed 现象是 reinsert 后统计偏移一 flush 周期，契约域外（not_found_in_source 无 stats 刷新保证），属最终一致延迟。A 机械定案 NOT_DEFECT。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "semantic_aliases_list_1",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "behavior",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: B=NEUTRAL、D=NO_SIGNAL、C=REFUTED(前提不成立+源码 by-design) → final=NOT_DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": "contract_misread",
+   "rationale": "claim 前提不成立：drop 被 65535 保护性拒绝（drop_collection_task.go:60-67 有关联别名时禁止删），collection 未删除，alias 并非 dangling，经 alias 查询成功是正确行为。执行证据自身不支撑缺陷。",
+   "rework_order": null
+  }
+ ],
+ "summary": {
+  "total": 11,
+  "defect": 6,
+  "not_defect": 4,
+  "needs_more_evidence": 0,
+  "fp_evidence_source_distribution": {
+   "doc": 1,
+   "source": 2,
+   "both": 0,
+   "behavior": 1
+  },
+  "root_cause_distribution": {
+   "mundane_api_semantics": 2,
+   "eventual_consistency": 1,
+   "contract_misread": 1
+  },
+  "note": "VOIDED 2026-08-22: 见版本根 VOIDED.md"
+ },
+ "total_chains": 10
+}

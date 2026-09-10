@@ -1,0 +1,24 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+control: well-formed count == 12 (endpoint healthy)
+
+F1 truncated JSON body -> status=400
+body bytes: b'{"filter": {"must": [{"key": "city"'
+raw: {"status":{"error":"Format error in JSON body: EOF while parsing an object at line 1 column 35"},"time":0.0}
+F1: rejected with 400 (clean)
+
+F2 trailing-comma JSON body -> status=400
+body bytes: b'{"exact": true,}'
+raw: {"status":{"error":"Format error in JSON body: trailing comma at line 1 column 16"},"time":0.0}
+F2: rejected with 400 (clean)
+
+F3 raw NUL byte in JSON key -> status=400
+body bytes: b'{"filter": {"must": [{"key": "ci\x00ty", "match": {"value": "berlin"}}]}, "exact": true}'
+raw: {"status":{"error":"Format error in JSON body: control character (\\u0000-\\u001F) found while parsing a string at line 1 column 33"},"time":0.0}
+F3: rejected with 400 (clean)
+
+F4 escaped \u0000 in match value (valid JSON, unseeded value) -> status=200
+body bytes: b'{"filter": {"must": [{"key": "city", "match": {"value": "ber\\u0000lin"}}]}}'
+raw: {"result":{"count":0},"status":"ok","time":0.000400641}
+F4: 200 with count == 0 (legal JSON, unsatisfiable value)
+VERDICT: NO_DEFECT

@@ -1,0 +1,71 @@
+{
+  "defect_id": "boundary_bd_gql_limit_07",
+  "endpoint": "POST /v1/graphql (Get limit)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraint_id 'boundary'（range_constraints 类）：limit 非负、且 offset+limit ≤ QUERY_MAXIMUM_RESULTS；0 与 10001 被拒证明值域约束存在，负值被接受即越界。endpoint_registry 含 /graphql",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "limit=-1: 200 {\"data\":{\"Get\":{\"BdGqlLimit\":[{\"_additional\":{\"id\":\"6821b771-f0fc-45ff-a8b0-132dfb2c84f7\"}}]}}",
+      "secondary_observations": [
+        "limit=0: 200 ... \"explorer: list class: search: invalid pagination params: invalid default limit: 0\"（正确拒绝）",
+        "limit=10001: 200 ... \"query maximum results exceeded ... QUERY_MAXIMUM_RESULTS\"（正确拒绝）",
+        "limit=999999999: 同上拒绝",
+        "派发任务附带观测：offset=-1 错误消息含 Go runtime 'slice bounds out of range [-1:]'"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "GraphQL 统一 200 + errors 字段（该 API 面常态）；核心问题是非法负值连 errors 都没有——直接返回数据"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_bd_gql_limit_07.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "boundary",
+      "assertion_text_quoted": "limit 参数有值域约束：0 与超上限（10000）均被服务端拒绝；负值应同样被拒绝（非负值域）",
+      "api_violates_assertion": true,
+      "note": "limit=-1 返回 200+数据（无 errors），同端点拒绝 0 与 10001 —— 负值绕过已证实的值域校验，violates=True",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:boundary（limit 非负值域）",
+        "doc:GraphQL limit 文档 + QUERY_MAXIMUM_RESULTS 上限",
+        "script:boundary_bd_gql_limit_07.py limit∈{2,0,-1,10001,999999999}",
+        "log:limit=-1 200 带结果 / 0、10001 均 errors 拒绝"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["invalid default limit", "getTotalLimit", "getLimit", "QUERY_MAXIMUM_RESULTS"],
+      "files_examined": [
+        "adapters/repos/db/search.go (L481-502, L547-552)"
+      ],
+      "source_excerpt": "adapters/repos/db/search.go L481-497:\nfunc (db *DB) getTotalLimit(pagination *filters.Pagination, ...) (int, error) {\n\ttotalLimit := pagination.Offset + db.getLimit(pagination.Limit)\n\tif totalLimit == 0 {\n\t\treturn 0, fmt.Errorf(\"invalid default limit: %v\", ...)\n\t}\n\tif !addl.ReferenceQuery && totalLimit > int(db.config.QueryMaximumResults) {\n\t\treturn 0, fmt.Errorf(\"query maximum results exceeded: ...\")\n\t}\n\treturn totalLimit, nil\n}\nL547-552: getLimit 只处理 LimitFlagNotSet（默认值），无负值分支。",
+      "call_chain_traced": "limit=-1 → getLimit 原样返回 -1 → totalLimit = offset + (-1)：offset=0 时 totalLimit=-1 ≠ 0 且 ≤ QueryMaximumResults → 两个校验均不触发 → -1 传入下游分页切片。负值无独立校验分支，仅靠 ==0 与 >max 两个边界间接覆盖，负值恰好落在两个检查的盲区",
+      "verification_outcome": "validation_absent",
+      "note": "源码确证：无任何 limit<0 显式校验；0 靠 totalLimit==0 偶然覆盖，负值穿透。附带 offset=-1 观测与 getOffsetLimit 的切片行为一致（runtime panic 消息泄漏为次生信号）",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "target": "weaviate",
+  "version": "v1.37.4",
+  "session_id": "weaviate-v1.37.4-2026-08-21T08-15-40Z",
+  "round": 1,
+  "top_endpoints": [
+    "POST /v1/schema",
+    "GET /v1/objects",
+    "POST /v1/batch/objects"
+  ],
+  "richness_scores": {
+    "POST /v1/schema": 8.5,
+    "GET /v1/objects": 7.0,
+    "POST /v1/batch/objects": 6.5
+  },
+  "condition_history": [
+    {
+      "endpoint": "POST /v1/schema",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "detail": "Server accepts inverted range (Min > Max), negative values, and zero for dynamicEfMin/dynamicEfMax",
+      "inspired_by": "numeric_boundary shape"
+    },
+    {
+      "endpoint": "POST /v1/batch/objects",
+      "condition_type": "compound_and",
+      "finding": "NO_DEFECT",
+      "detail": "All invalid combinations correctly rejected with 4xx",
+      "inspired_by": null
+    },
+    {
+      "endpoint": "POST /v1/replication/scale",
+      "condition_type": "range_filter",
+      "finding": "NO_DEFECT",
+      "detail": "All invalid replicationFactor values correctly rejected with 4xx",
+      "inspired_by": null
+    },
+    {
+      "endpoint": "GET /v1/objects",
+      "condition_type": "pagination_cursor",
+      "finding": "DEFECT_FOUND",
+      "detail": "Server accepts negative limit and negative offset parameters",
+      "inspired_by": "boundary validation"
+    },
+    {
+      "endpoint": "POST /v1/schema",
+      "condition_type": "compound_and",
+      "finding": "DEFECT_FOUND",
+      "detail": "Server accepts inverted pairing (Min=500 > Max=100), negative values (-100, -500), zero values (0, 0), and extreme values (999999999) for dynamicEfMin/dynamicEfMax without validation",
+      "inspired_by": "pagination_cursor finding → adjacent endpoint testing"
+    },
+    {
+      "endpoint": "POST /v1/schema",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "detail": "Server accepts negative (-1000) and zero (0) flatSearchCutoff values without validation",
+      "inspired_by": "compound_and pairing test"
+    },
+    {
+      "endpoint": "POST /v1/schema",
+      "condition_type": "compound_and",
+      "finding": "by_design_excluded",
+      "detail": "replicationFactor parameter coerces to 1 in single-node mode (negative, zero, large values all result in factor=1) - this is by-design for standalone deployment",
+      "inspired_by": "control group verification"
+    },
+    {
+      "endpoint": "POST /v1/objects",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "detail": "Server accepts null, numeric (999), array ([ONE, QUORUM]), and object ({level: ONE}) types for consistencyLevel without validation, silently coercing to default",
+      "inspired_by": "adjacent endpoint type testing"
+    },
+    {
+      "endpoint": "POST /v1/batch/objects",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "detail": "Server accepts null and numeric (999) consistencyLevel in batch operations without validation",
+      "inspired_by": "POST /objects type_mismatch finding → endpoint cross-pollination"
+    },
+    {
+      "endpoint": "POST /v1/objects",
+      "condition_type": "null_check",
+      "finding": "DEFECT_FOUND",
+      "detail": "Server accepts null tenant parameter without validation (silently coerced), but correctly rejects numeric tenant with 400",
+      "inspired_by": "type_mismatch test"
+    }
+  ],
+  "last_finding": {
+    "endpoint": "POST /v1/objects",
+    "condition_type": "null_check",
+    "finding": "DEFECT_FOUND"
+  },
+  "adjacent_pending": [
+    "collection_membership",
+    "geo_filter",
+    "compound_or",
+    "3-way AND combinations on GET /objects pagination",
+    "mixed type/null combinations on POST /objects"
+  ],
+  "candidates_count": 7,
+  "skipped_count": 1,
+  "start_time": "2026-08-21T08:15:40Z",
+  "end_time": "2026-08-21T08:27:40Z",
+  "max_turns_used": 12
+}

@@ -1,0 +1,12 @@
+A Int64 pk ids=['42']: {"code":0,"cost":0,"data":[{"distance":0,"pk":42}],"topks":[1]}
+ (documented strconv coercion)
+B numeric 42   -> hit=True {"code":0,"cost":0,"data":[{"distance":0,"pk":"42"},{"distance":0.040000003,"pk":"42.5"}],"topks":[2]}
+
+C float 42.5   -> hit=True {"code":0,"cost":0,"data":[{"distance":0,"pk":"42.5"},{"distance":0.040000003,"pk":"42"}],"topks":[2]}
+
+E float 42.0   -> hit=True {"code":0,"cost":0,"data":[{"distance":0,"pk":"42"},{"distance":0.040000003,"pk":"42.5"}],"topks":[2]}
+
+DEFECT: B numeric 42: non-string id 42 coerced and matched VarChar pk (convertIDsToSchemapbIDs Sprintf formatting)
+DEFECT: C float 42.5: non-string id 42.5 coerced and matched VarChar pk (convertIDsToSchemapbIDs Sprintf formatting)
+DEFECT: E float 42.0: non-string id 42.0 coerced and matched VarChar pk (convertIDsToSchemapbIDs Sprintf formatting)
+VERDICT: DEFECT_FOUND

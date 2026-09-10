@@ -1,0 +1,15 @@
+{
+ "defect_id": "boundary_index_delete_004",
+ "endpoint": "index+delete",
+ "param": "field_name",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "strategy2_path_param_boundary",
+ "constraint_ids": [
+  "qdrant_behavioral_index_delete_001",
+  "qdrant_state_index_delete_001"
+ ],
+ "oracle": {
+  "statement": "on a live never-indexed bidl4_* collection: route-preserving well-formed field_name path legs (space / embedded-space name / unicode / %2e%2e literal) each return exactly 200 (non-200 = Type1 legal-input-rejected signal against the unconditional 200 promise); measured legs (empty / slash / overlong-1024 / control-char / NUL) accept 200 or any clean 4xx (5xx = Type3 with /healthz re-check; client-side send refusals printed CLIENT_SIDE_SKIP); collections+get result.payload_schema still empty afterwards (phantom entry = Type4)",
+  "source": "docstring"
+ }
+}

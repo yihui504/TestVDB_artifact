@@ -1,0 +1,14 @@
+{
+ "defect_id": "boundary_index_create_005",
+ "endpoint": "index+create",
+ "param": "field_schema.tokenizer",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "strategy2_type_confusion",
+ "constraint_ids": [
+  "qdrant_type_index_create_001"
+ ],
+ "oracle": {
+  "statement": "on the live bic005_* collection each of the 4 in-domain tokenizers (prefix/whitespace/word/multilingual) returns 200 with its tok_<member> key in readback result.payload_schema (4xx on in-domain member = Type1 disposition-conflict signal; 200 without key = Type4_StateLogicViolation); each of the 6 bad tokenizer probes ('bogus', 'Word', '', 123, null, ['word']) returns 400/422 with non-empty diagnostics (2xx + persisted key = Type1_IllegalSuccess; 2xx + no key = silent-drop judge signal; 5xx/transport = Type3 with /healthz re-check); tokenizer-absent and tokenizer-on-non-text legs measured-only for judge",
+  "source": "docstring"
+ }
+}

@@ -1,0 +1,15 @@
+[alias3] cfg={'factor': 3} -> create=422 persisted_factor=None err={"allowed":null,"error":[{"message":"init sharding state: could not find enough weaviate nodes for replication: 1 availa
+[ctrl] cfg={'replicationFactor': 1} -> create=200 persisted_factor=1 err=
+[rf3] cfg={'replicationFactor': 3} -> create=200 persisted_factor=1 err=
+[zero] cfg={'replicationFactor': 0} -> create=200 persisted_factor=1 err=
+[neg] cfg={'replicationFactor': -1} -> create=200 persisted_factor=1 err=
+[float] cfg={'replicationFactor': 1.5} -> create=200 persisted_factor=1 err=
+[str] cfg={'replicationFactor': '3'} -> create=200 persisted_factor=1 err=
+[big] cfg={'replicationFactor': 16384} -> create=200 persisted_factor=1 err=
+[null] cfg={'replicationFactor': None} -> create=200 persisted_factor=1 err=
+DEFECT[rf3] Type1_IllegalSuccess: documented replicationFactor=3 accepted but silently dropped (factor=1, no 4xx)
+DEFECT[neg] Type1_IllegalSuccess: illegal value neg accepted, silently normalized to factor=1
+DEFECT[float] Type1_IllegalSuccess: illegal value float accepted, silently normalized to factor=1
+DEFECT[str] Type1_IllegalSuccess: illegal value str accepted, silently normalized to factor=1
+DEFECT[big] Type1_IllegalSuccess: illegal value big accepted, silently normalized to factor=1
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)

@@ -1,0 +1,69 @@
+{
+  "defect_id": "boundary_sharding_desiredCount_dos_002",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "evidence_weight": "medium",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "同 001：constraint source 为 go-func 引用，无 http URL 可验证；上限校验缺失的断言与源码核对一致（见 source_grounding）；/v1/schema 在 endpoint_registry 命中",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "desiredCount=100000 -> 0 in 4.1s raw=HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /v1/schema (Caused by NewConnectionError(...Failed to es...  / VERDICT: DEFECT_FOUND (Type3_RuntimeFailure — huge shard count hangs create, no validation cap)",
+      "secondary_observations": [
+        "001 同族 log 的 [huge] desiredCount=2147483647 -> create=0 readback=None raw=...Read timed out. (read timeout=30)",
+        "001 同族 log 的 [huge2] desiredCount=1000000000000 -> create=0 raw=('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))（容器曾被打挂）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "请求挂起/连接中断，无 HTTP 响应体可判；事件本身即资源耗尽信号（DoS 面）"
+      },
+      "reproducibility": "单脚本（大值场景， destructive，未跨脚本重复触发以免再打挂容器）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_sharding_desiredCount_dos_002.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_range_sharding_desired_count_001",
+      "assertion_text_quoted": "shardingConfig.desiredCount >= 1",
+      "api_violates_assertion": true,
+      "note": "10^5 量级值同样在约束域外（无上限 sanity check），且引发运行时资源故障；violates 判定基于'无上限校验'，观测与断言方向一致",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_range_sharding_desired_count_001 (>=1, 无上限校验)",
+        "doc: go-func validate() 引用",
+        "script: boundary_sharding_desiredCount_dos_002.py desiredCount=100000",
+        "log: create=0 (连接失败/超时)，容器不可用——Type3"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["physical shards unavailable", "desiredCount"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\usecases\\sharding\\config\\config.go (L28-146)"
+      ],
+      "source_excerpt": "usecases/sharding/config/config.go L53-69: validate() 仅校验 Key=='_id' / Strategy=='hash' / Function=='murmur3'，DesiredCount 与 VirtualPerPhysical 均无上限校验；L42 c.DesiredVirtualCount = c.DesiredCount * c.VirtualPerPhysical（大值直接乘出天文数字虚拟分片）",
+      "call_chain_traced": "ParseConfig → desiredCount 赋值(无上限) → DesiredVirtualCount 乘法放大 → 创建索引时物理资源耗尽 → 容器挂起/连接中断",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["请求参数笔误（值即攻击面）"],
+      "surviving": null
+    }
+  }
+}

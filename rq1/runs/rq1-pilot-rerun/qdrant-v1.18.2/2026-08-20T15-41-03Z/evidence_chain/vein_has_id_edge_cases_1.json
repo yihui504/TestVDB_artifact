@@ -1,0 +1,64 @@
+{
+  "defect_id": "vein_has_id_edge_cases_1",
+  "endpoint": "points+query",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Filter.has_id with empty list [] should return 0 points (semantically: no IDs to match). has_id with all non-existent IDs should also return 0. API incorrectly returns 1 point for both cases, violating semantic expectations of ID filtering.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: has_id=[] (empty list) → http=200, count=1 [DEFECT: expected 0, got 1]; c6: has_id=[999,998,997] (all non-existent) → http=200, count=1 [DEFECT: expected 0, got 1]",
+      "secondary_observations": ["c2: has_id=[100] → http=200, count=1", "c3: has_id=[100,200,300] → http=200, count=1 (expected 3)", "c5: has_id=[100,999,200] → http=200, count=1 (expected 2)"],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A (HTTP 2xx returned)",
+        "note": "API returns 200 OK for has_id filter edge cases, but with incorrect result counts (1 instead of 0). No validation error - semantic bug in filter evaluation."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_has_id_edge_cases_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A - Filter behavior not explicitly constrained in contract",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:N/A (filter semantics unconstrained)",
+        "doc:Filter.has_id documented for ID-based filtering",
+        "script:has_id=[] and has_id=[non-existent] tests",
+        "log:Empty and all-non-existent has_id return 1 instead of 0"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "No contract constraint violated. Issue is semantic correctness: has_id=[] and has_id with all non-existent IDs should return 0 points per filter semantics, but implementation returns 1. This suggests bug in HasId condition evaluator or filter-to-results conversion.",
+      "evidence_source": "behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["has_id", "HasId", "segment_ids", "filter.*has_id", "condition.*has_id"],
+      "files_examined": [
+        "lib/segment/src/index/struct_payload_index/read_view/condition_converter.rs",
+        "lib/segment/src/types.rs"
+      ],
+      "source_excerpt": "File: lib/segment/src/index/struct_payload_index/read_view/condition_converter.rs, Lines 113-120\n\nCondition::HasId(has_id) => {\n    let segment_ids: AHashSet<_> = has_id\n        .has_id\n        .iter()\n        .filter_map(|external_id| id_tracker.internal_id(*external_id))\n        .collect();\n    Box::new(move |point_id| segment_ids.contains(&point_id))\n}\n\nFile: lib/segment/src/types.rs, Lines 3834-3843\n\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone, PartialEq, Eq, Default, Hash)]\n#[serde(deny_unknown_fields, rename_all = \"snake_case\")]\npub struct Filter {\n    /// At least one of those conditions should match\n    #[validate(nested)]\n    #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")]\n    pub should: Option<Vec<Condition>>,\n    ...\n}\n\nObservation: HasId condition converter creates HashSet of segment_ids by mapping external IDs to internal IDs via filter_map (returns None for non-existent IDs). For has_id=[], this creates empty HashSet. The condition_checker returns predicate: point_id => segment_ids.contains(point_id). Empty HashSet means predicate returns false for all point_ids, so filter should match 0 points. Bug not in this code - must be in filter execution or result counting layer.",
+      "call_chain_traced": "HasId condition creates predicate function returning false for all points when has_id=[] or all IDs non-existent (empty HashSet). This should yield 0 matching points. Observation that 1 point is returned suggests bug in: (1) QueryResultsAggregator, (2) FilterExecutor applying conditions, or (3) Result counter logic not respecting false predicate. No explicit validation prevents has_id=[].",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay"],
+      "surviving": "has_id=[] and has_id=[all non-existent] should return 0 points (empty result set) per filter semantics. Implementation returns 1, violating boolean logic of ID filtering. No by-design rationale found for accepting empty has_id as 'match all'."
+    }
+  }
+}

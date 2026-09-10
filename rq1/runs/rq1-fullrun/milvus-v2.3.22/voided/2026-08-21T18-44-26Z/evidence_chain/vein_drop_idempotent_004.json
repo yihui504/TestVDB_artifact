@@ -1,0 +1,67 @@
+{
+  "defect_id": "vein_drop_idempotent_004",
+  "endpoint": "v2/vectordb/collections/drop (对照 collections/load)",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "detail": "契约 v1 面有明文 'drop non-existent -> error code 100'（milvus_behavioral_drop_001 + api_endpoints v1/drop 描述）；v2/drop 条目无此承诺（沉默）。同服务器 v1/v2 对同一不存在集合 drop 行为是否一致无契约条文——主张靠 v2 内部 drop(200) vs load(100) 不对称支撑。源码证实 v2 与 v1 走同一 rootcoord 幂等 drop",
+      "evidence_source": "doc+source"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "load nonexistent code=100; drop nonexistent code=200",
+      "secondary_observations": [
+        "Detail 行：drop of nonexistent collection returns success code 200 while load/search correctly report not-found; typo'd drop silently 'succeeds'",
+        "⚠️ 取证限制：vein 摘要级 log，错误消息体与'真集合存活'校验步骤未逐字留存（自述）；code 值本身由脚本直接断言输出"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "不对称双面：drop 不存在 -> 200+code:200（静默成功）；load 不存在 -> 200+code:100（正确 not-found）——同为 client 错误，一面报错一面成功"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_drop_idempotent_004.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_behavioral_drop_001",
+      "assertion_text_quoted": "drop non-existent collection -> error code 100 (expected_behavior: HTTP 200 body with code 100)",
+      "api_violates_assertion": false,
+      "note": "二选一核对：该断言 endpoint 为 v1/vector/collections/drop。v1 面行为未在本 log 中实测（脚本打的是 v2）；若 v1 也静默 200 则违反成立，但无观测——故对本断言记 violates=false（观测不在其 endpoint 域），v2 面主张落点为契约沉默+内部不对称，无直接条文可违。契约 v2/drop 描述 'Drop collection' 未承诺 not-found 错误",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: v1 面 drop not-found -> code 100 明文；v2 面无条文",
+        "doc: source_url handler_v2.go v2.3.22 可达，dropCollection 在 481-494",
+        "script: vein_drop_idempotent_004.py drop/load 打不存在集合对照",
+        "log: drop code=200 vs load code=100"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "断链在 contract 环：v2/drop 无 not-found 语义条文，观测无法违反不存在的承诺；缺陷主张实质是跨面不一致（v1 承诺 code 100 / v2 幂等 200）与 v2 面内 drop-load 不对称，属契约缺口型",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["dropCollectionTask", "ErrCollectionNotFound drop", "GetCollectionByName drop_collection_task.go", "dropCollection handler_v2.go"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go (481-494 dropCollection)",
+        "internal/rootcoord/drop_collection_task.go (34-89)"
+      ],
+      "source_excerpt": "internal/rootcoord/drop_collection_task.go:58-63: collMeta, err := t.core.meta.GetCollectionByName(...); if errors.Is(err, merr.ErrCollectionNotFound) { // make dropping collection idempotent. log.Warn(\"drop non-existent collection\", ...); return nil } —— 显式注释 'make dropping collection idempotent'：不存在即静默成功，源码明文 by-design；对照 load 路径 not-found 上抛 code 100。v2 REST handler(481-494) 对此零干预直接透传成功信封",
+      "call_chain_traced": "v2 drop -> rootcoord DropCollection -> dropCollectionTask.Execute -> GetCollectionByName ErrCollectionNotFound -> return nil（幂等成功）。v1 走同一 rootcoord 任务（同源同行为）——契约 v1 面 'code 100' 描述与源码幂等实现相矛盾，契约本身可疑",
+      "verification_outcome": "by_design_in_source",
+      "note": "幂等 drop 是显式设计决策（注释原话）；留 auditor 裁量'静默幂等 vs 误删 typo 无告警'的可辩护性",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error(code 值直接断言)", "env"],
+      "surviving": "幂等 drop 为分布式系统常见设计；但 drop(200)/load(100) 同一不存在集合的不对称削弱可辩护性——留 auditor"
+    }
+  },
+  "evidence_weight": "B（摘要级 log 但 code 断言明确 + 源码幂等注释逐字确证；主张形态=契约缺口+面内不对称）"
+}

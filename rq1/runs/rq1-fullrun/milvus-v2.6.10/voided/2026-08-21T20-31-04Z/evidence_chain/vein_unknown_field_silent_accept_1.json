@@ -1,0 +1,76 @@
+{
+  "defect_id": "vein_unknown_field_silent_accept_1",
+  "endpoint": "entities+query (search/delete 同病)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "vein 链 constraint_id=vein_unknown_field_silent_accept 为 vein 自生契约（不在 structured_contract 24 条 constraints 内——vein 语义链）；相邻官方约束 milvus_type_entities_delete_001 声明 'filter is valid boolean expr else error'，动态字段回落使 'valid expr' 语义被放宽——内容一致性 PARTIAL。endpoint_registry 含 entities+query/search/delete。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "PASS dyn_query_silent_code0 {'code': 0, 'cost': 0, 'data': []} — filter 'no_such_field_xyz > 5' on enableDynamicField=true collection",
+      "secondary_observations": [
+        "PASS control_nodyn_rejects {'code': 1100, 'message': 'failed to create query plan: cannot parse expression: no_such_field_xyz > 5, error: field no_such_field_xyz not exist: invalid parameter'} — 同 filter 在 enableDynamicField=false 集合正确拒绝",
+        "PASS dyn_search_silent_code0 {'code': 0, 'cost': 0, 'data': []} — search 同病",
+        "PASS dyn_delete_silent_code0 {'code': 0, 'data': {'deleteCount': 0}} — delete 报删除 0 条成功"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "动态集合下疑似笔误 filter 完全无错误通道（code:0 纯成功），连业务错误码都没有——静默数据隐藏。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_scripts/vein_unknown_field_silent_accept_1.py (query/search/delete 三路)",
+        "vein_scripts/vein_outputfields_silent_drop_6.log 同动态回落机制另路复现"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_unknown_field_silent_accept",
+      "assertion_text_quoted": "filter 中引用不存在的字段应被拒绝（对照：no-dyn 集合报 1100 'field not exist'）；动态 schema 下不得静默接受",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates=True 理由：观测为未知字段 filter 静默 200+code:0 空结果/deleteCount:0，且同值在对照集合被拒——'不得静默接受'被直接否定，无域外解释。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: vein_unknown_field_silent_accept（vein 自生）+ 官方 milvus_type_entities_delete_001 'filter must be valid boolean expr else error'",
+        "doc: 官方约束 source_url handler_v2.go 可达",
+        "script: vein_unknown_field_silent_accept_1.py dyn/no-dyn 双集合对照",
+        "log: dyn 三入口 code:0 vs no-dyn 1100 并列"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "GetFieldFromNameDefaultJSON 全树",
+        "getDefaultJSONField pkg/util/typeutil/schema.go",
+        "GetFieldFromName (严格版) 对照"
+      ],
+      "files_examined": [
+        ".milvus-src-2610/pkg/util/typeutil/schema.go:458-496 (GetFieldFromName / GetFieldFromNameDefaultJSON / getDefaultJSONField)",
+        ".milvus-src-2610/internal/parser/planparserv2/parser_visitor.go:58,1241 (filter 字段解析调用 DefaultJSON 回落)"
+      ],
+      "source_excerpt": "// pkg/util/typeutil/schema.go:468-474\n// GetFieldFromNameDefaultJSON is used to find the schema by field name, if not exist, use json field\nfunc (helper *SchemaHelper) GetFieldFromNameDefaultJSON(fieldName string) (*schemapb.FieldSchema, error) {\n\toffset, ok := helper.nameOffset[fieldName]\n\tif !ok {\n\t\treturn helper.getDefaultJSONField(fieldName)\n\t}\n\tfieldSchema := helper.allFields[offset]\n\treturn fieldSchema, nil\n}\n// schema.go:493-498 getDefaultJSONField: 遍历 fields 找 IsDynamic JSON 字段返回；无动态字段才报 \"field %s not exist\"",
+      "call_chain_traced": "parser_visitor.go:58 identifier 解析 → GetFieldFromNameDefaultJSON → 未知字段名回落到 $meta 动态 JSON 字段 → 表达式编译为对动态字段的空匹配 → 0 行结果 code:0；no-dyn 集合 getDefaultJSONField 找不到动态字段 → 'field not exist' 1100。校验不对称根因=回落函数按 schema 配置分支。",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "cache_delay", "request_typo"],
+      "surviving": "动态字段按设计可存任意 key，未知 identifier 回落动态字段是显式实现（注释自述）；但 delete 报 deleteCount:0 成功 + 静默空结果的诊断缺失（typo 免疫）为 surviving 现象"
+    }
+  }
+}

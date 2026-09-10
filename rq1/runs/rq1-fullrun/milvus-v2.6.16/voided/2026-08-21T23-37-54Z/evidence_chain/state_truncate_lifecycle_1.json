@@ -1,0 +1,56 @@
+{
+  "defect_id": "state_truncate_lifecycle_1",
+  "endpoint": "collections+truncate / collections+get_stats",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint state_collections_truncate_001 covers truncate immediate postconditions (rowCount==0/schema/load state unchanged - all confirmed in log); it does NOT cover post-truncate re-insert statistics behavior. The reinsert-visibility claim is contract-gap territory (count_consistency synthesis).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "re-insert 10: 200 {\"code\":0\",\"cost\":0\",\"data\":{\"insertCount\":10,...}} / visible rows (Strong) after re-insert: 10 / rowCount after truncate+reinsert+flush: 0 ... DEFECT: ('get_stats rowCount=0 while Strong query sees 10 rows after post-truncate flush', '{\"code\":0\",\"data\":{\"rowCount\":0}}')",
+      "secondary_observations": ["count after insert: 100 rowCount 100 - baseline stats correct", "truncate: code 0; count after truncate: 0; query rows after truncate: 0 - contract postconditions met", "schema after truncate: [None, None] (describe schema fields read as None - reading artifact vs actual loss unresolved, noted as-is)", "load state after truncate: LoadStateLoaded - preserved per contract", "truncate nonexistent: code 100 - error diag correct"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "no client error; both endpoints return success - the inconsistency is between two success responses' semantics"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_truncate_lifecycle_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_state_collections_truncate_001",
+      "assertion_text_quoted": "truncate(collection) success => get_stats rowCount==0 AND describe schema unchanged AND load state unchanged",
+      "api_violates_assertion": false,
+      "note": "all three immediate postconditions of the quoted assertion PASSED in-log. The claimed defect (post-truncate reinsert+flush rowCount stays 0 while Strong query sees 10) is OUTSIDE this assertion's scope - no constraint governs it. violates=false against quoted text; observation recorded as contract-gap state divergence for auditor.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:truncate_001 immediate postconditions (met)", "doc:ddl_callbacks_truncate_collection.go full ack flow (DropSegmentsByTime/ManualUpdateCurrentTarget/meta.TruncateCollection)", "script:state_truncate_lifecycle_1.py insert100->flush->load->truncate->reinsert10->flush->compare get_stats vs Strong query", "log:rowCount 0 vs Strong query 10 rows; DEFECT recorded"],
+      "chain_broken_at": "doc",
+      "break_detail": "no constraint covers post-truncate statistics refresh; the observation is real and logged verbatim but unconstrained - auditor must decide whether count_consistency synthesis + known flush-lag family covers it.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["TruncateCollection (rootcoord, ddl_callbacks_truncate_collection.go)", "DropSegmentsByTime", "BeginTruncateCollection / meta.TruncateCollection"],
+      "files_examined": ["internal/rootcoord/ddl_callbacks_truncate_collection.go:33-128", "internal/distributed/proxy/httpserver/handler_v2.go:761-769"],
+      "source_excerpt": "ddl_callbacks_truncate_collection.go: truncateCollectionV2AckCallback drops segments 'updated before the flush timestamp' (DropSegmentsByTime, :81), then ManualUpdateCurrentTarget (:86) to sync QueryCoord, then meta.TruncateCollection (:90) which (per BeginTruncateCollection :106-127 comment) must forbid compaction during the window. Mechanism plausibly explains the observation: post-truncate inserts land in NEW segments whose stats are only reflected in get_stats after the next flush-sync cycle of that collection; the in-log flush may not have completed the stats update path (rowCount computed from persisted segment stats, handler_v2.go:689 wrapperReturnRowCount). No code asserts rowCount correctness post-truncate-reinsert - the invariant is emergent, not enforced.",
+      "call_chain_traced": "truncate broadcast -> ack callback (drop old segments by ts, manual target update, meta truncate, forbid compaction) -> reinsert -> growing/new segments -> get_stats reads persisted segment stats (lagging) vs Strong query reads current view (10 rows)",
+      "verification_outcome": "not_found_in_source",
+      "sufficiency_check": "grep_hit_pursued (TruncateCollection/DropSegmentsByTime/BeginTruncateCollection all hit and read; no explicit stats-refresh guarantee or known-bug marker found in the truncate path; one flush-lag family candidate, not confirmed for truncate specifically)",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["immediate-visibility race on query (Strong consistency read is the strongest read, saw 10)", "script typo (insertCount:10 confirmed)"],
+      "surviving": "flush/stats propagation lag (asynchronous stats update - the strongest mundane candidate; flush was issued but stats sync not awaited/pollable in-script); NOT excluded because even post-flush the count remained 0, and the truncate path's stats reset interplay is not covered by the standard flush-by-design defense"
+    },
+    "evidence_weight": "medium (clear logged divergence, single script, no contract anchor, root cause only plausibly traced - stats-refresh guarantee not found in source)"
+  }
+}

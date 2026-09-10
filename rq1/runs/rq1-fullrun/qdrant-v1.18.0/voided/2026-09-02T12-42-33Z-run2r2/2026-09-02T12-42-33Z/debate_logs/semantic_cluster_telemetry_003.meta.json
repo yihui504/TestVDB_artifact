@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_telemetry_003",
+  "endpoint": "cluster+telemetry",
+  "param": "timeout",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "type_coercion",
+  "oracle": {
+    "statement": "with control GET /cluster/telemetry = 200, the legs timeout=1.5, timeout=True and timeout=abc each answer 4xx (integer-typed parameter must not be implicitly coerced; a 200 = Type1_IllegalSuccess, 5xx with /healthz alive = Type3_RuntimeFailure); with a 4xx control, all legs answer 4xx uniformly (a 2xx leg = Type1_IllegalSuccess on a face that refuses its documented control) (constraint qdrant_range_cluster_telemetry_001)",
+    "source": "docstring"
+  }
+}

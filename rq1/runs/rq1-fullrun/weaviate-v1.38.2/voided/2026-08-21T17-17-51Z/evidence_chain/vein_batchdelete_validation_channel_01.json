@@ -1,0 +1,74 @@
+{
+  "defect_id": "vein_batchdelete_validation_channel_01",
+  "endpoint": "DELETE /v1/batch/objects",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint weaviate_type_batch_delete_match_001 source_url 非标准 URL（openapi 回退），但 assertion（match.class+match.where 缺失应 4xx）与 OpenAPI 契约方向一致；endpoint_registry 含 DELETE /batch/objects；版本 v1.38.2 匹配",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "no_match: HTTP 500 msg=validate: empty match clause",
+      "secondary_observations": [
+        "match_null: HTTP 500 msg=validate: empty match clause",
+        "match_empty: HTTP 500 msg=validate: empty match.class clause",
+        "match_class_only: HTTP 500 msg=validate: empty match.where clause",
+        "match_where_null: HTTP 500 msg=validate: empty match.where clause",
+        "control nonexistent class: 422 {\"error\":[{\"message\":\"validate: failed to get class: NoSuchClassVein\"}]}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "非法 caller-input（缺失 match/match.where）以 HTTP 500 返回；同端点其他校验错误（类不存在）为 422 —— 同端点双通道分裂，500 通道把 caller 错误标记为 server fault"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_batchdelete_validation_channel_01.py", "debate_logs/boundary_bd_match_empty_08.py", "debate_logs/boundary_bd_match_where_01.py", "debate_logs/boundary_bd_match_class_02.py", "debate_logs/semantic_match_missing_01.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_type_batch_delete_match_001",
+      "assertion_text_quoted": "DELETE /batch/objects: match.class AND match.where present, else 4xx",
+      "api_violates_assertion": true,
+      "note": "约束要求缺失 match 时 4xx；观测为 500（非 4xx），violates=True 直接成立",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:weaviate_type_batch_delete_match_001 (match 缺失 → 4xx)",
+        "doc:openapi fallback (source_url 非直链，PARTIAL)",
+        "script:vein_batchdelete_validation_channel_01.py 5 组缺失/null match 变体 + 1 组 422 对照",
+        "log:no_match/match_null/match_empty/match_class_only/match_where_null 全部 HTTP 500 validate: empty match[.class/.where] clause"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["empty match clause", "NewErrInvalidUserInput batch_delete", "BatchObjectsDeleteUnprocessableEntity", "failed to get class"],
+      "files_examined": [
+        "usecases/objects/batch_delete.go (L119-160)",
+        "adapters/handlers/rest/handlers_batch_objects.go (L168-204)"
+      ],
+      "source_excerpt": "usecases/objects/batch_delete.go L126-136:\n\tif match == nil {\n\t\treturn nil, 0, errors.New(\"empty match clause\")\n\t}\n\tif len(match.Class) == 0 {\n\t\treturn nil, 0, errors.New(\"empty match.class clause\")\n\t}\n\tif match.Where == nil {\n\t\treturn nil, 0, errors.New(\"empty match.where clause\")\n\t}\n而紧随其后的 GetCachedClass 失败路径（L140-146）明确使用 NewErrInvalidUserInput(...\"failed to get class: %s\")。\nadapters/handlers/rest/handlers_batch_objects.go L183-197:\n\tif errors.As(err, &objects.ErrInvalidUserInput{}) {\n\t\treturn batch.NewBatchObjectsDeleteUnprocessableEntity()...  // 422\n\t} else if ... ErrMultiTenancy / Forbidden ... {\n\t} else {\n\t\treturn batch.NewBatchObjectsDeleteInternalServerError()...  // 500\n\t}",
+      "call_chain_traced": "validateBatchDelete: match==nil/Class empty/Where==nil → 裸 errors.New（非 ErrInvalidUserInput）→ REST handler 错误映射 switch 无匹配 → default → NewBatchObjectsDeleteInternalServerError (500)；同类校验 failed to get class 用 NewErrInvalidUserInput → 422。同函数内通道分裂直接可见",
+      "verification_outcome": "validation_absent",
+      "note": "校验本身存在（错误被检出）但未分类为 ErrInvalidUserInput，REST 层落到 500 default —— 与 422 兄弟错误构成校验通道分裂。源码 L140 与 L142 的注释本身承认其他 caller-input 需 NewErrInvalidUserInput 否则 REST 映射 500，但 L128/132/136 三处漏改",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

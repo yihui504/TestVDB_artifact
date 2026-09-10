@@ -1,0 +1,10 @@
+[dim=0] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, dimension]"}
+[dim=missing] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, dimension]"}
+[dim=-8] http=200 body={"code":65535,"message":"invalid dimension: -8. should be in range 1 ~ 32768"}
+[dim='8'(string)] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field CreateCollectionReq.dimension of type int32"}
+[dim=8.5] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number 8.5 into Go struct field CreateCollectionReq.dimension of type int32"}
+[dim=null] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, dimension]"}
+[dim=8(control)] http=200 body={"code":200,"data":{}}
+[readback] http=200
+[readback] vector dim persisted = None (expect 8)
+VERDICT: NO_DEFECT

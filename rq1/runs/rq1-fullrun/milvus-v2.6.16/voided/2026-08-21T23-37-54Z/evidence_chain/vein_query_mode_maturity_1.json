@@ -1,0 +1,54 @@
+{
+  "defect_id": "vein_query_mode_maturity_1",
+  "endpoint": "collections+create / collections+alter_properties",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "cross-endpoint maturity constraint grounded on create_009 (query_mode enum) + alter path source (task.go/common.go); both endpoints in registry. The asymmetry claim itself is not in any single constraint - it is a cross-endpoint synthesis, tier honest.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "CONTROL alter query_mode=bogus: 200 {\"code\":65535\",\"message\":\"invalid query_mode value \\\"bogus\\\", valid values: [large_topk]\"} vs T1 create properties.query_mode=bogus: 200 {\"code\":0\",\"data\":{}} / DEFECT: cross-endpoint validation asymmetry",
+      "secondary_observations": ["T1 create properties.query_mode=large_topk: 200 code 0", "T1 persisted: False [{'key': 'timezone', 'value': 'UTC'}] - create-time property (valid value) also discarded", "T2 alter unknown keys: 200 code 0; T2 props after: [{'key': 'timezone', ...}, {'key': 'junk_key_abc', 'value': 'junk_value'}, {'key': 'query_mod', 'value': 'large_topk'}, {'key': 'nprobe', 'value': '0'}] - alter path PERSISTS junk/misspelled keys verbatim into collection metadata", "T3 create-time junk persisted: ['timezone'] only - create ignores, alter persists"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "invalid enum accepted at create as 200/code 0; alter path of same value correctly 65535 (also HTTP 200 envelope)"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_query_mode_maturity_1", "boundary_querymode_01", "boundary_querymode_03"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_collections_create_009",
+      "assertion_text_quoted": "properties/params.query_mode NOT IN {unset, 'large_topk'} => code 65535 message \"invalid query_mode value ...\" (live-confirmed v2.6.16: 'bogus' rejected)",
+      "api_violates_assertion": true,
+      "note": "T1 create bogus code 0 violates create_009 directly. The T2 unvalidated-write observation (junk properties persisted via alter) has no dedicated constraint in the 39-constraint set - contract gap, recorded as secondary. T3 asymmetry is synthesis-level.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:create_009 create-path enum rejection", "doc:common.go:513-526 ValidateQueryMode + task.go:449 (create) / task.go:1351-1353 (alter)", "script:vein_query_mode_maturity_1.py control alter vs T1 create vs T2 alter-junk vs T3 create-junk", "log:CONTROL 65535 vs T1 code 0; T2 junk persisted; T3 create not persisted; DEFECTs recorded"],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["CollectionReqWithProperties (request_v2.go:80)", "CollectionReq struct (request_v2.go:643)", "ValidateQueryMode call sites (task.go:449, task.go:1352)", "query_mode handler_v2.go (zero hits)"],
+      "files_examined": ["internal/distributed/proxy/httpserver/request_v2.go:80-90,643-656", "internal/distributed/proxy/httpserver/handler_v2.go:1786-1792,2019-2049", "internal/proxy/task.go:448-451,1341-1366"],
+      "source_excerpt": "Two different REST structs serve the two endpoints: alter_properties binds CollectionReqWithProperties (request_v2.go:80-84: DbName/CollectionName/Properties map) whose Properties flow into alterCollectionTask where detectQueryModeChange -> common.ValidateQueryMode (task.go:1351-1353) rejects bad values (and even catches misspellings via EqualFold at common.go:521-522); create binds CollectionReq (request_v2.go:643-656) with NO Properties field and a params forwarding whitelist that excludes query_mode - hence create accepts anything silently while alter validates strictly and, for unknown non-reserved keys, persists them raw (no whitelist on alter properties map). The asymmetry is fully explained by the two-struct architecture.",
+      "call_chain_traced": "create: JSON properties -> no struct field -> drop -> code 0. alter: JSON properties -> CollectionReqWithProperties -> alterCollectionTask -> ValidateQueryMode (known keys) OR raw persist (unknown keys)",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (control on same server)", "typo (deliberate junk keys, verified persisted verbatim)"],
+      "surviving": "'create and alter intentionally have different surfaces' by-design defense; but within-constraint domain create_009 covers properties/params.query_mode at create, and alter's unvalidated persistence of arbitrary keys (T2) has no documented basis; recorded"
+    },
+    "evidence_weight": "high (in-script paired control + readback + two-struct root cause fully traced)"
+  }
+}

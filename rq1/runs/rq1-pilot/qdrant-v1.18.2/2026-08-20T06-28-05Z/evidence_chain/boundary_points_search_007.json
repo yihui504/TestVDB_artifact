@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_points_search_007",
+  "endpoint": "points+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url (https://api.qdrant.tech/api-reference/points/search-points) unreachable due to domain block - api.qdrant.tech blocked; doc_version 1.19.x matches target v1.18.2 (major.minor); endpoint registry lists points+search with source_url; contract constraint qdrant_range_search_points_001 asserts limit ∈ [1, 1000] (positive integer) but cannot verify against live doc due to network restriction",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c7: limit=NaN → http=-1, body=Out of range float values are not JSON compliant: nan",
+      "secondary_observations": [
+        "c8: score_threshold=Infinity → http=-1, body=Out of range float values are not JSON compliant: inf",
+        "c3: limit=1001 → http=200 (Type1_IllegalSuccess, upper bound violation)",
+        "c1: limit=0 → http=422 with validation error (correct rejection)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP -1 (network/library error)",
+        "note": "Status -1 indicates JSON serialization failure before HTTP request completes - NaN is not JSON compliant, causing client-side serialization error rather than server-side validation"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_points_search_007"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_search_points_001",
+      "assertion_text_quoted": "limit (max results) ∈ [1, 1000]",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_search_points_001 (limit ∈ [1, 1000])",
+        "doc:https://api.qdrant.tech/api-reference/points/search-points (unreachable, domain blocked)",
+        "script:POST /collections/{collection_name}/points/search with limit=NaN",
+        "log:Status -1 (JSON serialization failure - NaN not compliant)"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "contract expects limit ∈ [1, 1000]; NaN is special float value outside integer range; client-side JSON serialization rejects NaN before request reaches API validation (status -1, 'Out of range float values are not JSON compliant: nan'). This is client-side rejection, NOT server-side validation - server never sees the request, so contract constraint is not actively enforced by API. Chain断裂在script层：特殊值未經服務器驗證就在客戶端被序列化層拒絕。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "limit Option<usize>",
+        "validate range",
+        "pub limit Option<usize>",
+        "JSON compliant"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs (lines 592-593, 798-799)",
+        "lib/collection/src/operations/verification/mod.rs (lines 86-95, 356-369)",
+        "src/common/inference/query_requests_rest.rs (lines 80-86)"
+      ],
+      "source_excerpt": "File: lib/api/src/rest/schema.rs:592-593 (SearchPointRequestInternal)\n    /// Max number of points to return. Default is 10.\n    #[validate(range(min = 1))]\n    pub limit: Option<usize>,\n\nFile: lib/collection/src/operations/verification/mod.rs:86-95 (check_request_query_limit)\n    fn check_request_query_limit(\n        &self,\n        strict_mode_config: &StrictModeConfig,\n    ) -> CollectionResult<()> {\n        check_limit_opt(\n            self.query_limit(),\n            strict_mode_config.max_query_limit, // ❌ NO MAX=1000 ENFORCEMENT\n            \"limit\",\n        )\n    }\n\nFile: lib/collection/src/operations/verification/mod.rs:356-369 (check_limit_opt)\npub(crate) fn check_limit_opt<T: PartialOrd>(\n    value_fn: impl FnOnce() -> Option<T>,\n    limit: Option<T>,\n) -> bool {\n    let Some(limit) = limit else {\n        return true; // ❌ No limit configured → passes through\n    };\n    let Some(value) = value_fn() else {\n        return true;\n    };\n    value <= limit // ❌ Only checks if value <= configured max, NOT absolute max=1000\n}\n\nFile: src/common/inference/query_requests_rest.rs:80-86\n    limit: group_request\n        .limit\n        .unwrap_or(CollectionQueryRequest::DEFAULT_LIMIT), // ❌ NaN never reaches here - JSON serialization fails first",
+      "call_chain_traced": "client: Python/requests JSON serialization detects NaN and throws 'Out of range float values are not JSON compliant: nan' before HTTP request → client never sends request to server → server-side validation (schema.rs + verification/mod.rs) never executes → Type1 violation via silent client-side rejection rather than explicit server-side 400 error",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache", "by-design"],
+      "surviving": "Type1 violation - special float value (NaN) should be rejected with 400 Bad Request by API, but instead fails at client-side JSON serialization layer with status -1, indicating no server-side input validation for special float values"
+    }
+  }
+}

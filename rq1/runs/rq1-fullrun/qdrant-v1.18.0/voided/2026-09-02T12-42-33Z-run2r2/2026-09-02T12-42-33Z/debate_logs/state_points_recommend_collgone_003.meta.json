@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_points_recommend_collgone_003",
+  "endpoint": "points+recommend",
+  "param": "collection_name",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "delete_consistency",
+  "oracle": {
+    "statement": "the exact recommend body that returned 200 on a live collection returns 404 after the collection is dropped (200 = zombie read, Type4); describe of the dropped collection returns 404; recommend on a never-created collection name returns the same 404 disposition (200 = phantom, Type4); 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

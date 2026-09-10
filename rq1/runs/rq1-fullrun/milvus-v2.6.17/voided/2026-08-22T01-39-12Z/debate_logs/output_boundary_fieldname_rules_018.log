@@ -1,0 +1,19 @@
+dyn field '1abc' (leading digit) -> http=200 code=0 raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+dyn field 'a-b' (hyphen) -> http=200 code=0 raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+dyn field 'a.b' (dot) -> http=200 code=0 raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+dyn field '$x' (dollar) -> http=200 code=0 raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+dyn field 'a b' (space) -> http=200 code=0 raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+dyn field '' (empty) -> http=200 code=0 raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+dyn field 'ffffffffffffffffffffffffffffff' (overlong 256) -> http=200 code=0 raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+dyn field 'ffffffffffffffffffffffffffffff' (valid 255) -> http=200 code=0 raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+dyn field 'x' (valid 1char) -> http=200 code=0 raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+dyn field '_ok' (valid underscore) -> http=200 code=0 raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+NUL dyn field -> http=200 code=0 raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[2]}}
+DEFECT: illegal dynamic field name '1abc' accepted (code 0)
+DEFECT: illegal dynamic field name 'a-b' accepted (code 0)
+DEFECT: illegal dynamic field name 'a.b' accepted (code 0)
+DEFECT: illegal dynamic field name '$x' accepted (code 0)
+DEFECT: illegal dynamic field name 'a b' accepted (code 0)
+DEFECT: illegal dynamic field name '' accepted (code 0)
+DEFECT: illegal dynamic field name 'ffffffffffffffffffffffffffffff' accepted (code 0)
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) - illegal field name accepted

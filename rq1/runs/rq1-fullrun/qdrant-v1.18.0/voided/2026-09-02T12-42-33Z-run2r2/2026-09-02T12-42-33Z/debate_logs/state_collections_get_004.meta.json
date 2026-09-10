@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_get_004",
+ "endpoint": "collections+get",
+ "param": "collection_name (alias resolution on the describe face)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_get_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "describe by a live alias = 200 whose result.config.params.vectors.size equals the current alias target's created size (4 before the atomic switch, 8 after); 404 on a live alias or a 200 naming the wrong target's size = Type4; after the alias is deleted, describe by the alias name = exactly 404 with a non-empty error message (200-with-config = Type1, bare 404 = Type4); A and B keep answering 200 with sizes 4/8 throughout; 5xx = Type3 only with /healthz liveness",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

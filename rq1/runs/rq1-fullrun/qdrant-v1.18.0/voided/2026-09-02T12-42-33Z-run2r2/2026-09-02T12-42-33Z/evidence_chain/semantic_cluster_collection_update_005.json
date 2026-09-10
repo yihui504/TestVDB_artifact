@@ -1,0 +1,93 @@
+{
+  "defect_id": "semantic_cluster_collection_update_005",
+  "endpoint": "cluster+collection+update (POST /collections/{collection_name}/cluster)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists, but the endpoint_registry entry cluster+collection+update carries a batch preflight record (verified_at 2026-09-02T12:34:08Z, source_status reachable) and the page was fetched live 2026-09-03 via web reader (api.qdrant.tech blocked for WebFetch, succeeded via reader). Version: page nav self-identifies v1.18.x, URL is versioned v-1-18-x, major.minor matches target v1.18.0. Content: the live page documents the request as 'Collection cluster update operations' = oneOf of variant objects (MoveShardOperation ... CreateShardingKeyOperation) with example cURL body '{\"abort_resharding\": {}}' (single-key form) and query parameter 'timeout integer Optional >=1' - matching the assertion's 200-acceptance face and the timeout>=1 boundary; critically, NO 'operation' discriminator field is documented anywhere (OpenAPI sidecar .sourcedeps/qdrant/v1.18.0/openapi.json agrees: ClusterOperations is oneOf refs; CreateShardingKeyOperation = single-key object requiring create_sharding_key{shard_key}); the 400/404 halves of the assertion trace to the preflight doc_quote ('200 ok; 400 on invalid peer/shard; 404 for a missing collection') while the OpenAPI responses map for this path lists only 200. Endpoint: exact registry match cluster+collection+update POST with same source_url. All REST, no SDK/REST confusion.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "face1 create_sharding_key (plain): status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations\"},\"time\":0.0}",
+      "secondary_observations": [
+        "setup: create custom-sharded collection 's5cu5_1788373539_col_custom': status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.047038328} (environment healthy; only the probed endpoint 400ed)",
+        "faces 2-4 (timeout=1, timeout=30, drop_sharding_key) never executed - defect() exits at face1, so the timeout>=1 boundary face claimed in the attack was not actually observed",
+        "comparative rest face, correct single-key body form, same endpoint (output_boundary_cluster_collection_update_007.log line 5): [POST create_sharding_key key=bccu73d9c81f6sk K=5131] -> status=400 raw={\"status\":{\"error\":\"Bad request: Distributed mode disabled\"},\"time\":4.639e-6} - a schema-valid body passes deserialization and is refused one gate later, by the deployment-mode check",
+        "output_boundary_cluster_collection_update_007.log line 6: [POST create_sharding_key auto] -> status=400 raw={\"status\":{\"error\":\"Bad request: Distributed mode disabled\"},\"time\":0.000028781} - both carrier forms refused on this deployment; script honestly exited SCRIPT_ERROR",
+        "output_boundary_cluster_collection_update_008.log line 4: [POST create_sharding_key key=bccu87413258csk K=5877 #1] -> status=400 raw={\"status\":{\"error\":\"Bad request: Distributed mode disabled\"},\"time\":6.539e-6}",
+        "output_semantic_cluster_collection_update_002.log lines 6-7: create_sharding_key 's5cu2_1788373537_sk_obs': status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations\"},\"time\":0.0} - identical wrong-body response, script honestly exited SCRIPT_ERROR ('rejection claim owned by semantic_cluster_collection_update_005')",
+        "output_semantic_cluster_collection_update_006.log lines 4-5: step1 create_sharding_key 's5cu6_1788373540_sk_roundtrip': status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations\"},\"time\":0.0} - same, SCRIPT_ERROR exit"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The request was request-side-decidable invalid (body matches no schema variant) and the server answered HTTP 400 with a diagnostic body naming the failed deserialization ('Format error in JSON body: data did not match any variant of untagged enum ClusterOperations') - textbook client-error semantics; this supports the server being correct, not defective."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_cluster_collection_update_005",
+        "semantic_cluster_collection_update_002",
+        "semantic_cluster_collection_update_006",
+        "boundary_cluster_collection_update_007",
+        "boundary_cluster_collection_update_008"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_collection_update_001",
+      "assertion_text_quoted": "valid cluster operation returns HTTP 200 (accepted); invalid peer/shard returns 400; missing collection returns 404",
+      "api_violates_assertion": false,
+      "note": "violates=false via the out-of-domain branch of the self-check (no ambiguity tolerated): the assertion's 200 promise is scoped to VALID cluster operations, and the observed request is schema-invalid - body {\"operation\": \"create_sharding_key\", \"shard_key\": ...} matches no documented ClusterOperations variant (docs example '{\"abort_resharding\": {}}'; OpenAPI CreateShardingKeyOperation single-key; Rust #[serde(untagged)]), so the correct constraint reading does not reach this request. Secondary, co-anchored constraint qdrant_state_cluster_collection_update_001 ('shard move/replicate operations return 200 on acceptance; completion is asynchronous...') is likewise untouched: nothing valid was rejected. Tertiary environment fact: on this standalone deployment (consensus_state None, container testvdb-qdrant-standalone per deployment_meta.json) no body shape could have obtained 200 - src/common/collections.rs:260-264 returns 400 'Distributed mode disabled' before any operation executes.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: FOUND - assertions[56] qdrant_behavioral_cluster_collection_update_001 and constraints.state_constraints[23] qdrant_state_cluster_collection_update_001 both exist in results/qdrant/v1.18.0/structured_contract.json, source_url identical, source_status reachable, evidence_tier explicit",
+        "doc: CONSISTENT - live fetch of https://api.qdrant.tech/v-1-18-x/api-reference/distributed/update-collection-cluster confirms the 200-acceptance face, timeout>=1 query boundary, and the request schema as oneOf of single-key variant objects; the docs contradict the script's body shape (no 'operation' field exists)",
+        "script: BROKEN - semantic_cluster_collection_update_005.py (debate_logs copy, lines 167-170) sends body {\"operation\": \"create_sharding_key\", \"shard_key\": KEY} which matches no documented variant; the raw_knowledge.json entry for this endpoint lists a body parameter named 'operation' with the variant-name enum - an extraction artifact of the oneOf variants flattened into a fake field, which is the likely origin of the script's wrong shape; the 'legal face' premise of the claim is therefore false",
+        "log: VERDICT NOT SUPPORTED BY RAW - the raw response 'Format error in JSON body: data did not match any variant of untagged enum ClusterOperations' is serde doing exactly its documented job on a malformed body (the documented 400 validation branch), yet the script adjudicated it DEFECT_FOUND (Type1_IllegalRejection)"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The claim 'legal cluster operation wrongly rejected with status 400' rests on the request being a valid cluster operation. It was not: {\"operation\": \"create_sharding_key\", \"shard_key\": ...} matches no variant of the documented ClusterOperations oneOf (documentation example '{\"abort_resharding\": {}}'; OpenAPI CreateShardingKeyOperation = {\"create_sharding_key\": {\"shard_key\": ...}}; Rust #[serde(untagged)] enum at lib/collection/src/operations/cluster_ops.rs:15). The 400 'Format error in JSON body' is correct, documented validation behavior - not an illegal rejection. Independently, even schema-correct bodies cannot reach 200 on this deployment: src/common/collections.rs:260-264 returns 400 'Distributed mode disabled' when consensus_state is None (standalone container, corroborated by boundary_007/008 whose correct-form requests received exactly that), so the 200-acceptance face was unexercisable in this environment for any request. Sibling scripts hitting the identical response (semantic_002/006) honestly exited SCRIPT_ERROR and deferred the rejection claim to this script, which then misadjudicated it.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Distributed mode disabled",
+        "ClusterOperations",
+        "create_sharding_key",
+        "do_update_collection_cluster",
+        "collection_name}/cluster"
+      ],
+      "files_examined": [
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/lib/collection/src/operations/cluster_ops.rs (lines 1-120)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/common/collections.rs (lines 230-290)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/actix/api/cluster_api.rs (lines 1-133)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/actix/api/collections_api.rs (lines 196-240)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/actix/api/shards_api.rs (grep hits, lines 15/52/82)",
+        "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.4.0/.sourcedeps/qdrant/v1.18.0/openapi.json (schemas ClusterOperations/CreateShardingKeyOperation/CreateShardingKey/DropShardingKey; path /collections/{collection_name}/cluster post responses+params)"
+      ],
+      "source_excerpt": "lib/collection/src/operations/cluster_ops.rs:14-28\n  #[derive(Debug, Deserialize, Serialize, JsonSchema, Clone)]\n  #[serde(untagged, rename_all = \"snake_case\")]\n  pub enum ClusterOperations {\n      /// Move shard to a different peer\n      MoveShard(MoveShardOperation),\n      ...\n      /// Create a custom shard partition for a given key\n      CreateShardingKey(CreateShardingKeyOperation),\n      /// Drop a custom shard partition for a given key\n      DropShardingKey(DropShardingKeyOperation),\n      ...\n\nlib/collection/src/operations/cluster_ops.rs:56-66\n  #[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone)]\n  #[serde(rename_all = \"snake_case\")]\n  pub struct CreateShardingKeyOperation {\n      pub create_sharding_key: CreateShardingKey,\n  }\n\n  #[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone)]\n  #[serde(rename_all = \"snake_case\")]\n  pub struct DropShardingKeyOperation {\n      pub drop_sharding_key: DropShardingKey,\n  }\n\nsrc/actix/api/collections_api.rs:215-233\n  #[post(\"/collections/{collection_name}/cluster\")]\n  async fn update_collection_cluster(\n      dispatcher: web::Data<Dispatcher>,\n      collection: Path<CollectionPath>,\n      operation: Json<ClusterOperations>,\n      Query(query): Query<WaitTimeout>,\n      ActixAuth(auth): ActixAuth,\n  ) -> impl Responder {\n      let timing = Instant::now();\n      let wait_timeout = query.timeout();\n      let response = do_update_collection_cluster(\n          &dispatcher.into_inner(),\n          collection.collection_name.clone(),\n          operation.0,\n          auth,\n          wait_timeout,\n      )\n      .await;\n      process_response(response, timing, None)\n  }\n\nsrc/common/collections.rs:247-264\n  pub async fn do_update_collection_cluster(\n      dispatcher: &Dispatcher,\n      collection_name: String,\n      operation: ClusterOperations,\n      auth: Auth,\n      wait_timeout: Option<Duration>,\n  ) -> Result<bool, StorageError> {\n      let collection_pass = auth.check_collection_access(\n          &collection_name,\n          AccessRequirements::new().write().manage().extras(),\n          \"update_collection_cluster\",\n      )?;\n\n      if dispatcher.consensus_state().is_none() {\n          return Err(StorageError::bad_request(\n              \"Distributed mode disabled\".to_string(),\n          ));\n      }",
+      "call_chain_traced": "actix route update_collection_cluster (src/actix/api/collections_api.rs:215) declares parameter `operation: Json<ClusterOperations>` - actix-web deserializes the request body into the #[serde(untagged)] enum ClusterOperations (lib/collection/src/operations/cluster_ops.rs:14-54) BEFORE the handler body runs; a body matching no variant fails extraction and surfaces as HTTP 400 'Format error in JSON body: data did not match any variant of untagged enum ClusterOperations' - character-for-character the observed raw response. Each variant struct is a single-key wrapper (CreateShardingKeyOperation{create_sharding_key: CreateShardingKey}), so {'operation': ..., 'shard_key': ...} can never match. If deserialization succeeds, do_update_collection_cluster (src/common/collections.rs:247) returns 400 'Distributed mode disabled' when dispatcher.consensus_state() is None (this standalone deployment) before executing anything - exactly what boundary_007/008 observed with correct-form bodies. The dedicated v1.18 shard-key endpoints (src/actix/api/shards_api.rs:52,82 - PUT create / POST delete shard key) funnel into the same do_update_collection_cluster and thus the same gate. No validation gap exists: the untagged-enum shape IS the validation the assertion's 'valid operation' domain presupposes, and it worked as documented.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "request_body_malformed_script_side (script sent {\"operation\": ..., \"shard_key\": ...} matching no documented ClusterOperations variant; shape traces to raw_knowledge 'operation' parameter, an extraction artifact of the oneOf variants)",
+        "env (standalone deployment testvdb-qdrant-standalone, consensus_state None -> all cluster operations 400 'Distributed mode disabled' at src/common/collections.rs:260-264; corroborated by boundary_007/008 correct-form requests; the 200-acceptance face was unexercisable in this sandbox for any body)"
+      ],
+      "surviving": null
+    }
+  }
+}

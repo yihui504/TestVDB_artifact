@@ -1,0 +1,74 @@
+{
+  "defect_id": "semantic_collections_create_009",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Domain api.qdrant.tech blocked by network security policies; constraint assertion verified from raw_knowledge.md and structured_contract.json (assertion: vectors is required parameter for collections+create, evidence_tier: explicit, source_url: https://api.qdrant.tech/api-reference/collections/create-collection, source_verified: true)",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Test: missing_vectors | Description: Missing vectors object (required) | Payload: {} | Response status: 200 | Response body: {\"result\":true,\"status\":\"ok\",\"time\":0.336240085}",
+      "secondary_observations": [
+        "output_semantic_collections_create_001.log: Valid collection with vectors properly returns 200 OK (baseline test showing correct behavior when vectors is provided)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Target returned HTTP 200 with status:'ok' and result:true for empty payload {} missing required vectors parameter. Should have returned HTTP 400 Bad Request indicating missing/invalid required parameter"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_collections_create_009"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "vectors (object, required): Vector configuration with size and distance metric",
+      "api_violates_assertion": true,
+      "note": "Empty payload {} missing required vectors parameter was accepted with HTTP 200 OK and result:true. Per documentation, vectors is required for collections+create endpoint",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:raw_knowledge.md line 49 (assertion: vectors is required parameter for collections+create)",
+        "doc:https://api.qdrant.tech/api-reference/collections/create-collection (verified in raw_knowledge.md, source_verified:true)",
+        "script:PUT /collections/{collection_name} with empty payload {} (missing vectors)",
+        "log:HTTP 200, Body:{\"result\":true,\"status\":\"ok\",\"time\":0.336240085}"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Log shows HTTP 200 OK with result:true for empty payload {} that completely omits the required vectors parameter. The API should have rejected this with HTTP 400 Bad Request indicating missing required parameter, but instead silently accepted the malformed request as successful",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "vectors.*required",
+        "collections.*create",
+        "validation.*vectors",
+        "missing.*vectors"
+      ],
+      "files_examined": [],
+      "source_excerpt": "",
+      "call_chain_traced": "Source code not accessible (TESTVDB_SRC_DIR not set, no .srcdir file). WebFetch to https://api.qdrant.tech blocked by network security policies. Unable to perform source code verification.",
+      "verification_outcome": "not_found_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency"
+      ],
+      "surviving": null
+    }
+  }
+}

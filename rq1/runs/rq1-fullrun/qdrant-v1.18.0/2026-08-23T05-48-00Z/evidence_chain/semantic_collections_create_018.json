@@ -1,0 +1,83 @@
+{
+  "defect_id": "semantic_collections_create_018",
+  "endpoint": "collections+create (PUT /collections/{collection_name})",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "candidates.jsonl constraint_id/attack EMPTY (mechanical extraction gap); assertion recovered from script header (constraint_ids: qdrant_behavioral_collections_create_002) and located in structured_contract.json assertions[]. source_url https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection: WebFetch tool domain_blocked by policy, alternate reader retrieved live page (title 'Create a collection | Qdrant | API Reference') so link alive; live Fern page text-rendered Response section displays only usage/time, while version-pinned local artifact .sourcedeps/qdrant/v1.18.0/openapi.json Collections_create_collection_Response_200 = {result:boolean, status:string, time:number, usage} confirming the asserted envelope fields; literal status value 'ok' is not pinned in the schema (status: plain string). URL segment v-1-18-x / doc_version 1.18.x vs target 1.18.0: match. Script used PUT /collections/{name}: matches endpoint_registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "D",
+      "log_pattern": "create[minimal] sem_env0_1787504160 -> -1 HTTPConnectionPool(host='localhost', port=6333): Max retries exceeded with url: /collections/sem_env0_1787504160 (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=6333): Failed to e...",
+      "secondary_observations": [
+        "VERDICT: DEFECT_FOUND (Type4_StateLogicViolation)",
+        "create[minimal] sem_env0_1787504160: expected 200 success, got -1 (legal body rejected?)",
+        "exit_code_semantic_collections_create_018.txt = 1 (script DEFECT exit path)",
+        "sibling same-session up-window, same endpoint: 'CASE vectors={} empty: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.242426706}' (output_boundary_collections_create_01.log)",
+        "sibling same-window: output_semantic_collections_create_016.log correctly reported 'VERDICT: SCRIPT_ERROR — setup failed' for the same connection-refused condition; output_semantic_collections_create_017.log similarly misreported it as Type3"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No HTTP response of any kind. -1 is the script's own transport-exception sentinel (safe_request except-branch), not a server status. NewConnectionError [WinError 10061] = connection actively refused, nothing listening on localhost:6333; the request never reached Qdrant, so no HTTP semantics were observed."
+      },
+      "reproducibility": "环境问题（server-down window 2026-08-24 00:50-01:00 local: 36 logs in this session contain identical NewConnectionError; earlier window server up and conforming）",
+      "script_error": false,
+      "triggering_scripts": ["semantic_collections_create_018"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_collections_create_002",
+      "assertion_text_quoted": "200 CollectionOperationResponse {result, status ok, time} on success (category: 'HTTP 200 with status ok'; evidence_tier: explicit; source_verified: true; note: candidates.jsonl constraint_id field was empty — recovered from script header line 5)",
+      "api_violates_assertion": false,
+      "note": "violates=false because the assertion was never exercised against the API: the -1 observation is a client-side transport failure, no request reached the server (WinError 10061). Where the same assertion WAS exercised in this session (server-up window, e.g. output_boundary_collections_create_01.log), the envelope conformed: 200 {\"result\":true,\"status\":\"ok\",\"time\":0.242426706}. Source implements the envelope unconditionally for the Ok path (src/actix/helpers.rs:62-70).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_collections_create_002 in structured_contract.json assertions[] (candidates.jsonl entry has constraint_id='' — recovered from debate_logs/semantic_collections_create_018.py header)",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection alive (alternate reader; WebFetch domain_blocked); v1.18.0 openapi.json artifact: 200 schema {result:boolean, status:string, time:number, usage}",
+        "script: PUT /collections/sem_env0_1787504160 body {\"vectors\":{\"size\":4,\"distance\":\"Cosine\"}} — minimal legal body per endpoint_registry (vectors: VectorParams{size,distance} required)",
+        "log: 'create[minimal] sem_env0_1787504160 -> -1 HTTPConnectionPool ... NewConnectionError' — NO HTTP response; VERDICT line Type4 derived solely from status -1"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) is unsupported by any server-behavior observation: the only request in the log failed at transport level (connection refused, nothing listening on 6333), so no response envelope was ever seen. The script's own '(legal body rejected?)' is a guess printed by check_envelope for any non-200 status including its -1 exception sentinel. 35 sibling logs in the same 00:50-01:00 window show identical NewConnectionError (server down); earlier same-session logs show the same endpoint returning the conforming envelope. Secondary gap (dispatcher level, recovered): candidates.jsonl constraint_id/attack fields empty for this semantic candidate.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "struct CollectionOperationResponse",
+        "async fn create_collection",
+        "fn process_response",
+        "fn new|vectors|validate (lib/storage/src/content_manager/toc/create_collection.rs)"
+      ],
+      "files_examined": [
+        ".qdrant-src-1180/src/actix/api/collections_api.rs (L112-142: create_collection PUT + update_collection PATCH handlers)",
+        ".qdrant-src-1180/src/actix/helpers.rs (L52-125: process_response* / ApiResponse envelope)",
+        ".qdrant-src-1180/lib/storage/src/content_manager/toc/create_collection.rs (L20-79: create-side validations)",
+        ".sourcedeps/qdrant/v1.18.0/openapi.json (Collections_create_collection_Response_200 schema)"
+      ],
+      "source_excerpt": "src/actix/helpers.rs:52-89 (qdrant v1.18.0, git describe v1.18.0):\n\npub fn process_response_with_inference_usage<T>(\n    response: Result<T, StorageError>,\n    timing: Instant,\n    hardware_usage: Option<HardwareUsage>,\n    inference_usage: Option<InferenceUsage>,\n) -> HttpResponse\nwhere\n    T: Serialize,\n{\n    match response {\n        Ok(res) => HttpResponse::Ok().json(ApiResponse {\n            result: Some(res),\n            status: ApiStatus::Ok,\n            time: timing.elapsed().as_secs_f64(),\n            usage: Some(Usage {\n                hardware: hardware_usage,\n                inference: inference_usage,\n            }),\n        }),\n        Err(err) => process_response_error_with_inference_usage(\n            err, timing, hardware_usage, inference_usage,\n        ),\n    }\n}\n\npub fn process_response<T>(\n    response: Result<T, StorageError>,\n    timing: Instant,\n    hardware_usage: Option<HardwareUsage>,\n) -> HttpResponse\nwhere\n    T: Serialize,\n{\n    process_response_with_inference_usage(response, timing, hardware_usage, None)\n}",
+      "call_chain_traced": "PUT /collections/{name} -> src/actix/api/collections_api.rs:112 create_collection (Strict path/body extraction, WaitTimeout query) -> CreateCollectionOperation::new + dispatcher.submit_collection_meta_op -> lib/storage/src/content_manager/toc/create_collection.rs:20 create_collection (validate_collection_not_exists L50; max_collections limit L52-58; alias-name conflict L61-70) -> Result<bool> -> src/actix/helpers.rs:80 process_response -> L62-70: Ok => HTTP 200 ApiResponse{result:Some, status:ApiStatus::Ok, time:elapsed, usage}; Err => error envelope with mapped non-200 HTTP code. No code path produces status -1; -1 is the test script's except-branch sentinel (debate_logs/semantic_collections_create_018.py:43-44 'except Exception as e: return -1, str(e), str(e)').",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "concurrency (single sequential request, no parallel access)",
+        "request_param_typo (URL and body match endpoint_registry minimal legal shape)",
+        "cache (no cache layer involved in create path)"
+      ],
+      "surviving": "env: Qdrant server not listening on localhost:6333 during the 2026-08-24 00:50-01:00 local window — WinError 10061 (connection actively refused), 36 logs in this session show the identical NewConnectionError in that window, and earlier same-session logs on the same endpoint show the server up and returning the conforming envelope. A transport refusal to a down server fully explains the -1; no server-side state-logic defect can be inferred from it."
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+ "defect_id": "semantic_collections_get_004",
+ "endpoint": "collections+get",
+ "param": "collection_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "metamorphic",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_get_001"
+ ],
+ "oracle": {
+  "statement": "P2: describe by live alias returns 200 and matches describe by real name on config.params.vectors, params.shard_number, params.replication_factor, hnsw_config.m, points_count and result.status - any differing field = Type4 (one collection, two configs); non-200 on the live alias = Type1_IllegalRejection (read face resolves aliases); P3: repeated describe is deep-equal on result.config and equal on points_count - flap = Type4; P4: real name present and never-created name absent from list_collections names - violation = Type4 (alias-in-list printed as note only); P5: after the target's 200 drop, describe through the stale alias returns 404 with a non-empty error message - 200-with-config = Type1_IllegalSuccess (stale config), non-404 = Type4; alias action failures = SCRIPT_ERROR; 5xx with /healthz alive = Type3",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

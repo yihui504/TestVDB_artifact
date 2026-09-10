@@ -1,0 +1,11 @@
+{
+ "defect_id": "boundary_collections_update_011",
+ "endpoint": "collections+update",
+ "param": "optimizers_config.indexing_threshold",
+ "expected_defect_type": "Type2_PoorDiagnostics",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "fresh bcu011_* collection created without indexing_threshold -> describe readback of optimizer_config.indexing_threshold resolves to an integer that equals 10000 (create-side spec holds; diff-side 20000 prose contradicted = recorded doc-stale) OR 20000 (diff-side holds; create-side contradicted); a PATCH with explicit null returns HTTP 200 with result true and leaves the readback value unchanged (200 changing it = drift); a PATCH with explicit 50000 returns HTTP 200 and the readback echoes 50000; any resolved default that is neither 10000 nor 20000 = Type4_StateLogicViolation (both documented sides contradicted); 5xx with /healthz alive = Type3_RuntimeFailure",
+  "source": "docstring"
+ }
+}

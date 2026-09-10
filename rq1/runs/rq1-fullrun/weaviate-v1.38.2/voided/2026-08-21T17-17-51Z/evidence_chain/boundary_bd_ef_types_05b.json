@@ -1,0 +1,70 @@
+{
+  "defect_id": "boundary_bd_ef_types_05b",
+  "endpoint": "POST /schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint weaviate_type_create_collection_001 (evidence_tier=inferred, source_verified=false——本链源码核验补足)，source_url 'go-struct: entities/vectorindex/hnsw/config.go' clone 可达；api_endpoints POST /schema dynamicEfMin int default 100；endpoint_registry v1.38.2。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "ATTACK dynamicEfMin='100' (string): 200 / read-back dynamicEfMin = 0 (default is 100; 0 is invalid)（主观测：字符串类型非法值 200 接受且静默 coerce 为 0）",
+      "secondary_observations": [
+        "insert 0/1/2: 200 ×3 — 集合可用性正常",
+        "nearVector search: 200 {\"data\":{\"Get\":{\"BdEfDrop2\":[3 objects]}} — 检索仍工作，但 efMin=0 使 dynamic EF 语义退化（documented default 100），无任何诊断",
+        "（同族 05 契约线）字符串/数组/对象/null 全族 200→读回 0，仅 float 100.7 被正确 422"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "类型非法（string in int 字段）以 200 返回且静默 coerce 为 0——请求侧可判定错误被 2xx 吞掉，coerce 后值 0 亦非法（documented default 100）"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_bd_ef_types_05b", "boundary_bd_ef_types_05(同族契约线)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_type_create_collection_001",
+      "assertion_text_quoted": "dynamicEfMin is integer",
+      "api_violates_assertion": true,
+      "note": "字符串 '100' 非 integer 却被 200 接受——违反类型断言；且接受后值非拒绝亦非默认（100）而是 0。观测在约束类型域内。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_type_create_collection_001 — dynamicEfMin is integer (inferred)",
+        "doc: api_endpoints POST /schema dynamicEfMin type=int default_value=100, description 'inferred: Minimum dynamic EF (DefaultDynamicEFMin=100)'",
+        "script: boundary_bd_ef_types_05b.py POST /schema vectorIndexConfig{dynamicEfMin:'100'} + GET 读回 + insert + nearVector",
+        "log: \"ATTACK dynamicEfMin='100' (string): 200 / read-back dynamicEfMin = 0\""
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["dynamicEfMin", "OptionalIntFromMap", "case json.Number", "case float64", "DefaultDynamicEFMin"],
+      "files_examined": [
+        "entities/vectorindex/common/config.go (L43-76)",
+        "entities/vectorindex/hnsw/config.go (L30-93, L183-192, L255-289)"
+      ],
+      "source_excerpt": "entities/vectorindex/common/config.go L57-L75 (OptionalIntFromMap):\n  switch typed := value.(type) {\n  case json.Number:\n    asInt64, err = typed.Int64()\n  case float64:\n    asInt64 = int64(typed)\n  }   // switch 无 default：string/bool/array/object 等类型落到此处 asInt64 保持零值 0、err=nil\n  if err != nil { ... }\n  setFn(int(asInt64))  // → setFn(0)，既不报错也不跳过\n\nhnsw/config.go L91-L93: setDefaults 中 u.DynamicEFMin = DefaultDynamicEFMin(100)——但显式提供该键后 setFn(0) 覆盖默认",
+      "call_chain_traced": "POST /schema → ParseAndValidateConfig → OptionalIntFromMap(asMap,'dynamicEfMin',set)：REST 层经 encoding/json + UseNumber 时字符串进入 switch 无匹配 case → asInt64=0 → setFn(0) 覆盖默认 100 → validate() 无 EF 下界检查（仅 maxConnections/efConstruction/filterStrategy）→ 200 且读回 0。float 100.7 走 case float64 int64() 截断前由结构体 strict 校验拒 422（对照行），string 却漏网——类型漏洞由无-default 的 type switch 直接解释。（sufficiency_check: grep_hit_pursued）",
+      "verification_outcome": "validation_absent",
+      "note": "类型校验缺失（type switch 无 default 分支）→ 静默 coerce 0；真缺陷信号成立，源码机制完整解释观测。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

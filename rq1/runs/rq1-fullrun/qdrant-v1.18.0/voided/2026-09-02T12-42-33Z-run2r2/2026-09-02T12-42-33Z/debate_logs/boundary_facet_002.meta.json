@@ -1,0 +1,11 @@
+{
+ "defect_id": "boundary_facet_002",
+ "endpoint": "facet",
+ "param": "limit",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "strategy6_resource_limit",
+ "oracle": {
+  "statement": "on a live bfa002_* collection (tag keyword-indexed, 1001 distinct values over 1100 points): facet limit=1e6 / 1e8 / 2147483647 and one exact=true variant each complete with HTTP 200 (<=1001 hits) or an explicit 4xx reject, both NO_DEFECT per the resource assertion; 5xx / OOM / panic / connection reset / timeout-then-dead-healthz = Type3_RuntimeFailure; transport failure with /healthz alive = SCRIPT_ERROR",
+  "source": "docstring"
+ }
+}

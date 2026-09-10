@@ -1,0 +1,11 @@
+fields+add fieldName='123field' -> http=200 ok=False raw={"code":1701,"message":"Invalid field name: 123field. The first character of a field name must be an underscore or letter.: field name invalid[field=123field]"}
+fields+add fieldName='@field' -> http=200 ok=False raw={"code":1701,"message":"Invalid field name: @field. The first character of a field name must be an underscore or letter.: field name invalid[field=@field]"}
+fields+add fieldName='my-field' -> http=200 ok=False raw={"code":1701,"message":"Invalid field name: my-field. Field name can only contain numbers, letters, and underscores.: field name invalid[field=my-field]"}
+fields+add fieldName='field name' -> http=200 ok=False raw={"code":1701,"message":"Invalid field name: field name. Field name can only contain numbers, letters, and underscores.: field name invalid[field=field name]"}
+fields+add fieldName='f$eld' -> http=200 ok=False raw={"code":1701,"message":"Invalid field name: f$eld. Field name can only contain numbers, letters, and underscores.: field name invalid[field=f$eld]"}
+fields+add fieldName='' -> http=200 ok=False raw={"code":1802,"message":"missing required parameters, error: Key: 'CollectionFieldReqWithSchema.Schema.FieldName' Error:Field validation for 'FieldName' failed on the 'required' tag"}
+fields+add fieldName=None -> http=200 ok=False raw={"code":1802,"message":"missing required parameters, error: Key: 'CollectionFieldReqWithSchema.Schema.FieldName' Error:Field validation for 'FieldName' failed on the 'required' tag"}
+fields+add fieldName=123 -> http=200 ok=False raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number into Go struct field FieldSchema.schema.fieldName of type string"}
+fields+add 256-char name -> ok=False raw={"code":1701,"message":"Invalid field name: faaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+fields+add valid name -> ok=True raw={"code":0,"data":{}}
+VERDICT: NO_DEFECT

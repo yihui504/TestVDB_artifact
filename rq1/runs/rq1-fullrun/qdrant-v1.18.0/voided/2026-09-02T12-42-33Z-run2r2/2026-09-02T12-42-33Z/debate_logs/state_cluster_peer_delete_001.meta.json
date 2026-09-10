@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_peer_delete_001",
+  "endpoint": "cluster+peer+delete",
+  "param": "peer_id",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "delete_consistency",
+  "oracle": {
+    "statement": "DELETE /cluster/peer/<nonexistent id> -> HTTP status in 400..499 (200/201/204 = Type1_IllegalSuccess per the endpoint's own 4xx-invalid-peer-id promise; 500..599 = Type3_RuntimeFailure only after /healthz returns 200); afterwards GET /cluster -> HTTP 200 whose result object carries result.peer_id (uint64) equal to the pre-attempt snapshot and result.peers (map) whose key set is identical to the pre-attempt snapshot (peers key drift or result.peer_id change = Type4_StateLogicViolation; GET /cluster 500..599 while /healthz is 200 = Type3_RuntimeFailure)",
+    "source": "docstring"
+  }
+}

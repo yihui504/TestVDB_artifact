@@ -1,0 +1,7 @@
+PASS control_valid_insert {'code': 0, 'cost': 0, 'data': {'insertCount': 1, 'insertIds': [1]}}
+PASS control_float_bool_rejected {'code': 1804, 'message': 'fail to deal the insert data, error: unable to cast "true" of type string to float32: invalid parameter[expected=Float][actual=true]'}
+PASS int64_string_accepted {'code': 0, 'cost': 0, 'data': {'insertCount': 1, 'insertIds': [3]}}
+PASS coerced_readback {'id': 3, 'score': 1, 'val': 5, 'vec': [1, 0, 0, 0]}
+PASS int64_bool_rejected_control {'code': 1804, 'message': 'fail to deal the insert data, error: strconv.ParseInt: parsing "true": invalid syntax: invalid parameter[expected=Int64][actual=true]'}
+
+VERDICT: DEFECT_FOUND (5 pass / 0 fail) — Type2 silent coercion of "5"->5 into Int64 column

@@ -1,0 +1,13 @@
+create st_upsert_auto_003a auto=True: 200 {"code":0,"data":{}}
+create st_upsert_manual_003b auto=False: 200 {"code":0,"data":{}}
+upsert autoID #0: 200 {"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[468547910209326022]}}
+upsert autoID #1: 200 {"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[468547910209326024]}}
+autoID query after 2 identical upserts: 200 {"code":0,"cost":0,"data":[{"id":468547910209326022},{"id":468547910209326024}]}
+
+upsertIds: [[468547910209326022], [468547910209326024]] query-visible rows: 2
+upsert manual: 200 {"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[7]}}
+upsert manual: 200 {"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[7]}}
+manual query-visible rows after 2 pk=7 upserts: 0 {"code":0,"cost":0,"data":[]}
+
+DEFECT: upsert not idempotent, rowCount=0 expected 1 (Type4)
+VERDICT: DEFECT_FOUND

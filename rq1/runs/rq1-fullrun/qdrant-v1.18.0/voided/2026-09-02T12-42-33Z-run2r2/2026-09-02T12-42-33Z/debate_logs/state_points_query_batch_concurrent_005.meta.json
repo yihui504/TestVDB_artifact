@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_points_query_batch_concurrent_005",
+  "endpoint": "points+query+batch",
+  "param": "searches",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "concurrent",
+  "oracle": {
+    "statement": "with the collection existing throughout concurrent wait=true upserts, every reader batch query returns 200 with len(result)==4 and per-entry points lists (>=2 5xx with /healthz alive = Type3; >=2 4xx = Type4 against the pinned 200; single = WARN); settled exact count == seed + all writes; post-settle batch 200 len==4",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

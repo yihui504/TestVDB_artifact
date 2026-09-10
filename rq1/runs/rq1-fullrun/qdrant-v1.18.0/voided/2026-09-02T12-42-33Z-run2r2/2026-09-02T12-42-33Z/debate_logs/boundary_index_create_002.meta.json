@@ -1,0 +1,15 @@
+{
+ "defect_id": "boundary_index_create_002",
+ "endpoint": "index+create",
+ "param": "field_schema.type",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "strategy2_type_confusion",
+ "constraint_ids": [
+  "qdrant_type_index_create_001",
+  "qdrant_behavioral_index_create_001"
+ ],
+ "oracle": {
+  "statement": "on the live bic002_* collection the legal control {type: keyword} returns 200 with control key in readback result.payload_schema; each of the six near-domain probes ('Keyword', 'INTEGER', ' keyword', '', 'nested', 'vector') returns HTTP 400/422 with non-empty diagnostics (empty body = Type2_PoorDiagnostics; 2xx with the out-of-domain echo persisted as-is = Type1_IllegalSuccess; 404 on live collection = SCRIPT_ERROR; 5xx/transport = Type3 with /healthz re-check)",
+  "source": "docstring"
+ }
+}

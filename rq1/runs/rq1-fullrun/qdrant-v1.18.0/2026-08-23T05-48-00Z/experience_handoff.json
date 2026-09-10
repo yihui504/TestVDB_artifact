@@ -1,0 +1,48 @@
+{
+ "round": 4,
+ "rejection_patterns": [
+  {
+   "endpoint": "PUT /collections (create)",
+   "reason": "Option<T>+serde(default) 族 null=unset 合法（sharding_method/encoding/max_resident_memory_percent 等）——null 探针方向整体低产"
+  },
+  {
+   "endpoint": "scroll+order_by",
+   "reason": "by_design：源码硬编码 next_page_offset=None 且给官方替代方案"
+  },
+  {
+   "endpoint": "PUT /collections bnd_crt_rl_11/12",
+   "reason": "WAL FileTooLarge 500 被机械A判约束域不匹配 NOT_DEFECT（2TB 合法配置预分配），且资源极限类会打崩容器"
+  },
+  {
+   "endpoint": "PUT /collections/{name}（hnsw_config diff 域）",
+   "reason": "contract_misread — 契约把响应 schema(min=0)错绑 create 请求 schema(HnswConfigDiff min=10)，014/qlock 族两次命中同型"
+  },
+  {
+   "endpoint": "params.oversampling 等顶层未知键",
+   "reason": "request_param_typo — serde 无 deny_unknown_fields 静默丢弃未知键，探测不存在的参数路径恒 200"
+  },
+  {
+   "endpoint": "DELETE /collections/{name} (missing)",
+   "reason": "by_design_idempotent_delete — 源码 Ok(false)+官方 coalescing 测试锁定，契约 404 半边无 doc/spec 授权(contract_misread)"
+  }
+ ],
+ "key_learnings": [
+  "DEFECT 突破口=类型恒真类：datatype=int4（机械A直接CONFIRMED）、datetime range integer 界限、match 跨类型值——文档声称类型域 vs 静默接受越型值",
+  "geo lat=90 假阴性经 3 轮补证（unindexed 对照）翻案 DEFECT——极点边界类需 scroll/unindexed 双对照锚定",
+  "count(exact:false) estimator 族已在 R1+R2 双轮系统性排除（approximate_by_design 定案），勿再投入",
+  "f64→f32 溢出静默损坏(NaN score 排第一+违反 required schema)是可复现 DEFECT 形态——R3 确认(f32_overflow_vector_13，机械B=CONFIRMED)",
+  "类型恒真类(datetime range/f32 溢出)与 approximate estimator 类是两类不同族：前者真 DEFECT 高发，后者 by-design 高发",
+  "async 写路径验证不对称(wait=true 400 / wait=false 200静默丢弃)与 min_should 空 conditions match-all 为 R4 确认的 2 个新 DEFECT 形态"
+ ],
+ "high_value_endpoints": [
+  "POST /collections/{collection_name}/points/count (exact:false)",
+  "PUT /collections (datatype/vector 配置类)"
+ ],
+ "exhausted_directions": [
+  "count approximate estimator divergence",
+  "create 端点 null/Option 探针",
+  "scroll+order_by 分页",
+  "collections create hnsw_config diff 域边界(014+11)"
+ ],
+ "last_round_summary": "R4 攻 chunk_collections+delete（满 4 轮终止）：36 脚本→17 候选（含 2 漂移）→DEFECT 3(stdel004 race 500+vein15 min_should+vein17 async upsert)/NOT 13/NME 1(vein14 range截断转人工复核)。终态 41 链 DEFECT=8/NOT=32/NME=1。"
+}

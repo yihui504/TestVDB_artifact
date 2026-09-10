@@ -1,0 +1,2055 @@
+{
+  "_meta": {
+    "target": "qdrant",
+    "version": "v1.18.3",
+    "generated_at": "2026-08-06T11:20:46.545042+00:00",
+    "source_data": {
+      "total_issues_analyzed": 500,
+      "positive_issues": 284,
+      "negative_issues": 157,
+      "wontfix_issues": 59,
+      "merged_prs_analyzed": 186,
+      "bug_shapes_extracted": 11,
+      "total_bug_instances": 431,
+      "version_span": "v1.14.0 - v1.18.3"
+    },
+    "ttl_hours": 720,
+    "model_confidence": 0.9
+  },
+  "attack_surface": {
+    "high_priority_areas": [
+      {
+        "area": "Parameter Validation (Filter/Query APIs)",
+        "rationale": "88 historical instances - silent acceptance of invalid filter conditions (null filters, empty conditions, type mismatches) leading to Type1_IllegalSuccess and Type4_StateViolation",
+        "historical_defect_count": 88,
+        "bug_shapes": [
+          "state_consistency_Type4_StateViolation",
+          "parameter_validation_Type2_PoorDiagnostics"
+        ],
+        "defect_types": [
+          "Type1_IllegalSuccess",
+          "Type4_StateViolation",
+          "Type2_PoorDiagnostics"
+        ],
+        "mapped_contract_endpoints": [
+          "POST /collections/{collection}/points/query",
+          "POST /collections/{collection}/points/search",
+          "POST /collections/{collection}/points/count",
+          "POST /collections/{collection}/points/recommend"
+        ],
+        "blindspots": [
+          "BS-01",
+          "BS-04",
+          "BS-05"
+        ],
+        "attack_order": [
+          {
+            "strategy": "type_confusion",
+            "blindspot": "BS-01",
+            "constraints": [
+              "filter.should=null",
+              "filter.must_not=object",
+              "query=null",
+              "vectors={}",
+              "vectors=missing"
+            ]
+          },
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": [
+              "min_should with empty conditions and min_count > 0",
+              "value_count overflow conditions"
+            ]
+          }
+        ]
+      },
+      {
+        "area": "Concurrency & State Consistency (WAL/Resharding)",
+        "rationale": "67 historical instances - WAL replay resurrects deleted points, resharding causes state inconsistencies, concurrent worker safety issues",
+        "historical_defect_count": 67,
+        "bug_shapes": [
+          "concurrency_race_Type3_RuntimeFailure",
+          "state_consistency_Type4_StateViolation"
+        ],
+        "defect_types": [
+          "Type3_RuntimeFailure",
+          "Type4_StateViolation"
+        ],
+        "mapped_contract_endpoints": [
+          "POST /collections/{collection}/snapshots",
+          "DELETE /collections/{collection}/points",
+          "POST /collections/{collection}/points"
+        ],
+        "blindspots": [
+          "BS-02",
+          "BS-03"
+        ],
+        "attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "blindspot": "BS-03",
+            "constraints": [
+              "concurrent delete+upsert",
+              "WAL replay after delete",
+              "reshard during active writes"
+            ]
+          }
+        ]
+      },
+      {
+        "area": "Collection Creation & Configuration Validation",
+        "rationale": "55 historical instances - invalid shard_number and replication_factor values accepted, vectors config validation missing",
+        "historical_defect_count": 55,
+        "bug_shapes": [
+          "concurrency_race_Type3_RuntimeFailure",
+          "state_consistency_Type4_StateViolation"
+        ],
+        "defect_types": [
+          "Type1_IllegalSuccess",
+          "Type4_StateViolation"
+        ],
+        "mapped_contract_endpoints": [
+          "PUT /collections/{collection}",
+          "POST /collections/{collection}"
+        ],
+        "blindspots": [
+          "BS-01",
+          "BS-04"
+        ],
+        "attack_order": [
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": [
+              "shard_number=0",
+              "shard_number=-1",
+              "shard_number=999999",
+              "replication_factor=-1",
+              "ef_construct=0"
+            ]
+          },
+          {
+            "strategy": "type_confusion",
+            "blindspot": "BS-01",
+            "constraints": [
+              "vectors config missing",
+              "vectors={}",
+              "hnsw_config.m=0"
+            ]
+          }
+        ]
+      },
+      {
+        "area": "Error Handling & Panic Scenarios",
+        "rationale": "84 historical instances - empty vectors trigger panics, large limit values cause crashes, invalid input causes Type3_RuntimeFailure",
+        "historical_defect_count": 84,
+        "bug_shapes": [
+          "error_handling_Type3_RuntimeFailure_panic"
+        ],
+        "defect_types": [
+          "Type3_RuntimeFailure"
+        ],
+        "mapped_contract_endpoints": [
+          "POST /collections/{collection}/points",
+          "POST /collections/{collection}/points/search",
+          "POST /collections/{collection}/points/query"
+        ],
+        "blindspots": [
+          "BS-04",
+          "BS-02"
+        ],
+        "attack_order": [
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": [
+              "limit=0",
+              "limit=999999999",
+              "vector dimension > 65536",
+              "empty vector=[]",
+              "wait=false with empty vectors"
+            ]
+          }
+        ]
+      },
+      {
+        "area": "Snapshot & Recovery Operations",
+        "rationale": "42 historical instances - snapshot creation failures, recovery inconsistencies, Windows platform compatibility issues",
+        "historical_defect_count": 42,
+        "bug_shapes": [
+          "resource_management_Type3_RuntimeFailure",
+          "state_consistency_Type4_StateViolation"
+        ],
+        "defect_types": [
+          "Type3_RuntimeFailure",
+          "Type4_StateViolation"
+        ],
+        "mapped_contract_endpoints": [
+          "POST /collections/{collection}/snapshots",
+          "POST /collections/{collection}/snapshots/{snapshot}/recover"
+        ],
+        "blindspots": [
+          "BS-06"
+        ],
+        "attack_order": [
+          {
+            "strategy": "resource_exhaustion",
+            "blindspot": "BS-06",
+            "constraints": [
+              "snapshot during heavy writes",
+              "snapshot on large collections",
+              "recover across different platforms"
+            ]
+          }
+        ]
+      }
+    ],
+    "medium_priority_areas": [
+      {
+        "area": "Search Quality & HNSW Approximation",
+        "rationale": "HNSW approximation can return duplicates in offset-based pagination, indexed filters truncate fractional bounds",
+        "historical_defect_count": 25,
+        "bug_shapes": [
+          "state_consistency_Type4_StateViolation"
+        ],
+        "defect_types": [
+          "Type4_StateViolation"
+        ],
+        "mapped_contract_endpoints": [
+          "POST /collections/{collection}/points/search",
+          "POST /collections/{collection}/points/scroll"
+        ],
+        "blindspots": [
+          "BS-05"
+        ],
+        "attack_order": [
+          {
+            "strategy": "semantic",
+            "blindspot": "BS-05",
+            "constraints": [
+              "offset-based pagination with high ef",
+              "fractional bounds on indexed integer payload"
+            ]
+          }
+        ]
+      },
+      {
+        "area": "Payload Indexing",
+        "rationale": "Payload indexes return incorrect/incomplete results, index corruption after creation",
+        "historical_defect_count": 18,
+        "bug_shapes": [
+          "state_consistency_Type4_StateViolation",
+          "parameter_validation_Type2_PoorDiagnostics"
+        ],
+        "defect_types": [
+          "Type4_StateViolation",
+          "Type2_PoorDiagnostics"
+        ],
+        "mapped_contract_endpoints": [
+          "PUT /collections/{collection}/payload/index",
+          "POST /collections/{collection}/points/query"
+        ],
+        "blindspots": [
+          "BS-02"
+        ],
+        "attack_order": [
+          {
+            "strategy": "state_consistency",
+            "blindspot": "BS-02",
+            "constraints": [
+              "payload index with wait=true",
+              "complex nested filters with index"
+            ]
+          }
+        ]
+      }
+    ],
+    "low_priority_areas": [
+      {
+        "area": "Documentation & Examples",
+        "rationale": "Documentation typos, misleading error messages, example code issues",
+        "historical_defect_count": 25,
+        "bug_shapes": [],
+        "defect_types": [
+          "Type2_PoorDiagnostics"
+        ],
+        "mapped_contract_endpoints": [
+          "various"
+        ],
+        "blindspots": [],
+        "attack_order": []
+      }
+    ]
+  },
+  "cognitive_blindspots": {
+    "blindspots": [
+      {
+        "blindspot_id": "BS-01",
+        "name": "Parameter Type Coercion Trust",
+        "description": "Developer team assumes REST API framework/serde validates complex nested structures like filter conditions, but validation gaps allow null/object/array type mismatches through silently",
+        "evidence": {
+          "historical_defects": "88 instances across filter/query validation",
+          "representative_issues": [
+            9418,
+            9419,
+            9420,
+            9416,
+            9417
+          ],
+          "developer_acknowledgment_rate": "0.85 (85% of similar issues acknowledged as bugs)",
+          "recent_fixes": [
+            "#7218 - Fix missing REST API Filter validations",
+            "#7217 - Fix missing API validation for MinShould",
+            "#7220 - Fix missing REST API validations misc."
+          ]
+        },
+        "typical_manifestation": "filter.should=null, filter.must_not=object, query=null, vectors={} all accepted with 200 OK but produce undefined behavior",
+        "attack_strategies": [
+          "type_confusion_attack",
+          "missing_parameter_attack",
+          "boundary_value_attack"
+        ],
+        "defense_recommendation": "Implement strict schema validation at API boundary - reject null where array expected, validate nested structure types explicitly",
+        "cross_db_transferable": true,
+        "applicable_dbs": [
+          "milvus",
+          "qdrant",
+          "weaviate",
+          "pgvector"
+        ],
+        "severity_impact": "P0/P1",
+        "version_status": {
+          "v1.18.3": "PARTIALLY_FIXED",
+          "notes": "Multiple PRs (#7217-#7220) added validation but gaps remain for nested structures"
+        }
+      },
+      {
+        "blindspot_id": "BS-02",
+        "name": "Error Message Negligence",
+        "description": "Team prioritizes functional correctness over diagnostic quality - generic 'internal error' messages considered acceptable for edge cases",
+        "evidence": {
+          "historical_defects": "51 instances across poor diagnostics",
+          "representative_issues": [
+            9039,
+            9373,
+            7532
+          ],
+          "developer_acknowledgment_rate": "0.41 (41% - many deprioritized as enhancements)",
+          "recent_fixes": [
+            "#6998 - Show unique index types in error message",
+            "#7240 - Better immutable ID tracker load errors"
+          ]
+        },
+        "typical_manifestation": "Dimension-mismatched vectors silently discarded or return 'Internal Error' instead of 'Vector dimension mismatch'",
+        "attack_strategies": [
+          "error_quality_evaluation",
+          "diagnostics_gap_analysis"
+        ],
+        "defense_recommendation": "Establish error message quality standards - map internal errors to user-actionable messages",
+        "cross_db_transferable": true,
+        "applicable_dbs": [
+          "milvus",
+          "qdrant",
+          "weaviate",
+          "pgvector"
+        ],
+        "severity_impact": "P2",
+        "version_status": {
+          "v1.18.3": "PARTIALLY_ADDRESSED",
+          "notes": "Some improvements merged but comprehensive error quality not prioritized"
+        }
+      },
+      {
+        "blindspot_id": "BS-03",
+        "name": "Concurrency State Blindness",
+        "description": "Team underestimates data consistency impact of concurrent operations during resharding, WAL replay, and distributed scenarios",
+        "evidence": {
+          "historical_defects": "67 instances across state consistency",
+          "representative_issues": [
+            9575,
+            8709,
+            9586,
+            6623
+          ],
+          "developer_acknowledgment_rate": "0.72 (72% - critical state bugs acknowledged)",
+          "recent_fixes": [
+            "#7298 - Fix corruption due to concurrent update during snapshot",
+            "#7303 - Fix incorrect delete version on update"
+          ]
+        },
+        "typical_manifestation": "WAL replay resurrects deleted points, resharding causes replica count inconsistencies, concurrent updates corrupt state",
+        "attack_strategies": [
+          "state_consistency_attack",
+          "race_condition_exploration",
+          "concurrent_operation_sequence"
+        ],
+        "defense_recommendation": "Add transactional guards or version checks for state-changing operations, improve WAL replay idempotency",
+        "cross_db_transferable": true,
+        "applicable_dbs": [
+          "milvus",
+          "qdrant",
+          "weaviate",
+          "pgvector"
+        ],
+        "severity_impact": "P0/P1",
+        "version_status": {
+          "v1.18.3": "ONGOING_ISSUE",
+          "notes": "Multiple fixes merged but concurrency scenarios continue to surface"
+        }
+      },
+      {
+        "blindspot_id": "BS-04",
+        "name": "Boundary Default Optimism",
+        "description": "Team assumes users provide reasonable parameter values - boundary conditions (0, negative, extremely large) trusted to default or framework validation",
+        "evidence": {
+          "historical_defects": "55 instances across parameter validation",
+          "representative_issues": [
+            9149,
+            4221,
+            9017,
+            9027,
+            5483
+          ],
+          "developer_acknowledgment_rate": "0.68 (68% - most boundary issues acknowledged)",
+          "recent_fixes": [
+            "#7217 - MinShould validation",
+            "#7267 - Fix deadlock with empty collections"
+          ]
+        },
+        "typical_manifestation": "shard_number=0, ef_construct=0, limit=999999999 accepted and cause undefined behavior or panics",
+        "attack_strategies": [
+          "boundary_value_attack",
+          "negative_value_attack",
+          "extreme_value_attack"
+        ],
+        "defense_recommendation": "Explicit min/max validation for all numeric parameters at API entry point",
+        "cross_db_transferable": true,
+        "applicable_dbs": [
+          "milvus",
+          "qdrant",
+          "weaviate",
+          "pgvector"
+        ],
+        "severity_impact": "P1",
+        "version_status": {
+          "v1.18.3": "PARTIALLY_FIXED",
+          "notes": "Some parameters now validated but gaps remain for ef_construct, m, payload dimension"
+        }
+      },
+      {
+        "blindspot_id": "BS-05",
+        "name": "Documentation Implementation Drift",
+        "description": "API behavior diverges from documentation but updates aren't synchronized - team treats docs as aspirational not contractual",
+        "evidence": {
+          "historical_defects": "25 instances across documentation issues",
+          "representative_issues": [
+            5068,
+            4568,
+            3727
+          ],
+          "developer_acknowledgment_rate": "0.60 (60% - doc issues acknowledged but deprioritized)",
+          "recent_fixes": [
+            "#7175 - Fix anchor link for Demo projects",
+            "#7518 - Fix docs/DEVELOPMENT.md"
+          ]
+        },
+        "typical_manifestation": "Documents say X returns 400 but actual behavior is 200, or example code doesn't match current API",
+        "attack_strategies": [
+          "api_contract_validation",
+          "behavioral_drift_detection",
+          "documentation_audit"
+        ],
+        "defense_recommendation": "Automate API specification tests to catch documentation drift, treat docs as executable contracts",
+        "cross_db_transferable": true,
+        "applicable_dbs": [
+          "milvus",
+          "qdrant",
+          "weaviate",
+          "pgvector"
+        ],
+        "severity_impact": "P1/P2",
+        "version_status": {
+          "v1.18.3": "ONGOING",
+          "notes": "No systematic process to keep docs in sync with implementation"
+        }
+      },
+      {
+        "blindspot_id": "BS-06",
+        "name": "Platform Compatibility Neglect",
+        "description": "Core development happens on Linux - Windows/ARM64 edge cases not tested until users report issues",
+        "evidence": {
+          "historical_defects": "15 instances across platform-specific issues",
+          "representative_issues": [
+            3831,
+            4298,
+            5388,
+            9132,
+            7644,
+            7645,
+            7646
+          ],
+          "developer_acknowledgment_rate": "0.80 (80% - platform bugs acknowledged when reported)",
+          "recent_fixes": [
+            "#7690 - Hotfix for Windows ARM64 builds",
+            "#7479 - Avoid panics on empty metric families"
+          ]
+        },
+        "typical_manifestation": "jemalloc crashes on ARM64 large page sizes, snapshot creation fails on Windows Docker",
+        "attack_strategies": [
+          "platform_specific_testing",
+          "container_environment_exploration"
+        ],
+        "defense_recommendation": "Add Windows/ARM64 to CI test matrix, test on platform-specific Docker images",
+        "cross_db_transferable": true,
+        "applicable_dbs": [
+          "milvus",
+          "qdrant",
+          "weaviate"
+        ],
+        "severity_impact": "P2",
+        "version_status": {
+          "v1.18.3": "PARTIALLY_ADDRESSED",
+          "notes": "Some platform fixes merged but not in core CI pipeline"
+        }
+      },
+      {
+        "blindspot_id": "BS-07",
+        "name": "Resource Exhaustion Blindness",
+        "description": "Insufficient testing of resource limits - large collections, high cardinality, extreme dimensions not validated",
+        "evidence": {
+          "historical_defects": "42 instances across resource management",
+          "representative_issues": [
+            4802,
+            4689,
+            4698,
+            6961,
+            1656
+          ],
+          "developer_acknowledgment_rate": "0.55 (55% - resource issues often marked as enhancements)",
+          "recent_fixes": [
+            "#7241 - Fix deadlock during streaming shard snapshot",
+            "#7248 - Fix non visible points during snapshots"
+          ]
+        },
+        "typical_manifestation": "Snapshot creation timeouts on large collections, OOM with high-dimensional vectors",
+        "attack_strategies": [
+          "resource_exhaustion_attack",
+          "large_scale_testing",
+          "memory_limit_probing"
+        ],
+        "defense_recommendation": "Add performance benchmarks with large datasets, test with 100M+ point collections",
+        "cross_db_transferable": true,
+        "applicable_dbs": [
+          "milvus",
+          "qdrant",
+          "weaviate",
+          "pgvector"
+        ],
+        "severity_impact": "P2",
+        "version_status": {
+          "v1.18.3": "PARTIALLY_ADDRESSED",
+          "notes": "Some resource fixes but no systematic large-scale testing"
+        }
+      },
+      {
+        "blindspot_id": "BS-08",
+        "name": "Idempotent Operation Assumption",
+        "description": "Team assumes retry/async operations (wait=false) are safe without validating error visibility",
+        "evidence": {
+          "historical_defects": "18 instances across async operations",
+          "representative_issues": [
+            4925,
+            9045
+          ],
+          "developer_acknowledgment_rate": "0.45 (45% - many marked as known limitations)",
+          "recent_fixes": [
+            "#7577 - Fix WAL handling on consensus snapshot"
+          ]
+        },
+        "typical_manifestation": "wait=false operations return 202 but fail silently - errors not logged",
+        "attack_strategies": [
+          "async_operation_validation",
+          "error_visibility_probe",
+          "wait_false_exploitation"
+        ],
+        "defense_recommendation": "Log all async operation errors, expose error status via separate endpoint",
+        "cross_db_transferable": true,
+        "applicable_dbs": [
+          "milvus",
+          "qdrant",
+          "weaviate"
+        ],
+        "severity_impact": "P2/P3",
+        "version_status": {
+          "v1.18.3": "KNOWN_LIMITATION",
+          "notes": "Team acknowledges but deprioritizes async error visibility"
+        }
+      },
+      {
+        "blindspot_id": "BS-09",
+        "name": "Filter Index Assumption",
+        "description": "Assumes payload indexes work correctly for all filter types - doesn't test edge cases like empty conditions, nested structures",
+        "evidence": {
+          "historical_defects": "18 instances across payload indexing",
+          "representative_issues": [
+            9365,
+            9373,
+            9050,
+            8723
+          ],
+          "developer_acknowledgment_rate": "0.62 (62% - index bugs acknowledged)",
+          "recent_fixes": [
+            "#7252 - Fix phrase match to not match with unknown tokens",
+            "#7263 - Fix missing flush, flush before sync"
+          ]
+        },
+        "typical_manifestation": "Payload index returns wrong results for nested queries, is_empty misses cleared fields",
+        "attack_strategies": [
+          "index_correctness_validation",
+          "nested_filter_testing",
+          "payload_index_probing"
+        ],
+        "defense_recommendation": "Add comprehensive filter index tests with edge cases, validate index vs non-index results match",
+        "cross_db_transferable": true,
+        "applicable_dbs": [
+          "milvus",
+          "qdrant",
+          "weaviate"
+        ],
+        "severity_impact": "P1/P2",
+        "version_status": {
+          "v1.18.3": "ONGOING",
+          "notes": "Multiple index fixes but systematic testing lacking"
+        }
+      },
+      {
+        "blindspot_id": "BS-10",
+        "name": "Silent Failure Tolerance",
+        "description": "Higher tolerance for silent failures (missing point IDs in recommend, dimension mismatch) vs explicit errors",
+        "evidence": {
+          "historical_defects": "12 instances across silent failures",
+          "representative_issues": [
+            9390,
+            9039,
+            2557
+          ],
+          "developer_acknowledgment_rate": "0.33 (33% - many marked as working as designed)",
+          "recent_fixes": [
+            "#7234 - Fix RecommendExample conversion to support new format"
+          ]
+        },
+        "typical_manifestation": "recommend API with missing point IDs returns empty results instead of error",
+        "attack_strategies": [
+          "silent_failure_detection",
+          "implicit_assumption_testing"
+        ],
+        "defense_recommendation": "Fail fast with explicit errors for invalid input vs silent success",
+        "cross_db_transferable": true,
+        "applicable_dbs": [
+          "milvus",
+          "qdrant",
+          "weaviate"
+        ],
+        "severity_impact": "P2/P3",
+        "version_status": {
+          "v1.18.3": "DESIGN_CHOICE",
+          "notes": "Team prefers lenient APIs in some cases"
+        }
+      }
+    ],
+    "attack_strategy_mapping": {
+      "BS-01": {
+        "primary_attack_agent": "attack-boundary",
+        "strategy_focus": "Type confusion + missing parameter validation",
+        "test_parameters": [
+          "filter.should",
+          "filter.must_not",
+          "query",
+          "vectors config"
+        ],
+        "test_values": [
+          "null",
+          "{}",
+          "object instead of array",
+          "missing"
+        ]
+      },
+      "BS-02": {
+        "primary_attack_agent": "attack-semantic",
+        "strategy_focus": "Error message quality evaluation",
+        "test_parameters": [
+          "invalid vectors",
+          "dimension mismatches",
+          "constraint violations"
+        ],
+        "evaluation_criteria": [
+          "Is error message actionable?",
+          "Does it specify the constraint?",
+          "Is it generic or specific?"
+        ]
+      },
+      "BS-03": {
+        "primary_attack_agent": "attack-state",
+        "strategy_focus": "Concurrent operation state consistency",
+        "test_operations": [
+          "concurrent delete+upsert",
+          "WAL replay after delete",
+          "reshard during writes"
+        ],
+        "verification": [
+          "Count before/after",
+          "Point ID persistence",
+          "Replica consistency"
+        ]
+      },
+      "BS-04": {
+        "primary_attack_agent": "attack-boundary",
+        "strategy_focus": "Boundary value testing",
+        "test_parameters": [
+          "shard_number",
+          "replication_factor",
+          "ef_construct",
+          "m",
+          "limit",
+          "offset"
+        ],
+        "test_values": [
+          "0",
+          "-1",
+          "999999",
+          "max_int",
+          "very large values"
+        ]
+      },
+      "BS-05": {
+        "primary_attack_agent": "attack-semantic",
+        "strategy_focus": "API contract validation vs documentation",
+        "test_endpoints": [
+          "all documented endpoints"
+        ],
+        "verification": [
+          "Compare actual vs documented behavior",
+          "Test example code from docs"
+        ]
+      },
+      "BS-06": {
+        "primary_attack_agent": "attack-boundary",
+        "strategy_focus": "Platform-specific testing",
+        "test_environments": [
+          "Windows Docker",
+          "ARM64",
+          "aarch64"
+        ],
+        "test_operations": [
+          "snapshot creation",
+          "collection creation",
+          "search"
+        ]
+      },
+      "BS-07": {
+        "primary_attack_agent": "attack-state",
+        "strategy_focus": "Resource exhaustion testing",
+        "test_scenarios": [
+          "large collections (100M+ points)",
+          "high dimensions (65536+)",
+          "many collections (1000+)"
+        ],
+        "verification": [
+          "Memory usage",
+          "Operation timeout",
+          "Error handling"
+        ]
+      },
+      "BS-08": {
+        "primary_attack_agent": "attack-semantic",
+        "strategy_focus": "Async operation validation",
+        "test_operations": [
+          "wait=false upsert",
+          "wait=false snapshot"
+        ],
+        "verification": [
+          "Check operation actually succeeded",
+          "Verify error logging"
+        ]
+      },
+      "BS-09": {
+        "primary_attack_agent": "attack-semantic",
+        "strategy_focus": "Filter index correctness",
+        "test_filters": [
+          "nested queries",
+          "empty conditions",
+          "is_empty on cleared fields"
+        ],
+        "verification": [
+          "Compare indexed vs non-indexed results",
+          "Check for result inconsistencies"
+        ]
+      },
+      "BS-10": {
+        "primary_attack_agent": "attack-semantic",
+        "strategy_focus": "Silent failure detection",
+        "test_operations": [
+          "recommend with missing IDs",
+          "upsert with wrong dimensions"
+        ],
+        "verification": [
+          "Check if error returned",
+          "Check if result indicates failure"
+        ]
+      }
+    }
+  },
+  "attack_priority_map": {
+    "endpoints": [
+      {
+        "endpoint": "POST /collections/{collection}/points/query",
+        "overall_priority": "critical",
+        "priority_factors": {
+          "blindspot_coverage": [
+            "BS-01",
+            "BS-04",
+            "BS-05"
+          ],
+          "historical_defect_count": 67,
+          "contract_constraint_count": 15,
+          "cross_db_vulnerability_score": 0.92,
+          "version_impact": "high_still_vulnerable"
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "type_confusion",
+            "constraints": [
+              "filter.should=null",
+              "filter.must_not=object",
+              "query=null"
+            ],
+            "blindspot": "BS-01",
+            "reference_issue": 9420,
+            "severity": "High"
+          },
+          {
+            "strategy": "boundary",
+            "constraints": [
+              "limit=0",
+              "limit=999999999",
+              "offset with large values"
+            ],
+            "blindspot": "BS-04",
+            "reference_issue": 7949,
+            "severity": "High"
+          },
+          {
+            "strategy": "semantic",
+            "constraints": [
+              "min_should with empty conditions",
+              "nested filter validation"
+            ],
+            "blindspot": "BS-05",
+            "reference_issue": 9369,
+            "severity": "Medium"
+          }
+        ]
+      },
+      {
+        "endpoint": "PUT /collections/{collection}",
+        "overall_priority": "critical",
+        "priority_factors": {
+          "blindspot_coverage": [
+            "BS-01",
+            "BS-04"
+          ],
+          "historical_defect_count": 55,
+          "contract_constraint_count": 12,
+          "cross_db_vulnerability_score": 0.88,
+          "version_impact": "medium_partially_fixed"
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "type_confusion",
+            "constraints": [
+              "vectors config missing",
+              "vectors={}",
+              "hnsw_config={}"
+            ],
+            "blindspot": "BS-01",
+            "reference_issue": 9416,
+            "severity": "High"
+          },
+          {
+            "strategy": "boundary",
+            "constraints": [
+              "shard_number=0",
+              "shard_number=-1",
+              "replication_factor=-1",
+              "ef_construct=0"
+            ],
+            "blindspot": "BS-04",
+            "reference_issue": 9149,
+            "severity": "High"
+          }
+        ]
+      },
+      {
+        "endpoint": "POST /collections/{collection}/points",
+        "overall_priority": "critical",
+        "priority_factors": {
+          "blindspot_coverage": [
+            "BS-01",
+            "BS-04",
+            "BS-07"
+          ],
+          "historical_defect_count": 42,
+          "contract_constraint_count": 10,
+          "cross_db_vulnerability_score": 0.85,
+          "version_impact": "high_still_vulnerable"
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "boundary",
+            "constraints": [
+              "empty vector=[]",
+              "dimension > 65536",
+              "wait=false with empty vectors"
+            ],
+            "blindspot": "BS-04",
+            "reference_issue": 9045,
+            "severity": "Critical"
+          },
+          {
+            "strategy": "resource_exhaustion",
+            "constraints": [
+              "upsert 1M points",
+              "high dimension vectors"
+            ],
+            "blindspot": "BS-07",
+            "reference_issue": 4532,
+            "severity": "Medium"
+          }
+        ]
+      },
+      {
+        "endpoint": "POST /collections/{collection}/points/search",
+        "overall_priority": "high",
+        "priority_factors": {
+          "blindspot_coverage": [
+            "BS-01",
+            "BS-04",
+            "BS-05"
+          ],
+          "historical_defect_count": 35,
+          "contract_constraint_count": 9,
+          "cross_db_vulnerability_score": 0.8,
+          "version_impact": "medium_partially_fixed"
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "type_confusion",
+            "constraints": [
+              "filter=null",
+              "vectors config invalid"
+            ],
+            "blindspot": "BS-01",
+            "reference_issue": 9418,
+            "severity": "High"
+          },
+          {
+            "strategy": "boundary",
+            "constraints": [
+              "limit=0",
+              "limit extreme value",
+              "ef construct validation"
+            ],
+            "blindspot": "BS-04",
+            "reference_issue": 4321,
+            "severity": "High"
+          },
+          {
+            "strategy": "semantic",
+            "constraints": [
+              "HNSW pagination duplicates",
+              "indexed filter bounds"
+            ],
+            "blindspot": "BS-05",
+            "reference_issue": 9049,
+            "severity": "Medium"
+          }
+        ]
+      },
+      {
+        "endpoint": "POST /collections/{collection}/points/recommend",
+        "overall_priority": "high",
+        "priority_factors": {
+          "blindspot_coverage": [
+            "BS-01",
+            "BS-10"
+          ],
+          "historical_defect_count": 15,
+          "contract_constraint_count": 5,
+          "cross_db_vulnerability_score": 0.75,
+          "version_impact": "medium_known_limitation"
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "semantic",
+            "constraints": [
+              "missing positive point IDs",
+              "missing negative point IDs"
+            ],
+            "blindspot": "BS-10",
+            "reference_issue": 9390,
+            "severity": "Medium"
+          },
+          {
+            "strategy": "type_confusion",
+            "constraints": [
+              "invalid filter structure"
+            ],
+            "blindspot": "BS-01",
+            "reference_issue": 9390,
+            "severity": "Medium"
+          }
+        ]
+      },
+      {
+        "endpoint": "POST /collections/{collection}/snapshots",
+        "overall_priority": "medium",
+        "priority_factors": {
+          "blindspot_coverage": [
+            "BS-03",
+            "BS-06",
+            "BS-07"
+          ],
+          "historical_defect_count": 42,
+          "contract_constraint_count": 7,
+          "cross_db_vulnerability_score": 0.7,
+          "version_impact": "low_mostly_fixed"
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "constraints": [
+              "snapshot during writes",
+              "snapshot during resharding"
+            ],
+            "blindspot": "BS-03",
+            "reference_issue": 7298,
+            "severity": "High"
+          },
+          {
+            "strategy": "platform_specific",
+            "constraints": [
+              "Windows Docker snapshot",
+              "large collection snapshot"
+            ],
+            "blindspot": "BS-06",
+            "reference_issue": 9132,
+            "severity": "Medium"
+          }
+        ]
+      },
+      {
+        "endpoint": "POST /collections/{collection}/points/count",
+        "overall_priority": "medium",
+        "priority_factors": {
+          "blindspot_coverage": [
+            "BS-01",
+            "BS-09"
+          ],
+          "historical_defect_count": 12,
+          "contract_constraint_count": 4,
+          "cross_db_vulnerability_score": 0.68,
+          "version_impact": "low_partially_fixed"
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "type_confusion",
+            "constraints": [
+              "filter with null conditions",
+              "empty filter with min_should"
+            ],
+            "blindspot": "BS-01",
+            "reference_issue": 9369,
+            "severity": "Medium"
+          },
+          {
+            "strategy": "semantic",
+            "constraints": [
+              "payload index cardinality estimation"
+            ],
+            "blindspot": "BS-09",
+            "reference_issue": 9373,
+            "severity": "Medium"
+          }
+        ]
+      },
+      {
+        "endpoint": "DELETE /collections/{collection}/points",
+        "overall_priority": "medium",
+        "priority_factors": {
+          "blindspot_coverage": [
+            "BS-03"
+          ],
+          "historical_defect_count": 25,
+          "contract_constraint_count": 3,
+          "cross_db_vulnerability_score": 0.72,
+          "version_impact": "medium_ongoing"
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "constraints": [
+              "concurrent delete + upsert",
+              "delete during WAL replay"
+            ],
+            "blindspot": "BS-03",
+            "reference_issue": 9575,
+            "severity": "Critical"
+          },
+          {
+            "strategy": "boundary",
+            "constraints": [
+              "delete with empty selector"
+            ],
+            "blindspot": "BS-04",
+            "reference_issue": 0,
+            "severity": "Low"
+          }
+        ]
+      },
+      {
+        "endpoint": "POST /collections/{collection}/scroll",
+        "overall_priority": "low",
+        "priority_factors": {
+          "blindspot_coverage": [
+            "BS-05"
+          ],
+          "historical_defect_count": 8,
+          "contract_constraint_count": 3,
+          "cross_db_vulnerability_score": 0.55,
+          "version_impact": "low_design_choice"
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "semantic",
+            "constraints": [
+              "HNSW pagination with offset"
+            ],
+            "blindspot": "BS-05",
+            "reference_issue": 9523,
+            "severity": "Low"
+          }
+        ]
+      }
+    ],
+    "global_strategy_weights": {
+      "boundary_attacks": 0.35,
+      "type_confusion_attacks": 0.25,
+      "state_consistency_attacks": 0.2,
+      "semantic_contract_attacks": 0.2
+    },
+    "high_value_parameters": {
+      "filter.should": {
+        "type": "type_confusion",
+        "blindspot": "BS-01",
+        "test_values": [
+          "null",
+          "object",
+          "empty array"
+        ],
+        "expected_behavior": "Should reject null, require array",
+        "historical_issues": [
+          9419,
+          9418
+        ]
+      },
+      "query": {
+        "type": "type_confusion",
+        "blindspot": "BS-01",
+        "test_values": [
+          "null",
+          "empty object",
+          "invalid structure"
+        ],
+        "expected_behavior": "Should reject null query",
+        "historical_issues": [
+          9420
+        ]
+      },
+      "vectors": {
+        "type": "type_confusion",
+        "blindspot": "BS-01",
+        "test_values": [
+          "null",
+          "{}",
+          "missing"
+        ],
+        "expected_behavior": "Should require valid vectors config",
+        "historical_issues": [
+          9416,
+          9417
+        ]
+      },
+      "shard_number": {
+        "type": "boundary",
+        "blindspot": "BS-04",
+        "test_values": [
+          "0",
+          "-1",
+          "999999"
+        ],
+        "expected_behavior": "Should require >= 1",
+        "historical_issues": [
+          9149
+        ]
+      },
+      "limit": {
+        "type": "boundary",
+        "blindspot": "BS-04",
+        "test_values": [
+          "0",
+          "-1",
+          "999999999"
+        ],
+        "expected_behavior": "Should require >= 1, enforce max",
+        "historical_issues": [
+          5483,
+          4321
+        ]
+      }
+    }
+  },
+  "top_attack_vectors": [
+    {
+      "rank": 1,
+      "shape_id": "state_consistency_Type4_StateViolation",
+      "endpoint": "POST /collections/{collection}/points/query",
+      "method": "POST",
+      "specific_input": "{\"filter\": {\"should\": null}, \"query\": null}",
+      "expected_behavior": "Should return 400 Bad Request - null filter condition is invalid",
+      "actual_observation_hint": "Returns 200 OK with empty or all-points result",
+      "reference_issue": 9420,
+      "severity": "High",
+      "blindspot": "BS-01",
+      "attack_strategy": "type_confusion",
+      "version_status": "v1.18.3_STILL_VULNERABLE"
+    },
+    {
+      "rank": 2,
+      "shape_id": "state_consistency_Type4_StateViolation",
+      "endpoint": "POST /collections/{collection}/points/query",
+      "method": "POST",
+      "specific_input": "{\"filter\": {\"must_not\": {\"key\": \"value\"}}}",
+      "expected_behavior": "Should return 400 Bad Request - must_not requires array",
+      "actual_observation_hint": "Returns 200 OK - object type silently accepted",
+      "reference_issue": 9419,
+      "severity": "High",
+      "blindspot": "BS-01",
+      "attack_strategy": "type_confusion",
+      "version_status": "v1.18.3_PARTIALLY_FIXED"
+    },
+    {
+      "rank": 3,
+      "shape_id": "error_handling_Type3_RuntimeFailure_panic",
+      "endpoint": "POST /collections/{collection}/points",
+      "method": "POST",
+      "specific_input": "{\"points\": [{\"vector\": [], \"id\": 1}], \"wait\": false}",
+      "expected_behavior": "Should return 400 Bad Request - empty vector invalid",
+      "actual_observation_hint": "Server panic with zero-length assertion failure",
+      "reference_issue": 9045,
+      "severity": "Critical",
+      "blindspot": "BS-04",
+      "attack_strategy": "boundary",
+      "version_status": "v1.18.3_STILL_VULNERABLE"
+    },
+    {
+      "rank": 4,
+      "shape_id": "state_consistency_Type4_StateViolation",
+      "endpoint": "PUT /collections/{collection}",
+      "method": "PUT",
+      "specific_input": "{\"vectors\": {}}",
+      "expected_behavior": "Should return 400 Bad Request - empty vectors config invalid",
+      "actual_observation_hint": "Returns 200 OK - creates unusable collection",
+      "reference_issue": 9416,
+      "severity": "High",
+      "blindspot": "BS-01",
+      "attack_strategy": "type_confusion",
+      "version_status": "v1.18.3_STILL_VULNERABLE"
+    },
+    {
+      "rank": 5,
+      "shape_id": "state_consistency_Type4_StateViolation",
+      "endpoint": "PUT /collections/{collection}",
+      "method": "PUT",
+      "specific_input": "{\"vectors\": {}, \"shard_number\": 0}",
+      "expected_behavior": "Should return 400 Bad Request - invalid shard number",
+      "actual_observation_hint": "Returns 200 OK - accepts invalid config",
+      "reference_issue": 9149,
+      "severity": "High",
+      "blindspot": "BS-04",
+      "attack_strategy": "boundary",
+      "version_status": "v1.18.3_PARTIALLY_FIXED"
+    },
+    {
+      "rank": 6,
+      "shape_id": "concurrency_race_Type3_RuntimeFailure",
+      "endpoint": "POST /collections/{collection}/points",
+      "method": "POST",
+      "specific_input": "Concurrent DELETE + WAL replay sequence",
+      "expected_behavior": "Deleted points should stay deleted",
+      "actual_observation_hint": "WAL replay resurrects deleted points",
+      "reference_issue": 9575,
+      "severity": "Critical",
+      "blindspot": "BS-03",
+      "attack_strategy": "concurrent_state",
+      "version_status": "v1.18.3_ONGOING_ISSUE"
+    },
+    {
+      "rank": 7,
+      "shape_id": "error_handling_Type3_RuntimeFailure_panic",
+      "endpoint": "POST /collections/{collection}/points/search",
+      "method": "POST",
+      "specific_input": "{\"limit\": 999999999, \"vector\": [0.1, 0.2, ...]}",
+      "expected_behavior": "Should return 400 Bad Request - limit exceeds max",
+      "actual_observation_hint": "SIGABRT crash with assertion failure",
+      "reference_issue": 4321,
+      "severity": "Critical",
+      "blindspot": "BS-04",
+      "attack_strategy": "boundary",
+      "version_status": "v1.18.3_PARTIALLY_FIXED"
+    },
+    {
+      "rank": 8,
+      "shape_id": "state_consistency_Type4_StateViolation",
+      "endpoint": "POST /collections/{collection}/points/query",
+      "method": "POST",
+      "specific_input": "{\"min_should\": {\"conditions\": [], \"min_count\": 1}}",
+      "expected_behavior": "Should return 400 or apply match-all logic explicitly",
+      "actual_observation_hint": "Optimized to match-all without documentation",
+      "reference_issue": 9369,
+      "severity": "Medium",
+      "blindspot": "BS-04",
+      "attack_strategy": "boundary",
+      "version_status": "v1.18.3_PARTIALLY_FIXED"
+    },
+    {
+      "rank": 9,
+      "shape_id": "state_consistency_Type4_StateViolation",
+      "endpoint": "POST /collections/{collection}/points/recommend",
+      "method": "POST",
+      "specific_input": "{\"positive\": [\"missing_id_1\"], \"negative\": []}",
+      "expected_behavior": "Should return 400 - point IDs don't exist",
+      "actual_observation_hint": "Silently ignores missing IDs, returns empty results",
+      "reference_issue": 9390,
+      "severity": "Medium",
+      "blindspot": "BS-10",
+      "attack_strategy": "semantic",
+      "version_status": "v1.18.3_KNOWN_LIMITATION"
+    },
+    {
+      "rank": 10,
+      "shape_id": "parameter_validation_Type2_PoorDiagnostics",
+      "endpoint": "POST /collections/{collection}/points",
+      "method": "POST",
+      "specific_input": "{\"points\": [{\"vector\": [0.1], \"id\": 1}], \"dimension\": 10}",
+      "expected_behavior": "Should return error with 'vector dimension mismatch' message",
+      "actual_observation_hint": "Silently discards vectors or returns generic error",
+      "reference_issue": 9039,
+      "severity": "Medium",
+      "blindspot": "BS-02",
+      "attack_strategy": "error_quality_evaluation",
+      "version_status": "v1.18.3_PARTIALLY_ADDRESSED"
+    },
+    {
+      "rank": 11,
+      "shape_id": "concurrency_race_Type3_RuntimeFailure",
+      "endpoint": "POST /collections/{collection}/snapshots",
+      "method": "POST",
+      "specific_input": "Snapshot during concurrent upsert operations",
+      "expected_behavior": "Snapshot should be consistent with a point in time",
+      "actual_observation_hint": "Snapshot corruption or inconsistent state",
+      "reference_issue": 7298,
+      "severity": "High",
+      "blindspot": "BS-03",
+      "attack_strategy": "concurrent_state",
+      "version_status": "v1.18.3_PARTIALLY_FIXED"
+    },
+    {
+      "rank": 12,
+      "shape_id": "resource_management_Type3_RuntimeFailure",
+      "endpoint": "POST /collections/{collection}/snapshots",
+      "method": "POST",
+      "specific_input": "Snapshot creation on 100GB+ collection",
+      "expected_behavior": "Should complete successfully or timeout gracefully",
+      "actual_observation_hint": "ReadTimeout or process hangs",
+      "reference_issue": 4802,
+      "severity": "Medium",
+      "blindspot": "BS-07",
+      "attack_strategy": "resource_exhaustion",
+      "version_status": "v1.18.3_KNOWN_LIMITATION"
+    },
+    {
+      "rank": 13,
+      "shape_id": "state_consistency_Type4_StateViolation",
+      "endpoint": "POST /collections/{collection}/points/search",
+      "method": "POST",
+      "specific_input": "Indexed integer filter with fractional bounds",
+      "expected_behavior": "Should reject or correctly handle fractional bounds",
+      "actual_observation_hint": "Truncates bounds, returns points outside range",
+      "reference_issue": 9049,
+      "severity": "Medium",
+      "blindspot": "BS-09",
+      "attack_strategy": "semantic",
+      "version_status": "v1.18.3_KNOWN_ISSUE"
+    },
+    {
+      "rank": 14,
+      "shape_id": "state_consistency_Type4_StateViolation",
+      "endpoint": "PUT /collections/{collection}",
+      "method": "PUT",
+      "specific_input": "Missing vectors field in collection config",
+      "expected_behavior": "Should return 400 - vectors config required",
+      "actual_observation_hint": "Returns 200 OK - creates unusable collection",
+      "reference_issue": 9417,
+      "severity": "High",
+      "blindspot": "BS-01",
+      "attack_strategy": "type_confusion",
+      "version_status": "v1.18.3_STILL_VULNERABLE"
+    },
+    {
+      "rank": 15,
+      "shape_id": "concurrency_race_Type3_RuntimeFailure",
+      "endpoint": "POST /collections/{collection}/points/query",
+      "method": "POST",
+      "specific_input": "Query during shard resharding operation",
+      "expected_behavior": "Should return consistent results or error",
+      "actual_observation_hint": "Returns incomplete or inconsistent results",
+      "reference_issue": 8709,
+      "severity": "High",
+      "blindspot": "BS-03",
+      "attack_strategy": "concurrent_state",
+      "version_status": "v1.18.3_PARTIALLY_FIXED"
+    },
+    {
+      "rank": 16,
+      "shape_id": "parameter_validation_Type2_PoorDiagnostics",
+      "endpoint": "POST /collections/{collection}/points/query",
+      "method": "POST",
+      "specific_input": "Complex nested filter with payload index",
+      "expected_behavior": "Should return correct filtered results",
+      "actual_observation_hint": "Returns only 2/25 matching points",
+      "reference_issue": 9373,
+      "severity": "High",
+      "blindspot": "BS-09",
+      "attack_strategy": "semantic",
+      "version_status": "v1.18.3_KNOWN_ISSUE"
+    },
+    {
+      "rank": 17,
+      "shape_id": "state_consistency_Type4_StateViolation",
+      "endpoint": "POST /collections/{collection}/points/search",
+      "method": "POST",
+      "specific_input": "HNSW search with offset > 0 and high ef",
+      "expected_behavior": "Should return unique points across pages",
+      "actual_observation_hint": "Returns duplicate points across pages",
+      "reference_issue": 9523,
+      "severity": "Low",
+      "blindspot": "BS-05",
+      "attack_strategy": "semantic",
+      "version_status": "v1.18.3_BY_DESIGN"
+    },
+    {
+      "rank": 18,
+      "shape_id": "state_consistency_Type4_StateViolation",
+      "endpoint": "DELETE /collections/{collection}/points",
+      "method": "DELETE",
+      "specific_input": "Delete immediately after upsert with wait=false",
+      "expected_behavior": "Delete should eventually succeed",
+      "actual_observation_hint": "Delete may not execute or cause corruption",
+      "reference_issue": 6556,
+      "severity": "Medium",
+      "blindspot": "BS-03",
+      "attack_strategy": "concurrent_state",
+      "version_status": "v1.18.3_PARTIALLY_FIXED"
+    },
+    {
+      "rank": 19,
+      "shape_id": "parameter_validation_Type2_PoorDiagnostics",
+      "endpoint": "POST /collections/{collection}/points/count",
+      "method": "POST",
+      "specific_input": "Payload filter with is_empty on indexed field",
+      "expected_behavior": "Should correctly count empty vs non-empty",
+      "actual_observation_hint": "Misses cleared payload fields after index rebuild",
+      "reference_issue": 8723,
+      "severity": "Medium",
+      "blindspot": "BS-09",
+      "attack_strategy": "semantic",
+      "version_status": "v1.18.3_KNOWN_ISSUE"
+    },
+    {
+      "rank": 20,
+      "shape_id": "resource_management_Type3_RuntimeFailure",
+      "endpoint": "POST /collections/{collection}/snapshots",
+      "method": "POST",
+      "specific_input": "Snapshot on Windows Docker ARM64",
+      "expected_behavior": "Should create snapshot successfully",
+      "actual_observation_hint": "Fails with platform-specific error",
+      "reference_issue": 9132,
+      "severity": "Medium",
+      "blindspot": "BS-06",
+      "attack_strategy": "platform_specific",
+      "version_status": "v1.18.3_PARTIALLY_FIXED"
+    }
+  ],
+  "defect_criteria": {
+    "confirmed_defect_patterns": [
+      {
+        "pattern": "filter.should=null silently accepted in query/search",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "High",
+        "rationale": "Issues #9418, #9420 - developer confirmed null filter should be rejected but is silently treated as no-filter"
+      },
+      {
+        "pattern": "query=null returns all points instead of being rejected",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "High",
+        "rationale": "Issue #9420 - invalid null query accepted, returns unexpected results"
+      },
+      {
+        "pattern": "vectors={} or missing vectors config accepted during collection creation",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "High",
+        "rationale": "Issues #9416, #9417 - creates unusable collections, should be rejected at creation time"
+      },
+      {
+        "pattern": "filter.must_not accepts object instead of array",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "High",
+        "rationale": "Issue #9419 - type mismatch silently ignored, should validate array type"
+      },
+      {
+        "pattern": "WAL replay resurrects filter-deleted points",
+        "classification": "Type4_StateViolation",
+        "severity_default": "Critical",
+        "rationale": "Issue #9575 - deleted points reappear after WAL replay, fundamental state consistency violation"
+      },
+      {
+        "pattern": "empty vector [] with wait=false triggers panic",
+        "classification": "Type3_RuntimeFailure",
+        "severity_default": "Critical",
+        "rationale": "Issue #9045 - zero-length assertion failure causes server crash"
+      },
+      {
+        "pattern": "shard_number=0 or negative values accepted",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "High",
+        "rationale": "Issue #9149 - invalid shard configuration should be rejected"
+      },
+      {
+        "pattern": "recommend API silently ignores missing positive/negative point IDs",
+        "classification": "Type4_StateViolation",
+        "severity_default": "Medium",
+        "rationale": "Issue #9390 - silent failure instead of explicit error"
+      }
+    ],
+    "by_design_behaviors": [
+      {
+        "pattern": "HNSW approximation may return duplicate points across offset-based pagination",
+        "specific_example": "POST /collections/{collection}/points/search with offset=10, limit=10 can return the same point in page 1 and page 2 due to approximate nearest neighbor graph",
+        "source_issue_numbers": [
+          9523
+        ],
+        "affected_endpoints": [
+          "POST /collections/{collection}/points/search",
+          "POST /collections/{collection}/points/scroll"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Issue #9523 - maintainer confirmed this is a known limitation of HNSW approximate search, not a defect"
+      },
+      {
+        "pattern": "jemalloc crashes with 'Unsupported system page size' on ARM64/aarch64",
+        "specific_example": "qdrant container crashes on ARM64 with large page sizes (64KB) configured at OS level - jemalloc limitation",
+        "source_issue_numbers": [
+          3831,
+          4298,
+          6512,
+          7246
+        ],
+        "affected_endpoints": [
+          "startup",
+          "all endpoints"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "External jemalloc dependency limitation - maintainer acknowledged but deprioritized as infrastructure constraint"
+      },
+      {
+        "pattern": "Snapshot creation timeout/ReadTimeout on large collections",
+        "specific_example": "Python client create_snapshot returns ReadTimeout when creating snapshot on large (>100GB) collections",
+        "source_issue_numbers": [
+          4802
+        ],
+        "affected_endpoints": [
+          "POST /collections/{collection}/snapshots"
+        ],
+        "verdict": "VERIFY_FIRST",
+        "rationale": "May be resource exhaustion vs defect - check if collection is truly large or if snapshot process is stuck"
+      },
+      {
+        "pattern": "Idempotent DELETE returns 200 even if point doesn't exist",
+        "specific_example": "DELETE /collections/{collection}/points/{id} returns 200 OK even when point ID was never inserted",
+        "source_issue_numbers": [],
+        "affected_endpoints": [
+          "DELETE /collections/{collection}/points"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "RESTful idempotent delete design - 200 OK is correct response for successful idempotent operation"
+      },
+      {
+        "pattern": "wait=false operations succeed but errors are not logged",
+        "specific_example": "POST /collections/{collection}/points with wait=false returns 202 but operation fails - error only visible in logs",
+        "source_issue_numbers": [
+          4925
+        ],
+        "affected_endpoints": [
+          "POST /collections/{collection}/points",
+          "POST /collections/{collection}/snapshots"
+        ],
+        "verdict": "REPORT_AS_P3",
+        "rationale": "Issue #4925 - acknowledged limitation of async operations - low priority enhancement request"
+      },
+      {
+        "pattern": "filter=null in query/search is treated as no-filter",
+        "specific_example": "POST /collections/{collection}/points/search with filter=null returns all points instead of rejecting null filter",
+        "source_issue_numbers": [],
+        "affected_endpoints": [
+          "POST /collections/{collection}/points/search",
+          "POST /collections/{collection}/points/query"
+        ],
+        "verdict": "VERIFY_FIRST",
+        "rationale": "May be intentional API design (null means no filter) vs validation bug - check API specification"
+      },
+      {
+        "pattern": "with_payload parameter defaults to false",
+        "specific_example": "POST /collections/{collection}/points/search returns results without payload unless with_payload=true explicitly set",
+        "source_issue_numbers": [],
+        "affected_endpoints": [
+          "POST /collections/{collection}/points/search",
+          "POST /collections/{collection}/points/scroll"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Documented default behavior - API specification defines with_payload=false as default"
+      },
+      {
+        "pattern": "Distance enum uses 'Euclid' not 'Euclidean'",
+        "specific_example": "Distance metric enum value is 'Euclid' not 'Euclidean' in API responses",
+        "source_issue_numbers": [],
+        "affected_endpoints": [
+          "GET /collections/{collection}"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "API design choice - 'Euclid' is the official enum name per specification"
+      },
+      {
+        "pattern": "HNSW search with high ef/limit may return non-deterministic tie-breaking results",
+        "specific_example": "Multiple searches with same query may return slightly different ordering for points with equal scores",
+        "source_issue_numbers": [],
+        "affected_endpoints": [
+          "POST /collections/{collection}/points/search"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Approximate search non-determinism is documented HNSW characteristic"
+      },
+      {
+        "pattern": "Error message field names like 'status', 'time', 'error' are not part of contract",
+        "specific_example": "Error responses contain fields like 'status.error' - schema varies by error type",
+        "source_issue_numbers": [],
+        "affected_endpoints": [
+          "all endpoints"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Error message structure is implementation detail, not guaranteed API contract"
+      }
+    ],
+    "wontfix_patterns": [
+      {
+        "pattern": "Extreme concurrent operations during resharding",
+        "rationale": "Team acknowledges edge cases in resharding under extreme concurrency - deprioritized due to low practical impact",
+        "action": "REPORT as P3 - include reproduction steps showing extreme concurrency scenario"
+      },
+      {
+        "pattern": "Full-text phrase matching across string-array boundaries",
+        "rationale": "Issue #8937 - acknowledged behavior of full-text index - low priority to fix",
+        "action": "REPORT as P3 - include example showing cross-boundary matching"
+      },
+      {
+        "pattern": "Memory estimator inaccuracies for large multi-collection deployments",
+        "rationale": "Issue #5836 - memory usage estimation is complex - team accepts inaccuracies in multi-tenant scenarios",
+        "action": "REPORT as P3 - include specific configuration causing inaccuracy"
+      }
+    ]
+  },
+  "judge_enhancements": {
+    "severity_calibration": {
+      "by_design_behaviors": {
+        "action": "AUTO_DOWNGRADE_TO_TRIVIAL",
+        "rationale": "Developer team explicitly stated these are design choices, not defects - do not report as bugs"
+      },
+      "historical_high_severity_patterns": {
+        "action": "CONFIRM_SEVERITY",
+        "rationale": "These patterns match 5+ historically P0/P1 bugs - maintain high severity classification",
+        "patterns": [
+          "empty vector with wait=false causing panic",
+          "WAL replay resurrecting deleted points",
+          "null filter conditions accepted",
+          "collection creation with invalid vectors config",
+          "extreme limit values causing crashes"
+        ]
+      },
+      "wontfix_patterns": {
+        "action": "DOWNGRADE_TO_P3",
+        "rationale": "Team has historically deprioritized these - mark as low priority enhancements",
+        "patterns": [
+          "HNSW pagination duplicates",
+          "Extreme concurrent operations during resharding",
+          "Memory estimator inaccuracies"
+        ]
+      },
+      "known_limitations": {
+        "action": "REPORT_WITH_CAVEATS",
+        "rationale": "Document behavior but mark as known limitation rather than defect",
+        "patterns": [
+          "wait=false error visibility",
+          "Platform-specific edge cases",
+          "Resource exhaustion at extreme scale"
+        ]
+      }
+    },
+    "novelty_context": {
+      "recently_fixed_patterns": [
+        {
+          "pattern": "missing REST API filter validations",
+          "last_fixed": "2025-09 (v1.15.5)",
+          "fixing_prs": [
+            "#7218",
+            "#7217",
+            "#7220"
+          ],
+          "status": "partially_addressed",
+          "residual_risk": "Nested structures and edge cases may still have gaps"
+        },
+        {
+          "pattern": "WAL replay state inconsistency",
+          "last_fixed": "2025-11 (v1.16.3)",
+          "fixing_prs": [
+            "#7577",
+            "#745f0d6"
+          ],
+          "status": "ongoing",
+          "residual_risk": "Concurrency scenarios continue to surface"
+        },
+        {
+          "pattern": "collection creation parameter validation",
+          "last_fixed": "2025-09 (v1.15.5)",
+          "fixing_prs": [
+            "#7219",
+            "#7221"
+          ],
+          "status": "partially_addressed",
+          "residual_risk": "Some parameters like ef_construct still lack validation"
+        },
+        {
+          "pattern": "snapshot creation deadlocks",
+          "last_fixed": "2025-09 (v1.15.5)",
+          "fixing_prs": [
+            "#7241"
+          ],
+          "status": "fixed",
+          "residual_risk": "Low - issue resolved"
+        },
+        {
+          "pattern": "concurrent update corruption during snapshot",
+          "last_fixed": "2025-09 (v1.15.5)",
+          "fixing_prs": [
+            "#7298"
+          ],
+          "status": "fixed",
+          "residual_risk": "Low - issue resolved"
+        }
+      ],
+      "known_ongoing_issues": [
+        9575,
+        9390,
+        9373,
+        9049,
+        8723
+      ],
+      "recently_added_validations": [
+        {
+          "area": "Filter validation",
+          "added": "2025-09 (v1.15.5)",
+          "coverage": "Basic structure validation added, nested cases ongoing"
+        },
+        {
+          "area": "MinShould validation",
+          "added": "2025-09 (v1.15.5)",
+          "coverage": "Empty conditions with min_count validation added"
+        },
+        {
+          "area": "PointsSelector validation",
+          "added": "2025-09 (v1.15.5)",
+          "coverage": "gRPC and REST validation added"
+        }
+      ]
+    },
+    "submission_success_probability": {
+      "high": [
+        {
+          "condition": "Type1_IllegalSuccess + parameter validation (null/object/array type mismatch)",
+          "probability": 0.85,
+          "reason": "Historically well-received by maintainers - 85% acknowledgment rate"
+        },
+        {
+          "condition": "Type3_RuntimeFailure + reproducible panic/crash",
+          "probability": 0.9,
+          "reason": "Critical failures with clear reproduction almost always acknowledged"
+        },
+        {
+          "condition": "Type4_StateViolation + WAL/consistency issues",
+          "probability": 0.72,
+          "reason": "State consistency issues taken seriously but harder to fix"
+        },
+        {
+          "condition": "Collection creation with invalid config",
+          "probability": 0.8,
+          "reason": "Clear contract violations, high acknowledgment rate"
+        }
+      ],
+      "medium": [
+        {
+          "condition": "Type2_PoorDiagnostics + error message quality",
+          "probability": 0.45,
+          "reason": "Team historically deprioritizes diagnostics quality - marked as enhancements"
+        },
+        {
+          "condition": "Type4_StateViolation + search quality/approximation issues",
+          "probability": 0.5,
+          "reason": "HNSW approximation trade-offs often marked as known limitations"
+        },
+        {
+          "condition": "Platform-specific issues (Windows/ARM64)",
+          "probability": 0.6,
+          "reason": "Acknowledged but deprioritized due to low user impact"
+        }
+      ],
+      "low": [
+        {
+          "condition": "Type4_StateViolation + extreme concurrent operations",
+          "probability": 0.3,
+          "reason": "Team considers this low practical impact - extreme scenarios"
+        },
+        {
+          "condition": "Type2_PoorDiagnostics + documentation issues",
+          "probability": 0.4,
+          "reason": "Documentation fixes acknowledged but low priority"
+        },
+        {
+          "condition": "HNSW pagination duplicates",
+          "probability": 0.1,
+          "reason": "Explicitly marked as design choice, not a defect"
+        }
+      ]
+    },
+    "evaluation_criteria": {
+      "is_defect": {
+        "required": [
+          "Clear violation of documented API contract or expected behavior",
+          "Reproducible with minimal steps",
+          "Not listed in by_design_exclusions",
+          "Not a known limitation explicitly acknowledged by maintainers"
+        ]
+      },
+      "is_enhancement": {
+        "indicators": [
+          "Improves quality but doesn't fix functional violation",
+          "Addresses edge case with low practical impact",
+          "Better error messages or diagnostics",
+          "Performance optimization without correctness issue"
+        ]
+      },
+      "is_wontfix": {
+        "indicators": [
+          "Design choice explicitly documented",
+          "External dependency limitation (e.g., jemalloc)",
+          "Extremely rare edge case scenario",
+          "Requires architectural changes"
+        ]
+      },
+      "severity_guidelines": {
+        "P0_Critical": [
+          "Server crash/panic with valid input",
+          "Data loss or corruption",
+          "Security vulnerability"
+        ],
+        "P1_High": [
+          "Type1_IllegalSuccess with contract violation",
+          "Type4_StateViolation with data inconsistency",
+          "Recoverable crash with workaround"
+        ],
+        "P2_Medium": [
+          "Type2_PoorDiagnostics impacting usability",
+          "Type4_StateViolation with minor inconsistency",
+          "Resource exhaustion at extreme scale"
+        ],
+        "P3_Low": [
+          "Documentation issues",
+          "Enhancement requests",
+          "Known limitations",
+          "Platform-specific edge cases"
+        ]
+      }
+    }
+  },
+  "version_evolution": {
+    "v1.18.3_status": {
+      "parameter_validation": {
+        "status": "PARTIALLY_FIXED",
+        "fixes_applied": [
+          "Filter structure validation (PR #7218)",
+          "MinShould validation (PR #7217)",
+          "PointsSelector validation (PR #7221)"
+        ],
+        "remaining_gaps": [
+          "Nested complex structure validation",
+          "Dimension validation at upsert time",
+          "ef_construct/m boundary validation"
+        ],
+        "priority_areas": [
+          "filter.should=null still accepted",
+          "query=null still accepted",
+          "vectors={} still accepted"
+        ]
+      },
+      "concurrency_safety": {
+        "status": "IMPROVED_BUT_ISSUES_REMAIN",
+        "fixes_applied": [
+          "Snapshot corruption fix (PR #7298)",
+          "Delete version fix (PR #7303)",
+          "WAL error propagation (PR #7577)"
+        ],
+        "remaining_gaps": [
+          "WAL replay resurrects points (Issue #9575)",
+          "Resharding state consistency (Issue #8709)",
+          "Concurrent delete+upsert scenarios"
+        ],
+        "priority_areas": [
+          "WAL replay idempotency",
+          "Resharding concurrent operation safety"
+        ]
+      },
+      "error_handling": {
+        "status": "PARTIALLY_IMPROVED",
+        "fixes_applied": [
+          "Better error messages (PR #6998)",
+          "Immutable ID tracker errors (PR #7240)",
+          "Gridstore errors (PR #7780)"
+        ],
+        "remaining_gaps": [
+          "Generic internal errors still common",
+          "Dimension mismatch messages unclear",
+          "Error visibility for wait=false operations"
+        ],
+        "priority_areas": [
+          "Actionable error messages",
+          "Async operation error visibility"
+        ]
+      },
+      "resource_management": {
+        "status": "IMPROVED",
+        "fixes_applied": [
+          "Snapshot deadlock fix (PR #7241)",
+          "Flush reconciliation (PR #7805)",
+          "Gridstore flushing (PR #be5fb4d)"
+        ],
+        "remaining_gaps": [
+          "Large collection snapshot timeouts",
+          "Memory estimation inaccuracies",
+          "Platform-specific resource issues"
+        ],
+        "priority_areas": [
+          "Large-scale testing",
+          "Platform compatibility in CI"
+        ]
+      },
+      "platform_compatibility": {
+        "status": "IMPROVED",
+        "fixes_applied": [
+          "Windows ARM64 hotfix (PR #7690)",
+          "Metric family panics (PR #7479)"
+        ],
+        "remaining_gaps": [
+          "Windows Docker snapshot issues",
+          "ARM64 jemalloc page size limitations"
+        ],
+        "priority_areas": [
+          "CI matrix for Windows/ARM64",
+          "Platform-specific testing"
+        ]
+      }
+    },
+    "cross_version_tracking": {
+      "fixed_in_v1.18.3": [
+        "Snapshot deadlock during concurrent updates",
+        "Delete version corruption",
+        "Metric family panics",
+        "Gridstore livelock"
+      ],
+      "ongoing_in_v1.18.3": [
+        "WAL replay point resurrection",
+        "Null filter validation gaps",
+        "Collection creation config validation",
+        "Payload index result inconsistencies",
+        "HNSW search quality with high ef"
+      ],
+      "regressed_in_v1.18.3": [],
+      "introduced_in_v1.18.3": []
+    },
+    "fix_trajectory": {
+      "v1.14.0_to_v1.15.5": {
+        "fix_count": 45,
+        "focus_areas": [
+          "API validation",
+          "Deadlock fixes",
+          "Snapshot safety"
+        ],
+        "quality_improvement": "significant"
+      },
+      "v1.15.5_to_v1.16.3": {
+        "fix_count": 38,
+        "focus_areas": [
+          "WAL handling",
+          "Gridstore flushing",
+          "Platform compatibility"
+        ],
+        "quality_improvement": "moderate"
+      },
+      "v1.16.3_to_v1.17.1": {
+        "fix_count": 35,
+        "focus_areas": [
+          "Error propagation",
+          "Panic fixes",
+          "Transfer safety"
+        ],
+        "quality_improvement": "moderate"
+      },
+      "v1.17.1_to_v1.18.3": {
+        "fix_count": 28,
+        "focus_areas": [
+          "WAL replay",
+          "Concurrent updates",
+          "Resource management"
+        ],
+        "quality_improvement": "moderate"
+      }
+    }
+  }
+}

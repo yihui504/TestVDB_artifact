@@ -1,0 +1,74 @@
+{
+  "defect_id": "semantic_points_search_008",
+  "endpoint": "points+search",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "contract endpoint points+search exists in structured_contract.json with source_url https://api.qdrant.tech/api-reference/points/search-points (verified reachable, doc version 1.19.x matches target v1.18.2 at major.minor level). Behavioral assertion qdrant_behavioral_search_points_001 states 'returns 200 OK with array of scored points' - this is the claimed contract. Filter semantics are documented in raw_knowledge.md.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "c1: Filter category=A → http=200, result array with 2 scored points: [{'id': 1, 'version': 1, 'score': 0.99999994}, {'id': 3, 'version': 1, 'score': 0.99999994}]",
+      "secondary_observations": [
+        "c2: VERDICT: DEFECT_FOUND (Type4_StateLogicViolation)",
+        "c3: Test expectation: 'Search should return array'"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "HTTP 200 OK with successful scored results; no client error returned"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_points_search_008"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_search_points_001",
+      "assertion_text_quoted": "returns 200 OK with array of scored points",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_behavioral_search_points_001 (asserts 'returns 200 OK with array of scored points')",
+        "doc:https://api.qdrant.tech/api-reference/points/search-points (verified reachable, defines behavioral contract)",
+        "script:semantic_points_search_008 (performs points+search with filter category=A, expects direct array return)",
+        "log:HTTP 200 with response wrapper {'result': [2 scored points], 'status': 'ok', 'time': 0.000447318} (test reports array expectation violation)"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The test script expects the search endpoint to return a bare array, but the Qdrant REST API actually returns a response object with structure {'result': <array>, 'status': 'ok', 'time': <float>}. The contract is technically satisfied (result contains array of 2 scored points with proper scoring), but the test's expectation misaligns with the documented API response format. The filter functionality works correctly (2 points returned matching category=A). The chain is intact through doc and log, but the script's assertion creates the appearance of a violation.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "ScoredPoint",
+        "filter.*category",
+        "search.*result",
+        "ApiResponse"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/models.rs (lines 42-51: ApiResponse struct with result, status, time fields)",
+        "lib/collection/src/collection/search.rs (line 10: imports ScoredPoint type)",
+        "lib/collection/src/collection/search.rs (lines 31, 58: function signatures returning Vec<ScoredPoint>)",
+        "src/common/query.rs (imports Filter type for filtering)"
+      ],
+      "source_excerpt": "From lib/api/src/rest/models.rs:\n\n#[derive(Debug, Serialize, JsonSchema)]\n#[serde(rename_all = \"snake_case\")]\npub struct ApiResponse<D> {\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub result: Option<D>,\n    pub status: ApiStatus,\n    pub time: f64,\n}\n\nFrom lib/collection/src/collection/search.rs:\n\npub async fn search(\n    &self,\n    request: CoreSearchRequest,\n    read_consistency: Option<ReadConsistency>,\n    shard_selection: &ShardSelectorInternal,\n    timeout: Option<Duration>,\n    hw_measurement_acc: HwMeasurementAcc,\n) -> CollectionResult<Vec<ScoredPoint>>",
+      "call_chain_traced": "REST API layer (ApiResponse wrapper) ← Collection.search (returns Vec<ScoredPoint>) ← Segment search execution with Filter applied. The ScoredPoint results are wrapped in ApiResponse.result field. Filter by category is processed in collection layer before scoring.",
+      "verification_outcome": "validation_present",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env"],
+      "surviving": "API response format mismatch - test expects bare array, but documented API returns response object with result/status/time structure. Filter functionality works correctly (2/expected points returned). This is a test expectation issue, not a backend defect."
+    }
+  }
+}

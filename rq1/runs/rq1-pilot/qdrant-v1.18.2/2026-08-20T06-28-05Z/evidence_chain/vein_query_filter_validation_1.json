@@ -1,0 +1,79 @@
+{
+  "defect_id": "vein_query_filter_validation_1",
+  "endpoint": "POST /collections/{collection}/points/query",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "OpenAPI schema for Filter (struct with should/must/must_not fields, all Option<Vec<Condition>>) defines filter structure but does not explicitly enforce type constraints at schema level. REST API schema shows filter: Option<Filter> in QueryRequestInternal (lib/api/src/rest/schema.rs:582). The #validate(nested) attribute exists but validation library does not reject null values in array fields (should, must, must_not). No explicit documentation stating null arrays are invalid - this is inferred from type semantics.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: filter=null → http=200, points=3; c2: filter.should=null → http=200, points=3; c3: filter.must_not=object (not array) → http=200, points=1; c4: query=null → http=200, points=2; c5: limit=0 → http=422 (validation rejected as expected)",
+      "secondary_observations": [
+        "c5 (control): limit=0 correctly rejected with HTTP 422 + validation error message",
+        "filter=null returns all 3 points (unfiltered result)",
+        "filter.should=null returns all 3 points (should treated as no constraint)",
+        "filter.must_not=object returns 1 point (object coerced, array constraint bypassed)",
+        "query=null returns 2 points (null query accepted)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 (HTTP 200 for all 4 invalid inputs)",
+        "note": "Invalid filter/query inputs return HTTP 200 with successful results. Only limit=0 (control test) correctly returns HTTP 422 with validation error."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_query_filter_validation_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "Filter struct defined with should/must/must_not as Option<Vec<Condition>> (lib/segment/src/types.rs:3834-3865). Type semantics imply non-null array when present. REST API uses #validate(nested) attribute (lib/api/src/rest/schema.rs:581) but validator crate does not enforce array-type rejection of null values.",
+      "api_violates_assertion": true,
+      "evidence_source": "source"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: Filter type definition (Option<Vec<Condition>> fields)",
+        "doc: REST API schema with #validate(nested) but no explicit null-array rejection",
+        "script: HTTP POST with filter=null / filter.should=null / filter.must_not=object / query=null",
+        "log: HTTP 200 responses for all 4 invalid inputs (control test limit=0 correctly returns 422)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "API accepts invalid filter/query values (null, null arrays, object instead of array) and returns HTTP 200 with successful results, violating expected input validation. The validator's nested validation does not reject null values in array fields.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "struct Filter",
+        "pub should: Option",
+        "pub must: Option",
+        "pub must_not: Option",
+        "QueryRequestInternal",
+        "#validate(nested)"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs (Filter struct definition, lines 3830-3913)",
+        "lib/api/src/rest/schema.rs (QueryRequestInternal, lines 560-617)",
+        "lib/collection/src/operations/universal_query/collection_query.rs (filter usage, lines 520-535)",
+        "src/actix/api/query_api.rs (query endpoint handler, lines 30-100)"
+      ],
+      "source_excerpt": "Filter struct (lib/segment/src/types.rs:3834-3865):\n\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone, PartialEq, Eq, Default, Hash)]\n#[serde(deny_unknown_fields, rename_all = \"snake_case\")]\npub struct Filter {\n    #[validate(nested)]\n    #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")]\n    #[schemars(with = \"MaybeOneOrMany<Condition>\")]\n    pub should: Option<Vec<Condition>>,\n    \n    #[validate(nested)]\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub min_should: Option<MinShould>,\n    \n    #[validate(nested)]\n    #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")]\n    #[schemars(with = \"MaybeOneOrMany<Condition>\")]\n    pub must: Option<Vec<Condition>>,\n    \n    #[validate(nested)]\n    #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")]\n    #[schemars(with = \"MaybeOneOrMany<Condition>\")]\n    pub must_not: Option<Vec<Condition>>,\n}\n\nREST API (lib/api/src/rest/schema.rs:566-583):\n\n#[derive(Debug, Serialize, Deserialize, JsonSchema, Validate)]\npub struct QueryRequestInternal {\n    #[validate(nested)]\n    #[serde(default, with = \"MaybeOneOrMany\")]\n    #[schemars(with = \"MaybeOneOrMany<Prefetch>\")]\n    pub prefetch: Option<Vec<Prefetch>>,\n    \n    #[validate(nested)]\n    pub query: Option<QueryInterface>,\n    \n    pub using: Option<VectorNameBuf>,\n    \n    /// Filter conditions - return only those points that satisfy the specified conditions.\n    #[validate(nested)]\n    pub filter: Option<Filter>,\n    \n    #[validate(range(min = 1))]\n    pub limit: Option<usize>,\n    // ...\n}",
+      "call_chain_traced": "query_points API handler (src/actix/api/query_api.rs:30-100) → Json<QueryRequest> deserialization → QueryRequestInternal with filter: Option<Filter> → filter passed through dispatcher.toc().query_batch() → CollectionQueryRequest processing → filter.unwrap_or_default() in exclude_referenced_ids (lib/collection/src/operations/universal_query/collection_query.rs:534) → Filter treated as no-op when fields are None/null → query executes with invalid filter values returning results.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["concurrency", "env", "caching"],
+      "surviving": "API validation gap: validator crate's nested validation does not reject null values in Option<Vec<T>> fields; type coercion allows objects to be treated as arrays in must_not field; query field allows null values without rejection"
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "defect_id": "vein_shard_status_echo_2",
+  "endpoint": "PUT /schema/{className}/shards/{shardName}",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约 endpoint_registry 含 PUT /schema/{className}/shards/{shardName}（openapi backfill v1.38.1）。clone openapi-specs/schema.json:8939 起该端点描述 'Update a shard status ... sets it to READY or READONLY'——状态值语义域在文档中明确。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "attack bogus shard + bogus status: status=200 body={\"status\": \"NOT_A_STATUS\"}",
+      "secondary_observations": [
+        "control real shard + bogus status: status=422 body={\"error\": [{\"message\": \"updating db: TYPE_UPDATE_SHARD_STATUS: NOT_A_STATUS: invalid storage status\"}]}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "不存在分片上任意非法 status → 200 且响应体逐字回显请求体（无任何处理痕迹）；真分片同值正确 422。双重失败（bogus shard + bogus status）反而全部短路成成功"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_shard_status_echo_2.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_failure_path_state (泛标签；实际引用 openapi PUT /schema/{className}/shards/{shardName} 状态枚举语义)",
+      "assertion_text_quoted": "openapi-specs/schema.json:8941-8943: \"Update a shard status ... sets it to `READY` or `READONLY`\"",
+      "api_violates_assertion": true,
+      "note": "NOT_A_STATUS 既不在 READY/READONLY 域，分片也不存在，却 200+逐字回显。violates=True：对不存在资源应 404、对非法状态应 422（对照组证明 422 机制存在且可达）。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: endpoint_registry PUT /schema/{className}/shards/{shardName}",
+        "doc: openapi 描述 'sets it to READY or READONLY'（状态域）",
+        "script: vein_shard_status_echo_2.py 对不存在分片 + 真分片各发 status=NOT_A_STATUS",
+        "log: bogus shard 200 body 逐字回显；real shard 422 invalid storage status"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["updateShardStatus", "IsLocalShard", "if !isOwner return nil", "payload := params.Body"],
+      "files_examined": ["adapters/handlers/rest/handlers_schema.go", "usecases/schema/handler.go", "usecases/schema/executor.go", "adapters/repos/db/migrator.go", "adapters/repos/db/index.go"],
+      "source_excerpt": "adapters/repos/db/index.go:3539-3551 Index.updateShardStatus():\nfunc (i *Index) updateShardStatus(ctx, shardName, targetStatus string) error {\n    isOwner := false\n    if err := i.schemaReader.Read(..., func(_ *models.Class, state *sharding.State) error {\n        if state != nil { isOwner = state.IsLocalShard(shardName) }\n        return nil\n    }); err != nil { return err }\n    if !isOwner {\n        return nil          // ← 不存在的分片：静默成功（nil），无 404 无校验\n    }\n    shard, release, err := i.getOrInitShard(ctx, shardName) ...\n    return shard.UpdateStatus(targetStatus, statusReasonManualUpdate)  // 真分片才走到状态枚举校验 → 422\n}\n\nadapters/handlers/rest/handlers_schema.go:431-452 updateShardStatus handler:\n    _, err := s.manager.UpdateShardStatus(ctx, principal, params.ClassName, params.ShardName, params.Body.Status)\n    if err != nil { ... return 422 ... }\n    payload := params.Body      // ← 成功路径直接把请求体原样回显\n    return schema.NewSchemaObjectsShardsUpdateOK().WithPayload(payload)",
+      "call_chain_traced": "PUT /schema/{c}/shards/{s} → handlers_schema.go:431 → Handler.UpdateShardStatus (handler.go:344) → executor.UpdateShardStatus (executor.go:360) → Migrator.UpdateShardStatus (migrator.go:584) → Index.updateShardStatus (index.go:3539) → !isOwner→nil → handler 视为成功 → 回显 params.Body",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "存在性检查缺失（IsLocalShard false 静默 nil 而非 ErrShardNotFound）与状态校验缺失（非 owner 路径根本不触碰 UpdateStatus 枚举校验）双重缺席，均在源码逐行证实。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo", "by_design（对照真分片同值 422，说明校验本应生效；!isOwner return nil 疑为多节点场景下的转发捷径在单节点下误吞错误，但代码无任何注释声明此意图）"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "high（行为对照清晰 + 源码双缺陷点逐行定位）"
+}

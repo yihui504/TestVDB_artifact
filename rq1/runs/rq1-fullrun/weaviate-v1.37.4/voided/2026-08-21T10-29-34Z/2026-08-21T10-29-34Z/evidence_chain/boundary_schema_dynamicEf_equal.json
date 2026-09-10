@@ -1,0 +1,79 @@
+{
+  "defect_id": "boundary_schema_dynamicEf_equal",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Assertion inferred (Min<=Max); github blocked (PARTIAL). Local clone exact v1.37.4. Equality boundary accepted - source places no strict-less-than constraint on the pair, so equality is within the conforming set.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "c1: dynamicEfMin=300, dynamicEfMax=300 (equal) -> http=200, body persists dynamicEfMin=300 dynamicEfMax=300 (status 200, VERDICT: DEFECT_FOUND)",
+      "secondary_observations": [
+        "equality boundary accepted and persisted; no rejection, no clamp, no re-normalization"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200; equal Min/Max boundary persisted as success - boundary probe observation, value is conforming"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_dynamicEf_equal",
+        "boundary_schema_dynamicEf_inverted",
+        "boundary_schema_dynamicEfMinOnly",
+        "boundary_schema_dynamicEfMaxOnly"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_inferred_hnsw_ef_pairing_001",
+      "assertion_text_quoted": "dynamicEfMin and dynamicEfMax represent paired EF parameters where Min <= Max",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "assertion_id": "weaviate_inferred_hnsw_ef_pairing_001"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:weaviate_inferred_hnsw_ef_pairing_001 (Min<=Max) -> doc:assertion inferred, source=config.go -> script:boundary_schema_dynamicEf_equal POST /v1/schema with dynamicEfMin=300 dynamicEfMax=300 -> log:http=200, body persists both at 300"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "Chain complete but value conforms: Min==Max=300 satisfies Min<=Max (equality is within the asserted <= set). Observation tests the equality boundary which is accepted/persisted; no violation of the paired-pairing assertion.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "DynamicEFMin|DynamicEFMax parsing",
+        "Min<=Max strict check",
+        "UserConfig.validate"
+      ],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go",
+        "adapters/repos/db/vector/hnsw/index.go",
+        "adapters/repos/db/vector/hnsw/config_update.go"
+      ],
+      "source_excerpt": "config.go:183-193 OptionalIntFromMap assigns dynamicEfMax/dynamicEfMin with no strict-less-than enforcement; validate() 260-323 never compares the pair; so equality is accepted identically to any pair that happens to pass - even inverted pairs pass. Boundary equality persisted verbatim.",
+      "call_chain_traced": "POST /schema -> ParseAndValidateConfig (assigns 300/300, no order check) -> validate() (no EF comparison) -> persisted as 300/300.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "encryption"
+      ],
+      "surviving": "Value is conforming at the equality boundary; the exposure here is that the same no-validation path ALSO admits inverted pairs (see dynamicEf_inverted/Max_negative). Equality itself is valid per Min<=Max.",
+      "note": "violates=false because 300<=300 satisfies the quote. Boundary-equality is accepted; this is a boundary probe, not an assertion violation. Same root: validate() lacks the pairwise check."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[probe indexing_threshold=-1 (min-1)] PATCH optimizers_config.indexing_threshold=-1 -> status=400
+OK(reject): 'indexing_threshold=-1 (min-1)' -> 400: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 47"},"time":0.0}
+[probe indexing_threshold=-100 (deep negative)] PATCH optimizers_config.indexing_threshold=-100 -> status=400
+OK(reject): 'indexing_threshold=-100 (deep negative)' -> 400: {"status":{"error":"Format error in JSON body: invalid value: integer `-100`, expected usize at line 1 column 49"},"time":0.0}
+[probe indexing_threshold=0 (at-min)] PATCH optimizers_config.indexing_threshold=0 -> status=200 raw={"result":true,"status":"ok","time":0.018241404}
+OK(echo): after 'indexing_threshold=0 (at-min)' readback optimizer_config.indexing_threshold=0 (present=True)
+[probe indexing_threshold=10000 (runtime default)] PATCH optimizers_config.indexing_threshold=10000 -> status=200 raw={"result":true,"status":"ok","time":0.0167051}
+OK(echo): after 'indexing_threshold=10000 (runtime default)' readback optimizer_config.indexing_threshold=10000 (present=True)
+OK: indexing_threshold -1/-100 rejected (400/422); 0 and 10000 accepted with result true
+VERDICT: NO_DEFECT

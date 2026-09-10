@@ -1,0 +1,19 @@
+create sm_al_a : 200 {"code":0,"data":{}}
+create sm_al_b : 200 {"code":0,"data":{}}
+A alias create: 200 {"code":0,"data":{}}
+A alias list: ['sm_alias_x']
+A alias describe -> sm_al_a
+B insert via alias: 200 {"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[1]}}
+B stats CA: {"code":0,"data":{"rowCount":0}}
+C alias alter: 200 {"code":0,"data":{}}
+C describe after alter -> sm_al_b
+D drop target CB: 200 {"code":65535,"message":"unable to drop the collection [sm_al_b] because it has associated aliases [sm_alias_x], please remove all aliases before drop
+D describe alias after target drop: 200 {"code":0,"data":{"aliasName":"sm_alias_x","collectionName":"sm_al_b","dbName":"default"}}
+D has via alias: {"code":0,"data":{"has":true}} | query via alias: {"code":0,"cost":0,"data":[]}
+
+D alias list after target drop: ['sm_alias_x']
+E alias in custom db: 200 {"code":0,"data":{}}
+E default alias list leak: False
+DEFECT: ('query via dangling alias SUCCEEDS after target drop', '{"code":0,"cost":0,"data":[]}\n')
+DEFECT: ('dangling alias remains in list after target collection dropped (no cascade/gc)', "['sm_alias_x']")
+VERDICT: DEFECT_FOUND

@@ -1,0 +1,453 @@
+{
+  "auditor": "chain-auditor",
+  "target": "weaviate",
+  "version": "v1.37.4",
+  "verdicts": [
+    {
+      "defect_id": "boundary_schema_dynamicEf_inverted",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, api_violates_assertion=true) -> implied_verdict=DEFECT -> final=DEFECT（机械定案，LLM 无权改判）"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "A机械判定: constraint_id=weaviate_inferred_hnsw_ef_pairing_001, 引文 'dynamicEfMin and dynamicEfMax represent paired EF parameters where Min <= Max' 为契约 description(line 2918) 逐字子串; execution_evidence c1: dynamicEfMin=250, dynamicEfMax=100 -> http=200 原样持久化, Min>Max 直接违反排序断言, api_violates_assertion=true。source_grounding validation_absent (config.go:260-323 validate() 仅界 maxConnections/efConstruction, 无 dynamicEf 检查) 佐证而非推翻 A——源码无 by-design 显式允许; 机械 B=NOT_TRIGGERED (Min<=Max 排序不属于五类客观约束), D=NO_SIGNAL, 终判 DEFECT。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_schema_dynamicEfMin_negative",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, api_violates_assertion=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT（机械定案；脚本内联 B 冲突检测未触发，独立 B 亦 NOT_TRIGGERED）"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "contract_misread",
+      "rationale": "A机械判定: 引文逐字对齐契约, 观测 -1<=500 数值满足 Min<=Max 排序断言, api_violates_assertion=false, implied=NOT_DEFECT。契约仅一条 inferred 排序断言, 无 dynamicEfMin 须为正数/≥1 的背书; 负数被接受并持久化 (index.go:366 efMin=-1 直存) 属 validation_absent 而非违反契约。ef 类 HNSW 参数有负值 sentinel 先例且机械 B=NOT_TRIGGERED 排除, C=CONFIRMED 权重 LOW 不能推翻 A 机械定案。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_schema_dynamicEfMin_zero",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, api_violates_assertion=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT（机械定案；脚本内联 B 冲突检测未触发，独立 B 亦 NOT_TRIGGERED）"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "contract_misread",
+      "rationale": "A机械判定: 引文逐字对齐契约, 观测 0<=500 满足 Min<=Max 排序断言, api_violates_assertion=false, implied=NOT_DEFECT。零下界被接受并持久化 (OptionalIntFromMap common/config.go:74 setFn 直赋, validate() 260-323 无 dynamicEf 检查, DefaultDynamicEFMin=100 仅默认值) 属 validation_absent; 契约无 positivity 断言, 机械 B=NOT_TRIGGERED (ef 类参数被排除), 行为不优雅不足以推翻 A 机械定案。",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_schema_flatSearchCutoff_negative",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "A=NEUTRAL(quote_mismatch), B=CONFIRMED(数值下界) -> DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "-1 无校验接受并持久化，search.go 恒 false 永久失活；validate() 同族参数有 range 校验独漏此字段"
+    },
+    {
+      "defect_id": "boundary_schema_flatSearchCutoff_zero",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "A=NEUTRAL, B=CONFIRMED(零计数下界) -> DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "0 与 -1 同效恒 false 失活，validate() 独漏此字段且无 sentinel"
+    },
+    {
+      "defect_id": "boundary_schema_flatSearchCutoff_extreme",
+      "verdict": "NEEDS_MORE_EVIDENCE",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL"
+        },
+        "physical": {
+          "verdict_B": "NOT_TRIGGERED"
+        },
+        "behavioral": {
+          "verdict_C": "WEAK_REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "B=NEUTRAL, C=WEAK_REFUTED, D=NO_SIGNAL -> NME"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "1e9 接受持久化无溢出，契约无 max 断言且无降级证据",
+      "rework_order": {
+        "type": "EVIDENCE_GAP",
+        "targeted_instruction": "补上限/行为证据"
+      }
+    },
+    {
+      "defect_id": "boundary_schema_replicationFactor_negative",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL"
+        },
+        "physical": {
+          "verdict_B": "NOT_TRIGGERED"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "source by_design 显式归一 -> NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "源码 config.go 显式 Factor<1 归一为 1（by-design），回读 1 合法态"
+    },
+    {
+      "defect_id": "boundary_schema_replicationFactor_zero",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL"
+        },
+        "physical": {
+          "verdict_B": "NOT_TRIGGERED"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "source by_design 显式归一 -> NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "factor=0 绕过 >0 报错分支落入 Factor<1 显式归一，持久化 1 合法"
+    },
+    {
+      "defect_id": "vein_type_mismatch_schema_ef_pair_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "类型恒真"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "B=CONFIRMED(类型恒真) -> DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "string 赋 int 字段 200 静默转 0 并持久化 Min100>Max0 倒置，float 对照 422 证类型校验缺口"
+    },
+    {
+      "defect_id": "boundary_schema_dynamicEfMax_negative",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED"
+        },
+        "physical": {
+          "verdict_B": "NOT_TRIGGERED"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "A=CONFIRMED -> DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "100>-1 倒置且负值，HTTP200 原样持久化，validate() 无 EF 校验"
+    },
+    {
+      "defect_id": "boundary_schema_dynamicEfMinOnly",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED"
+        },
+        "physical": {
+          "verdict_B": "NOT_TRIGGERED"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "A=CONFIRMED -> DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "仅设 Min900 保留默认 Max500 致 900>500 倒置，HTTP200 持久化"
+    },
+    {
+      "defect_id": "boundary_schema_dynamicEfMaxOnly",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED"
+        },
+        "physical": {
+          "verdict_B": "NOT_TRIGGERED"
+        },
+        "behavioral": {
+          "verdict_C": "WEAK_REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "A=REFUTED -> NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "contract_misread",
+      "rationale": "默认 Min100<=700 合规，边界探测非违规"
+    },
+    {
+      "defect_id": "boundary_schema_dynamicEf_equal",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED"
+        },
+        "physical": {
+          "verdict_B": "NOT_TRIGGERED"
+        },
+        "behavioral": {
+          "verdict_C": "WEAK_REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "A=REFUTED -> NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "contract_misread",
+      "rationale": "300<=300 合规，等值边界被接受，非断言违反"
+    },
+    {
+      "defect_id": "semantic_schema_httpLayering",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "HTTP语义恒真"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "B=CONFIRMED(HTTP语义恒真) -> DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Min>Max 与 cutoff=-1 以 200 接受非 4xx；UNSTABLE 系脚本伪影，200 违规观测+validation_absent 成立"
+    },
+    {
+      "defect_id": "semantic_schema_typeCoercion",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "类型恒真"
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "B=CONFIRMED(类型恒真) -> DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "int 字段接受 string'250' 静默落 0（OptionalIntFromMap 无 string case），200 无披露"
+    },
+    {
+      "defect_id": "state_schema_concurrent_create",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL"
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "B=NEUTRAL+C=REFUTED -> NOT_DEFECT"
+      },
+      "chain_broken_at": "log",
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "c5 类缺失系脚本伪影；1×200+19×422 正确收敛，源码 ErrClassExists by-design"
+    },
+    {
+      "defect_id": "vein_range_filter_schema_sharding_zombie_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "B=CONFIRMED(数值下界) -> DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "desiredCount=-3→200空body+GET404半持久化，同端点0→422；源码 validate() 无范围校验"
+    },
+    {
+      "defect_id": "vein_range_filter_schema_vi_ints_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL"
+        },
+        "aggregation_applied": "B=CONFIRMED(数值下界) -> DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "ef=-5/0、vcm/cleanup/pq.centroids=-1 被 200 持久化；同对象 maxConn/efCons 被 422 拒——校验不对称"
+    }
+  ],
+  "summary": {
+    "total": 18,
+    "defect": 10,
+    "not_defect": 7,
+    "needs_more_evidence": 1
+  }
+}

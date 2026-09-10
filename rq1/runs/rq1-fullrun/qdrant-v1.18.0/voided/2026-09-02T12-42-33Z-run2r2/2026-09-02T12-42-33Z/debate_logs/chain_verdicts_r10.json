@@ -1,0 +1,162 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "r10",
+  "verdicts": [
+    {
+      "defect_id": "boundary_collections_create_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED", "objective_constraint_class": null},
+        "cognition": {"verdict_D": "SUPPORTS_NOT_DEFECT",
+                       "matched_pattern": "blindspot_indicators: payload-only collections (creating a collection without vector configuration is a supported use case)",
+                       "developer_quote": "not an unusable collection, it allows payload-only collection"},
+        "aggregation_applied": "verdict_A=REFUTED (mechanical, id+quote_ok, api_violates_assertion=false) → implied_verdict=NOT_DEFECT → final=NOT_DEFECT"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": "contract_misread",
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: qdrant_type_collections_create_001 quote verified verbatim; vectors={} deserializes as Multi(empty), outside the quoted VectorParams inner-field clauses (which ARE enforced: partial forms 400). Doc marks vectors Optional; source shows by-design (serde(default) + Default=Multi(empty) + empty() ctor + maintainer comment naming the post-create vectors-PATCH path). Chain's own break at doc documents the claim's missing premise, supporting NOT_DEFECT; B=NEUTRAL (empty map is in no objective violation class).",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_collections_create_006",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "enum closed set"},
+        "behavioral": {"verdict_C": "CONFIRMED", "objective_constraint_class": null},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok, api_violates_assertion=true) → implied_verdict=DEFECT → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: qdrant_type_collections_create_006 quote verified verbatim; in-chain observations show out-of-enum memory='hot' and dense-unsupported 'pinned' both accepted 200 with success envelope, and even legal 'cached' never echoed — api_violates_assertion=true. B=CONFIRMED on the enum closed set (non-enum 'hot' accepted); C=CONFIRMED (validation_absent, unannotated serde unknown-field drop; sibling declared field on_disk IS persisted, localizing the drop). Version-skew doubt recorded for manual main-process review: served v-1-18-x spec documents a Memory enum that does not exist in the v1.18.0 source (docs-ahead-of-code); verdict unchanged per mechanized aggregation.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_collections_create_011",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED", "objective_constraint_class": null},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok, api_violates_assertion=true) → implied_verdict=DEFECT → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "range",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: qdrant_range_collections_create_005 quote verified verbatim; wal_retain_closed=0 is at the documented create-side inclusive minimum (WalConfigDiff grid, corroborated by repo-shipped v1.18.x openapi.json) yet the create deterministically returns 500 'Tokio task join error ... panicked' with /healthz alive — failure-to-honor, api_violates_assertion=true. Source grounds the panic at NonZeroUsize::new(*wal_retain_closed).unwrap() (config.rs:62) via the un-revalidated diff merge; reproduced identically by 3 scripts (task ids 16212/17006/17417). B=NEUTRAL (crash-on-legal-value is not an acceptance-class violation; create-min-0 vs resolved-min-1 asymmetry is the contract's own recorded internal conflict — source doubt on the grid conflict exists but A ruled).",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_collections_create_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED", "objective_constraint_class": null},
+        "cognition": {"verdict_D": "SUPPORTS_NOT_DEFECT",
+                       "matched_pattern": "blindspot_indicators: payload-only collections (vector-less create supported; errors surface on first vector use)",
+                       "developer_quote": "not an unusable collection, it allows payload-only collection"},
+        "aggregation_applied": "verdict_A=REFUTED (mechanical, id+quote_ok, api_violates_assertion=false) → implied_verdict=NOT_DEFECT → final=NOT_DEFECT"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "contract_misread",
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: qdrant_type_collections_create_001 quote verified verbatim; the omitted-vectors phenomenon lies outside the quote's domain (inner-field typing, enforced live with 400s) — the 'required=true' premise traces to the mining-layer registry and is contradicted by the version-pinned served OpenAPI (CreateCollection has no required array). Source grounding is explicitly by-design (serde(default) → Multi(empty); maintainer comment names both creation paths) and the shell-then-fill workflow was live-verified end-to-end (create {} → 200, PUT /collections/{name}/vectors/myvec → 200, readback persisted). Chain's break at script marks the oracle's out-of-domain premise — supports NOT_DEFECT.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_collections_create_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "type tautology"},
+        "behavioral": {"verdict_C": "CONFIRMED", "objective_constraint_class": null},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok, api_violates_assertion=true) → implied_verdict=DEFECT → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: qdrant_type_collections_create_002 quote verified verbatim; sparse_vectors map value [] (SparseVectorParams object required) accepted 200 while the same position rejects integer 5 with the server's own 'expected struct SparseVectorParams' 400 — the map-value typing half is violated, the distance half HELD. B=CONFIRMED (object-typed position accepting a sequence; same-family disposition split within one log). Cognition lenient-filter anchor considered and rejected as not isomorphic (scoped to filter condition fields); D=NO_SIGNAL. Source: unannotated serde struct-from-seq leniency, contradicted by the repo's own shipped v1.18.x OpenAPI (SparseVectorParams type: object).",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_collections_create_007",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "CONFIRMED", "objective_constraint_class": "enum closed set"},
+        "behavioral": {"verdict_C": "CONFIRMED", "objective_constraint_class": null},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok, api_violates_assertion=true) → implied_verdict=DEFECT → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: qdrant_type_collections_create_006 quote verified verbatim; primary observation is exactly the assertion's excluded combination (memory='pinned' on a DENSE vectors config) accepted 200 with a clean success envelope, and readback shows no memory key for ANY value (cold/cached echo '__absent__') — api_violates_assertion=true. Doc side is stronger here: versioned OpenAPI shard curl-verified with the verbatim 'pinned is not supported for dense vector storage' sentence. Source forensics show v1.18.0 has no memory field at all and no deny_unknown_fields — docs-ahead-of-code skew doubt recorded for manual review; verdict unchanged per mechanized aggregation.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_collections_create_014",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED", "objective_constraint_class": null},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok, api_violates_assertion=true) → implied_verdict=DEFECT → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "range",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A basis: qdrant_range_collections_create_005 quote verified verbatim; the documented inclusive-minima combo (wal_capacity_mb=1, wal_segments_ahead=0, wal_retain_closed=0) returns 500 with a Tokio task panic while /healthz stays 200 and sibling minima without retain_closed=0 are accepted and persisted (readback wal_retain_closed defaults to 1). Source: WalConfigDiff.wal_retain_closed carries no range attribute while sibling wal_capacity_mb does (mirroring the doc asymmetry), the merge path never re-validates the resolved WalConfig, and NonZeroUsize::new(0).unwrap() panics at config.rs:62. B=NEUTRAL (crash-on-legal-value, not an acceptance class); cognition WAL-replay blindspot not isomorphic to WAL-config validation, D=NO_SIGNAL.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "defect": 5,
+    "not_defect": 2,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 0, "both": 2, "behavior": 0},
+    "root_cause_distribution": {"contract_misread": 2},
+    "constraint_category_distribution": {"type": 5, "range": 2},
+    "candidate_class_distribution": {"strict_defect": 5, "exploratory_candidate": 0, "rejected": 2}
+  }
+}

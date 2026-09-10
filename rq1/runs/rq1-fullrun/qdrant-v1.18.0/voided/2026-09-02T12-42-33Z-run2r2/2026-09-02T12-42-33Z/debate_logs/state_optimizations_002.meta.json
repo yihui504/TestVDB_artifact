@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_optimizations_002",
+ "endpoint": "collections+optimizations",
+ "param": "summary.queued_points / summary.queued_optimizations (queue-accounting drain-to-idle after acked bulk write)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_optimizations_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-optimizations",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "after a wait=true upsert of K points the optimizations face returns only HTTP 200 responses with the spec-typed result envelope, and within a 75s budget 3 consecutive 1s-spaced reads report summary.queued_points == 0 and queued_optimizations == 0 (drained), with two later reads still idle; never-drained or re-awakened phantom queue = Type4_StateLogicViolation; any 5xx/non-200 on the live collection with /healthz alive = Type3/Type4 per class",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

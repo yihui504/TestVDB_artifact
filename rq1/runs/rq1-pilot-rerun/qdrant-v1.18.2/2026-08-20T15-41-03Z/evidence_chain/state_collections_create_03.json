@@ -1,0 +1,64 @@
+{
+  "defect_id": "state_collections_create_03",
+  "endpoint": "collections+create",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation at api.qdrant.tech not reachable (domain_blocked). Contract qdrant_range_create_collection_001 asserts m in [2,100]. State consistency test with m=0 accepted (200), inconsistent with valid range.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: m=0 → HTTP 200, response={\"result\":true,\"status\":\"ok\",\"time\":0.231367577}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A (success: true)",
+        "note": "Invalid m=0 accepted with HTTP 200. Type4_StateViolation - API state inconsistent with documented valid range [2,100]."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_collections_create_03"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_001",
+      "assertion_text_quoted": "hnsw_config.m >= 2 AND hnsw_config.m <= 100",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_001 (assertion: m >= 2 AND m <= 100)",
+        "doc:OpenAPI v1.18.x schema defines m minimum:0 (contradicts contract)",
+        "script:PUT /collections/{name} with hnsw_config.m=0 (state consistency test)",
+        "log:HTTP 200 accepted (state now has m=0, violating [2,100] constraint)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "OpenAPI schema minimum:0 permits m=0. API accepts m=0 and creates collection with invalid HNSW config. Type4_StateViolation - internal state inconsistent with documented constraints.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["hnsw_config.*m", "m.*validation", "HnswGraphConfig"],
+      "files_examined": [
+        "lib/segment/src/index/hnsw_index/config.rs",
+        "docs/redoc/v1.18.x/openapi.json"
+      ],
+      "source_excerpt": "File: docs/redoc/v1.18.x/openapi.json, Lines 7896-7900\n\"m\": {\"minimum\": 0}  // Wrong minimum\n\nFile: lib/segment/src/index/hnsw_index/config.rs, Lines 11-33\n#[derive(Debug, Deserialize, Serialize, Copy, Clone, PartialEq, Eq)]\npub struct HnswGraphConfig {\n    pub m: usize,  // Accepts 0, should reject\n    pub m0: usize,\n    pub ef_construct: usize,\n    ...\n}\n\nHnswGraphConfig accepts m as usize (0 allowed). No validation enforces m>=2.",
+      "call_chain_traced": "OpenAPI schema minimum:0 allows m=0. HnswGraphConfig struct accepts m as usize without validation. Collection created with m=0 persists invalid state. No validation layer enforces [2,100] constraint.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay"],
+      "surviving": "m=0 violates [2,100] range but API creates collection with this invalid config. Type4: state violation - persisted state inconsistent with documented constraints. Not by-design."
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "defect_id": "vein_ids_conversion_chain_002",
+  "endpoint": "entities+search",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "同族：契约无 VarChar pk 数值 id 断言（search_003 仅覆盖 Int64 小数）。script docstring 自述 'documented strconv coercion'（A 案 Int64 pk ids=['42'] 字符串转 int64 属记录行为）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "B numeric 42   -> hit=True {\"code\":0,\"cost\":0,\"data\":[{\"distance\":0,\"pk\":\"42\"},{\"distance\":0.040000003,\"pk\":\"42.5\"}],\"topks\":[2]}（主观测：数值 42 对 VarChar pk 命中）",
+      "secondary_observations": [
+        "C float 42.5   -> hit=True {\"code\":0,...\"data\":[{\"distance\":0,\"pk\":\"42.5\"},{\"distance\":0.040000003,\"pk\":\"42\"}],\"topks\":[2]}（42.5 命中 pk '42.5'）",
+        "E float 42.0   -> hit=True {\"code\":0,...\"data\":[{\"distance\":0,\"pk\":\"42\"},...]}（42.0 → %v 格式化为 '42'）",
+        "A Int64 pk ids=['42']: {\"code\":0,...}（documented strconv 反向 coercion 对照）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "全部 200+code:0，语义层类型混淆"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_ids_conversion_chain_002.py", "debate_logs/semantic_search_ids_mode_002.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": null,
+      "assertion_text_quoted": "（无 VarChar 侧断言；参照 milvus_type_entities_search_003 'int64 pk AND id has fractional part (e.g. 1.5) => code==1100'——Int64 侧严格、VarChar 侧无对称约束）",
+      "api_violates_assertion": false,
+      "note": "同 semantic_search_ids_mode_002：无契约断言可违，violates=false 指'无契约违反'；现象价值在双向不对称证据（E 案 42.0→'42' 证明 %v 格式化而非 strconv 精确转换）。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:VarChar 数值 id 无断言（环缺失）",
+        "doc:utils.go:179 convertIDsToSchemapbIDs",
+        "script:B/C/E 数值与浮点 id 对 VarChar pk 集合 search",
+        "log:hit=True code:0 命中对应字符串 pk"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "契约环缺失（同族）；行为与源码链完整闭合",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["convertIDsToSchemapbIDs", "handleIfSearchByPK", "fmt.Sprintf"],
+      "files_examined": ["internal/distributed/proxy/httpserver/utils.go", "internal/proxy/impl.go"],
+      "source_excerpt": "internal/distributed/proxy/httpserver/utils.go:222-228（VarChar 分支）:\n\t\t\tswitch v := id.(type) {\n\t\t\tcase string:\n\t\t\t\tstringID = v\n\t\t\tcase int64, int, float64:\n\t\t\t\t// Convert number to string\n\t\t\t\tstringID = fmt.Sprintf(\"%v\", v)\n\ninternal/proxy/impl.go:3446-3460:\nfunc (node *Proxy) handleIfSearchByPK(ctx context.Context, request *milvuspb.SearchRequest) error {\n\tids := request.GetIds()\n\tif ids == nil || typeutil.GetSizeOfIDs(ids) == 0 {\n\t\treturn nil // Not search by PK, do nothing\n\t}\n\tinputIDsCount := typeutil.GetSizeOfIDs(ids)\n\tchecker, err := typeutil.NewIDsChecker(ids) ...",
+      "call_chain_traced": "JSON ids → convertIDsToSchemapbIDs VarChar 分支 %v 格式化（42.0→'42' 非 '42.0'，证明是 fmt %v 而非 strconv.FormatFloat 固定格式）→ handleIfSearchByPK 转 PK 查询。E 案是 %v 路径的决定性证据（Go %v 对 42.0 输出 '42'）。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request_typo"],
+      "surviving": "源码显式实现（带注释），但构成隐性类型宽松面：用户传数值 id 永远不会得到类型错误，而是静默字符串化——文档化程度未证实，留 auditor"
+    }
+  }
+}

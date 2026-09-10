@@ -1,0 +1,16 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] drop_collection = /collections/{name} (raw_knowledge api_endpoints[collections+delete].url = /collections/{collection_name})
+ownership prefix: scd01bc6a3f
+[pre-probe] /healthz status=200 raw=healthz check passed
+[create scd01bc6a3f_ctrl] status=200 raw={"result":true,"status":"ok","time":0.237128164}
+[control delete scd01bc6a3f_ctrl] status=200 raw={"result":true,"status":"ok","time":0.006538192}
+[conform] control delete: 200 with result=true (404s below are attributable to non-existence)
+[delete never-created scd01bc6a3f_never] status=200 raw={"result":false,"status":"ok","time":0.000036495}
+[delete never-created] status=200 rubric c1(name-or-collection)=False c2(not-found-hint)=False c3(actionable-bonus)=False score=0/3 text='{"result": false, "status": "ok", "time": 3.6495e-05}'
+[delete just-deleted scd01bc6a3f_ctrl] status=200 raw={"result":false,"status":"ok","time":0.000042836}
+[delete just-deleted] status=200 rubric c1(name-or-collection)=False c2(not-found-hint)=False c3(actionable-bonus)=False score=0/3 text='{"result": false, "status": "ok", "time": 4.2836e-05}'
+[get never-created scd01bc6a3f_never] status=404 raw={"status":{"error":"Not found: Collection `scd01bc6a3f_never` doesn't exist!"},"time":4.588e-6}
+[get never-created (reference face)] status=404 rubric c1(name-or-collection)=True c2(not-found-hint)=True c3(actionable-bonus)=False score=2/3 text="Not found: Collection `scd01bc6a3f_never` doesn't exist!"
+[conform] get never-created (reference face): 404 with resource-named not-found diagnostic (c3 actionable bonus=no)
+VERDICT: SCRIPT_ERROR - SCRIPT-ERROR: delete never-created expected the declared 404 (raw_knowledge expected_responses), got 200; status-matrix adjudication belongs to the boundary lane: {"result":false,"status":"ok","time":0.000036495}

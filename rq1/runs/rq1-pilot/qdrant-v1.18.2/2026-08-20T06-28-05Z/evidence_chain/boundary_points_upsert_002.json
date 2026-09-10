@@ -1,0 +1,72 @@
+{
+  "defect_id": "boundary_points_upsert_002",
+  "endpoint": "points+upsert",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url (https://api.qdrant.tech/api-reference/points/upsert-points) unreachable due to domain block - api.qdrant.tech blocked; doc_version 1.19.x matches target v1.18.2 (major.minor); endpoint registry lists points+upsert with source_url; contract constraint qdrant_type_upsert_points_001 asserts len(points) ∈ [1, 1000] but cannot verify against live doc due to network restriction",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: upsert 1001 points → http=200, code=0 (success), body='{\"result\":{\"operation_id\":1,\"status\":\"acknowledged\"},\"status\":\"ok\"}'",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 200 + 业务成功码",
+        "note": "1001 points exceeds contract upper bound of 1000, but server returns HTTP 200 with success status. Server accepted invalid batch size without rejection."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_points_upsert_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_upsert_points_001",
+      "assertion_text_quoted": "len(points) >= 1 AND len(points) <= 1000",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_type_upsert_points_001 (len(points) ∈ [1, 1000])",
+        "doc:https://api.qdrant.tech/api-reference/points/upsert-points (unreachable, domain blocked)",
+        "script:PUT /collections/{collection_name}/points with 1001 points",
+        "log:Status 200 (operation succeeded - Type1_IllegalSuccess)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "contract asserts len(points) <= 1000; server received request with 1001 points but returned HTTP 200 with operation_id=1, status='acknowledged'; server did not reject the oversized batch. Server-side validation at verification/update.rs:165-169 uses check_limit_opt() with strict_mode_config.upsert_max_batchsize, but this is a configurable limit that defaults to None/unbounded, not an absolute maximum of 1000. Chain断裂在log层：服務器接受了違反契約上限的請求並返回成功。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "upsert_max_batchsize",
+        "check_limit_opt",
+        "len(points)",
+        "1000",
+        "points.len()"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/verification/update.rs (lines 155-182, 165-169)",
+        "lib/collection/src/operations/verification/mod.rs (lines 337-352)",
+        "lib/api/src/rest/schema.rs (lines 1471-1484)",
+        "lib/api/src/rest/schema.rs (lines 1431-1446)"
+      ],
+      "source_excerpt": "File: lib/collection/src/operations/verification/update.rs:155-182 (PointInsertOperations check_custom)\n    async fn check_custom(\n        &self,\n        collection: &Collection,\n        strict_mode_config: &StrictModeConfig,\n    ) -> CollectionResult<()> {\n        check_limit_opt(\n            Some(self.len()),\n            strict_mode_config.upsert_max_batchsize, // ❌ Configurable limit, NOT absolute 1000\n            \"upsert limit\",\n        )?;\n        // ... other checks ...\n    }\n\nFile: lib/collection/src/operations/verification/mod.rs:337-352 (check_limit_opt)\npub(crate) fn check_limit_opt<T: PartialOrd + Display>(\n    value: Option<T>,\n    limit: Option<T>,\n    name: &str,\n) -> CollectionResult<()> {\n    let (Some(limit), Some(value)) = (limit, value) else {\n        return Ok(()); // ❌ No limit configured → passes through\n    };\n    if value > limit {\n        return Err(CollectionError::strict_mode(...));\n    }\n    Ok(())\n}\n// ❌ This only validates against configured max, NOT absolute constraint of 1000\n// ❌ If upsert_max_batchsize is None or > 1000, 1001 points passes through\n\nFile: lib/api/src/rest/schema.rs:1471-1484 (PointsList)\n#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, Validate)]\npub struct PointsList {\n    #[validate(nested)]\n    pub points: Vec<PointStruct>, // ❌ NO length(max = 1000) validation attribute\n    // ...\n}\n\nFile: lib/api/src/rest/schema.rs:1431-1446 (PointsBatch)\n#[derive(Debug, Deserialize, Serialize, Clone, Validate)]\npub struct PointsBatch {\n    #[validate(nested)]\n    pub batch: Batch, // ❌ NO size validation on Batch.ids length\n    // ...\n}",
+      "call_chain_traced": "REST API: schema.rs defines PointsList/PointsBatch without length(max = 1000) validation → request deserialization succeeds for 1001 points → verification/update.rs:check_custom() calls check_limit_opt() with strict_mode_config.upsert_max_batchsize → if upsert_max_batchsize is None/unbounded, check_limit_opt returns Ok(()) at line 342-344 → request proceeds to handler → server processes all 1001 points and returns HTTP 200 → contract violation: len(points) <= 1000 not enforced",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache", "by-design"],
+      "surviving": "Type1 violation - API should reject batches exceeding 1000 points with 400 Bad Request per contract, but server accepts 1001 points and returns HTTP 200 success. Validation is configurable (strict_mode_config.upsert_max_batchsize) rather than absolute (1000), allowing oversized batches to pass through when limit is not configured or set too high."
+    }
+  }
+}

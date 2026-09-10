@@ -1,0 +1,103 @@
+{
+  "defect_id": "boundary_points_delete_invalid_filter_004",
+  "endpoint": "points+delete (POST /collections/{collection_name}/points/delete)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS: page + .md variant both fetched via alternate web reader on 2026-09-04 (native WebFetch domain-verifier blocked api.qdrant.tech; recorded honestly). Version PASS: page selector shows v1.18.x (URL path v-1-18-x), matching target v1.18.0 on major.minor. Content PARTIAL: the page documents POST /collections/{collection_name}/points/delete with a 'PointIdsList OR FilterSelector' body and a 200 UpdateResult response, but the rendered response section carries ONLY the 200 branch — the literal promise '400 on an invalid filter' is not verbatim prose on the fetched page; it is grounded in (a) the contract's own embedded doc-verification record (doc_quote '...200 ok, 404 for a missing collection, 400 for an invalid filter', verified_at 2026-09-02T12:34:08Z) and (b) the server's own demonstrated convention (T1/m1/m4/F3/F4 all returned 400 'Format error in JSON body' for shape-invalid filters). Note also the Fern-rendered schema for must/must_not/should explicitly lists single-object alternatives ('object or ... or list of object ... or any'), so the OBJECT CONTAINER itself is doc-schema-legal; the violation rests on the no-matcher condition, which the source's own validator defines as invalid. Endpoint precision PASS: endpoint_registry maps points+delete to POST /collections/{collection_name}/points/delete with the same source_url; the script used exactly this path.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "T2 must_not as OBJECT -> status=200 | raw: {\"result\":{\"operation_id\":3,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.00620807} | blast radius: DESTRUCTIVE: count moved 6 -> 0",
+      "secondary_observations": [
+        "G guard valid filter delete must[grp=red] -> status=200 | G: 200, count == 6 == 6 (guard baseline set) [positive control: valid-filter path live before any 400 is trusted]",
+        "T1 must as STRING -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum PointsSelector\"},\"time\":0.0} [rest face, same script, same endpoint: string clause rejected cleanly — disposition asymmetry vs T2]",
+        "addendum: the acceptance was destructive — Type4_StateLogicViolation (invalid input mutated state)",
+        "[rest face, same endpoint points+delete, other script state_points_delete_002.log:17] [m3-cond-without-match] status=200 body={\"filter\": {\"must\": [{\"key\": \"grp\"}]}} raw={\"result\":{\"operation_id\":5,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.003657538} [array-form condition without match ALSO accepted — defect is not limited to the object shorthand]",
+        "[rest face, same endpoint, state_points_delete_002.log:15-16] [m2-should-null] status=200 body={\"filter\": {\"should\": null}} ... [m2-should-null count] status=200 raw={\"result\":{\"count\":0},\"status\":\"ok\",...} [null clause accepted, wiped remaining 3 points]",
+        "[rest face, same endpoint, state_points_delete_002.log:14,19] [m1-must-not-a-list] status=400 ... [m4-match-without-key] status=400 [rejected controls: string clause and key-less condition both 400]",
+        "[rest face, sibling endpoint points+count, boundary_points_count_filter_type_003.log:20-21] F5 filter={\"must\": {...}} (object for conditions array) -> status=200 | raw: {\"result\":{\"count\":8},\"status\":\"ok\",\"time\":0.000412256} [same-family parameter, same acceptance]",
+        "[rest face, sibling endpoint points+count, boundary_points_count_filter_type_003.log:12-17] F3 filter=\"berlin\" (string for object) -> status=400 ... invalid type: string \"berlin\", expected struct Filter | F4 filter=[{...}] (array for object) -> status=400 ... invalid length 1, expected struct Filter with 4 elements [rejected controls: string and array containers rejected; only the map form slips through]"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Worse than a business error code: the request-decidable invalid filter (no-matcher condition) returned HTTP 200 with a full SUCCESS envelope (status:\"ok\", operation_id:3, status:\"completed\") — the invalidity was not surfaced as an error anywhere in the response, and the operation executed destructively."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_points_delete_invalid_filter_004",
+        "state_points_delete_002",
+        "boundary_points_count_filter_type_003"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_delete_001",
+      "assertion_text_quoted": "returns 200 ok (UpdateResult) on success; 404 when the collection is missing; 400 on an invalid filter",
+      "api_violates_assertion": true,
+      "note": "assertion_text_quoted is the verbatim description field of qdrant_behavioral_points_delete_001 in structured_contract.json (~line 7153); the same entry's expected_behavior field additionally reads verbatim: 'valid delete returns HTTP 200; missing collection returns 404; malformed filter returns 400'. violates-declaration self-check: the observed phenomenon is 'invalid filter silently accepted with 200 + destructive execution', and the quoted constraint demands '400 on an invalid filter' — the observed input IS inside the constraint's invalid-filter domain. Ground for 'invalid': the source's own validator explicitly defines a FieldCondition with no matcher as invalid (types.rs:3232-3240 'At least one field condition must be specified'), and the server's own convention returns 400 for shape-invalid filters on sibling faces (T1, m1, m4, F3, F4 all 400 'Format error in JSON body'). Caveat recorded for the auditor: the object-instead-of-array CONTAINER is by-design one-or-many (MaybeOneOrMany) and doc-schema-legal; the violating substance is the no-matcher condition acceptance (and its destructive must_not inversion), not the container shape.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_delete_001 present in results/qdrant/v1.18.0/structured_contract.json (~line 7151; endpoint points+delete; evidence_tier explicit; 200/404/400 promise). Minor mechanical gap: candidates.jsonl constraint_id field was extracted EMPTY; recovered from the script header 'constraint_ids: qdrant_behavioral_points_delete_001' (debate_logs/boundary_points_delete_invalid_filter_004.py:8).",
+        "doc: source_url https://api.qdrant.tech/v-1-18-x/api-reference/points/delete-points reachable (HTML + .md fetched via alternate web reader; native WebFetch domain-blocked), version v1.18.x matches v1.18.0; page documents the exact endpoint and the PointIdsList-OR-FilterSelector body; rendered page shows only the 200 response branch — the '400 on invalid filter' leg is PARTIAL (not verbatim on page; grounded by the contract's embedded doc_quote record verified_at 2026-09-02 and by the server's own 400 convention on sibling malformed faces).",
+        "script: debate_logs/boundary_points_delete_invalid_filter_004.py sent POST /collections/{coll}/points/delete?wait=true with body {\"filter\":{\"must_not\":{\"key\":\"grp\"}}} (FACES[1], script line 106-107), after seeding 9 points (3 red/6 blue) and a G guard valid-filter delete that removed the 3 red (count 9->6).",
+        "log: output_boundary_points_delete_invalid_filter_004.log verdict line 15 'VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — T2 must_not as OBJECT: invalid filter ACCEPTED with status 200 (promise: 400); blast radius: DESTRUCTIVE: count moved 6 -> 0' with line 16 Type4 addendum — matches the dispatched claim_hint exactly; T3-T5 never ran (script returns at first Type1)."
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "pub struct Filter {",
+        "enum PointsSelector",
+        "MaybeOneOrMany",
+        "pub enum Condition {",
+        "pub struct FieldCondition {",
+        "fn validate_field_condition",
+        "pub async fn do_delete_points",
+        "\\.validate\\(\\)",
+        "fn all_fields_none",
+        "must_not"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs",
+        "lib/segment/src/common/utils.rs",
+        "lib/segment/src/payload_storage/query_checker.rs",
+        "lib/segment/src/payload_storage/condition_checker.rs",
+        "lib/collection/src/operations/point_ops.rs",
+        "src/actix/api/update_api.rs",
+        "src/common/update.rs",
+        "lib/storage/src/content_manager/toc/point_ops.rs",
+        "lib/segment/src/index/query_optimization/optimizer.rs"
+      ],
+      "source_excerpt": "[lib/segment/src/common/utils.rs:94-107 — single-object coercion is deliberate]\nimpl<'de, T: Deserialize<'de>> MaybeOneOrMany<T> {\n    pub fn deserialize<D>(deserializer: D) -> Result<Option<Vec<T>>, D::Error>\n    where D: serde::Deserializer<'de>,\n    {\n        use serde_untagged::UntaggedEnumVisitor;\n        UntaggedEnumVisitor::new()\n            .unit(|| Ok(None))\n            .seq(|x| x.deserialize().map(Some))\n            .map(|x| x.deserialize().map(|x| vec![x]).map(Some))\n            .deserialize(deserializer)\n    }\n}\n\n[lib/segment/src/types.rs:3793-3825 — all three clause fields use MaybeOneOrMany; Filter itself deny_unknown_fields]\n#[serde(deny_unknown_fields, rename_all = \"snake_case\")]\npub struct Filter {\n    #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")]\n    pub should: Option<Vec<Condition>>,\n    ... (min_should plain Option)\n    #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")]\n    pub must: Option<Vec<Condition>>,\n    #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")]\n    pub must_not: Option<Vec<Condition>>,\n}\n\n[lib/segment/src/types.rs:3040-3045 — every matcher optional, so {\"key\":\"grp\"} is serde-legal]\npub struct FieldCondition {\n    pub key: PayloadKeyType,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub r#match: Option<Match>,   // ... range/geo_*/values_count/is_empty/is_null all Option too (3046-3066)\n\n[lib/segment/src/types.rs:3440-3449 — any map containing \"key\" is routed to FieldCondition first]\nif let serde_value::Value::Map(obj) = &value\n    && obj.contains_key(&serde_value::Value::String(\"key\".into()))\n{\n    return value.deserialize_into().map(Condition::Field).map_err(serde::de::Error::custom);\n}\n\n[lib/segment/src/types.rs:3199-3213 + 3232-3240 — the source's own validator declares all-None conditions INVALID]\npub fn all_fields_none(&self) -> bool { matches!(self, FieldCondition { r#match: None, range: None, ... }) }\npub fn validate_field_condition(field_condition: &FieldCondition) -> Result<(), ValidationError> {\n    if field_condition.all_fields_none() {\n        Err(ValidationError::new(\"At least one field condition must be specified\"))\n    } else { Ok(()) }\n}\n\n[src/actix/api/update_api.rs:80-89,99-108 — REST handler: deserialize then straight to do_delete_points, NO .validate()]\n#[post(\"/collections/{collection_name}/points/delete\")]\nasync fn delete_points(... operation: Json<PointsSelector>, ...) -> impl Responder {\n    let operation = operation.into_inner();\n    ...\n    let res = do_delete_points(StrictModeCheckedTocProvider::new(&dispatcher), collection.into_inner().collection_name, operation, ...).await;\n\n[src/common/update.rs:412,425-434 — no validation; selector mapped directly to DeletePointsByFilter]\npub async fn do_delete_points(...) -> Result<UpdateResult, StorageError> {\n    ...\n    PointsSelector::FilterSelector(FilterSelector { filter, shard_key }) => {\n        (PointOperations::DeletePointsByFilter(filter), shard_key)\n    }\n\n[lib/segment/src/payload_storage/condition_checker.rs:78-101 — all-None condition matches NOTHING]\nr#match.as_ref().is_some_and(...) || range.as_ref().is_some_and(...) || geo_radius... || geo_bounding_box... || geo_polygon... || values_count... || is_empty.is_some_and(...) || is_null.is_some_and(...)  // all None => false\n\n[lib/segment/src/payload_storage/query_checker.rs:88-97 — must_not inverts it: matches EVERY point]\nfn check_must_not<F>(checker: &F, must_not: &Option<Vec<Condition>>) -> bool {\n    let check = |x| !check_condition(checker, x);\n    match must_not { None => true, Some(conditions) => conditions.iter().all(check) }\n}",
+      "call_chain_traced": "Request {\"filter\":{\"must_not\":{\"key\":\"grp\"}}} -> actix delete_points (src/actix/api/update_api.rs:80, Json<PointsSelector>, serde-untagged) -> FilterSelector -> Filter.must_not via MaybeOneOrMany map-branch -> vec![Condition] (lib/segment/src/common/utils.rs:104) -> Condition::deserialize routes map-with-'key' to FieldCondition (types.rs:3442-3449) -> FieldCondition{key:\"grp\", all matchers None} (types.rs:3040-3067, every matcher Option => serde-legal). The VALIDATION that would reject this exists in source — PointsSelector:Validate (lib/collection/src/operations/point_ops.rs:28-35) cascades Filter#[validate(nested)] -> FieldCondition#[validate(schema(function=\"validate_field_condition\"))] -> 'At least one field condition must be specified' (types.rs:3232-3240), and unit tests assert batch.validate().is_err() for invalid selectors (point_ops.rs:403-427) — but NO .validate() call exists anywhere on the REST path (handler -> do_delete_points src/common/update.rs:412 -> update() :1201 -> TableOfContent::update lib/storage/src/content_manager/toc/point_ops.rs:490; grep of src/ + lib/collection + lib/storage update chain finds zero call sites). Evaluation then proceeds: no payload index on 'grp' -> fallback field_condition.check per value (query_checker.rs:234) -> check_match with all-None matchers returns false for every point (condition_checker.rs:78-101) -> check_must_not inverts (!false=true) for every point (query_checker.rs:88-97) -> filter matches ALL 6 remaining points -> DeletePointsByFilter wipes them -> observed count 6->0. Root cause: no-matcher FieldCondition passes serde and the validator that forbids it is never invoked on the REST delete path.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "validation_absent on the operative path, with precision: the validation RULE exists in source (validator-crate impls at every level, tested in lib/collection/src/operations/point_ops.rs:403-427) but is never invoked on the REST delete-points route — dead validation code, so the API accepts an input the source itself defines as invalid, with destructive effect. NOT by_design_in_source: the only by-design element is the one-or-many object shorthand (MaybeOneOrMany, unit-tested, mirrored by the Fern doc schema 'object or ... or list of object'); nothing annotates acceptance of matcher-less conditions — the source's own validator text points the opposite way. Corroboration that this generalizes beyond the shorthand: state_points_delete_002 m3 shows a well-formed ARRAY containing a no-matcher condition also accepted 200 on the same endpoint.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "environment — G guard proves the valid-filter delete path is live (200, exact count 9->6) before T2; deterministic serde behavior, no transport failures in the log",
+        "concurrency — single-threaded sequential script, wait=true on every mutation, exact count re-queried after each accepted operation",
+        "cache/read staleness — counts taken via the points+count face after wait=true committed operations (count moved immediately 6->0)",
+        "request-parameter typo — the malformed body is the intended probe; rejected control faces on the same parameter (T1, m1 string-clause 400; m4 key-less condition 400; F3/F4 wrong-container 400) prove the endpoint parses and dispositions the filter body"
+      ],
+      "surviving": "By-design defense is available ONLY for the one-object shorthand container (MaybeOneOrMany, unit-tested, doc-schema-visible); it does NOT cover acceptance of a matcher-less FieldCondition, which the source's own validator explicitly forbids ('At least one field condition must be specified') yet is never enforced on the REST path. The surviving defect signal: an explicitly-forbidden filter shape is silently accepted AND destructively executed (must_not:[no-matcher condition] inverts to match-everything, wiping the collection) — the destructive generalization of the gap is confirmed by the same-endpoint m3 (array form) and m2 (null clause -> empty filter -> wipe) observations."
+    }
+  }
+}

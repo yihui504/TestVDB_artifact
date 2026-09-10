@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_get_006",
+ "endpoint": "collections+get",
+ "param": "hnsw_config.m / params.vectors (resolved-config echo + post-update reflection)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_get_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "describe after an explicit create (vectors size 4 / distance Dot, hnsw m 32 / ef_construct 200, indexing_threshold 30000) echoes those exact values with unset fields resolved (full_scan_threshold int, shard_number int, wal_config object with wal_capacity_mb int, flush_interval_sec number); after a 200 PATCH hnsw_config.m=24, describe reports m==24 — re-defaulted/omitted explicit values or a stale m = Type4_StateLogicViolation; 5xx = Type3 only with /healthz liveness",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

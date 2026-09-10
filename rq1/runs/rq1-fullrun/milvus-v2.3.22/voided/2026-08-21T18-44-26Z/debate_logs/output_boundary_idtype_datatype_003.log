@@ -1,0 +1,18 @@
+[idType='int64'] http=200 body={"code":200,"data":{}}
+[idType='varchar'] http=200 body={"code":1100,"message":"idType can only be [Int64, VarChar], default: Int64: invalid parameter[expected=Int64, Varchar][actual=varchar]"}
+[idType='INT64'] http=200 body={"code":1100,"message":"idType can only be [Int64, VarChar], default: Int64: invalid parameter[expected=Int64, Varchar][actual=INT64]"}
+[idType='Int32'] http=200 body={"code":1100,"message":"idType can only be [Int64, VarChar], default: Int64: invalid parameter[expected=Int64, Varchar][actual=Int32]"}
+[idType=''] http=200 body={"code":200,"data":{}}
+[idType=123] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number into Go struct field CollectionReq.idType of type string"}
+[idType=None] http=200 body={"code":200,"data":{}}
+[dataType='Int64'] http=200 body={"code":200,"data":{}}
+[dataType='int64'] http=200 body={"code":1100,"message":"invalid parameter, data type int64 is invalid(case sensitive)."}
+[dataType='FloatVector'] http=200 body={"code":200,"data":{}}
+[dataType='floatvector'] http=200 body={"code":1100,"message":"invalid parameter, data type floatvector is invalid(case sensitive)."}
+[dataType='varchar'] http=200 body={"code":1100,"message":"invalid parameter, data type varchar is invalid(case sensitive)."}
+[dataType='Bogus'] http=200 body={"code":1100,"message":"invalid parameter, data type Bogus is invalid(case sensitive)."}
+[dataType=''] http=200 body={"code":1100,"message":"invalid parameter, data type  is invalid(case sensitive)."}
+DEFECT: idType='int64': Type1_IllegalSuccess (enum violation)
+DEFECT: idType='': Type1_IllegalSuccess (enum violation)
+DEFECT: idType=None: Type1_IllegalSuccess (enum violation)
+VERDICT: DEFECT_FOUND

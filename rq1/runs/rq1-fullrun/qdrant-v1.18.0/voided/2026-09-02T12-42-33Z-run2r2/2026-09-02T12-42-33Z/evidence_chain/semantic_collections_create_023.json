@@ -1,0 +1,92 @@
+{
+  "defect_id": "semantic_collections_create_023",
+  "endpoint": "collections+create",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS via web-reader fallback (built-in WebFetch was domain-gated for qdrant.tech, i.e. domain_blocked on that face only; the alternate fetch returned the full page, title 'Collections - Qdrant'). Version PARTIAL: source_url has no version in URL (site latest), but the page contains 'Available as of v1.18.0' (Update Vector Schema section) and all four endpoint_registry entries carry versioned v-1-18-x api-reference URLs verified_at 2026-09-02T12:34:08Z. Content PARTIAL: the page documents all four operations (Create a Collection PUT /collections/{c}; List All Collections GET /collections; Collection Info GET /collections/{c} with the exact green/yellow/grey/red status semantics the contract's parenthetical cites; Check Collection Existence GET /collections/{c}/exists, v1.8.0+) - however the strict 'immediately (zero intervening sleep)' timing clause is the contract oracle's phrasing, not documentation-verbatim prose. Endpoint precision PASS: collections+create/+list/+get/+exists all present in endpoint_registry with method/path/source_url/doc_quote. No doc_preflight.json sidecar exists in the contract directory; fallback verification was performed live as specified.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "D",
+      "log_pattern": "[list] 0 collections; membership pos=False neg=False",
+      "secondary_observations": [
+        "[list] status=200 raw={\"result\":{\"collections\":[{\"name\":\"bcc139b6a8bp2\"},{\"name\":\"bcc139bc7c6p2\"},{\"name\":\"scc023_1788393553_vis\"},{\"name\":\"scc2a_1788393513_35968_shmin\"}]},\"status\":\"ok\",\"time\":9.587e-6}  <- RAW-RESPONSE REFUTATION: the created name IS present in the list body returned immediately after the 200 create",
+        "[create scc023_1788393553_vis] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.298110102}",
+        "VERDICT line: 'collection scc023_1788393553_vis returned 200 on create but is ABSENT from the collections list queried immediately after ... list head=[]'  <- verdict text directly contradicted by the raw body on the [list] line above it",
+        "root cause in script (debate_logs/semantic_collections_create_023.py lines 206-212): list_names() appends only items with an 'id' key or bare strings; the actual v1.18.0 items are {\"name\":...} dicts, so every entry is dropped -> names=[] -> false membership=False; the script then exited at the first defect() call, so the describe and exists faces were never executed in this log",
+        "cross-script refutation (output_boundary_collections_create_019.log, same contract qdrant_bc_create_visibility_001, same session/deployment): '[list face] status=200 n_names=3 name_present=True' / '[get face] status=200 result.status=green' / '[exists face] status=200 result.exists=True' / negative control invisible on all faces / 'VERDICT: NO_DEFECT' - sibling script parses the same {\"name\":...} entries correctly"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The request was valid (documented minimal config {vectors:{size:4,distance:Cosine}}); create and list both returned genuine 2xx success envelopes. The disagreement is between the script's derived membership variable and its own raw response - a script-side parsing artifact, not an HTTP-semantics issue."
+      },
+      "reproducibility": "single script (and refuted cross-script: boundary_collections_create_019 on the same contract and the same six faces returned NO_DEFECT; no other log in the session shows the '[list] 0 collections' pattern)",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_collections_create_023"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_bc_create_visibility_001",
+      "assertion_text_quoted": "a successfully created collection is immediately listable, gettable and reported as existing",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check: the claim's phenomenon is '200-created collection absent from the immediate list', an illegal invisibility. The chain's quoted raw observation (the [list] RESP body) shows the name scc023_1788393553_vis PRESENT in result.collections[] - squarely inside the quote's constraint domain ('the name appears in the collections list') and genuinely compliant. The 'absence' existed only inside the script's names[] variable after an extraction bug (id-key vs name-key mismatch), so api_violates_assertion=false is correct on the merits, not a mis-cited-constraint case.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_bc_create_visibility_001 exists in structured_contract.json behavioral_contracts; its scenario (PUT create 200 -> list -> get -> exists) matches the script's issued chain 1:1",
+        "doc: https://qdrant.tech/documentation/manage-data/collections/ reachable (web-reader fallback); documents all four operations incl. the exact yellow/grey status semantics; the 'immediately' timing clause is contract-oracle phrasing rather than doc-verbatim (recorded as PARTIAL)",
+        "script: requests conform to the scenario (valid PUT create, then immediate GET /collections via runtime list_collections) - but list_names() (debate_logs/semantic_collections_create_023.py:206-212) accepts only 'id'-keyed dicts or bare strings and silently drops the actual {\"name\":...} entries; the docstring's claimed basis 'result.collections[].id (v1.18.0 observed)' is contradicted by raw_knowledge.json (collections+list behavioral constraint: '200 with array of {name} CollectionDescription') and by the source (REST CollectionDescription has only pub name)",
+        "log: the script printed VERDICT: DEFECT_FOUND (Type4) with 'ABSENT ... list head=[]' while the same log's raw [list] response body contains the created name - the judged defect contradicts the recorded raw evidence"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "The log-level verdict is contradicted by the log-level raw response: line 7 raw body contains {\"name\":\"scc023_1788393553_vis\"} among 4 collections, while line 8 derives '0 collections; membership pos=False' and line 10 asserts ABSENT. The membership fact required by the contract is TRUE in the raw traffic; the DEFECT_FOUND is an artifact of the script's name-extraction bug (items keyed 'name' dropped because only 'id'/bare-string shapes were collected). The chain contract->doc->script->raw-traffic is otherwise intact; only the script's derived verdict layer is invalid. Additionally, the script terminated at the first defect() call, so the describe and exists faces of the contract were never exercised in this log; the sibling script boundary_collections_create_019 exercised all six faces (positive x3 + negative x3) on the same contract and observed full compliance (NO_DEFECT), including immediate listability.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "CollectionDescription (whole tree, *.rs)",
+        "get_collections|list_collections|CollectionsResponse (src/actix)",
+        "do_list_collections|do_collection_exists (src/common/collections.rs)",
+        "submit_collection_meta_op|perform_collection_meta_op (lib/storage)",
+        "all_collections (toc/mod.rs)",
+        "create_collection + collections.insert (toc/create_collection.rs)"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/models.rs (lines 126-162)",
+        "src/actix/api/collections_api.rs (lines 37-135, 160-194)",
+        "src/common/collections.rs (lines 49-101)",
+        "lib/storage/src/dispatcher.rs (lines 63-262)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (lines 30-115)",
+        "lib/storage/src/content_manager/toc/create_collection.rs (lines 19-315)",
+        "lib/storage/src/content_manager/toc/mod.rs (lines 315-350)"
+      ],
+      "source_excerpt": "lib/api/src/rest/models.rs:132-162\n#[derive(Debug, Serialize, JsonSchema)]\n#[serde(rename_all = \"snake_case\")]\npub struct CollectionDescription {\n    pub name: String,\n}\n\nfn example_collections_response() -> CollectionsResponse {\n    CollectionsResponse {\n        collections: vec![\n            CollectionDescription { name: \"arxiv-title\".to_string(), },\n            CollectionDescription { name: \"arxiv-abstract\".to_string(), },\n            CollectionDescription { name: \"medium-title\".to_string(), },\n            CollectionDescription { name: \"medium-text\".to_string(), },\n        ],\n    }\n}\n\n#[derive(Debug, Serialize, JsonSchema)]\n#[serde(rename_all = \"snake_case\")]\n#[schemars(example = \"example_collections_response\")]\npub struct CollectionsResponse {\n    pub collections: Vec<CollectionDescription>,\n}\n\nlib/storage/src/content_manager/toc/create_collection.rs:240-244, 275-283\n        {\n            let mut write_collections = self.collections.write().await;\n            write_collections.validate_collection_not_exists(collection_name)?;\n            let existing_collection =\n                write_collections.insert(collection_name.to_string(), Arc::new(collection));\n            ...\n        }\n\n        drop(collection_create_guard);\n\n        // Notify the collection is created and ready to use\n        for shard_id in local_shards {\n            self.on_peer_created(collection_name.to_string(), self.this_peer_id, shard_id)\n                .await?;\n        }\n\n        Ok(true)\n    }",
+      "call_chain_traced": "PUT /collections/{c} handler (src/actix/api/collections_api.rs:111-135) -> Dispatcher::submit_collection_meta_op (lib/storage/src/dispatcher.rs:72). Standalone branch (:257-261): tokio::task::spawn(toc.perform_collection_meta_op(op)).await - the HTTP 200 is sent only after the meta op completes. perform_collection_meta_op (toc/collection_meta_ops.rs:37-73) awaits TableOfContent::create_collection (toc/create_collection.rs:20-284), which fully constructs the Collection (Collection::new, :206-234) and inserts it into the shared self.collections map (:241-244) BEFORE returning Ok(true) (:283), under comment 'Notify the collection is created and ready to use'. Every read face reads that same live map with no cache or delay: do_list_collections (src/common/collections.rs:87-101) via toc.all_collections -> self.collections.read().await keys (toc/mod.rs:343-344), mapped to CollectionDescription{name}; do_collection_exists (:49-66) via toc.get_collection() -> exists:true; do_get_collection (:68-85) via toc.get_collection().info(). The REST list entry struct has ONLY pub name (lib/api/src/rest/models.rs:134-136) - no 'id' field exists anywhere on this face, refuting the script's 'result.collections[].id' extraction preference at the source level. (Distributed deployments additionally wait for consensus apply + replica activation before responding, dispatcher.rs:214-231.)",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (pre-probe /healthz=200; create/list both 200; no transport failures)",
+        "concurrency race / async visibility gap (the raw list body fetched immediately after the 200 create already contains the name; source shows registration into the live TOC map completes before the create response is sent)",
+        "cache delay / eventual consistency on metadata (read faces read the in-memory self.collections RwLock directly; no cache layer in the path)",
+        "request-parameter typo (create body is the documented minimal valid config; the name string matches exactly between create and list)"
+      ],
+      "surviving": null
+    }
+  },
+  "builder_note": "Attribution of the claimed defect: fully explained by a script-side extraction bug (semantic_collections_create_023.py list_names() drops {\"name\":...} entries because it only collects 'id'-keyed dicts or bare strings), producing a false Type4 verdict that contradicts the script's own recorded raw response. The target's behavior complies with qdrant_bc_create_visibility_001 on the evidence of this log's raw traffic and of the sibling script boundary_collections_create_019 (same contract, all faces, NO_DEFECT). Verdict adjudication is the chain-auditor's prerogative; this file records facts only."
+}

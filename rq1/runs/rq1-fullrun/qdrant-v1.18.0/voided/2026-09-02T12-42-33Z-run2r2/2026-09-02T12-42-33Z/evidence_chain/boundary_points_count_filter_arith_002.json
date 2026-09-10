@@ -1,0 +1,95 @@
+{
+  "defect_id": "boundary_points_count_filter_arith_002",
+  "endpoint": "points+count (POST /collections/{collection_name}/points/count)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS via contract-time records: assertion source_status='reachable' and endpoint_registry entry for points+count carries doc_quote + verified_at=2026-09-02T12:34:08.403684+00:00; a live WebFetch re-verification today returned domain_blocked (network restriction on api.qdrant.tech, not evidence of URL death — recorded honestly). Version PASS: URL segment v-1-18-x matches target v1.18.0 (major.minor 1.18). Content PASS verified against the clone's versioned OpenAPI docs/redoc/v1.18.x/openapi.json: CountRequest.filter 'Look only for points which satisfies this conditions', CountRequest.exact 'If true, count exact number of points. If false, count approximate number of points faster. Approximate count might be unreliable during the indexing process. Default: true', and CountRequest description 'Counts the number of points which satisfy the given filter. If filter is not provided, the count of all points in the collection will be returned.' — the assertion is a faithful paraphrase; note the doc promises filter-generic exact counting (membership semantics for has_id via the Filter schema), and promises no per-condition count arithmetic beyond that. Endpoint PASS: registry path points+count, method POST, url /collections/{collection_name}/points/count; the script posted to exactly this face with filter+exact in the JSON body.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "F6 must [has_id [1,2,3,9]] -> status=200 / raw: {\"result\":{\"count\":4},\"status\":\"ok\",\"time\":0.000382902} / VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — F6 must [has_id [1,2,3,9]]: exact=true count expected 3 (arithmetic-derived from seed set), got 4",
+      "secondary_observations": [
+        "baseline: omitted filter count == 12 (arithmetic anchor OK) — proves all 12 seeded points visible before any filter face",
+        "F1 must [city=berlin]: count == 8 == expected 8",
+        "F2 must [city=paris]: count == 4 == expected 4 — proves the 4 paris points (ids 9,10,11,12 by the script's seed construction) existed at face time; id 9 therefore existed when F6 ran (count POSTs are read-only, no mutation between faces)",
+        "F4 must_not [berlin]: count == 4 == expected 4",
+        "F5 must [berlin] + must_not [berlin] (contradiction): count == 0 == expected 0",
+        "F7 points+scroll cross-face check never executed: the script returns on the first expectation mismatch, so the in-script cross-face agreement check (scroll id set == 8 berlin ids) was skipped after F6",
+        "script oracle source (debate_logs/boundary_points_count_filter_arith_002.py): line 159 (\"F6 must [has_id [1,2,3,9]]\", {\"must\": [{\"has_id\": [1, 2, 3, 9]}]}, 3) vs seed loop lines 178-180 'for i in range(1, N_SEED + 1): city = \"berlin\" if i <= BERLIN_N else \"paris\"' with N_SEED=12 — id 9 IS seeded; the docstring line 30 'F6 ... -> 3 (ids 1,2,3 in seed; all exist)' is internally inconsistent ('all exist' implies 4)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The F6 request is a well-formed, fully valid request (legal filter, exact=true boolean); no client-side-decidable error is involved, so the 2xx-vs-4xx question does not apply. The 200 response with count=4 is the documented success shape."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_points_count_filter_arith_002"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_count_001",
+      "assertion_text_quoted": "exact=true (default) performs an exact count (slower); an omitted filter counts all points",
+      "api_violates_assertion": false,
+      "note": "violates=False is the genuinely-compliant branch of the self-check, not the vague middle: the observed count 4 IS the exact number of points matching the filter — the seeded collection contains ids 1..12 (baseline count==12 in the same log), so has_id [1,2,3,9] matches exactly {1,2,3,9} = 4 points, and id 9's existence is independently proven by F2 (paris==4, paris ids are 9..12 by the script's own construction). The 3-vs-4 mismatch is against the script's mis-derived oracle, not against the assertion's promise. Also note: candidates.jsonl's constraint_id field is empty; the constraint id was recovered from the attack string and the script header '# constraint_ids: qdrant_behavioral_points_count_001', and the assertion exists verbatim in structured_contract.json assertions[] (evidence_tier explicit, level endpoint).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_count_001 present in structured_contract.json assertions[] (candidates.jsonl constraint_id field is empty ''; id recovered from the attack string + script header '# constraint_ids: qdrant_behavioral_points_count_001') — link present",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/points/count-points; exact/filter semantics confirmed verbatim in the clone's versioned docs/redoc/v1.18.x/openapi.json (CountRequest.exact 'If true, count exact number of points ... Default: true'); live fetch today domain_blocked — link present via contract-time verified_at record + in-clone OpenAPI",
+        "script: raw request face correct (POST /collections/{coll}/points/count, body {\"filter\":{\"must\":[{\"has_id\":[1,2,3,9]}]},\"exact\":true}, fresh uuid-tagged collection, wait=true upsert, baseline anchor 12 OK) — BUT the F6 oracle expectation 3 contradicts the script's own arrange step: seed loop range(1,13) makes id 9 an existing paris point, so the correct arithmetic-derived expectation is 4; the docstring's own 'R33 lesson: id-collision analysis' was violated by including in-range id 9 — oracle link broken",
+        "log: the DEFECT_FOUND (Type4) verdict line is the mechanical product of the mis-derived expectation (got 4 != expected 3); the raw response count=4 is arithmetically correct for the seeded set, so the verdict does not evidence a target-side state-logic violation — log link inherits the script break"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The break is in the script's expected-value derivation, not in the request construction and not in the target's behavior: line 159 sets expected=3 for has_id [1,2,3,9] while lines 178-180 seed ids 1..12 (id 9 = paris). The filter's true matching set is {1,2,3,9} (all four exist, proven by baseline==12 and F2 paris==4 within the same log), so exact=true returning 4 satisfies the assertion 'exact=true returns the exact number of points matching the filter'. The log's Type4 verdict is a false positive caused by the oracle arithmetic error (apparent intent: include one non-existent id to prove has_id does not over-count — that requires an id outside 1..12, e.g. 13 or 99).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "HasIdCondition",
+        "has_id.contains",
+        "fn count",
+        "CountRequestInternal",
+        "fn read_filtered",
+        "estimate_cardinality"
+      ],
+      "files_examined": [
+        "lib/shard/src/count.rs",
+        "lib/segment/src/types.rs",
+        "lib/segment/src/payload_storage/query_checker.rs",
+        "lib/collection/src/shards/local_shard/shard_ops.rs",
+        "lib/collection/src/shards/local_shard/mod.rs",
+        "lib/collection/src/collection_manager/segments_searcher.rs",
+        "lib/collection/src/collection/point_ops.rs",
+        "docs/redoc/v1.18.x/openapi.json"
+      ],
+      "source_excerpt": "lib/segment/src/types.rs:3277-3282\n/// ID-based filtering condition\npub struct HasIdCondition {\n    #[schemars(schema_with = \"HashSet::<PointIdType>::json_schema\")]\n    pub has_id: MaybeArc<AHashSet<PointIdType>>,\n}\n\nlib/segment/src/payload_storage/query_checker.rs:128-140 (check_payload)\n    let checker = |condition: &Condition| match condition {\n        ...\n        Condition::HasId(has_id) => id_tracker\n            .and_then(|id_tracker| id_tracker.external_id(point_id))\n            .is_some_and(|id| has_id.has_id.contains(&id)),\n\nlib/collection/src/shards/local_shard/shard_ops.rs:365-387 (LocalShard::count)\n        let result: CollectionResult<usize> = if request.exact {\n            let timeout = self.timeout_or_default_search_timeout(timeout);\n            match tokio::time::timeout(\n                timeout,\n                self.read_filtered(\n                    request.filter.as_ref(),\n                    search_runtime_handle,\n                    hw_measurement_acc,\n                    Some(timeout),\n                    deferred_behavior,\n                ),\n            )\n            .await\n            {\n                Ok(Ok(all_points)) => Ok(all_points.len()),\n                Ok(Err(err)) => Err(err),\n                Err(_elapsed) => Err(CollectionError::timeout(timeout, \"count\")),\n            }\n        } else {\n            self.estimate_cardinality(request.filter.as_ref(), &hw_measurement_acc)\n                .await\n                .map(|cardinality| cardinality.exp)\n        };\n\nlib/collection/src/collection_manager/segments_searcher.rs:448-463 (SegmentsSearcher::read_filtered)\n            let work = || -> CollectionResult<_> {\n                let all_points: BTreeSet<_> = segments\n                    .into_iter()\n                    .map(|segment| {\n                        segment.get().read().read_filtered(\n                            None,\n                            None,\n                            filter.as_ref(),\n                            &is_stopped,\n                            &hw_counter,\n                            deferred_behavior,\n                        )\n                    })\n                    .process_results(|iter| iter.flatten().collect())?;\n                Ok(all_points)\n            };\n\nlib/collection/src/collection/point_ops.rs:407,435-440 (Collection::count, per-shard sum)\n        let mut count = 0;\n        while let Some(response) = requests.try_next().await? {\n            count += response.count;\n        }\n        Ok(CountResult { count })",
+      "call_chain_traced": "REST POST /collections/{name}/points/count -> Collection::count (point_ops.rs:407; fans out per shard and sums counts) -> LocalShard::count (shard_ops.rs:347; exact branch at :365 runs read_filtered over the filter and takes all_points.len(), approximate branch uses estimate_cardinality) -> SegmentsSearcher::read_filtered (segments_searcher.rs:420; materializes the matching external point ids into a deduplicating BTreeSet across segments) -> per-segment read_filtered -> check_payload (query_checker.rs:116), where Condition::HasId is evaluated as plain set membership of the point's external id (has_id.has_id.contains(&id)). HasIdCondition itself is defined at types.rs:3279. Net semantics: exact=true returns |matching external ids|; for a collection holding ids 1..12 and filter has_id [1,2,3,9] the code must and does return 4.",
+      "verification_outcome": "validation_present",
+      "note": "The behavior the constraint requires (exact=true -> exact, filter-aware count) is present and correctly implemented in source: exact counts are computed by materializing the matching id set, and has_id is membership semantics. Source therefore corroborates count=4 as the correct exact count for this request; nothing in the source suggests an alternative (e.g. filter-ignoring or approximate) path was taken with exact=true.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (healthz alive, exit code 0, baseline and F1-F5 all arithmetically correct in the same run)",
+        "concurrency (isolated uuid-tagged collection bpcF2+tag, sequential single-client count POSTs, read-only faces)",
+        "cache/indexing delay (upsert with wait=true; baseline anchored 12/12 visible before any filter face)",
+        "request-parameter typo (the F6 request body is exactly the intended filter {\"must\":[{\"has_id\":[1,2,3,9]}]} with exact:true)"
+      ],
+      "surviving": "script_expectation_error: the F6 oracle expectation 3 is mis-derived — the script's own seed loop (range(1, N_SEED+1), N_SEED=12) makes id 9 an existing paris point, so the correct arithmetic-derived expectation is 4 and the target's response is compliant; the DEFECT_FOUND verdict is attributable to this tester-side oracle bug, not to a qdrant defect"
+    }
+  }
+}

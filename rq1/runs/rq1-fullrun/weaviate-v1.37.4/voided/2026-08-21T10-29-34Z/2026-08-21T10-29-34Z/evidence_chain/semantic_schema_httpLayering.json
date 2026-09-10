@@ -1,0 +1,58 @@
+{
+  "defect_id": "semantic_schema_httpLayering",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint_id 为空（无对应 contract constraint 条目）；POST /schema 在 endpoint_registry 存在（v1.37.4）；REST 语义（稳定 4xx 分层）为脚本自设 Rationale 非文档原话——内容一致性 PARTIAL",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "[invertedPairing] statuses=[200, 422]; [negativeEfConstruction] statuses=[422, 422] raw={\"error\":[{\"message\":\"...efConstruction must be a positive integer with a minimum of 4\"}]}; [negativeFlatCutoff] statuses=[200, 422] → DEFECT signal: 'UNSTABLE status [200, 422] for identical input'",
+      "secondary_observations": [
+        "主观测真实性核验：invertedPairing 与 negativeFlatCutoff 的 [200,422] 中 422 是第二次同名类 POST 的 '类已存在' 冲突（脚本对同一 payload 连发两次、两次之间无 cleanup；negativeEfConstruction 因第一次 422 未创建所以两次都 422）——'相同输入不稳定'判定是脚本伪影",
+        "真实观测 1：invertedPairing (dynamicEfMin=300 > dynamicEfMax=100) 第一次请求返回 200 —— Min>Max 配对被接受（无校验）",
+        "真实观测 2：negativeFlatCutoff (flatSearchCutoff=-1) 第一次请求返回 200 —— 负值被接受（源码 validate() 无该字段校验）",
+        "真实观测 3：negativeEfConstruction (efConstruction=-5) 两次均 422 且错误消息点名 'efConstruction must be a positive integer with a minimum of 4' —— 校验存在且诊断质量好（对照）"
+      ],
+      "claim_alignment": "drifted",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "客户端非法配置（Min>Max、flatSearchCutoff=-1）被 HTTP 200 接受而非 4xx 拒绝；重复创建返回 422（4xx 类正确）；全程无 5xx；'不稳定'判定不成立——422 是冲突语义不是输入判定翻转"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_schema_httpLayering"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "（无 contract constraint；脚本 Rationale：'REST semantics demand that a malformed client payload be answered with a stable 4xx client-error class... never an unstable status for the same input'）",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:无对应 constraint（constraint_id 为空）", "doc:openapi fallback 'Create collection' v1.37.4", "script:semantic_schema_httpLayering.py（同一 payload 连发两次、无中间 cleanup）", "log:'UNSTABLE status [200, 422] for identical input'"],
+      "chain_broken_at": "log",
+      "break_detail": "log 判 DEFECT 依据'相同输入状态不稳定'，但 raw 响应序列显示 200=接受、422=同名重复创建冲突（脚本未在两 fire 之间 DELETE）——判定模式与 raw 观测不符；链断在 log 层。真实观测（200 接受 Min>Max 与 flatSearchCutoff=-1）与其他候选（dynamicEf 系列、flatSearchCutoff_negative）在源码层互相印证",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["DynamicEFMin|dynamicEfMin", "FlatSearchCutoff", "validate()"],
+      "files_examined": ["entities/vectorindex/hnsw/config.go", "entities/vectorindex/hnsw/config_test.go", "entities/vectorindex/dynamic/config_test.go"],
+      "source_excerpt": "config.go:260-323 validate() 无 dynamicEfMin/Max 校验、无 Min<=Max 配对校验、无 flatSearchCutoff 校验 → invertedPairing 与 flatSearchCutoff=-1 被接受与源码一致（validation_absent）；validate() 对 efConstruction<4 报错 'efConstruction must be a positive integer with a minimum of 4'（config.go:276-281）与 log 中 422 错误消息逐字吻合 → 422 确为配置校验拒绝",
+      "call_chain_traced": "POST /v1/schema → ParseAndValidateConfig → validate()：efConstruction=-5 → 422 + 点名错误；dynamicEfMin/Max 配对与 flatSearchCutoff 无校验分支 → 通过 → 200 创建成功；第二次同名 POST → schema.addClass ErrClassExists（cluster/schema/schema.go:343-345）→ 422",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "请求参数笔误"],
+      "surviving": "脚本伪影已排除（判定模式错位原因=脚本设计：两次 fire 间无 cleanup）；真实信号=非法配置以 200 接受（与源码无校验一致），但脚本归因（不稳定）不成立"
+    }
+  }
+}

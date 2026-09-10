@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_points_search_005",
+  "endpoint": "points+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url (https://api.qdrant.tech/api-reference/points/search-points) unreachable due to domain block - api.qdrant.tech blocked; doc_version 1.19.x matches target v1.18.2 (major.minor); endpoint registry lists points+search with source_url; contract constraint qdrant_range_search_points_002 asserts score_threshold ∈ [0, 1] but cannot verify against live doc due to network restriction",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c5: score_threshold=1.1 → http=200, body={\"result\":[],\"status\":\"ok\",\"time\":0.000427895}",
+      "secondary_observations": [
+        "c4: score_threshold=-0.1 → http=200 (Type1_IllegalSuccess, lower bound violation)",
+        "c6: dimension mismatch → http=400 (correct rejection, different issue)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx (success response)",
+        "note": "HTTP 200 OK with empty result array indicates acceptance of invalid score_threshold=1.1 value"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_points_search_005"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_search_points_002",
+      "assertion_text_quoted": "score_threshold (minimum score) ∈ [0, 1]",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_search_points_002 (score_threshold ∈ [0, 1])",
+        "doc:https://api.qdrant.tech/api-reference/points/search-points (unreachable, domain blocked)",
+        "script:POST /collections/{collection_name}/points/search with score_threshold=1.1",
+        "log:HTTP 200 OK (Type1_IllegalSuccess - should reject but accepts)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "contract and unverified doc assert score_threshold max=1; request sends 1.1; API responds HTTP 200 OK (accepts out-of-range value). Chain断裂在log层：响应未按contract拒絕非法值。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "score_threshold",
+        "validate range min",
+        "pub limit Option<usize>",
+        "pub score_threshold Option<ScoreType>"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs (lines 589-593, 795-799)",
+        "lib/collection/src/operations/verification/mod.rs (lines 15-100, 371-387)",
+        "src/common/inference/query_requests_rest.rs (lines 45-76, 96)"
+      ],
+      "source_excerpt": "File: lib/api/src/rest/schema.rs:589-593 (SearchPointRequestInternal)\n    /// Return points with scores better than this threshold.\n    pub score_threshold: Option<ScoreType>,\n\n    /// Max number of points to return. Default is 10.\n    #[validate(range(min = 1))]\n    pub limit: Option<usize>,\n\nFile: lib/collection/src/operations/verification/mod.rs:371-387 (impl StrictModeVerification for SearchParams)\nimpl StrictModeVerification for SearchParams {\n    async fn check_custom(\n        &self,\n        _collection: &Collection,\n        strict_mode_config: &StrictModeConfig,\n    ) -> CollectionResult<()> {\n        check_limit_opt(\n            self.quantization.and_then(|i| i.oversampling),\n            strict_mode_config.search_max_oversampling,\n            \"oversampling\",\n        )?;\n\n        check_limit_opt(\n            self.hnsw_ef,\n            strict_mode_config.search_max_hnsw_ef,\n            \"hnsw_ef\",\n        )?;\n\n        check_limit_opt(\n            self.score_threshold, // ❌ NO CHECK - just passes through\n            strict_mode_config.search_max_score_threshold, // ❌ NOT USED\n            \"score_threshold\",\n        )?",
+      "call_chain_traced": "schema.rs: REST API struct defines score_threshold with NO validation annotations (no range check) → verification/mod.rs: StrictModeVerification.check_custom() checks hnsw_ef and oversampling but score_threshold check is NOT implemented → source_code: score_threshold flows through unvalidated to search execution",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "clear Type1 violation - out-of-range score_threshold accepted without rejection"
+    }
+  }
+}

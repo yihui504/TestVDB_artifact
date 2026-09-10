@@ -1,0 +1,24 @@
+setup: ready
+consistencyLevel='Strong' -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+consistencyLevel='Session' -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+consistencyLevel='Bounded' -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+consistencyLevel='Eventually' -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+consistencyLevel='Customized' -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+consistencyLevel='strong' -> http=200 code=1100 ok=False raw={"code":1100,"message":"consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded, err:parameter:'strong' is incorrect, please check it: inv
+consistencyLevel='STRONG' -> http=200 code=1100 ok=False raw={"code":1100,"message":"consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded, err:parameter:'STRONG' is incorrect, please check it: inv
+consistencyLevel='Bogus' -> http=200 code=1100 ok=False raw={"code":1100,"message":"consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded, err:parameter:'Bogus' is incorrect, please check it: inva
+consistencyLevel='' -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+consistencyLevel='Bounded ' -> http=200 code=1100 ok=False raw={"code":1100,"message":"consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded, err:parameter:'Bounded ' is incorrect, please check it: i
+consistencyLevel=None -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+consistencyLevel=5 -> http=200 code=1801 ok=False raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number into Go struct field SearchReqV2.consistencyLevel of type string"}
+consistencyLevel={'$gt': ''} -> http=200 code=1801 ok=False raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal object into Go struct field SearchReqV2.consistencyLevel of type string"}
+consistencyLevel='Strong; DROP' -> http=200 code=1100 ok=False raw={"code":1100,"message":"consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded, err:parameter:'Strong; DROP' is incorrect, please check i
+consistencyLevel='Eventually\ud800' -> http=200 code=1100 ok=False raw={"code":1100,"message":"consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded, err:parameter:'Eventually�' is incorrect, please check it
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) - illegal consistencyLevel accepted: ['', None]

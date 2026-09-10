@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_collections_create_011",
+  "endpoint": "collections+create",
+  "param": "quantization_config.scalar.quantile",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "behavioral_contract",
+  "oracle": {
+    "statement": "quantile=0.5 and quantile=1.0 (closed interval endpoints) each create 200 result=true and describe echoes quantization_config.scalar.quantile == endpoint (tolerance 1e-9; refusal of an endpoint = Type1_IllegalRejection; echo mismatch = Type4_StateLogicViolation); quantile=0.49 and 1.01 are refused 400/422 (any 2xx = Type1_IllegalSuccess; 5xx with /healthz alive = Type3_RuntimeFailure) and neither refusal scores 0/3 on the Type-2 rubric (0/3 = Type2_PoorDiagnostics) - constraint qdrant_range_collections_create_003",
+    "source": "docstring"
+  }
+}

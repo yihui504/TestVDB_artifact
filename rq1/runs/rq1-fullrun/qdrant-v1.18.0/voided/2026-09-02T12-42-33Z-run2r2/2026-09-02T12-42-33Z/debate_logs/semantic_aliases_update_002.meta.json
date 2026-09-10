@@ -1,0 +1,12 @@
+{
+ "defect_id": "semantic_aliases_update_002",
+ "endpoint": "aliases+update",
+ "param": null,
+ "strategy": "behavioral_contract",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "oracle": {
+  "statement": "every mixed batch that contains one invalid action (create_alias -> nonexistent collection, documented 404 by qdrant_behavioral_aliases_update_001) is rejected with status>=400 (a 200 => Type1_IllegalSuccess), and after each rejection the prefix-scoped alias map is exactly the pre-batch map: the valid co-actions (AY/AZ2/AY2) must NOT exist, and in the destructive case the delete of the live alias AX inside the failed batch must NOT be applied (AX -> C1 still present) => partial application is Type4_StateLogicViolation",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

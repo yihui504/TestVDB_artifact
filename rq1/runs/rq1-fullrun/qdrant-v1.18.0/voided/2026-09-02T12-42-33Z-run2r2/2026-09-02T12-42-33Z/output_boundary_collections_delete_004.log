@@ -1,0 +1,12 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: bcd45e3a7a
+[assertion quote] DELETE on an existing collection returns HTTP 200; DELETE on a non-existent collection returns 404, not 200
+[nul-percent00] name='bcd45e3a7anul%00x' status=422 raw={"status":{"error":"Validation error in path parameters: [collection_name: collection name cannot contain \"\u0000\" char]"},"time":0.0}
+[conform] nul-percent00: 422 (hostile name rejected at the validation face - robust handling)
+[unicode-cjk-emoji] name='bcd45e3a7auni中文测试🎯' status=200 raw={"result":false,"status":"ok","time":0.000055503}
+[overlong-1000] name='bcd45e3a7alongaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...' status=422 raw={"status":{"error":"Validation error in path parameters: [collection_name: value \"bcd45e3a7alongaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+[conform] overlong-1000: 422 (hostile name rejected at the validation face - robust handling)
+[sql-injection] name="bcd45e3a7asq'; DROP TABLE--" status=200 raw={"result":false,"status":"ok","time":0.000046468}
+[json-injection] name='bcd45e3a7ajsn{"$gt":""}' status=200 raw={"result":false,"status":"ok","time":0.000060115}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess: unicode-cjk-emoji hostile never-created name DELETE returned 200 - assertion demands 404, not 200 (phantom delete success); raw: {"result":false,"status":"ok","time":0.000055503})

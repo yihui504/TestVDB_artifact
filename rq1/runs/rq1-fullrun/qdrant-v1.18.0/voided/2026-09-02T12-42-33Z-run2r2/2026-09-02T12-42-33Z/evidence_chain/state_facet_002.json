@@ -1,0 +1,101 @@
+{
+  "defect_id": "state_facet_002",
+  "endpoint": "facet (POST /collections/{collection_name}/facet)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists anywhere under the testvdb plugin cache for this session, so per fallback the source_url https://api.qdrant.tech/v-1-18-x/api-reference/points/facet was WebFetched and the fetch was blocked at domain verification ('Unable to verify if domain api.qdrant.tech is safe to fetch... network restrictions') -> domain_blocked, recorded PARTIAL not FAIL; the structured_contract.json endpoint_registry[33] entry for this URL records source_status 'reachable' with doc_quote 'Faceting works only on a payload field with an index supporting MatchValue conditions; returns 200 {response: [FacetValueHit {value, count}]}; 404; 400 (including when no suitable index exists).' verified_at 2026-09-02T12:34:08Z (contract build time). Version match: URL routes v-1-18-x and assertion doc_version is '1.18.x (versioned v-1-18-x api-reference)' against target qdrant v1.18.0 -> PASS. Content consistency: the assertion's explicit clauses (200 with value/count hits; 400 when no MatchValue-capable index; 404 missing collection) are consistent with the contract doc_quote and with the repo's generated openapi (docs/redoc/master/openapi.json at the v1.18.0 tag, which feeds the api.qdrant.tech pages): operation 'Count points that satisfy the given filter for each unique value of a payload key', FacetResponse.hits = array of FacetValueHit{value, count} with count schema minimum 0, responses 200/4XX -> PASS, with the caveat recorded for the auditor that NOTHING in the doc/spec text states that values with zero matching points must be absent from hits (FacetValueHit.count minimum is 0, not 1). Endpoint precision: endpoint_registry[33]/api_endpoints[33] path facet POST matches the openapi path /collections/{collection_name}/facet and the script's registered URL (raw_knowledge.json api_endpoints[33].url, registered verbatim in the script) -> PASS. Aggregate DOC_PARTIAL solely because reachability is PARTIAL (domain_blocked at evidence time).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "[E after-delete] facet status=200 raw={\"result\":{\"hits\":[{\"value\":\"A\",\"count\":175},{\"value\":\"B\",\"count\":100},{\"value\":\"C\",\"count\":0}]},\"status\":\"ok\",\"time\":0.000419224} -> VERDICT: DEFECT_FOUND (output_state_facet_002.log lines 20-21; the script's leg-E oracle expected the hit list to be exactly {A:175, B:100} with C VANISHED, and classified the retained zero-count C entry as a Type4_StateLogicViolation; no explicit 'DEFECT:' detail line was printed because the early-return path in expect_counts() bypasses the summary print block)",
+      "secondary_observations": [
+        "[E delete city=C] status=200 raw={\"result\":{\"operation_id\":7,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.006862023} (log line 19) — delete_points(filter city=C, wait=true) reported completed before the facet readout",
+        "[D after-upsert] OK: counts {'A': 175, 'B': 100, 'C': 50} and facet-sum 325 == count face 325 (log line 18) — same exact=true facet face was truthful in all pre-delete legs A/C/C2/D (facet sums equalled the exact point-count face at every leg)",
+        "[post-delete exact=true] status=200 raw={\"result\":{\"hits\":[{\"value\":\"A\",\"count\":2},{\"value\":\"B\",\"count\":2},{\"value\":\"C\",\"count\":0}]},\"status\":\"ok\",\"time\":0.000387043} — independent builder replay of the identical scenario at 5-point scale (state_facet_002_comparative_probe.py): the stale zero-count value C reproduces deterministically on the exact=true face",
+        "[post-delete exact=false] status=200 raw={\"result\":{\"hits\":[{\"value\":\"A\",\"count\":2},{\"value\":\"B\",\"count\":2}]},\"status\":\"ok\",\"time\":0.0002768} — same post-delete state, approximate face (exact=false): C is absent; the disposition difference between the two faces of the same facet request is the empirical core of this observation",
+        "[post-delete count face] status=200 raw={\"result\":{\"count\":4},\"status\":\"ok\",\"time\":0.000297248} — the exact point-count face confirms the C points were truly deleted (only the facet exact face retains the value with count 0)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No request-side error involved: all requests carried documented legal parameters (key/limit/exact/filter) and every leg returned HTTP 200 + status ok; the disputed phenomenon is a success-body content issue (a zero-count stale value inside result.hits), not an error-status semantics issue"
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["state_facet_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_facet_001",
+      "assertion_text_quoted": "returns 200 {response: [FacetValueHit {value, count}]}; 400 when no suitable payload index supports the key (or other validation error); 404 for a missing collection",
+      "api_violates_assertion": false,
+      "note": "The observed response conforms to the letter of the quoted assertion (200 with value/count hits; C's count 0 is the true post-delete frequency of value C, equal to the count face); the contested clause — that a value with zero surviving points must be absent from an exact facet hit list — exists only in the script's leg-E oracle, not in the quoted assertion text nor in the documentation (FacetValueHit.count schema minimum is 0 and no suppression statement exists), so the cited constraint does not cover the contested dimension (possible wrong/under-specified constraint citation rather than an assertion violation)",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_behavioral_facet_001 (structured_contract.json assertions[43], endpoint facet, category behavioral)",
+        "doc:https://api.qdrant.tech/v-1-18-x/api-reference/points/facet (endpoint_registry[33] doc_quote + repo openapi docs/redoc/master/openapi.json facet operation and FacetValueHit schema)",
+        "script:state_facet_002 (debate_logs/state_facet_002.py; header constraint_ids: qdrant_behavioral_facet_001)",
+        "log:output_state_facet_002.log lines 19-21 (E-leg delete completed -> facet exact=true returns C:0 -> VERDICT: DEFECT_FOUND)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "All four links exist and are mutually consistent (the log genuinely shows the verdict the script computed from the observation). Two caveats recorded factually for the auditor: (1) the dispatch entry in candidates.jsonl carries constraint_id \"\" (empty) while the attack string and the script header name qdrant_behavioral_facet_001, which exists at assertions[43] — contract link resolved via script header/attack string, not via the dispatch field; (2) the DEFECT_FOUND verdict rests entirely on leg E whose oracle ('C must VANISH from the hits list') is stronger than the quoted assertion text and is doc-silent (no doc/spec clause requires zero-count suppression), so doc-layer content consistency PASSes for the assertion's own clauses but cannot ground the leg-E oracle",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "facet (file find across lib/ and src/)",
+        "remove_point / for_each_count_per_value / for_each_value_map / for_each_value in map_index/mutable_map_index.rs",
+        "exact_facet / approx_facet / request.exact routing in collection crate",
+        "unique_values / facet / facet_values / approximate_facet in segment crate",
+        "deferred_internal_id / for_each_visible_value",
+        "delete_point_internal / clear_payload / clear_index_for_point in segment_ops.rs / struct_payload_index.rs",
+        "FacetValueHit / top_hits / k_largest in data_types/facets.rs and docs/redoc/master/openapi.json",
+        "facet + delete + zero-count in segment/collection tests (no hits)"
+      ],
+      "files_examined": [
+        "lib/segment/src/segment/read_view/facet.rs",
+        "lib/segment/src/index/field_index/facet_index.rs",
+        "lib/segment/src/index/field_index/map_index/mutable_map_index.rs",
+        "lib/segment/src/index/field_index/map_index/mod.rs (load_map_index)",
+        "lib/segment/src/index/struct_payload_index.rs",
+        "lib/segment/src/segment/segment_ops.rs (delete_point_internal)",
+        "lib/segment/src/segment/read_view/deferred.rs",
+        "lib/segment/src/segment/entry.rs + lib/segment/src/entry/entry_point.rs (Segment trait facet/unique_values)",
+        "lib/segment/src/data_types/facets.rs (FacetParams/FacetResponse::top_hits/FacetHit Ord)",
+        "lib/collection/src/shards/local_shard/facet.rs",
+        "lib/collection/src/shards/local_shard/shard_ops.rs (facet routing)",
+        "lib/collection/src/collection/facet.rs",
+        "lib/shard/src/facet.rs (FacetRequestInternal docstring)",
+        "docs/redoc/master/openapi.json (facet operation + FacetValueHit schema)",
+        "lib/segment tests and lib/collection tests (facet delete/zero-count assertions: none exist)"
+      ],
+      "source_excerpt": "Mechanism confirmed at three layers (mutable keyword map index retains keys with emptied postings; exact facet path emits zero-count hits; approximate path filters them out):\n(1) lib/segment/src/index/field_index/map_index/mutable_map_index.rs:163-188 (called from struct_payload_index.rs clear_index_for_point/delete_payload/clear_payload on point deletion): 'pub fn remove_point(&mut self, idx: PointOffsetType) ... { for value in &removed_values { if let Some(vals) = self.map.get_mut(value.borrow()) { vals.remove(idx); } } ... }' — the point id is removed from the value's RoaringBitmap but the map KEY is never dropped when its bitmap becomes empty; empty-posting keys survive in self.map.\n(2) lib/collection/src/shards/local_shard/facet.rs:98-154 exact_facet (chosen when request.exact=true, shard_ops.rs:521): '// Get unique values for the field' -> unique_values(...) then '// Make an exact count for each value' -> per value read_filtered(filter AND match value, DeferredBehavior::Exclude) -> 'CollectionResult::Ok(FacetValueHit { value, count })' — the hit is emitted for EVERY candidate value with NO count>0 guard, so a value whose count computes to 0 is returned as a hit.\n(3) candidate enumeration: Segment::unique_values (segment/entry.rs:222) -> view.facet_values (read_view/facet.rs:135-183): no-filter branch calls for_each_visible_value(hw_counter, deferred_internal_id=None, ...) which 'When deferred_internal_id is None ... is equivalent to for_each_value' (facet_index.rs:42-69) = all map keys including empty-posting ones (mutable_map_index.rs:320-325 'for_each_value ... self.map.keys()...'). In the filter branch the candidates come from filtered points instead, which is why the log's leg C (filter region=EU) correctly omitted C (C's 50 points are all AP).\n(4) contrast: the approximate face (exact=false) reaches read_view/facet.rs approximate_facet which inserts a hit only 'if count > 0' (lines 115 and 125-127) — zero-count suppression exists on the approximate face but is absent on the exact face; no code comment, docstring or test anywhere states that retaining empty map keys or emitting zero-count exact hits is intentional (by-design evidence: NONE found).\n(5) FacetResponse::top_hits (data_types/facets.rs): '.k_largest(limit)' with no zero filter — zero-count hits survive when within the limit.",
+      "call_chain_traced": "REST POST /collections/{c}/facet -> actix facet_api -> storage Toc -> Collection::facet (collection/facet.rs, aggregates per shard) -> LocalShard::facet (shard_ops.rs:502) -> request.exact==true -> exact_facet (local_shard/facet.rs:98) -> unique_values per segment (Segment::unique_values -> view.facet_values, read_view/facet.rs:135) [no filter -> for_each_visible_value(deferred=None) == map.keys(), includes empty-posting key 'C' left behind by MutableMapIndex::remove_point after delete_points -> clear_payload -> index.remove_point] -> per-value exact count via read_filtered(filter AND key=C, DeferredBehavior::Exclude) = 0 -> FacetValueHit{C,0} emitted (no count>0 guard, unlike approximate_facet read_view/facet.rs:115/125) -> FacetResponse::top_hits k_largest keeps it -> HTTP 200 hits [{A,175},{B,100},{C,0}]. Independent live replay (state_facet_002_comparative_probe.py, sandbox localhost:6333) reproduced [{A,2},{B,2},{C,0}] on exact=true while exact=false on the same state returned [{A,2},{B,2}] and the count face returned 4, confirming the disposition difference between the two faces and that the deletion itself was effective.",
+      "verification_outcome": "validation_absent",
+      "note": "Framing note for the auditor: this is a behavioral/state candidate, not a parameter-validation one, so the outcome label maps as follows — the zero-count suppression that the approximate facet face performs ('if count > 0') and the pruning of empty-posting map keys are ABSENT on the exact face / in MutableMapIndex::remove_point respectively; that absence is the source-side fact behind the observation, and the source contains no explicit by-design declaration for the retention of empty keys or emission of zero-count hits (by_design_in_source is NOT claimed; no comments/docstrings/tests assert intent). The delete/clear path and the map-key retention are real and confirmed in code and by live replay.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (server healthy throughout: healthz passed in log liveness pattern and at probe time; verdict deterministic)",
+        "concurrency (all writes wait=true and delete operation_id 7 reported completed before the facet readout; unique collections isolate the probe)",
+        "cache_delay (the approximate face and the exact point-count face on the same post-delete state reflected the deletion immediately — only the exact facet face retained C, so it is not a propagation lag)",
+        "request_parameter_typo (the exact=true request is schema-identical to the successful pre-delete legs A-D and matches the documented FacetRequest; exact is a documented toggle)",
+        "by_design (no explicit intent evidence in source comments/docstrings/tests — the approximate face's count>0 filter shows suppression is the operative semantic there, contradicting a design reading for the exact face)"
+      ],
+      "surviving": "Source-confirmed mechanism: after delete_points removes all points carrying value C, MutableMapIndex::remove_point empties C's posting bitmap but retains the key C in the map; with exact=true the facet path enumerates all map keys as candidates and emits a FacetValueHit for each without a zero-count guard, so the deleted value surfaces as {value:'C', count:0} — a hit whose count is factually correct but whose value no point currently carries; the same request with exact=false suppresses it. Whether the documented 'value/count hits' semantics require suppression of zero-count values is doc-silent (see contract_grounding.note and chain_trace.break_detail) — left to the auditor."
+    }
+  }
+}

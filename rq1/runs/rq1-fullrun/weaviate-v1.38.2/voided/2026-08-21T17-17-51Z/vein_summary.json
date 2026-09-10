@@ -1,0 +1,19 @@
+{
+  "target": "weaviate", "version": "v1.38.2",
+  "session_dir": "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.3.0/results/weaviate/v1.38.2/2026-08-21T17-17-51Z",
+  "top_endpoints": ["DELETE /v1/batch/objects", "PUT /v1/schema/{className}/shards/{shardName}", "GET /v1/nodes/{className}"],
+  "richness_scores": {"DELETE /v1/batch/objects": 8.5, "PUT /v1/schema/{className}/shards/{shardName}": 6.0, "GET /v1/nodes/{className}": 4.0},
+  "candidates_count": 5, "skipped_count": 3,
+  "candidates": [
+    {"id": "vein_batchdelete_validation_channel_01", "endpoint": "DELETE /v1/batch/objects", "condition_type": "null_check", "finding": "DEFECT_FOUND", "http_status": 500, "response_excerpt": "validate: empty match clause / empty match.class clause / empty match.where clause all HTTP 500; control nonexistent class = 422", "by_design_match": false, "inspired_by": null, "script_path": "vein_scripts/vein_batchdelete_validation_channel_01.py"},
+    {"id": "vein_batchdelete_stopword_500_02", "endpoint": "DELETE /v1/batch/objects", "condition_type": "range_filter(stopword term)", "finding": "DEFECT_FOUND", "http_status": 500, "response_excerpt": "docIds: invalid search term, only stopwords provided (HTTP 500); GraphQL same filter = structured error HTTP 200", "by_design_match": false, "inspired_by": "null_check", "script_path": "vein_scripts/vein_batchdelete_stopword_500_02.py"},
+    {"id": "vein_shardstatus_phantom_03", "endpoint": "PUT /v1/schema/{className}/shards/{shardName}", "condition_type": "existence_check", "finding": "DEFECT_FOUND", "http_status": 200, "response_excerpt": "nonexistent shardName -> 200 {status:READONLY}, real shards unchanged; invalid status + nonexistent class both rejected", "by_design_match": false, "inspired_by": "null_check on batch delete", "script_path": "vein_scripts/vein_shardstatus_phantom_03.py"},
+    {"id": "vein_shardstatus_500_invalidstatus_04", "endpoint": "PUT /v1/schema/{className}/shards/{shardName}", "condition_type": "type_mismatch", "finding": "DEFECT_FOUND", "http_status": 500, "response_excerpt": "NOTASTATUS -> 500 'invalid storage status'; control READONLY -> 200", "by_design_match": false, "inspired_by": "existence_check", "script_path": "vein_scripts/vein_shardstatus_500_invalidstatus_04.py"},
+    {"id": "vein_nodes_shardsnull_05", "endpoint": "GET /v1/nodes/{className}", "condition_type": "state_echo", "finding": "DEFECT_FOUND", "http_status": 200, "response_excerpt": "shards:null for class with 5 objects; GET /v1/schema/{c}/shards shows READY shard", "by_design_match": false, "inspired_by": null, "script_path": "vein_scripts/vein_nodes_shardsnull_05.py"}
+  ],
+  "by_design_excluded": [
+    "DELETE /v1/batch/objects?tenant on non-MT class -> proper 422",
+    "POST /v1/objects with nonexistent class -> auto-schema by design",
+    "GET /v1/objects?where ignored -> undocumented param, go-swagger default"
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "defect_id": "boundary_nanninf_vector_015",
+  "endpoint": "v1/vector/insert（对照 v1/vector/search）",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "high",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约无 vector 元素非空/非 NaN 显式断言；引用 milvus_range_search_001（v1 search 侧 vector 校验语义）+ insert 侧 1804 语义作锚。NaN/Infinity 裸字面量被 JSON 解析器拒（1801）是 parser 行为，null 元素是唯一漏洞面",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[insert null elem] http=200 body={\"code\":200,\"data\":{\"insertCount\":1,\"insertIds\":[468539281520724791]}}（主观测：null 元素向量被持久化）",
+      "secondary_observations": [
+        "[search vector null elem] http=200 body={\"code\":200,\"data\":[]}（search 侧同样接受 null 元素，静默空结果）",
+        "[search vector NaN raw] http=200 code=1801 \"invalid character 'N' looking for beginning of value\"",
+        "[search vector Infinity raw] http=200 code=1801 \"invalid character 'I'...\"",
+        "[search vector str elem] http=200 code=1801 \"json: cannot unmarshal string into ... float32\"",
+        "[insert extremes control] http=200 {\"insertCount\":1,\"insertIds\":[468539281520724793]}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "NaN/Inf 裸字面量以 1801 拒；null 元素为 HTTP 200 + code 200 且 insertCount=1 实际写入"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_nanninf_vector_015.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_range_search_001",
+      "assertion_text_quoted": "collectionName and vector required; else code 1802",
+      "api_violates_assertion": false,
+      "note": "violates=False 针对该 assertion 本身（必填确实校验）；null 元素不在其约束域——契约缺口：无 vector 元素级非空断言。客观锚：search 侧同字段对 string 元素拒 1801（类型严格）却对 null 元素（等价 NaN 语义）放行，语义不一致由 auditor 归类",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_range_search_001 必填锚；元素级校验契约缺口（记录）",
+        "doc: handler_v1.go / utils.go reachable",
+        "script: boundary_nanninf_vector_015.py 提交 [0.1,null,0.2,0.3] 到 insert 与 search",
+        "log: insert null elem → 200 code 200 insertCount=1（主观测）"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "无元素级非空/NaN 契约断言，contract 环部分接地（以同字段类型严格性 1801 为语义锚）",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["func checkAndSetData", "json.Unmarshal([]float32)", "func anyToColumns", "func reflectValueCandi"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/utils.go:241-286",
+        "internal/distributed/proxy/httpserver/utils.go:562-582",
+        "internal/distributed/proxy/httpserver/utils.go:599-714",
+        "internal/distributed/proxy/httpserver/handler_v1.go:629-725"
+      ],
+      "source_excerpt": "utils.go:275-280（insert 路径）:\n\tvar vectorArray []float32\n\terr := json.Unmarshal([]byte(dataString), &vectorArray)\n\tif err != nil { return merr.WrapErrParameterInvalid(...) }\n\treallyData[fieldName] = vectorArray\n——Go encoding/json 对元素 null 的行为：json.Unmarshal([0.1,null,0.2]) 到 []float32 会报错，但此处 dataString 来自 gjson.Get(...).String()，null 元素经 gjson String() 序列化后仍为 \"null\" 字面量；实测 200 insertCount=1 表明该路径下 null 被解码为 float32 零值或 NaN 语义进入存储（等价 'NaN 风格存储'），REST 层无任何元素级 null/NaN 检查代码（grep NaN/IsNaN 于 httpserver 无校验命中）",
+      "call_chain_traced": "v1 insert → checkAndSetData (utils.go:241) gjson 取 vector 字段 → json.Unmarshal 仅类型转换（无元素值域检查）→ anyToColumns (utils.go:599) append []float32 → proxy.Insert 持久化。search 侧 handler_v1.go:843 仅查 Vector==nil，元素级同样无检查 → vectors2PlaceholderGroupBytes 直接序列化",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

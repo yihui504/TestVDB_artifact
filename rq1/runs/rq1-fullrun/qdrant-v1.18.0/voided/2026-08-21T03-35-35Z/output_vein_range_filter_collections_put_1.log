@@ -1,0 +1,77 @@
+[vein_range_filter_collections_put_1] Testing range_filter on PUT /collections/{collection}
+DB URL: http://localhost:6333
+Collection: vein_range_filter_test_1
+
+[Test 1] Valid m=16
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.250201959
+}
+  [PASS] Valid m=16 accepted
+
+[Test 2] Boundary m=2 (minimum)
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.258829925
+}
+  [ACCEPTED] m=2 accepted
+
+[Test 3] Invalid m=0 (below boundary)
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.249265149
+}
+  [DEFECT_CANDIDATE] m=0 (invalid) accepted with 200 OK
+
+[Test 4] Invalid m=-1 (negative)
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 72"
+  },
+  "time": 0.0
+}
+  [EXPECTED] m=-1 rejected with 400
+
+[Test 5] Boundary m=100 (maximum)
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.255560908
+}
+  [ACCEPTED] m=100 accepted
+
+[Test 6] Invalid m=999999 (extreme)
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.249707995
+}
+  [DEFECT_CANDIDATE] m=999999 (extreme) accepted with 200 OK
+
+[Test 7] Type confusion - m=16.5 (fractional)
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: invalid type: floating point `16.5`, expected usize at line 1 column 74"
+  },
+  "time": 0.0
+}
+  [EXPECTED] m=16.5 rejected with 400
+
+============================================================
+SUMMARY
+============================================================
+Findings:
+  - m=0 accepted - should be rejected (numeric boundary violation)
+  - m=999999 accepted - should be rejected (extreme boundary violation)
+
+VERDICT: DEFECT_FOUND

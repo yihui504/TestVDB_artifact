@@ -1,0 +1,19 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: sidl04daf669
+[constraint quote] assertion: 'delete of a non-existent payload index is an idempotent success; index deletion leaves point data untouched'
+[measure S0_no_index] match_cat_A=[1, 3, 5] range_score_gt25=[2, 4, 5]
+[PUT index cat] schema=keyword -> status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.540984176}
+[PUT index score] schema=integer -> status=200 raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.864949443}
+[measure S1_indexed] match_cat_A=[1, 3, 5] range_score_gt25=[2, 4, 5]
+[DELETE index S2 cat] -> status=200 raw={"result":{"operation_id":7,"status":"completed"},"status":"ok","time":0.309950256}
+[DELETE index S2 score] -> status=200 raw={"result":{"operation_id":9,"status":"completed"},"status":"ok","time":0.297308792}
+[measure S2_deleted] match_cat_A=[1, 3, 5] range_score_gt25=[2, 4, 5]
+[PUT index cat] schema=keyword -> status=200 raw={"result":{"operation_id":11,"status":"completed"},"status":"ok","time":0.522175184}
+[PUT index score] schema=integer -> status=200 raw={"result":{"operation_id":13,"status":"completed"},"status":"ok","time":0.815820812}
+[measure S3_recreated] match_cat_A=[1, 3, 5] range_score_gt25=[2, 4, 5]
+[DELETE index S4 cat] -> status=200 raw={"result":{"operation_id":15,"status":"completed"},"status":"ok","time":0.29589937}
+[DELETE index S4 score] -> status=200 raw={"result":{"operation_id":17,"status":"completed"},"status":"ok","time":0.292104728}
+[measure S4_deleted_again] match_cat_A=[1, 3, 5] range_score_gt25=[2, 4, 5]
+OK: both tracked filtered queries returned identical id sets at all five index lifecycle states (no-index / indexed / deleted / recreated / deleted-again); re-create echoed after delete; both deletes removed their describe entries
+VERDICT: NO_DEFECT

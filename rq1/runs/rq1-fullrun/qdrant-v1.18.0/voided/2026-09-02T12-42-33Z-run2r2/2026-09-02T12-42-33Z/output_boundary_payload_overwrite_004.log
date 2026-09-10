@@ -1,0 +1,24 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+baseline: 4 points visible (p2 payload-less)
+
+overwrite points=[1] payload={"c": 3} -> status=200
+raw: {"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.004744035}
+
+overwrite points=[1] payload={"d": 4, "e": 5} -> status=200
+raw: {"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.005867651}
+case A OK: chained replacement exact at both steps
+
+overwrite points=[2] payload={"only": "key"} -> status=200
+raw: {"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.002571572}
+case B OK: from-nothing overwrite exact
+
+overwrite points=[3] payload={"nested": {"new": 2}, "top": 5} -> status=200
+raw: {"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.004179892}
+case C OK: nested payload deep-equal after replacement
+
+overwrite points=[4] payload={'k': None} -> status=200
+raw: {"result":{"operation_id":6,"status":"completed"},"status":"ok","time":0.007154453}
+case D OK: null-valued key persisted exactly
+collateral sweep OK: all siblings hold their case-final exact payloads
+VERDICT: NO_DEFECT

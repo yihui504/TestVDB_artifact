@@ -1,0 +1,14 @@
+{
+ "defect_id": "boundary_index_create_008",
+ "endpoint": "index+create",
+ "param": "field_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "strategy4_special_value",
+ "constraint_ids": [
+  "qdrant_type_index_create_001"
+ ],
+ "oracle": {
+  "statement": "on the live bic008_* collection the ASCII control returns 200 with exact echo; each exotic field_name (unicode 城市🎯field, zero-width a<ZWSP>b, dot-notation lvl2.city, JSON-injection-shaped {\"$gt\": \"\"}, SQL-shaped '; DROP TABLE idx--') yields 200 with the JSON-parsed readback key EXACTLY equal to the sent string (any difference = Type4_StateLogicViolation mojibake/normalization) OR 400/422 with non-empty diagnostics (empty body = Type2_PoorDiagnostics; 404 on live collection = SCRIPT_ERROR; 5xx/transport = Type3 with /healthz re-check); 200 with no key = silent-drop judge signal",
+  "source": "docstring"
+ }
+}

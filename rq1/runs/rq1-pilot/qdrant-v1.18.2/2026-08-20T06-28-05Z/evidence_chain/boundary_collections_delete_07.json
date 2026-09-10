@@ -1,0 +1,83 @@
+{
+  "defect_id": "boundary_collections_delete_07",
+  "endpoint": "collections+delete",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation at https://api.qdrant.tech/api-reference/collections/delete-collection (v1.19.x, matched to v1.18.2) specifies: DELETE /collections/:collection_name with behavioral constraint 'Exists → 200 OK, Not found → 404'. Collection name parameter type: non-empty string. Documentation confirms 404 should be returned for non-existent collections.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: collection name='test<0x202E>boundary' (RTL override character U+202E) → HTTP 200 OK, response={result: false, status: ok}. Collection did not exist (setup returned 200 with result: false). VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)",
+      "secondary_observations": [
+        "boundary_collections_delete_01: DELETE of non-existent collection returned 404 (correct)",
+        "boundary_collections_delete_02: NUL byte in collection name returned 422 (correct)",
+        "boundary_collections_delete_06: Lone surrogate U+D800 returned 200 (Type1)",
+        "boundary_collections_delete_03: 1000 deletions of non-existent collection all returned 200 (Type1)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Target returned HTTP 200 OK with {result: false, status: ok} for DELETE request with RTL override character in collection name. The response indicates 'ok' status despite the collection not existing (result: false should have triggered 404 per docs). No 4xx/5xx error code returned."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_collections_delete_07"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_delete_collection_001",
+      "assertion_text_quoted": "Constraint from raw_knowledge.md line 89: 'behavioral: Exists → 200 OK, Not found → 404'. DELETE /collections/:collection_name must validate collection existence and return 404 for non-existent collections. Collection name should be validated for character encoding issues.",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_delete_collection_001 (DELETE endpoint must return 404 for non-existent collection)",
+        "doc: raw_knowledge.md lines 80-90 specify 'Exists → 200 OK, Not found → 404' behavioral constraint",
+        "script: DELETE /collections/test<0x202E>boundary with RTL override U+202E in collection name",
+        "log: HTTP 200 OK returned with {result: false, status: ok} instead of expected 404"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Observation shows contract violation: docs specify 404 for non-existent collections, but API returned 200 OK. Collection name with RTL override character should have been rejected or treated as non-existent returning 404, not accepted with 200.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "INVALID_NAME_CHARS",
+        "validate_collection_name",
+        "validate_collection_name_legacy",
+        "delete_collection",
+        "DeleteCollectionOperation"
+      ],
+      "files_examined": [
+        "lib/common/common/src/validation.rs",
+        "src/actix/api/mod.rs",
+        "src/actix/api/collections_api.rs",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs",
+        "lib/api/build.rs"
+      ],
+      "source_excerpt": "/// Filesystem-unsafe characters rejected for both collection and vector names.\n///\n/// These end up as path components on disk (collection directories,\n/// per-vector storage subdirectories — see\n/// `segment_constructor::get_vector_storage_path`), so they must be safe on both\n/// Linux and Windows filesystems.\nconst INVALID_NAME_CHARS: [char; 11] =\n    ['<', '>', ':', '\"', '/', '\\\\', '|', '?', '*', '\\0', '\\u{1F}'];\n\n/// Validate the collection name contains no illegal characters\n///\n/// This does not check the length of the name.\npub fn validate_collection_name(value: &str) -> Result<(), ValidationError> {\n    check_invalid_name_chars(value, \"collection name\")\n}\n\n/// Validate the collection name contains no illegal characters, legacy edition\n///\n/// Similar to [`validate_collection_name`], but this still allows some special characters that\n/// were supported pre Qdrant 1.5. More specifically, this only disallows characters that could\n/// never have been used on both Linux and Windows filesystems.\n///\n/// This does not check the length of the name.\npub fn validate_collection_name_legacy(value: &str) -> Result<(), ValidationError> {\n    // Disallowed characters on both Linux/Windows, sourced from: <https://stackoverflow.com/a/31976060/1000145>\n    const INVALID_CHARS: [char; 2] = ['/', '\\0'];\n    \n    match INVALID_CHARS.into_iter().find(|c| value.contains(*c)) {\n        Some(c) => {\n            let mut err = ValidationError::new(\"does_not_contain\");\n            err.add_param(Cow::from(\"pattern\"), &c);\n            err.message\n                .replace(format!(\"collection name cannot contain \\\"{c}\\\" char\").into());\n            Err(err)\n        }\n        None => Ok(()),\n    }\n}\n\n// DELETE endpoint uses legacy validation (from collections_api.rs line 160-178):\n#[delete(\"/collections/{collection_name}\")]\nasync fn delete_collection(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,  // <-- uses legacy validation\n    Query(query): Query<WaitTimeout>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Responder {\n    let timing = Instant::now();\n    let response = dispatcher\n        .submit_collection_meta_op(\n            CollectionMetaOperations::DeleteCollection(DeleteCollectionOperation(\n                collection.collection_name.clone(),\n            )),\n            auth,\n            query.timeout(),\n        )\n        .await;\n    process_response(response, timing, None)\n}\n\n// CollectionPath uses legacy validation (from mod.rs):\n#[derive(Deserialize, Validate)]\nstruct CollectionPath {\n    #[validate(\n        length(min = 1, max = 255),\n        custom(function = \"validate_collection_name_legacy\")\n    )]\n    collection_name: String,\n}\n\n// delete_collection returns false for non-existent (from toc/collection_meta_ops.rs line 276-288):\nresult = false;  // <-- collection did not exist, but still returned 200 OK",
+      "call_chain_traced": "DELETE request → actix-web extracts collection_name from URL → CollectionPath validator runs validate_collection_name_legacy (only blocks '/' and '\\0') → RTL override U+202E PASSES validation (not in INVALID_CHARS list) → DeleteCollectionOperation created → dispatcher.delete_collection() checks if collection exists in collections map → collection not found → returns Ok(false) → HTTP layer wraps as 200 OK with {result: false, status: ok}",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency"
+      ],
+      "surviving": "Type1_IllegalSurviving: API accepts DELETE requests with RTL override characters (U+202E) in collection names and returns 200 OK instead of 404. This is not an environment issue - the character encoding validation is intentionally designed to be permissive (legacy mode only blocks '/' and '\\0'). Not a race condition - single request showed consistent behavior. Not by-design for defect classification - while the validation is intentionally permissive for backward compatibility, it still violates the documented behavioral contract (404 for non-existent collections). The source code confirms this is the intended behavior: validate_collection_name_legacy only rejects characters unsafe on both Linux and Windows filesystems ('/' and '\\0'), allowing RTL override U+202E as valid Unicode. However, this intentional permissiveness does not excuse the violation of the behavioral contract that DELETE should return 404 for non-existent collections."
+    }
+  }
+}

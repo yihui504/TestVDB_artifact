@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_gql_limit_negative_009",
+  "endpoint": "POST /v1/graphql (+ REST GET /v1/objects)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约 assertions 含 weaviate_behavioral_graphql_query_001（POST /graphql 执行查询）；limit 值域无专属 constraint。源码锚：entities/filters/pagination.go 显式将负 limit 当作'未设置'——与观测 0/INT_MAX 报错、负值返回全部的反差一致",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[gql] limit=-1 -> 200 results=[{'txt': 'doc0'}, {'txt': 'doc1'}, {'txt': 'doc2'}] err= / DEFECT Type1_IllegalSuccess: negative limit -1 returns 3 rows",
+      "secondary_observations": [
+        "[gql] limit=0 -> 200 results=None err={\"data\":{\"Get\":{\"BndLimit\":null}},\"errors\":[{\"message\":\"explorer: list cla...",
+        "[gql] limit=-100 -> 200 results=[{'txt': 'doc0'}, {'txt': 'doc1'}, {'txt': 'doc2'}] err=",
+        "[gql] limit=2147483647 -> 200 results=None err=...explorer: list cla...（超 QUERY_MAXIMUM_RESULTS 报错，正确）",
+        "[rest] limit=-1 -> 200 body='' content-length=0 / DEFECT Type1_IllegalSuccess: REST limit=-1 -> 200 with empty (malformed) body"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "GraphQL 负 limit 以 200 返回全部数据（业务层无错）；REST 负 limit 以 200 返回空体（连业务错误码都无）——两个通道对同一非法值均未走 4xx"
+      },
+      "reproducibility": "单脚本（5 变体确定性；GraphQL+REST 双通道）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_gql_limit_negative_009.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "boundary (族级；锚 entities/filters/pagination.go L40 'limit.(int) < 0' 处理 + REST 错误文案 'If you've supplied a negative offset or limit, this may be an underflow error')",
+      "assertion_text_quoted": "limit 为非负整数且 <= QUERY_MAXIMUM_RESULTS（REST get.go 错误文案显式提及 negative limit 应报错：\"If you've supplied a negative offset or limit, this may be an underflow error\"）",
+      "api_violates_assertion": true,
+      "note": "GraphQL 负 limit 返回全部数据、REST 负 limit 200 空体；同脚本 0 与 INT_MAX 正确报错证明值域检查通道存在但负值被特判吞掉。violates=True",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 族级（pagination.go + get.go 错误文案自证负值应报）",
+        "doc: 源码锚本地核对",
+        "script: boundary_gql_limit_negative_009.py GraphQL 4 变体 + REST 1 变体",
+        "log: -1/-100 → 200 全量；0/INT_MAX → errors；REST -1 → 200 空体"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "无专属 constraint_id（契约 4 条约束均为 schema 字段），族级锚需 auditor 认定",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["limit.(int) < 0 / ExtractPaginationFromArgs", "localOffsetLimit", "negative offset or limit"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\entities\\filters\\pagination.go (全文 L14-58)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\usecases\\objects\\get.go (L160-260)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\adapters\\handlers\\rest\\handlers_objects.go (L229-281)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\usecases\\traverser\\explorer.go (L434 错误串)"
+      ],
+      "source_excerpt": "entities/filters/pagination.go L39-42:\n\tlimit, limitOk := args[\"limit\"]\n\tif !limitOk || limit.(int) < 0 {\n\t\tlimit = LimitFlagNotSet  // ← 负 limit 被显式等价于'未设置'→无限查询→返回全部\n\t}\nL18: LimitFlagSearchByDist int = iota - 2（=-2），L517 class_builder_fields.go: Pagination.Limit<0 → LimitFlagSearchByDist（同样吞负值）\nusecases/objects/get.go L245-252 localOffsetLimit: 仅检查 offset+limit > QueryMaximumResults（负 limit 使总和变小，检查被绕过）→ ObjectSearch 返回空集→REST 200 空体",
+      "call_chain_traced": "GraphQL: near/limit arg → ExtractPaginationFromArgs L40 负值→NotSet → explorer 全量查询 → 200 全部行。REST: GET /objects?limit=-1 → getObjectsFromRepo → localOffsetLimit（负值绕过上限检查）→ repo limit=-1 → 空结果 → NewObjectsListOK 200 content-length=0",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（0/INT_MAX 对照组正确报错）"],
+      "surviving": "pagination.go L40 注释表明'负 limit=未设置'是有意编码（可能为 nearXXX distance 搜索场景设计），构成 by-design 抗辩材料；但该特判无条件应用于普通 Get 且 REST 侧 200 空体为畸形响应，行为不一致 surviving"
+    }
+  }
+}

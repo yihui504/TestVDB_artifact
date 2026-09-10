@@ -1,0 +1,74 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "boundary_collections_update_011",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok on qdrant_doccons_indexing_threshold_001, violates=true) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "doc_consistency",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A-restatement: constraint qdrant_doccons_indexing_threshold_001 (doc_consistency_constraints, collections+update) exists and the quoted assertion is verbatim; violates=true. Log: default create readback resolves indexing_threshold=10000, PATCH optimizers_config.indexing_threshold=null leaves 10000 unchanged, explicit 50000 echoes — the OptimizersConfigDiff 'Default value is 20,000' prose is never materialized as a default. Source_grounding: DEFAULT_INDEXING_THRESHOLD_KB=10_000 (config.rs:15) with no 20000 path; the stale doc comment config_diff.rs:150 is the verbatim child of the contradicted spec sentence (doc-stale, grade-A stable 3-script reproduction). B=NEUTRAL (no value-acceptance/objective constraint class engaged; all probes HTTP 200 legal on both documented faces); C=CONFIRMED (no explicit by-design, bare stale annotation); D=NO_SIGNAL (no cognition anchor for default-claim doc conflicts).",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_collections_update_005",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok on qdrant_doccons_indexing_threshold_001, violates=true) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "doc_consistency",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A-restatement: qdrant_doccons_indexing_threshold_001 present with verbatim assertion quote; violates=true. Log [doccons measurements]: A1 full-omission create=10000, A2 partial-diff create=10000, B1 partial-diff PATCH=10000, D1 explicit-20000 control=20000 — the documented OptimizersConfigDiff default 20,000 is reachable only when sent explicitly, never via a default construct. Doc comments verified verbatim (optimizers_builder.rs:77 '10,000' vs config_diff.rs:150 '20,000', both JsonSchema-derived into the v1.18.x OpenAPI); diff-omit preserves current value (config_diff.rs:271), runtime self-consistent at 10000, falsehood confined to the 20,000 'default' claim. B=NEUTRAL (no violating-value acceptance; all requests 200 result:true); C=CONFIRMED (no explicit by-design); D=NO_SIGNAL.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_collections_update_005",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical, id+quote_ok on qdrant_doccons_indexing_threshold_001, violates=true) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "doc_consistency",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A-restatement: qdrant_doccons_indexing_threshold_001 present with verbatim assertion quote; violates=true. Log legs: V_c (default create)=10000, V_b (after unrelated deleted_threshold-only diff PATCH)=10000, V_cx (explicit 30000, preserved through diff)=30000 — the OptimizersConfigDiff-side claim 'Default value is 20000' never materializes while the 10000 side is satisfied. Source: DEFAULT_INDEXING_THRESHOLD_KB=10_000 (config.rs:15) + config.yaml:149 indexing_threshold_kb:10000 + diff-omit merge config_diff.rs:272; 20,000 exists only in config_diff.rs:150 and its gRPC mirror (qdrant.rs:838), no implementing path — doc-internal contradiction survives with implementation self-consistent at 10000. B=NEUTRAL (no objective constraint class; all 8 HTTP interactions 200 result:true); C=CONFIRMED (no by-design declaration); D=NO_SIGNAL.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 3, "defect": 3, "not_defect": 0, "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {},
+    "constraint_category_distribution": {"doc_consistency": 3},
+    "candidate_class_distribution": {"strict_defect": 3, "exploratory_candidate": 0, "rejected": 0}
+  }
+}

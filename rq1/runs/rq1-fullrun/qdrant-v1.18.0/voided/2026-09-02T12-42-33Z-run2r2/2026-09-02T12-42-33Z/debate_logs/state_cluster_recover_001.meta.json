@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_recover_001",
+  "endpoint": "cluster+recover",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "delete_consistency",
+  "oracle": {
+    "statement": "after POST /cluster/recover: /healthz returns 200 within the 20s grace window (never-200 = Type3_RuntimeFailure); GET /collections/{c} -> 200 and exact count == 8 (404 or count != 8 = Type4_StateLogicViolation — a refused 4xx recover must be a no-op, an accepted 2xx recover must preserve local data per the constraint's 'from local data' wording; 5xx on these faces while /healthz is 200 = Type3_RuntimeFailure); GET /cluster -> 200 (5xx = Type3 only after liveness); recover itself 5xx = Type3 only after liveness",
+    "source": "docstring"
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "defect_id": "boundary_points_get_type_001",
+  "endpoint": "points+get (POST /collections/{collection_name}/points)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: no doc_preflight.json sidecar exists anywhere in the plugin tree and doc_coverage_report.json has no per-URL record; built-in WebFetch was network-blocked (domain_blocked for qdrant.tech and api.qdrant.tech) but the web-reader fetch succeeded — https://qdrant.tech/documentation/search/search/ loads directly (200, title 'Search', canonical unchanged). version: contract doc_version is 'current (site latest; no version archive)' — concept docs have no version routing; page references features up to v1.16.0 so it is loosely consistent with target v1.18.0 but unpinned. content: the constraint's own behavior IS in the doc verbatim ('By default, retrieval methods do not return any stored information such as payload and vectors. Additional parameters `with_vectors` and `with_payload` alter this behavior.' plus the exact type domain: boolean / array of strings / include-exclude object) — however the CLAIMED phenomenon (4xx error body must name the parameter) appears nowhere in the doc; the page says nothing about error-message content. endpoint: endpoint_registry maps points+get -> method POST, source https://api.qdrant.tech/v-1-18-x/api-reference/points/get-points with doc_quote 'By default payload and vector are NOT returned - opt in with with_payload/with_vector; 200 array of Record; missing ids are simply absent'; the script used POST /collections/{name}/points exactly per registry. REST face throughout, no SDK/REST confusion.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "leg wp='true'(string) -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: Expected a boolean, an array of strings, or an object with an include/exclude field at line 1 column 38\"},\"time\":0.0}",
+      "secondary_observations": [
+        "rest(control, same endpoint, legal forms) output_boundary_points_get_defaults_001.log:6: 'leg B with_payload=true -> status=200' and :12: 'leg E with_payload=false -> status=200' — the boolean opt-in forms behave as documented; only the string form is rejected",
+        "rest(comparative, same request struct, sibling param `ids` missing) output_boundary_points_get_idtype_002.log:5: raw: {\"status\":{\"error\":\"Format error in JSON body: missing field `ids` at line 1 column 2\"},\"time\":0.0} — derive-level error DOES name the field (that script's own diagnostics leg passed: 'diagnostics OK: 4xx names the required field ids')",
+        "rest(comparative, same request struct, sibling param `ids` container type) output_boundary_points_get_idtype_002.log:12: raw: {\"status\":{\"error\":\"Format error in JSON body: invalid type: null, expected a sequence at line 1 column 13\"},\"time\":0.0} — does NOT name 'ids'",
+        "rest(comparative, same request struct, element-level custom visitor) output_boundary_points_get_idtype_001.log:13: raw: {\"status\":{\"error\":\"Format error in JSON body: value 1.5 is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 14\"},\"time\":0.0} — names the offending value and valid domain, not the field name",
+        "template-family note (grep over this session's output_*.log): the wrapper 'Format error in JSON body' occurs 338 times across 101 log files — it is the generic qdrant JSON-deserialization 4xx wrapper for every endpoint, not specific to with_payload"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The request-side-decidable error (with_payload as string 'true' instead of boolean|selector) was returned as a proper HTTP 400 with a JSON error envelope — status semantics are correct; the claim concerns only the error body's missing parameter name, so the '2xx + business code' criterion does not apply."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_points_get_type_001"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_get_001",
+      "assertion_text_quoted": "by default payload and vector are NOT returned - clients must opt in with with_payload/with_vector [DOC search]",
+      "api_violates_assertion": false,
+      "note": "Dispatch constraint_id field was EMPTY; the id was recovered from the attack string and the script header ('# constraint_ids: qdrant_behavioral_points_get_001') and verified to exist in structured_contract.json assertions. Violates-declaration self-check: the claimed phenomenon is NOT 'illegal value silently accepted' — the illegal string form was cleanly rejected with 400, which PRESERVES the quoted assertion (typed opt-in enforced, no coercion; the default-omission semantics are untouched by a rejected request). The quote's constraint domain is default-return behavior, which contains no clause about error diagnostics. The re-citation arm was checked: grep 'PoorDiagnostics|diagnos' over structured_contract.json returns ZERO hits — the contract contains no diagnostics-quality constraint for any endpoint, so no alternative citation exists. The Type2_PoorDiagnostics criterion originates solely from the script's self-declared oracle (strategy5 leg: 4xx naming neither 'with_payload' nor 'payload' => Type2), not from contract text.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_get_001 EXISTS in structured_contract.json (assertions, endpoint points+get, evidence_tier explicit, source_status degraded, source_verified false); dispatch constraint_id field empty — recovered from attack string + script header",
+        "doc: https://qdrant.tech/documentation/search/search/ reachable (200); prose 'By default, retrieval methods do not return any stored information such as payload and vectors. Additional parameters `with_vectors` and `with_payload` alter this behavior.' supports the assertion's default-false/opt-in semantics and shows the exact boolean/array/include-exclude type domain; the page contains NOTHING about 4xx error-message content",
+        "script: boundary_points_get_type_001.py sends POST /collections/{coll}/points with body {\"ids\":[301],\"with_payload\":\"true\"} (method matches endpoint_registry POST); its oracle declares the Type2 rule 'the 4xx answer for with_payload=\"true\" that mentions neither \"with_payload\" nor \"payload\" = Type2_PoorDiagnostics' — a script-internal rubric",
+        "log: output_boundary_points_get_type_001.log verdict 'DEFECT_FOUND (Type2_PoorDiagnostics)' on the first leg wp='true'(string) -> status=400, quoting the raw error line verbatim; script early-returns after the first defect so the remaining designed legs (wp=1(int), wp=[], include=string, unknown-key, wv legs, wp=null soft leg) never executed"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "All four links physically exist and are mutually consistent about endpoint, method and parameter; the break is semantic at the first link: the cited constraint's assertion domain (default-false opt-in return semantics) does not license the claimed phenomenon (diagnostics quality of the 4xx body), and no diagnostics-quality constraint exists anywhere in the contract to re-anchor. The observed 400 rejection actually complies with the cited assertion (strict typed opt-in enforced); the DEFECT verdict is derived from the script's self-declared Type2 oracle, not from contract text. Adjudication of whether an oracle-only Type2 rubric suffices belongs to the chain-auditor.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Expected a boolean, an array of strings",
+        "Format error",
+        "struct PointRequest",
+        "fn get_points|points_api",
+        "serde_path_to_error",
+        "validation_error_handler|JsonConfig"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs (lines 3558-3596)",
+        "src/actix/mod.rs (lines 100-120, 227-265)",
+        "src/actix/api/retrieve_api.rs (lines 114-140)",
+        "lib/collection/src/operations/types.rs (lines 548-588)"
+      ],
+      "source_excerpt": "lib/segment/src/types.rs:3558-3584 — /// Options for specifying which payload to include or not\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, PartialEq, Hash)]\n#[serde(untagged, rename_all = \"snake_case\")]\n#[serde(\n    expecting = \"Expected a boolean, an array of strings, or an object with an include/exclude field\"\n)]\npub enum WithPayloadInterface {\n    /// If `true` - return all payload,\n    /// If `false` - do not return payload\n    Bool(bool),\n    /// Specify which fields to return\n    Fields(Vec<JsonPath>),\n    /// Specify included or excluded fields\n    Selector(PayloadSelector),\n}\n... impl Default for WithPayloadInterface {\n    fn default() -> Self { WithPayloadInterface::Bool(false) }\n}\n\nlib/collection/src/operations/types.rs:560-580 — #[derive(Debug, Deserialize, Serialize, JsonSchema, Validate)]\npub struct PointRequest {\n    #[serde(flatten)]\n    #[validate(nested)]\n    pub point_request: PointRequestInternal,\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub shard_key: Option<ShardKeySelector>,\n}\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone, PartialEq, Hash)]\n#[serde(rename_all = \"snake_case\")]\npub struct PointRequestInternal {\n    /// Look for points with ids\n    pub ids: Vec<PointIdType>,\n    /// Select which payload to return with the response. Default is true.\n    pub with_payload: Option<WithPayloadInterface>,\n    /// Options for specifying which vectors to include into response. Default is false.\n    #[serde(default, alias = \"with_vectors\")]\n    pub with_vector: WithVector,\n}\n\nsrc/actix/api/retrieve_api.rs:125-129 — #[post(\"/collections/{collection_name}/points\")]\nasync fn get_points(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    request: Json<PointRequest>,\n\nsrc/actix/mod.rs:109-111 — let validate_json_config = actix_web_validator::JsonConfig::default()\n    .limit(settings.service.max_request_size_mb * 1024 * 1024)\n    .error_handler(|err, rec| validation_error_handler(\"JSON body\", err, rec));\n\nsrc/actix/mod.rs:249-261 — actix_web_validator::Error::JsonPayloadError(\n    actix_web::error::JsonPayloadError::Deserialize(err),\n) => { format!(\"Format error in {name}: {err}\",) }\n... let response = match &err {\n    actix_web_validator::Error::Validate(_) => HttpResponse::UnprocessableEntity(),\n    _ => HttpResponse::BadRequest(),\n}.json(ApiResponse::<()> { result: None, status: ApiStatus::Error(msg), ... })",
+      "call_chain_traced": "src/actix/mod.rs:109-111 wires actix_web_validator::JsonConfig.error_handler -> validation_error_handler(\"JSON body\", ...) -> src/actix/api/retrieve_api.rs:125 get_points (#[post(\"/collections/{collection_name}/points\")], request: Json<PointRequest>) -> lib/collection/src/operations/types.rs:570-580 PointRequestInternal.with_payload: Option<WithPayloadInterface> -> lib/segment/src/types.rs:3564 untagged enum WithPayloadInterface {Bool(bool), Fields(Vec<JsonPath>), Selector(PayloadSelector)}: the string \"true\" matches no variant, so serde emits the enum's custom #[serde(expecting = \"Expected a boolean, an array of strings, or an object with an include/exclude field\")] plus serde_json's position ('at line 1 column 38') -> mod.rs:252 format!(\"Format error in {name}: {err}\") -> mod.rs:260 HttpResponse::BadRequest() with ApiStatus::Error — byte-for-byte the observed 400 body. Mechanism of the missing parameter name: serde does not prepend struct-field names to errors raised inside custom/untagged deserializers, and the clone uses no serde_path_to_error anywhere (grep zero hits); derive-generated errors on the same struct DO carry the field name (observed 'missing field `ids`' in idtype_002), so the naming gap is specific to custom-deserializer fields like with_payload. The custom expecting text is itself a deliberate diagnostics investment (it accurately describes the accepted type domain, matching the doc's boolean/array/include-exclude forms) but there is NO comment or maintainer annotation declaring the omission of the parameter name intentional. Note (factual, from the excerpt): the source doc comment on PointRequestInternal.with_payload reads 'Default is true.' while WithPayloadInterface::default() = Bool(false) — a defaults-face nuance belonging to the sibling defaults candidates, recorded here only because it sits inside the examined excerpt.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "environment (deterministic 400 on a live server; /healthz not implicated; script exit code 0)",
+        "concurrency race (single sequential request; no shared state involved in the rejection path)",
+        "cache delay (stateless request-deserialization rejection)",
+        "request-parameter typo (the malformed value IS the deliberate test input; well-formed sanity legs on the same endpoint in sibling scripts returned 200)"
+      ],
+      "surviving": [
+        "by_design: not excludable — no explicit intent marker in source; the parameter-name omission is inherent to serde's custom-deserializer error propagation (no serde_path_to_error in the clone), and while Qdrant deliberately wrote the expecting text describing the type domain, no maintainer annotation declares the naming omission intentional; whether this framework-level pattern counts as a defectable diagnostics gap is the auditor's call"
+      ]
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "defect_id": "vein_stats_rowcount_001",
+  "endpoint": "v2/vectordb/collections/get_stats",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "不变式 milvus_inv_count_consistency 原文即 get_stats.rowCount==N；契约 endpoint_registry v2 get_stats 条目 'data {rowCount}' 与源码 handler_v2.go:417-428 一致；source_url 指向 v2.3.22 tag 真实存在",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "count(*)=10 query_rows=10 get_stats.rowCount=0",
+      "secondary_observations": [
+        "Detail 行（脚本自述）：get_stats permanently reports rowCount=0 while count(*)=10 and query returns all 10 rows on a loaded collection (waited >10s)",
+        "⚠️ 取证限制如实记录：本 vein log 为摘要行（script 汇总输出），非逐 REQ/RESP 对；脚本 wait/reload 循环细节未逐字留存。raw 佐证见 boundary_stats_rowcount_016（http=200 body 逐字）与 semantic_visibility_04（insertCount=3/rowCount=0 逐字）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "错值以 200+code:200 成功信封返回（数据错误而非错误码错误）"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_stats_rowcount_001.py", "semantic_visibility_04.py", "boundary_stats_rowcount_016.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_inv_count_consistency",
+      "assertion_text_quoted": "insert N entities -> rowCount == N (get_stats); after inserting N rows, collections/get_stats data.rowCount == N",
+      "api_violates_assertion": true,
+      "note": "N=10，rowCount=0，同集合 count(*)=10 且 query 返回全部 10 行——不变式直接违反；参数（插入行数 vs 统计读回）确在断言域内，violates=True 无含混",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_inv_count_consistency rowCount==N",
+        "doc: source_url handler_v2.go v2.3.22 可达且 getCollectionStat 存在（本地 clone 佐证）",
+        "script: vein_stats_rowcount_001.py 10 行插入 + 30s wait + release/reload 循环 + count(*) 对照",
+        "log: count(*)=10 / query_rows=10 / rowCount=0 三方对照一行汇总"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "断链在 target 环：链四环自洽，执行结果违反不变式。wait>10s + loaded 集合 + release/reload 循环已机械排除一致性滞后平凡解释（见 mundane_exclusion）",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["getCollectionStat|RowCount (handler_v2.go)", "func .*GetNumRowsOfCollection", "isSegmentHealthy", "GetCollectionStatistics (task_statistic.go / datacoord services.go)"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go (417-430)",
+        "internal/proxy/task_statistic.go (591-671 旧版 getCollectionStatisticsTask 为 v2 REST 实际走到的路径; 34-160 新版 getStatisticsTask 走 querynode/datacoord 分流)",
+        "internal/datacoord/services.go (340-360)",
+        "internal/datacoord/meta.go (253-269)"
+      ],
+      "source_excerpt": "internal/datacoord/meta.go:253-261: func (m *meta) getNumRowsOfCollectionUnsafe(collectionID UniqueID) int64 { var ret int64; segments := m.segments.GetSegments(); for _, segment := range segments { if isSegmentHealthy(segment) && segment.GetCollectionID() == collectionID { ret += segment.GetNumOfRows() } }; return ret } —— rowCount 仅累加 datacoord 元数据中 healthy segment 的 NumOfRows 字段",
+      "call_chain_traced": "REST v2 get_stats -> handler_v2.go:417 getCollectionStat -> proxy.GetCollectionStatistics -> task_statistic.go:645 Execute -> datacoord.GetCollectionStatistics(services.go:342) -> meta.GetNumRowsOfCollection(meta.go:265) -> 逐 healthy segment 累加 NumOfRows。若 segment 未被 datacoord 计入（growing/未上报），rowCount=0 而 query path 仍可返回行——与 log 观测的持久 0 完全吻合",
+      "verification_outcome": "by_design_in_source",
+      "note": "统计源为 datacoord segment 元数据而非 query path 实时计数——架构性 by-design 候选；但'insert N -> rowCount==N'是契约明文不变式且用户无 flush 义务，是否算可辩护 by-design 留 auditor；release/reload 后仍 0 说明非单纯 growing-segment 窗口",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["consistency-lag(waited >10s 仍 0)", "load-state(loaded 集合上观测; release/reload 循环后仍 0)", "data-loss(count(*)=10 且 query 返回 10 行)", "env(同 session 其他端点全部正常)"],
+      "surviving": "rowCount 统计源与 query path 可见性的架构分歧（by_design 抗辩方向）；⚠️ 摘要级 log 的复现细节依赖脚本自述，原始逐字证据在同根因另两链补强"
+    }
+  },
+  "evidence_weight": "A（三方独立复现 + 全调用链源码定位；本链自身 log 为摘要级，由 016/semantic_04 的 raw 响应补强）"
+}

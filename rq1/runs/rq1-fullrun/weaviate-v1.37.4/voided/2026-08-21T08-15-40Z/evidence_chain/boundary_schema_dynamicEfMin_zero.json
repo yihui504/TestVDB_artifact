@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_schema_dynamicEfMin_zero",
+  "endpoint": "POST /schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Network blocked doc verification. OpenAPI spec exists but validation constraints undocumented.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: dynamicEfMin=0 → http=200, code=0, class created with value 0",
+      "secondary_observations": [
+        "c2: dynamicEfMin=-1 → http=200, accepted",
+        "c3: dynamicEfMax=-1 → http=200, accepted",
+        "c4: dynamicEfMax=0 → http=200, accepted",
+        "c5: dynamicEfMin=500 > dynamicEfMax=100 → http=200, accepted"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 with success. Zero value accepted without error."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_dynamicEfMin_zero",
+        "boundary_schema_dynamicEfMin_negative",
+        "boundary_schema_dynamicEfMax_negative",
+        "boundary_schema_dynamicEfMax_zero",
+        "boundary_schema_dynamicEf_inverted"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint in structured_contract.json. Contract lacks validation assertions.",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (no constraint)",
+        "doc: (partial, network blocked)",
+        "script: POST /schema with dynamicEfMin=0",
+        "log: HTTP 200, zero accepted"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "No constraint defined. Contract lacks semantic assertions for dynamicEfMin validation.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["dynamicEfMin", "validate"],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go (lines 189-193, 260-323)"
+      ],
+      "source_excerpt": "From entities/vectorindex/hnsw/config.go:\n\n// Line 189-193: dynamicEfMin parsed without validation\nif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"dynamicEfMin\", func(v int) {\n\tuc.DynamicEFMin = v\n}); err != nil {\n\treturn uc, err\n}\n\n// validate() DOES NOT check u.DynamicEFMin == 0 or < 0",
+      "call_chain_traced": "ParseAndValidateConfig → assign v=0 → validate() skips check → zero persisted",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Source confirms validation_absent. 5/5 scripts confirm. Zero invalid for search EF parameter (should be positive)."
+    }
+  }
+}

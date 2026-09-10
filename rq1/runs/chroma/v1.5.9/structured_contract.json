@@ -1,0 +1,190 @@
+{
+  "target": "chroma",
+  "version": "1.5.9",
+  "api_endpoints": {
+    "collections": {
+      "create": {
+        "method": "POST",
+        "path": "/api/v1/collections",
+        "parameters": {
+          "name": {"type": "string", "required": true},
+          "metadata": {"type": "object", "required": false},
+          "dimension": {"type": "integer", "required": false}
+        }
+      },
+      "list": {
+        "method": "GET",
+        "path": "/api/v1/collections",
+        "parameters": {}
+      },
+      "delete": {
+        "method": "DELETE",
+        "path": "/api/v1/collections/{collection_name}",
+        "parameters": {}
+      },
+      "get": {
+        "method": "GET",
+        "path": "/api/v1/collections/{collection_name}",
+        "parameters": {}
+      }
+    },
+    "documents": {
+      "add": {
+        "method": "POST",
+        "path": "/api/v1/collections/{collection_name}/add",
+        "parameters": {
+          "documents": {"type": "array", "required": true},
+          "embeddings": {"type": "array", "required": true},
+          "metadatas": {"type": "array", "required": false},
+          "ids": {"type": "array", "required": true}
+        }
+      },
+      "query": {
+        "method": "POST",
+        "path": "/api/v1/collections/{collection_name}/query",
+        "parameters": {
+          "query_embeddings": {"type": "array", "required": true},
+          "n_results": {"type": "integer", "required": false, "default": 10},
+          "where": {"type": "object", "required": false},
+          "where_document": {"type": "object", "required": false}
+        }
+      },
+      "get": {
+        "method": "POST",
+        "path": "/api/v1/collections/{collection_name}/get",
+        "parameters": {
+          "ids": {"type": "array", "required": false},
+          "where": {"type": "object", "required": false},
+          "limit": {"type": "integer", "required": false}
+        }
+      },
+      "delete": {
+        "method": "DELETE",
+        "path": "/api/v1/collections/{collection_name}/delete",
+        "parameters": {
+          "ids": {"type": "array", "required": true}
+        }
+      }
+    }
+  },
+  "data_types": {
+    "point_wrapper": null,
+    "vector_field": "embeddings",
+    "id_field": "id",
+    "metadata_field": "metadata"
+  },
+  "behavioral_contracts": [
+    {
+      "contract_id": "bc-001",
+      "constraint_id": "c-001",
+      "assertion": "Invalid parameter types must be rejected with clear error messages",
+      "source_url": "https://docs.trychroma.com/docs/faq/applications",
+      "doc_version": "v1.5.9",
+      "behavior": "error_diagnosis",
+      "details": {
+        "parameter": "n_results",
+        "invalid_types": ["string", "float", "boolean", "negative", "zero"],
+        "expected_error_indicates": "parameter name and correct format"
+      }
+    },
+    {
+      "contract_id": "bc-002",
+      "constraint_id": "c-002",
+      "assertion": "Empty query results must be clearly indicated, not null/undefined",
+      "source_url": "https://docs.trychroma.com/docs/faq/applications",
+      "doc_version": "v1.5.9",
+      "behavior": "empty_result_semantics",
+      "details": {
+        "scenario": "query with non-matching filter",
+        "expected": "empty array or clear empty indicator, not null/undefined"
+      }
+    },
+    {
+      "contract_id": "bc-003",
+      "constraint_id": "c-003",
+      "assertion": "Documents must be immediately queryable after add (within 1 second)",
+      "source_url": "https://docs.trychroma.com/docs/faq/applications",
+      "doc_version": "v1.5.9",
+      "behavior": "write_read_consistency",
+      "details": {
+        "operation": "add then query",
+        "expected_delay": "visible within 1 second"
+      }
+    },
+    {
+      "contract_id": "bc-004",
+      "constraint_id": "c-004",
+      "assertion": "Metadata filtering must support exact match on string fields",
+      "source_url": "https://docs.trychroma.com/docs/faq/applications",
+      "doc_version": "v1.5.9",
+      "behavior": "filter_semantics",
+      "details": {
+        "filter_type": "where",
+        "field": "string",
+        "operator": "exact match"
+      }
+    },
+    {
+      "contract_id": "bc-005",
+      "constraint_id": "c-005",
+      "assertion": "Metadata filtering must support numeric comparisons",
+      "source_url": "https://docs.trychroma.com/docs/faq/applications",
+      "doc_version": "v1.5.9",
+      "behavior": "filter_semantics",
+      "details": {
+        "filter_type": "where",
+        "field": "numeric",
+        "operators": [">", ">=", "<", "<="]
+      }
+    },
+    {
+      "contract_id": "bc-006",
+      "constraint_id": "c-006",
+      "assertion": "Query must return most similar documents by cosine similarity",
+      "source_url": "https://docs.trychroma.com/docs/faq/applications",
+      "doc_version": "v1.5.9",
+      "behavior": "search_correctness",
+      "details": {
+        "metric": "cosine",
+        "expected_ordering": "most similar first"
+      }
+    },
+    {
+      "contract_id": "bc-007",
+      "constraint_id": "c-007",
+      "assertion": "Document deletion must be idempotent - deleting non-existent ID should not error",
+      "source_url": "https://docs.trychroma.com/docs/faq/applications",
+      "doc_version": "v1.5.9",
+      "behavior": "idempotent_delete",
+      "details": {
+        "operation": "delete non-existent ID",
+        "expected": "no error or clear 'not found' message"
+      }
+    },
+    {
+      "contract_id": "bc-008",
+      "constraint_id": "c-008",
+      "assertion": "Error on invalid collection name must indicate naming constraints",
+      "source_url": "https://docs.trychroma.com/docs/faq/applications",
+      "doc_version": "v1.5.9",
+      "behavior": "error_diagnosis",
+      "details": {
+        "parameter": "collection name",
+        "constraints": "non-empty, valid string, no special characters in some cases"
+      }
+    },
+    {
+      "contract_id": "bc-009",
+      "constraint_id": "c-009",
+      "assertion": "Valid collection must be retrievable immediately after creation",
+      "source_url": "https://docs.trychroma.com/docs/faq/applications",
+      "doc_version": "v1.5.9",
+      "behavior": "write_read_consistency",
+      "details": {
+        "operation": "create then get",
+        "expected_delay": "immediately visible"
+      }
+    }
+  ],
+  "constraints": []
+}

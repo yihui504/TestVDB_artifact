@@ -1,0 +1,69 @@
+[ATTACK] geo_filter on count endpoint (cardinality cross-pollination)
+======================================================================
+
+[TEST] Collection size: 50
+--------------------------------------------------
+  exact=true:  0
+  exact=false: 0
+  difference:  0 (0.0%)
+
+[TEST] Collection size: 200
+--------------------------------------------------
+  exact=true:  0
+  exact=false: 0
+  difference:  0 (0.0%)
+
+[TEST] Collection size: 500
+--------------------------------------------------
+  exact=true:  0
+  exact=false: 0
+  difference:  0 (0.0%)
+
+======================================================================
+[ANALYSIS] Geo filter cardinality estimation results
+----------------------------------------------------------------------
+[PASS] Estimation error within tolerance (max 0.0%)
+
+======================================================================
+{
+  "strategy": "vein_geo_filter",
+  "endpoint": "POST /collections/{collection}/points/count",
+  "condition_type": "geo_filter",
+  "test_sizes": [
+    50,
+    200,
+    500
+  ],
+  "results": {
+    "size_50": {
+      "exact_true": 0,
+      "exact_false": 0,
+      "difference": 0,
+      "error_pct": 0
+    },
+    "size_200": {
+      "exact_true": 0,
+      "exact_false": 0,
+      "difference": 0,
+      "error_pct": 0
+    },
+    "size_500": {
+      "exact_true": 0,
+      "exact_false": 0,
+      "difference": 0,
+      "error_pct": 0
+    }
+  },
+  "max_error_pct": 0,
+  "verdict": "PASS",
+  "threat_model_reference": "BS-09 (Filter Index Assumption)",
+  "finding_feedback_source": "cardinality_oracle (round 1)"
+}
+======================================================================
+
+VERDICT: NO_DEFECT
+
+[CLEANUP] Deleting test collections...
+  - DELETE vein_geo_test_50: 200
+  - DELETE vein_geo_test_200: 200
+  - DELETE vein_geo_test_500: 200

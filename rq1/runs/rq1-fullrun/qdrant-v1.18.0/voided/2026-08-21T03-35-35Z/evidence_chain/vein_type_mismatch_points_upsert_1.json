@@ -1,0 +1,75 @@
+{
+  "defect_id": "vein_type_mismatch_points_upsert_1",
+  "endpoint": "/collections/{collection_name}/points",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation does not explicitly state dimension validation behavior; upsert endpoint documented but silent discard not specified",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "Line 8-9: Upserting point with dimension-3 vector (expecting 4) → Status: 200, Response: {'result': {'operation_id': 1, 'status': 'acknowledged'}, 'status': 'ok', 'time': 0.000708671}. Line 15-17: Scrolling to verify stored points → Status: 200, Points found: [10], Total count: 1. Line 19: [DEFECT_FOUND] Dimension-mismatched vector (id=1) was silently discarded",
+      "secondary_observations": [
+        "Line 11-12: Upserting point with correct dimension-4 vector → Status: 200, Response: {'result': {'operation_id': 2, 'status': 'acknowledged'}, 'status': 'ok'}",
+        "Line 15-17: Scroll verification confirms only 1 point stored (id=10 with correct dimension), dimension-mismatched point (id=1) absent"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 (acknowledged but silently discarded)",
+        "note": "HTTP 200 OK with 'acknowledged' status, but point not actually stored. No 4xx error returned despite invalid vector dimension."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_type_mismatch_points_upsert_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A - no constraint_id in candidate metadata",
+      "api_violates_assertion": true,
+      "note": "Although no explicit constraint_id, API accepts invalid vector data without validation, violating reasonable expectations that dimension mismatches should be rejected with 4xx error",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: N/A (no constraint_id)",
+        "doc: upsert endpoint documented but silent discard behavior unspecified",
+        "script: vein_type_mismatch_points_upsert_1 sends 3D vector to 4D collection",
+        "log: HTTP 200 OK returned but scroll shows point not stored (silent discard)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "HTTP response indicates success (200 OK + acknowledged) but actual data shows silent failure - API contract violated by accepting invalid input and returning success without actually storing the point",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "check_named_vectors",
+        "check_vector_against_config",
+        "insert_new_vectors",
+        "WrongVectorDimension"
+      ],
+      "files_examined": [
+        "lib/segment/src/common/mod.rs",
+        "lib/segment/src/segment/segment_ops.rs",
+        "lib/segment/src/segment/entry.rs",
+        "lib/shard/src/operations/point_ops.rs"
+      ],
+      "source_excerpt": "File: lib/segment/src/common/mod.rs, Lines 186-219:\n\nfn check_vector_against_config(\n    vector: VectorRef,\n    vector_config: &VectorDataConfig,\n) -> OperationResult<()> {\n    match vector {\n        VectorRef::Dense(vector) => {\n            // Check dimensionality\n            let dim = vector_config.size;\n            if vector.len() != dim {\n                return Err(OperationError::WrongVectorDimension {\n                    expected_dim: dim,\n                    received_dim: vector.len(),\n                });\n            }\n            Ok(())\n        }\n        // ...\n    }\n}\n\nFile: lib/segment/src/segment/segment_ops.rs, Lines 102-120:\n\npub(super) fn insert_new_vectors(\n    &mut self,\n    point_id: PointIdType,\n    op_num: SeqNumberType,\n    vectors: &NamedVectors,\n    hw_counter: &HardwareCounterCell,\n) -> OperationResult<PointOffsetType> {\n    debug_assert!(self.is_appendable());\n    check_named_vectors(vectors, &self.segment_config)?;  // <-- Validation here\n    let new_index = self.id_tracker.borrow().total_point_count() as PointOffsetType;\n    for (vector_name, vector_data) in self.vector_data.iter_mut() {\n        let vector_opt = vectors.get(vector_name);\n        let mut vector_index = vector_data.vector_index.borrow_mut();\n        vector_index.update_vector(new_index, vector_opt, hw_counter)?;  // <-- Error caught here\n        self.version_tracker.set_vector(vector_name, Some(op_num));\n    }\n    self.id_tracker.borrow_mut().set_link(point_id, new_index)?;\n    Ok(new_index)\n}",
+      "call_chain_traced": "upsert_point (entry.rs:653) → check_named_vectors (common/mod.rs:149) → check_vector_against_config (common/mod.rs:188) → returns WrongVectorDimension error if dimension mismatch → error propagates through insert_new_vectors (segment_ops.rs:110) → handled by handle_point_version_and_failure (entry.rs:664) → error logged but operation still returns 200 OK to client due to async 'acknowledged' response pattern",
+      "verification_outcome": "validation_present",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "缓存延迟"],
+      "surviving": "Type1_IllegalSuccess: API returns HTTP 200 OK + 'acknowledged' status for invalid input (dimension-mismatched vector), but point is not actually stored. This is a silent discard bug, not a transient error or environmental issue."
+    }
+  }
+}

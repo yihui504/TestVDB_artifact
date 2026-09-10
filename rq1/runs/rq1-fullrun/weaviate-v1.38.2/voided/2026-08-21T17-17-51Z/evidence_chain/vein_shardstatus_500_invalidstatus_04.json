@@ -1,0 +1,70 @@
+{
+  "defect_id": "vein_shardstatus_500_invalidstatus_04",
+  "endpoint": "PUT /v1/schema/{className}/shards/{shardName}",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraint_id vein_validation_error_channel 为 vein 探索性约束；status 枚举值域（READY/READONLY/INDEXING/SHUTDOWN 等）与源码 storagestate 一致；endpoint_registry 含该端点",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "invalid status: 500 {\"error\":[{\"message\":\"updating db: TYPE_UPDATE_SHARD_STATUS: NOTASTATUS: invalid storage status\"}]}",
+      "secondary_observations": [
+        "control READONLY: 200"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "caller 输入 status='NOTASTATUS'（枚举外值）→ HTTP 500 而非 4xx；合法值 200。客户端可判定的枚举校验错误被归类为 server fault"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_shardstatus_500_invalidstatus_04.py", "vein_scripts/vein_shardstatus_phantom_03.py (control invalid status 同 500)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_validation_error_channel",
+      "assertion_text_quoted": "请求体中的非法枚举值（status 不在合法集合内）应返回 4xx 客户端错误",
+      "api_violates_assertion": true,
+      "note": "枚举校验存在（检出 NOTASTATUS）但以 500 返回，violates=True（错误通道而非缺失校验）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:vein_validation_error_channel（推断性）",
+        "doc:status 合法值域 = 源码枚举 READY/READONLY/INDEXING/LOADING/LAZY_LOADING/SHUTDOWN",
+        "script:vein_shardstatus_500_invalidstatus_04.py status='NOTASTATUS' + READONLY 对照",
+        "log:500 invalid storage status / control 200"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["invalid storage status", "ValidateStatus", "func (s *Shard) UpdateStatus", "NewSchemaObjectsShardsUpdateInternalServerError"],
+      "files_examined": [
+        "entities/storagestate/status.go (L15-42)",
+        "adapters/repos/db/shard_status.go (L90-103)",
+        "adapters/handlers/rest/handlers_schema.go (L431-454)"
+      ],
+      "source_excerpt": "entities/storagestate/status.go L33-42:\nvar ErrInvalidStatus = errors.New(\"invalid storage status\")\nfunc ValidateStatus(in string) (status Status, err error) {\n\tswitch in {\n\tcase string(StatusReadOnly): ...\n\tdefault:\n\t\terr = ErrInvalidStatus\n\t}\n\treturn status, err\n}\nadapters/repos/db/shard_status.go L100-103:\n\ttargetStatus, err := storagestate.ValidateStatus(strings.ToUpper(in))\n\tif err != nil {\n\t\treturn errors.Wrap(err, in)\n\t}\nadapters/handlers/rest/handlers_schema.go L438-447: handler 的错误 switch 仅区分 Forbidden，default → NewSchemaObjectsShardsUpdateInternalServerError()（500）。",
+      "call_chain_traced": "ValidateStatus 枚举校验存在（deep 层）→ 错误向上冒泡为普通 error → handler 只映射 Forbidden/500 两类，无 ErrInvalidUserInput 分支 → 枚举外值恒 500。校验存在但错误通道错误",
+      "verification_outcome": "by_design_in_source",
+      "note": "校验逻辑本身存在且正确（检出并拒绝），缺陷在 handler 层错误分类：handlers_schema.go updateShardStatus 无 4xx 分支（对照同文件 createTenants L474 有 UnprocessableEntity）。outcome 记 by_design_in_source 指'现有代码结构即如此'，非指行为正确",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

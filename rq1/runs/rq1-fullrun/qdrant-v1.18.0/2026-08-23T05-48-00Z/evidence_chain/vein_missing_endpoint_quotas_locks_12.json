@@ -1,0 +1,89 @@
+{
+  "defect_id": "vein_missing_endpoint_quotas_locks_12",
+  "endpoint": "quotas+get / quotas+set (GET/PUT /quotas); secondary: locks+get/locks+set (GET/POST /locks, contract_stale)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "rework_note": "Per auditor work order (EVIDENCE_GAP): claim split. Main phenomenon = GET/PUT /quotas absent (404 empty body). /locks half downgraded to contract_stale secondary observation, NOT a violation observation. Contract anchor re-attached to endpoint_registry quotas+get/quotas+set entries (with doc_quote); qdrant_range_quotas_001 kept as weak-grounding alternative only.",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "FAIL",
+      "version_match": "FAIL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PARTIAL",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: all four contract source_urls under https://api.qdrant.tech/v-1-18-x/api-reference/service/{get,put}-quotas and {get,post}-locks return live 404. Version: no rendered doc page for get-quotas exists on ANY versioned branch (v-1-15-x through v-1-19-x all probed, all 404); get-locks exists ONLY at v-1-15-x where the page is itself marked 'Deprecated' (summary 'Check write protection', which does not even match the contract doc_quote 'Get current write protection state'). Content: /quotas IS documented in the unversioned machine spec https://api.qdrant.tech/openapi/api-reference.json (GET operationId get-quotas 'Get global quotas', PUT operationId update-quotas 'Set global quotas', QuotaConfig schema with max_resident_memory_percent min 1 max 100, max_disk_usage_percent min 1 max 100, release_margin_percent min 0 max 100) — this is the only doc grounding and its info.version is a bare '1.0.0' with no release binding; spec is not bound to 1.18.x. Endpoint precision: endpoint_registry lookups for quotas+get/quotas+set and locks+get/locks+set succeed and paths/methods match the machine spec, but the registry's doc_version '1.18.x (versioned)' and verified_at 2026-08-23T05:20:00Z claims are unsubstantiated by the live site.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "GET /quotas: 404 body='' / PUT /quotas: 404 body='' (raw log lines 3-4) with server-alive controls: control GET /: 200 | control GET /healthz: 200 (line 7)",
+      "secondary_observations": [
+        "GET /locks: 404 body='' (raw log line 5) — contract_stale: locks doc exists only at v-1-15-x and is marked Deprecated there; per auditor work order NOT counted as violation observation",
+        "POST /locks: 404 body='' (raw log line 6) — contract_stale, same as above",
+        "log line 8 VERDICT line additionally claims quota API is 'the documented replacement for deprecated strict-mode max_resident_memory_percent' — cross-check: qdrant_range_quotas_001 and QuotaConfig schema cover the same field names, but no in-repo or rendered-1.18.x doc states the replacement relationship; that linkage is unverified"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "Unregistered routes return actix default 404 with empty body — correct HTTP semantics for a missing route; nothing is masked behind 2xx. The violation question is the route's absence itself (doc-vs-implementation divergence), not error masking."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["vein_missing_endpoint_quotas_locks_12"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "endpoint_registry:quotas+get + quotas+set (primary anchor per rework order); weak alternative: qdrant_range_quotas_001",
+      "assertion_text_quoted": "endpoint_registry quotas+get: doc_quote \"Get node-wide quota config\", source_url https://api.qdrant.tech/v-1-18-x/api-reference/service/get-quotas; quotas+set: doc_quote \"Set node-wide quota config\", source_url .../put-quotas; both doc_version \"1.18.x (versioned)\", verified_at 2026-08-23T05:20:00Z. Machine-spec equivalents: get-quotas \"Get global quotas\" / update-quotas \"Set global quotas\" (Replace the cluster-wide resource quota configuration... propagated to every peer through consensus). Alternative constraint qdrant_range_quotas_001 (quotas+set): \"max_resident_memory_percent IN [1,100] AND max_disk_usage_percent IN [1,100] AND release_margin_percent IN [0,100]\", evidence_tier inferred, source_verified false — note: this constrains quota VALUES, not endpoint existence, hence weak grounding for the present claim.",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates=true reasoning: the machine spec documents GET/PUT /quotas as existing operations (200 responses with QuotaConfig bodies), while the target returns 404 empty body on both — the documented surface is absent from the implementation. Grounding is explicitly weak: the only carrying doc is the unversioned spec (info.version 1.0.0, no release binding); every versioned rendered page including v-1-18-x 404s. Whether the quotas surface is cloud/enterprise-only or a future/unreleased feature is not provable within the repo or the public specs (auditor's drift_point confirmed by source probe: upstream main branch service_api.rs / rest schema.rs / models.rs also have zero 'quota' occurrences, and latest tag v1.19.0's rendered docs lack get-quotas)."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: structured_contract.json endpoint_registry quotas+get/quotas+set entries (doc_version 1.18.x claimed, doc_quote present)",
+        "doc: UNVERSIONED machine spec https://api.qdrant.tech/openapi/api-reference.json documents GET/PUT /quotas with QuotaConfig schema matching qdrant_range_quotas_001 field names and bounds; contract's stated v-1-18-x URLs are live 404",
+        "script: vein_missing_endpoint_quotas_locks_12 issues raw GET /quotas and PUT /quotas plus GET/POST /locks and control GET / + GET /healthz",
+        "log: output_vein_missing_endpoint_quotas_locks_12.log lines 3-4 GET/PUT /quotas 404 body=''; line 7 controls 200 — routes absent while server alive"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Doc link is mis-versioned for the /quotas half: the contract cites v-1-18-x rendered pages that do not exist (404) and claims verified_at 2026-08-23T05:20:00Z / doc_version 1.18.x — unsubstantiated. Doc content survives only via the unversioned machine spec with no release binding, so the assertion 'documented for v1.18.0' cannot be established at full strength (weak grounding, per rework order). The /locks half is broken one link earlier, at contract: registry entry is stale backfill (real page only at v-1-15-x, marked Deprecated, summary text differs from the registry doc_quote) — hence contract_stale, excluded from violation observation. Script and log links are intact for both halves.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "quotas (whole tree)",
+        "quota case-insensitive (whole tree)",
+        "locks (lib/api)",
+        "get_locks (git history -S)",
+        "healthz (route registration locator)",
+        "config_service_api (mod.rs)"
+      ],
+      "files_examined": [
+        ".qdrant-src-1190 (git describe = v1.18.0, Cargo.toml version 1.18.0; shallow depth-1 clone) src/actix/api/service_api.rs (full read, 276 lines — complete service route table)",
+        ".qdrant-src-1190/src/actix/mod.rs (route registration block, lines 149-161)",
+        ".qdrant-src-1190/lib/collection/src/operations/snapshot_storage_ops.rs (sole 'quotas' hit: doc-comment URL about cloud storage quotas, lines 66-78)",
+        ".qdrant-src-1190/tests/consensus_tests/utils.py (sole other case-insensitive 'quota' hit: commented-out systemd-run CPUQuota line, lines 261-308)",
+        ".qdrant-src-1190/lib/api/src/grpc/qdrant.rs and grpc/proto/collections_internal_service.proto ('locks' hits are 'clocks' substring in RecoveryPointClockTag and internal consensus locks — not the REST /locks API)",
+        ".qdrant-src-1190/lib/api/src/rest/ directory listing (schema.rs/models.rs/mod.rs — no service route modules in v1.18 layout)",
+        "upstream spot-check via raw.githubusercontent.com qdrant/qdrant@main: src/actix/api/service_api.rs, lib/api/src/rest/schema.rs, lib/api/src/rest/models.rs — all 0 'quota' occurrences"
+      ],
+      "source_excerpt": ".qdrant-src-1190/src/actix/api/service_api.rs lines 260-276 — the COMPLETE v1.18.0 service route registration:\n// Configure services\npub fn config_service_api(cfg: &mut web::ServiceConfig) {\n    cfg.service(telemetry)\n        .service(metrics)\n        .service(get_stacktrace)\n        .service(healthz)\n        .service(livez)\n        .service(readyz)\n        .service(get_logger_config)\n        .service(update_logger_config)\n        .service(truncate_unapplied_wal);\n}\n\n// Dedicated service for metrics\npub fn config_metrics_api(cfg: &mut web::ServiceConfig) {\n    cfg.service(metrics);\n}\n— no quotas handler, no locks handler; individual route macros in the file are #[get(\"/telemetry\")], #[get(\"/metrics\")], #[get(\"/stacktrace\")], #[get(\"/healthz\")], #[get(\"/livez\")], #[get(\"/readyz\")], #[get(\"/logger\")], #[post(\"/logger\")], #[post(\"/collections/{collection_name}/truncate_unapplied_wal\")] — that is the entire service-level surface.",
+      "call_chain_traced": "src/actix/mod.rs HttpServer .configure(config_service_api) (line 155 among the full configure chain) -> service_api::config_service_api registers the exhaustive service route list above. For /quotas or /locks to exist, a handler macro plus a .service() registration would have to appear somewhere; case-insensitive 'quota' across the entire tree yields only the two irrelevant hits (S3 doc-comment URL, commented-out systemd CPUQuota), so no handler exists to register. Git history for locks removal is unavailable locally (shallow depth-1 clone; git log -S 'get_locks' and -S '\"/locks\"' return nothing by construction), but rendered-doc evidence (locks page only at v-1-15-x, marked Deprecated) dates the removal to before 1.16.",
+      "verification_outcome": "not_found_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source",
+      "note": "For a missing-endpoint claim 'validation_absent' is inapplicable; the checked fact is route existence. 'quotas'/'quota' hits (2 files) were both read and are demonstrably irrelevant (cloud-storage doc comment; test-infra comment). Upstream main spot-check (3 files where service routes and OpenAPI schemas live) also shows zero quota occurrences, and public code indexes (sourcegraph/grep.app) return no QuotaConfig hits for qdrant/qdrant — supporting that the quotas surface is not in the OSS repo at all, not merely missing from v1.18.0."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env: control GET / = 200 and GET /healthz = 200 prove the server is up and routing normally",
+        "concurrency: single sequential probes, no race window",
+        "request_typo: raw log shows exact documented paths /quotas and /locks with correct methods",
+        "script_error: no TypeError/SCRIPT_ERROR markers; only a benign requests urllib3 RequestsDependencyWarning (log line 1)"
+      ],
+      "surviving": "quotas surface may be cloud/enterprise-only or a future/unreleased feature carried by the unversioned api.qdrant.tech machine spec (info.version 1.0.0, no release tag) rather than an OSS v1.18.0 commitment — this cannot be confirmed or excluded from within the repo/specs (upstream main and latest tag v1.19.0 also lack it). For /locks no surviving explanation is needed: contract_stale per rework order."
+    }
+  }
+}

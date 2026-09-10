@@ -1,0 +1,78 @@
+{
+  "defect_id": "boundary_metric_enum_002",
+  "endpoint": "v2/vectordb/collections/create（对照 v1/vector/collections/create）",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "high",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint milvus_type_create_collection_001 断言 metricType 7 值枚举，本地源码 metric_type.go:18-39 逐字一致；契约 source_verified=true",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[v2 metric=''] http=200 body={\"code\":200,\"data\":{}}（主观测：空串绕过枚举校验）",
+      "secondary_observations": [
+        "[v2 metric=None] http=200 body={\"code\":200,\"data\":{}}",
+        "[v1 metric=None] http=200 body={\"code\":200,\"data\":{}}（v1 侧同样绕过）",
+        "[v1 metric=''] http=200 code=65535 \"metric type not found or not supported, supported: [L2 IP COSINE HAMMING JACCARD]\"",
+        "[v1/v2 metric='l2'] http=200 code=65535 supported: [L2 IP COSINE HAMMING JACCARD]",
+        "[v1/v2 metric='cosine'/'euclidean'/'L3'/'HAMMING '/'L3;DROP'] http=200 code=65535 同类拒绝",
+        "[v1/v2 metric=123] http=200 code=1801 unmarshal number→string",
+        "[readback] {\"code\":200,...\"fields\":[{\"autoId\":true,...\"type\":\"Int64\"}...]}（控制集 IP 创建正常）",
+        "错误消息枚举只列 [L2 IP COSINE HAMMING JACCARD] 4 种，契约枚举为 7 种（缺 SUBSTRUCTURE/SUPERSTRUCTURE/视 checker 而定）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "非法非空串拒绝为 HTTP 200 + 65535；空串/None 为 HTTP 200 + code 200 静默接受"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_metric_enum_002.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_create_collection_001",
+      "assertion_text_quoted": "metricType in [L2, IP, COSINE, HAMMING, JACCARD, SUBSTRUCTURE, SUPERSTRUCTURE]",
+      "api_violates_assertion": true,
+      "note": "metricType='' 与 None 不在枚举内且被 200+code 200 接受。''/None 走 default-metric 回退（源码 1118-1119 显式 `if len(httpReq.MetricType)==0 { = DefaultMetricType }`），属'缺省即合法'路径——是否算违反严格枚举断言交 auditor（观测事实：非法域值未产生任何错误）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_create_collection_001 metricType 7 值枚举",
+        "doc: metric_type.go 7 常量定义逐字一致；错误消息侧 METRICS/HnswMetrics 只有 3/5 值（constraints.go:42,48）",
+        "script: boundary_metric_enum_002.py v1+v2 双侧提交空串/None/非法串/数字",
+        "log: v2 metric='' → 200 code 200（主观测）；v1 metric='' → 65535（对照）"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["metric type not found or not supported", "METRICS =", "DefaultMetricType", "len(httpReq.MetricType) == 0"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go:1117-1130",
+        "internal/distributed/proxy/httpserver/handler_v1.go:247-260",
+        "internal/distributed/proxy/httpserver/constant.go:119",
+        "pkg/util/indexparamcheck/constraints.go:42-48",
+        "pkg/util/indexparamcheck/float_vector_base_checker.go:14-20",
+        "pkg/util/metric/metric_type.go:18-39",
+        "tests/python_client/testcases/test_high_level_api.py:128"
+      ],
+      "source_excerpt": "handler_v2.go:1117-1119:\n\tif httpReq.Schema.Fields == nil || len(httpReq.Schema.Fields) == 0 {\n\t\tif len(httpReq.MetricType) == 0 {\n\t\t\thttpReq.MetricType = DefaultMetricType\n\t\t}\n——空串/None 在进入 indexparamcheck 前被替换为 DefaultMetricType(=metric.COSINE, constant.go:119)，故从不触发枚举拒绝。checker 侧 constraints.go:42 `var METRICS = []string{metric.L2, metric.IP, metric.COSINE}`、:48 HnswMetrics 5 值——错误消息 'supported: [L2 IP COSINE HAMMING JACCARD]' 即来自 HnswMetrics（默认 HNSW 索引路径），与契约 7 值枚举错位；官方测试 test_high_level_api.py:128 也只断言 4 值列表",
+      "call_chain_traced": "v2 create(quick) → createCollection:1118 空值回退 DefaultMetricType → CreateIndex(1121-1129) → indexparamcheck HnswChecker.staticCheck（HnswMetrics 5 值）→ 非法非空串 65535；''/None 永不达 checker。v1 create: handler_v1.go:252 ExtraParams 直传 httpReq.MetricType（无空值回退），故 v1 metric='' 到达 checker 且 65535、v1 metric=None 则因 Go 零值同空串但实测被拒、None(JSON null→\"\"​)与''行为分裂实测为 None 通过（200）——v1 None 通过与 v1 '' 拒绝的差异在 JSON null 绑定为 Go \"\" 的路径上，如实记录实测值",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "两点交 auditor：(1) v2 空值回退默认 metric 为显式设计（1118 行），但对用户而言'空串=None=合法'绕过了契约枚举且 v1/v2 行为分裂（v1 '' 拒、v2 '' 收）；(2) 错误消息枚举（4 值，来自 HnswMetrics）与契约/源码全枚举（7 值 metric_type.go）错位，误导性诊断信息"
+    }
+  }
+}

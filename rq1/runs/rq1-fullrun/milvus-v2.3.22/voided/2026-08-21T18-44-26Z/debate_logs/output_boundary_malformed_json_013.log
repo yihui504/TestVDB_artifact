@@ -1,0 +1,49 @@
+[create | truncated json] http=200 body={"code":1801,"message":"can only accept json format request, error: unexpected EOF"}
+[create | trailing comma] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '}' looking for beginning of object key string"}
+[create | single quotes] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '\\'' looking for beginning of object key string"}
+[create | comment injection] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '/' after object key:value pair"}
+[create | bad escape] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character 'q' in string escape code"}
+[create | lone surrogate] http=200 body={"code":1100,"message":"Invalid collection name: �bad. the first character of a collection name must be an underscore or letter: invalid parameter"}
+[create | nul in value] http=200 body={"code":1100,"message":"Invalid collection name: a\u0000b. collection name can only contain numbers, letters and underscores: invalid parameter"}
+[create | extra brace] http=200 body={"code":200,"data":{}}
+[create | array body] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal array into Go value of type httpserver.CreateCollectionReq"}
+[create | string body] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go value of type httpserver.CreateCollectionReq"}
+[create | empty body] http=200 body={"code":1801,"message":"can only accept json format request, error: EOF"}
+[create | huge value] http=200 body={"code":1100,"message":"Invalid collection name: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+[create | truncated json] http=200 body={"code":1801,"message":"can only accept json format request, error: unexpected EOF"}
+[create | trailing comma] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '}' looking for beginning of object key string"}
+[create | single quotes] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '\\'' looking for beginning of object key string"}
+[create | comment injection] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '/' after object key:value pair"}
+[create | bad escape] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character 'q' in string escape code"}
+[create | lone surrogate] http=200 body={"code":1100,"message":"Invalid collection name: �bad. the first character of a collection name must be an underscore or letter: invalid parameter"}
+[create | nul in value] http=200 body={"code":1100,"message":"Invalid collection name: a\u0000b. collection name can only contain numbers, letters and underscores: invalid parameter"}
+[create | extra brace] http=200 body={"code":65535,"message":"create duplicate collection with different parameters, collection: x"}
+[create | array body] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal array into Go value of type httpserver.CollectionReq"}
+[create | string body] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go value of type httpserver.CollectionReq"}
+[create | empty body] http=200 body={"code":1801,"message":"can only accept json format request, the request body should be nil, however {} is valid"}
+[create | huge value] http=200 body={"code":1100,"message":"Invalid collection name: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+[search | truncated json] http=200 body={"code":1801,"message":"can only accept json format request, error: unexpected EOF"}
+[search | trailing comma] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '}' looking for beginning of object key string"}
+[search | single quotes] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '\\'' looking for beginning of object key string"}
+[search | comment injection] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '/' after object key:value pair"}
+[search | bad escape] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character 'q' in string escape code"}
+[search | lone surrogate] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, vector]"}
+[search | nul in value] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, vector]"}
+[search | extra brace] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, vector]"}
+[search | array body] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal array into Go value of type httpserver.SearchReq"}
+[search | string body] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go value of type httpserver.SearchReq"}
+[search | empty body] http=200 body={"code":1801,"message":"can only accept json format request, error: EOF"}
+[search | huge value] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, vector]"}
+[search | truncated json] http=200 body={"code":1801,"message":"can only accept json format request, error: unexpected EOF"}
+[search | trailing comma] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '}' looking for beginning of object key string"}
+[search | single quotes] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '\\'' looking for beginning of object key string"}
+[search | comment injection] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character '/' after object key:value pair"}
+[search | bad escape] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character 'q' in string escape code"}
+[search | lone surrogate] http=200 body={"code":1802,"message":"missing required parameters, error: Key: 'SearchReqV2.Data' Error:Field validation for 'Data' failed on the 'required' tag"}
+[search | nul in value] http=200 body={"code":1802,"message":"missing required parameters, error: Key: 'SearchReqV2.Data' Error:Field validation for 'Data' failed on the 'required' tag"}
+[search | extra brace] http=200 body={"code":1802,"message":"missing required parameters, error: Key: 'SearchReqV2.Data' Error:Field validation for 'Data' failed on the 'required' tag"}
+[search | array body] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal array into Go value of type httpserver.SearchReqV2"}
+[search | string body] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go value of type httpserver.SearchReqV2"}
+[search | empty body] http=200 body={"code":1801,"message":"can only accept json format request, the request body should be nil, however {} is valid"}
+[search | huge value] http=200 body={"code":1802,"message":"missing required parameters, error: Key: 'SearchReqV2.Data' Error:Field validation for 'Data' failed on the 'required' tag"}
+VERDICT: NO_DEFECT

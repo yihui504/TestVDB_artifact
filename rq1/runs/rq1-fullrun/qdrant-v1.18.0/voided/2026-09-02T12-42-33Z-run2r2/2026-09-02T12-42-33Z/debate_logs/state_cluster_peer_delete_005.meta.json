@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_peer_delete_005",
+  "endpoint": "cluster+peer+delete",
+  "param": "peer_id",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "count_consistency",
+  "oracle": {
+    "statement": "refused ghost removal -> repeated GET /cluster snapshots all 200 with peers count identical to baseline (drift = Type4_StateLogicViolation; 5xx = Type3 only after /healthz liveness); if a non-self peer is derivable from GET /cluster: its removal -> HTTP 200 with the response_shape result:boolean envelope and peers count exactly baseline-1 afterwards, removed id absent from peers, re-removal of the same id -> 4xx; if no non-self peer exists (standalone deployment) -> honest SCRIPT_ERROR exit with no conclusion on the 200 face",
+    "source": "docstring"
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "defect_id": "boundary_points_query_limit_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "link_reachability: no doc_preflight.json sidecar exists; live check of https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points failed on both channels (WebFetch domain-verification blocked, web-reader 500 network error) -> domain_blocked, recorded PARTIAL not FAIL. version_match: PASS (URL version routing v-1-18-x = 1.18.x loosely matches target 1.18.0; also cross-checked against docs/redoc/v1.18.x/openapi.json shipped inside the v1.18.0 tag). content_consistency: PARTIAL — the cited constraint's assertion text IS present in the versioned OpenAPI shipped in the repo (QueryRequest.limit: 'Max number of points to return. Default is 10.' with minimum:1; QueryRequest.offset: 'Offset of the result. Skip this many points. Default is 0' with minimum:0), BUT the same v1.18.x OpenAPI's QueryResponse schema contains ONLY {points} and no next_page_offset property anywhere on the query face (next_page_offset exists solely in ScrollResult; identical in master snapshot), so the claim's verdict-driving expectation (next_page_offset present when more results remain) has no doc support; the contract's own endpoint_registry[20] doc_quote 'QueryResponse {result: [ScoredPoint], next_page_offset?}' is a loose paraphrase not backed by the shipped schema, and assertions[26] (qdrant_behavioral_points_query_001) itself marks the field 'optional'. endpoint_precision: PASS (points+query found in endpoint_registry with the exact source_url and POST path; raw_knowledge api_endpoints carries the same url).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "leg L1 limit=1 -> status=200 | raw: {\"result\":{\"points\":[{\"id\":1,\"version\":1,\"score\":0.0057622097}]},\"status\":\"ok\",\"time\":0.000565217} (log lines 4-5 verbatim; exactly 1 point returned for limit=1, next_page_offset key absent from result object — primary observation: claim expects next_page_offset==1 with 12 seeded points and offset default 0, got None)",
+      "secondary_observations": [
+        "[rest:query][sibling script] output_boundary_points_query_offset_001.log:6 — VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — leg [Of0 offset=0]: next_page_offset must be 5 (5 shown from offset 0), got None: {\"result\":{\"points\":[{\"id\":1,\"version\":1,\"score\":0.0057622097},{\"id\":2,\"version\":1,\"score\":0.011524419},{\"id\":3,\"version\":1,\"score\":0.01728663},{\"id\":4,\"version\":1,\"score\":0.023048839},{\"id\":5,\"version\":1,\"score\":0.028811049}]},\"status\":\"ok\",\"time\":0.000252237}",
+        "[rest:query][sibling script] output_state_points_query_exact_pagination_005.log:17 — [E3] next_page_offset log: [None, None, None, None, None, None]; line 25 — WARN: (E3) non-final page 0 lacked next_page_offset (same endpoint, every page of a multi-page walk lacked the key)",
+        "[rest:scroll contrast, same session/target] output_state_cluster_collection_update_003.log:10 — [scroll spot-check] status=200 raw={\"result\":{\"points\":[{\"id\":1},{\"id\":2},{\"id\":3},{\"id\":4},{\"id\":5}],\"next_page_offset\":6},\"status\":\"ok\",\"time\":0.001708381} — the scroll face DOES emit continuation (5 shown, next_page_offset=6) while the query face never emits the key (comparative-forensics: same-value situation, different same-family endpoint face)",
+        "[rest:query][sibling script] output_boundary_points_query_offset_huge_001.log:10 — leg H1 offset=100000 OK: 200 with 0 points, no next_page_offset (envelope result.points) — query-face responses omit the key entirely even in the exhausted state where scroll would serialize an explicit null"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "limit=1 is a documented legal value (minimum 1); the exchange was a successful 200 with exactly 1 point. The dispute is response-shape only (absent continuation token), not client-error-as-2xx semantics."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_points_query_limit_001",
+        "boundary_points_query_offset_001",
+        "state_points_query_exact_pagination_005"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_points_query_001",
+      "assertion_text_quoted": "limit minimum 1 (default 10); offset minimum 0 (default 0)",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "Violates-declaration self-check: the observed parameter value is genuinely compliant — limit=1 is inside the quoted domain (minimum 1) and was accepted with 200 returning exactly 1 point (min-closure honored), offset omitted -> default 0 honored; the claimed phenomenon (next_page_offset must be 1) lies OUTSIDE this constraint's domain, which asserts input bounds only. The re-citation alternative finds no better anchor: the only other query-face contract text (qdrant_behavioral_points_query_001, assertions[26]) marks next_page_offset 'optional', and the continuation-mandatory constraint (qdrant_state_points_scroll_001, 'scroll returns next_page_offset to continue') is scoped to points+scroll, not points+query. Dispatch note: candidates.jsonl constraint_id field was empty; the id was recovered from the attack string and the script header (constraint_ids: qdrant_range_points_query_001)."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_range_points_query_001 exists (structured_contract.json constraints.range_constraints[10], endpoint points+query, evidence_tier explicit) but its assertion text covers input bounds only (limit min 1 default 10; offset min 0 default 0) — it does not promise next_page_offset on any face",
+        "doc: source_url versioned v-1-18-x; offline source of truth (docs/redoc/v1.18.x/openapi.json inside the v1.18.0 tag) confirms the input-bounds prose verbatim (limit 'Default is 10.' minimum:1 / offset 'Default is 0' minimum:0) but its QueryResponse schema = {points} only, with next_page_offset present solely in ScrollResult — no doc support for a query-face continuation token",
+        "script: debate_logs/boundary_points_query_limit_001.py leg L1 sent {\"query\": {\"nearest\": V}, \"limit\": 1} — a legal request inside the constraint domain; the next_page_offset==1 expectation is script-oracle arithmetic (line 218: if npo != 1 -> DEFECT Type4), not contract text",
+        "log: output_boundary_points_query_limit_001.log faithfully records 200 with exactly 1 point and no next_page_offset; the raw response is consistent with input-side compliance, and matches the source's QueryResponse struct byte-for-byte in shape"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The DEFECT_FOUND verdict rests on an oracle clause (next_page_offset must be 1) that appears in no query-face contract constraint: the cited qdrant_range_points_query_001 asserts only limit/offset input bounds (which the observed exchange HONORED), assertions[26] marks the field optional, and the continuation-mandatory constraint belongs to points+scroll. The doc layer compounds this: the shipped v1.18.x OpenAPI QueryResponse schema has no next_page_offset property at all, so the endpoint_registry[20] doc_quote '...next_page_offset?' is itself an unsupported paraphrase. Chain is internally consistent from script to log, but the contract->claim link (and secondarily the doc-quote link) does not carry the verdict-driving expectation.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "next_page_offset (whole clone, 67 file hits)",
+        "QueryResponse (lib/**.rs)",
+        "QueryResults|next_page|offset (lib/collection/src/operations/universal_query/)",
+        "\\.offset|offset\\)|offset: (lib/collection/src)",
+        "next_page_offset (src/tonic/api/query_common.rs, tests/openapi/test_order_by.py)",
+        "QueryResponse/next_page_offset (docs/redoc/v1.18.x/openapi.json + docs/redoc/master/openapi.json via json parse)"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs (QueryRequestInternal limit/offset at 570-593; QueryResponse at 609-612)",
+        "lib/api/src/grpc/qdrant.rs (gRPC QueryResponse at 7484-7500)",
+        "src/actix/api/query_api.rs (REST handler, QueryResponse{points} at 89-98)",
+        "lib/collection/src/collection/query.rs (offset application skip/take at 437; 'Offset is handled on the collection level' at 138)",
+        "lib/collection/src/collection/point_ops.rs (scroll next_page_offset logic at 394-404)",
+        "lib/collection/src/operations/universal_query/collection_query.rs (offset transport + sample shortcut at 692-739)",
+        "lib/collection/src/shards/local_shard/query.rs (rescoring path offset:0 at 343-350)",
+        "src/tonic/api/query_common.rs (next_page_offset only in the scroll gRPC handler at 641-646)",
+        "tests/openapi/test_order_by.py (next_page_offset assertions are scroll-face tests at 103-145)",
+        "docs/redoc/v1.18.x/openapi.json and docs/redoc/master/openapi.json (schema comparison)"
+      ],
+      "source_excerpt": "lib/api/src/rest/schema.rs:569-612 (request face + response face of points/query):\n    pub params: Option<SearchParams>,\n    /// Return points with scores better than this threshold.\n    pub score_threshold: Option<ScoreType>,\n    /// Max number of points to return. Default is 10.\n    #[validate(range(min = 1))]\n    pub limit: Option<usize>,\n    /// Offset of the result. Skip this many points. Default is 0\n    pub offset: Option<usize>,\n    ...\n#[derive(Debug, Serialize, Deserialize, JsonSchema, Validate)]\npub struct QueryRequest {\n    #[validate(nested)]\n    #[serde(flatten)]\n    pub internal: QueryRequestInternal,\n    pub shard_key: Option<ShardKeySelector>,\n}\n...\n#[derive(Debug, Serialize, JsonSchema)]\npub struct QueryResponse {\n    pub points: Vec<ScoredPoint>,\n}\n\nsrc/actix/api/query_api.rs:89-97 (REST handler builds the response; no continuation field exists to populate):\n            .pop()\n            .ok_or_else(|| {\n                StorageError::service_error(\"Expected at least one response for one query\")\n            })?\n            .into_iter()\n            .map(api::rest::ScoredPoint::from)\n            .collect_vec();\n        Ok(QueryResponse { points })\n\nlib/collection/src/collection/query.rs:437 (query pipeline terminal type is a bare Vec; offset applied by slicing):\n        let result: Vec<ScoredPoint> = result.into_iter().skip(*offset).take(*limit).collect();\n\nCONTRAST — lib/collection/src/collection/point_ops.rs:394-404 (the scroll face is where continuation is implemented):\n        let next_page_offset = if points.len() < limit || order_by.is_some() {\n            // This was the last page\n            None\n        } else {\n            // remove extra point, it would be a first point of the next page\n            Some(points.pop().unwrap().id)\n        };\n        Ok(ScrollResult {\n            points,\n            next_page_offset,\n        })\n\ngRPC face — lib/api/src/grpc/qdrant.rs:7492-7499: QueryResponse { result: Vec<ScoredPoint>, time, usage } — no next_page_offset field either.\nShipped OpenAPI — docs/redoc/v1.18.x/openapi.json: QueryResponse = {type: object, required: [points], properties: {points: array of ScoredPoint}}; next_page_offset appears only under ScrollResult ('Offset which should be used to retrieve a next page result'). Same in master.",
+      "call_chain_traced": "REST POST /collections/{c}/points/query -> src/actix/api/query_api.rs:97 wraps into QueryResponse{points} -> lib/collection/src/collection/query.rs:437 applies offset via skip(offset).take(limit) and returns a bare Vec<ScoredPoint> -> lib/api/src/rest/schema.rs:609-612 QueryResponse has ONLY the points field, so the query face structurally cannot emit next_page_offset on REST (schema.rs:610) or gRPC (lib/api/src/grpc/qdrant.rs:7492); the continuation token is implemented exclusively on the scroll face (lib/collection/src/collection/point_ops.rs:394-404, ScrollResult). Request-side validation for the CITED constraint is present and honored: limit carries #[validate(range(min = 1))] (schema.rs:576) and offset is Option<usize> (unsigned => minimum 0 structural), defaults 10/0 documented in the same doc comments; the observed exchange (limit=1 -> 200 with exactly 1 point) complied. The claimed continuation-token omission carries no explicit maintainer annotation in source (collection/query.rs:138 comment 'Offset is handled on the collection level' concerns where offset is applied, not continuation), so by_design_in_source is not available; the omission is structural and version-stable (identical in master).",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service answered 200 on every leg; /healthz never consulted because no transport error occurred)",
+        "concurrency (single sequential request against a fresh script-owned collection, 12 points upserted with wait=true before the query)",
+        "cache-delay (no cache semantics involved in a stateless search response shape)",
+        "request-typo (request body {\"query\": {\"nearest\": V}, \"limit\": 1} matches the script source verbatim at debate_logs/boundary_points_query_limit_001.py:188-189)"
+      ],
+      "surviving": "spec-conformance candidate (unannotated): the observed absent next_page_offset exactly matches the shipped v1.18.x OpenAPI QueryResponse schema ({points} only) and the source struct on both REST and gRPC faces — i.e., the behavior conforms to the specification as shipped in the target tag; what survives for the auditor is the meta-question of the contract's endpoint_registry doc_quote ('next_page_offset?') being unsupported by that same specification, not a server-side state-logic fault. No explicit by-design annotation exists in source, so this remains a recorded mundane candidate rather than a by_design_in_source declaration."
+    }
+  }
+}

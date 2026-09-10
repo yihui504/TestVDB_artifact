@@ -1,0 +1,73 @@
+{
+  "defect_id": "semantic_batch_report_04",
+  "endpoint": "POST /v1/batch/objects",
+  "defect_type": "Type2",
+  "evidence_weight": "strong",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "domain_blocked",
+      "version_match": "PARTIAL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "脚本头自述契约 'weaviate_behavioral_objects_post_001'（contract 不存在此 ID）。关键：raw_knowledge.md L227（官方 OpenAPI 描述）明确：'Metadata and schema values for each object are validated' + 'This operation is idempotent based on the object UUIDs'——逐对象校验契约存在，但官方描述未明文承诺单对象校验失败时其余对象继续提交；实测为 body-level swagger 校验（id 格式在 body binding 阶段）整批 422。全批拒绝与'each object validated'的逐对象表述存在张力，但拒绝发生在请求体格式校验层（可辩 by-design）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "batch status: 422 / raw: {\"code\":601,\"message\":\"body.objects.2.id in body must be of type uuid: \\\"not-a-valid-uuid\\\"\"}",
+      "secondary_observations": [
+        "OBS: entire batch rejected with single status 422",
+        "GET ok1: 404",
+        "GET ok2: 404"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "422 状态码本身正确、错误消息精确到 body.objects.2.id（含索引定位）——诊断质量高；缺陷主张是'valid 对象被连坐'（all-or-nothing），非错误码问题。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["semantic_batch_report_04.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_behavioral_objects_post_001",
+      "assertion_text_quoted": "该 ID 不在 structured_contract.json。raw_knowledge.md L227 官方描述: 'Registers multiple data objects in a single request for efficiency. Metadata and schema values for each object are validated.'；L388 单对象端点: 'The object's metadata and schema values are validated before creation.'",
+      "api_violates_assertion": true,
+      "note": "violates=true 的依据：官方描述 'for each object are validated' 暗示逐对象粒度，实测 body-level 校验（UUID 格式错使 6 对象中 3 个合法对象全部丢失）；但 swagger 层对 body 字段格式的整批拒绝是 go-swagger 生成代码的标准行为，by-design 抗辩有力。violates 最终归 auditor。"
+      ,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_behavioral_objects_post_001 悬空——断链；raw_knowledge L227 'for each object are validated' 为弱锚",
+        "doc: raw_knowledge.md L223-227 批量端点描述",
+        "script: semantic_batch_report_04.py L38-45 构造 6 对象批次（idx2 为 'not-a-valid-uuid'）",
+        "log: 422 body.objects.2.id in body must be of type uuid"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "contract_id 悬空；doc 描述与行为的冲突点在'逐对象校验承诺 vs body-binding 整批拒绝'。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["must be of type", "BatchObjectsCreateBody", "validateID", "FormatOf"],
+      "files_examined": [
+        "adapters/handlers/rest/operations/batch/batch_objects_create.go",
+        "adapters/handlers/rest/operations/batch/batch_objects_create_parameters.go",
+        "entities/models/object.go",
+        "adapters/handlers/rest/handlers_batch_objects.go"
+      ],
+      "source_excerpt": "operations/batch/batch_objects_create_parameters.go L69-82:\n\tif runtime.HasBody(r) {\n\t\tvar body BatchObjectsCreateBody\n\t\tif err := route.Consumer.Consume(r.Body, &body); err != nil { ... }\n\t\telse {\n\t\t\t// validate body object\n\t\t\tif err := body.Validate(route.Formats); err != nil {\n\t\t\t\tres = append(res, err)   // 任一 object 校验失败 → 整个请求在 middleware 层被拒\n\t\t\t}\nentities/models/object.go L110-117:\nfunc (m *Object) validateID(formats strfmt.Registry) error {\n\tif swag.IsZero(m.ID) { return nil }\n\tif err := validate.FormatOf(\"id\", \"body\", \"uuid\", m.ID.String(), formats); err != nil {\n\t\treturn err   // 'body.objects.N.id in body must be of type uuid' 由 go-swagger 生成\n\t}\nhandlers_batch_objects.go L60-65: ErrInvalidUserInput → 422 —— usecase 层逐对象路径存在但本次根本未到达。",
+      "call_chain_traced": "go-swagger 参数绑定 → BatchObjectsCreateBody.Validate → 每个 models.Object.Validate → validateID FormatOf 失败 → CompositeError → 422（manager.AddObjects 的逐对象 per-object result 机制从未触达）",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "caching_delay"],
+      "surviving": "两难留给 auditor：swagger 层 body 格式校验天然 all-or-nothing（生成代码、by-design），但它使官方描述的'for each object are validated'语义失效——语义文档与实现层级错位存活"
+    }
+  }
+}

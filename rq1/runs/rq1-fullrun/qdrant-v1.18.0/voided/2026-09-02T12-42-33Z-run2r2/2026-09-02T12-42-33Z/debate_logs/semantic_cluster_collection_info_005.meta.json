@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_collection_info_005",
+  "endpoint": "cluster+collection+info",
+  "param": "shard_count",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "metamorphic",
+  "oracle": {
+    "statement": "for one unchanged collection: (R1) two consecutive cluster-info reads return identical (peer_id, shard_count); (R2) cluster-info shard_count == describe_collection result.config.params.shard_number (contract-declared integer, two documented views of the same quantity); (R3) cluster-info peer_id == cluster_status result.peer_id (this-peer identity on both cluster faces); any relation mismatch is Type4_StateLogicViolation (constraint qdrant_type_cluster_collection_info_001)",
+    "source": "docstring"
+  }
+}

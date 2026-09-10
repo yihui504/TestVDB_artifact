@@ -1,0 +1,53 @@
+{
+  "_meta": {
+    "target": "weaviate",
+    "analyzed_at": "2026-07-06T20:07:04.320672",
+    "total_negative_issues": 0,
+    "total_invalid_issues": 80,
+    "total_positive_issues": 92,
+    "notes": "No explicit negative issues found in this dataset - all closed issues with bug labels were classified as positive"
+  },
+  "rejection_patterns": [
+    {
+      "pattern_id": "RP-001",
+      "rejection_reason": "expected_behavior",
+      "description": "Behaviors that match documented API specifications even if unexpected",
+      "example_issues": [],
+      "developer_rationale_summary": "If the behavior matches documentation, it is considered correct",
+      "attack_guidance": "DO NOT report: Behaviors that are documented or specified. INSTEAD: Verify documentation matches implementation",
+      "affected_endpoints_pattern": "All API endpoints",
+      "frequency": 0
+    }
+  ],
+  "developer_cognition_signals": {
+    "what_developers_consider_bugs": [
+      "Parameter validation gaps at API boundaries",
+      "Error handling issues that cause crashes or panics",
+      "Race conditions in concurrent operations",
+      "State consistency problems during operations",
+      "Resource management issues (leaks, cleanup)",
+      "Vector index calculation errors",
+      "Configuration validation problems"
+    ],
+    "what_developers_prioritize": [
+      "System stability and crash prevention",
+      "Data consistency and integrity",
+      "Storage engine correctness",
+      "API contract compliance",
+      "Performance and resource efficiency"
+    ],
+    "blindspot_indicators": [
+      "Input validation is often incomplete at API boundaries",
+      "Error messages lack context for debugging",
+      "Edge cases in concurrent operations are frequently missed",
+      "Configuration validation is inconsistent across parameters",
+      "Type coercion issues in RAFT communication",
+      "Backup/restore state consistency edge cases",
+      "HTTP status-code semantics: server-side 5xx responses to request-side detectable errors (invalid or missing parameters, non-existent resources, mode-inapplicable operations) are treated as defects by maintainers and repeatedly fixed (500->422 merged PR 12049, 500->404 merged PR 12040, batch REST handler error-code fixes merged PR 11878, 500->202 with maintainer +1 on PR 12262). 5xx is reserved for genuine internal failures; 'the validation exists and the error message is clear' does not make a 5xx status correct"
+    ]
+  },
+  "by_design_patterns": [],
+  "blindspot_indicators": [
+    "HTTP status-code semantics: server-side 5xx responses to request-side detectable errors (invalid or missing parameters, non-existent resources, mode-inapplicable operations) are treated as defects by maintainers and repeatedly fixed (500->422 merged PR 12049, 500->404 merged PR 12040, batch REST handler error-code fixes merged PR 11878, 500->202 with maintainer +1 on PR 12262). 5xx is reserved for genuine internal failures; 'the validation exists and the error message is clear' does not make a 5xx status correct"
+  ]
+}

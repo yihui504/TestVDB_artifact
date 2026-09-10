@@ -1,0 +1,11 @@
+{
+ "defect_id": "boundary_collections_update_012",
+ "endpoint": "collections+update",
+ "param": null,
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "on the live bcu012_* collection, PATCH optimizers_config.vacuum_min_vector_number= 1500 returns HTTP 200 with result true and the readback echoes 1500; the same body on each of three never-created bcu012_* ghost names returns exactly HTTP 404 (2xx = Type1_ IllegalSuccess; 4xx other than 404 = Type2_PoorDiagnostics on the wrong documented face; 5xx with /healthz alive = Type3_RuntimeFailure; transport failure re-checked via /healthz)",
+  "source": "docstring"
+ }
+}

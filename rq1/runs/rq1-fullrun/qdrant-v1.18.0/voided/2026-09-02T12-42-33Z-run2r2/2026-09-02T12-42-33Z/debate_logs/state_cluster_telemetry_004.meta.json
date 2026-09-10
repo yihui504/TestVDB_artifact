@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_telemetry_004",
+  "endpoint": "cluster+telemetry",
+  "param": "timeout",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "count_consistency",
+  "oracle": {
+    "statement": "absent-param, timeout=60 and timeout=1 all return 200 with identical result fingerprints (result key set, cluster.enabled, cluster.number_of_peers) — non-200 on a legal member or fingerprint divergence = Type4_StateLogicViolation; timeout=0 and timeout=-1 return HTTP 4xx (200 = Type1_IllegalSuccess; differing state view on an accepted sub-minimum call = Type4_StateLogicViolation; 5xx = Type3_RuntimeFailure only after /healthz 200); the post-leg default face returns 200 with the baseline fingerprint (state damage from refused read-only calls = Type4)",
+    "source": "docstring"
+  }
+}

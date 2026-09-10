@@ -1,0 +1,72 @@
+{
+  "defect_id": "vein_v1v2_autoid_005",
+  "endpoint": "v1/vector/collections/create vs v2/vectordb/collections/create",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约 milvus_bc_v1_vs_v2_semantics 原文明载该分歧：'v1: autoID=true forced; v2: explicit schema autoID=false'；api_endpoints v1/create 描述 autoID=true、v2/create 描述 quick-create 与 explicit schema 两路径。契约如实记录了分歧——观测与契约一致，主张实质是'契约如实记录的行为本身是缺陷'",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "autoId v1=True v2=False; explicit-id insert code v1=1804 v2=200",
+      "secondary_observations": [
+        "v1 create ok=True; v2 create ok=True（相同 quick-create payload collectionName+dimension 两面均成功）",
+        "Detail 行：identical quick-create payload yields conflicting default PK generation: v1 autoId=True, v2 autoId=False; the same explicit-id row is rejected by one face and accepted by the other",
+        "⚠️ 取证限制：vein 摘要级 log，autoId 值取自 describe 输出、insert code 值直接断言；1804 消息体未逐字留存（契约 milvus_state_insert_001 有该消息全文）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "v1 拒显式 id 为 200+code:1804；v2 收为 200+code:200——同一行数据两面相反判定"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_v1v2_autoid_005.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_bc_v1_vs_v2_semantics",
+      "assertion_text_quoted": "v1 vs v2 semantic divergence: ... expected_behavior: v1: default metric L2, autoID=true forced ...; v2: quick-create default metric COSINE, explicit schema autoID=false (client supplies id)",
+      "api_violates_assertion": false,
+      "note": "二选一核对：观测（v1 autoId=True/v2=False，v1 拒 1804/v2 收 200）与断言预期逐项一致——API 未违反契约，violates=false 正确且无含混。缺陷主张的落点因此不是契约违反而是契约记录的行为自身构成 REST 面间一致性缺陷（two-face trap），归 auditor 判定该主张是否成立",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_bc_v1_vs_v2_semantics 明文记录 v1/v2 autoID 分歧（含 quick-create v2 路径）",
+        "doc: source_url handler_v1.go/handler_v2.go v2.3.22 均可达，源码即现场",
+        "script: vein_v1v2_autoid_005.py 相同 payload 双面 create + describe 验 autoId + 显式 id 行双面 insert",
+        "log: v1=True/v2=False, 1804/200 —— 与契约预期一致"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "note": "四环齐全且互相印证（观测==契约==源码）。链不断，但正因为不断，本案是'契约如实记录的 by-design 分歧'型主张：同 payload 双面创建出语义相反的 schema，REST 使用者无任何警告",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["AutoID (handler_v1.go / handler_v2.go / request_v2.go)", "EnableAutoID / DisableAutoID"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v1.go (183-214 quick-create 硬编码 AutoID: EnableAutoID)",
+        "internal/distributed/proxy/httpserver/handler_v2.go (983-1009 quick-create AutoID: httpReq.AutoID)",
+        "internal/distributed/proxy/httpserver/request_v2.go (253/262 AutoId bool json:'autoID' —— 无默认 true 绑定，零值即 false)",
+        "internal/distributed/proxy/httpserver/handler_v2.go (55 路由默认构造 &CollectionReq{AutoID: DisableAutoID})"
+      ],
+      "source_excerpt": "handler_v1.go:191: AutoID: EnableAutoID （v1 quick-create schema 硬编码 true）|| handler_v2.go:991: AutoID: httpReq.AutoID （v2 quick-create 取请求值）|| request_v2.go:262: AutoID bool `json:\"autoID\"` （缺省零值 false）—— 同一'quick-create'概念两面不同默认，源码逐行坐实",
+      "call_chain_traced": "v1 create -> 硬编码 AutoID=true schema -> insert 显式 id 命中 merr 1804（milvus_state_insert_001 消息原文源出 pkg/util/merr/errors.go）；v2 create -> CollectionReq.AutoID 零值 false -> 同一行数据被接受。差异无任何文档注释解释为何两默认相反",
+      "verification_outcome": "by_design_in_source",
+      "note": "源码显式写出（非 bug 级疏漏），且契约如实记录；缺陷性质=API 设计一致性，非实现偏离",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error(双面 create 均 ok, describe 验证 autoId)", "env"],
+      "surviving": "by-design 分歧为契约明文记录——本案的争点本身就是'该 design 是否算 defect'，全部留 auditor（v1 已废弃的辩护方向 vs 使用者实害）"
+    }
+  },
+  "evidence_weight": "B（链四环全齐且源码三处逐行坐实；但 api_violates=false / by_design 明确——属弱主张形态：契约内行为的设计缺陷指控）"
+}

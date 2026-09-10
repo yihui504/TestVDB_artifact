@@ -1,0 +1,70 @@
+{
+  "defect_id": "vein_dynamic_ef_minmax_1",
+  "endpoint": "POST/PUT /v1/schema (vectorIndexConfig)",
+  "defect_type": "Type1",
+  "evidence_weight": "strong",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "structured_contract.json constraint weaviate_range_create_collection_001: assertion 'dynamicEfMin <= dynamicEfMax'，source_url 'go-struct: entities/vectorindex/hnsw/config.go'（evidence_tier: inferred, 本地源码可达并核实）。raw_knowledge.md L768-794 机械提取了同一文件字段定义并标注 '关联字段 dynamicEfMax（配对约束候选：Min <= Max）'。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "FINDING: POST accepted dynamicEfMin=500 > dynamicEfMax=100",
+      "secondary_observations": [
+        "FINDING: control min<max stored verbatim (50,500) => no normalization either way",
+        "FINDING: PUT update also accepts inverted (9999,1)",
+        "FINDING: negative values persisted (-100,-50)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "非法值（Min>Max、负值）以 200 接受并逐字持久化——无错误通道。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_dynamic_ef_minmax_1.py", "vein_flat_search_cutoff_2.py（同 validate() 块无交叉校验）"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_range_create_collection_001",
+      "assertion_text_quoted": "dynamicEfMin <= dynamicEfMax（description: 'inferred: dynamicEfMin <= dynamicEfMax (paired constraint from go source)'）",
+      "api_violates_assertion": true,
+      "note": "观测 POST 200 且 readback dynamicEfMin=500 > dynamicEfMax=100，值明确违反 Min<=Max 断言且被持久化——violates=true 无歧义。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_range_create_collection_001 dynamicEfMin<=dynamicEfMax",
+        "doc: raw_knowledge.md L768-794 源码机械提取字段与默认值",
+        "script: vein_dynamic_ef_minmax_1.py L31-33 POST vectorIndexConfig {ef:128, dynamicEfMin:500, dynamicEfMax:100}",
+        "log: FINDING: POST accepted dynamicEfMin=500 > dynamicEfMax=100"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["dynamicEfMin", "DynamicEFMin.*(Max|<|>)", "validate() error", "MinmumMaxConnections"],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go"
+      ],
+      "source_excerpt": "entities/vectorindex/hnsw/config.go L189-193（解析，无界写入）:\n\tif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"dynamicEfMin\", func(v int) {\n\t\tuc.DynamicEFMin = v\n\t}); err != nil { return uc, err }\nL260-281 validate()（完整列举了所有存在的不变式——无 Min/Max 交叉）:\nfunc (u *UserConfig) validate() error {\n\tvar errMsgs []string\n\tif u.MaxConnections < MinmumMaxConnections { errMsgs = append(...) }\n\tif u.MaxConnections > MaximumMaxConnections { errMsgs = append(...) }\n\tif u.EFConstruction < MinmumEFConstruction { errMsgs = append(...) }\n\tif u.FilterStrategy != ... { errMsgs = append(...) }\n\t// —— DynamicEFMin/DynamicEFMax/FlatSearchCutoff 无任何比较校验\n\tif len(errMsgs) > 0 { return fmt.Errorf(\"invalid hnsw config: %s\", ...) }\n全库 grep 'DynamicEFMin' 仅 config.go 定义/默认/解析/测试——零交叉校验命中。",
+      "call_chain_traced": "POST /schema → ParseAndValidateConfig(input) → OptionalIntFromMap 逐字段写入（L183-205）→ validate()（L260-323 仅 maxConnections/efConstruction/filterStrategy/量化配置）→ 无 Min<=Max 检查 → 持久化",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "caching_delay", "readback_artifact（control 显示 verbatim 存储）"],
+      "surviving": null
+    }
+  }
+}

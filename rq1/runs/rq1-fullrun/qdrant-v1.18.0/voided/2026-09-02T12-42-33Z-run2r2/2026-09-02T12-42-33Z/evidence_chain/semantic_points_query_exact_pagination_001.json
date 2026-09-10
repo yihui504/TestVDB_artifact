@@ -1,0 +1,100 @@
+{
+  "defect_id": "semantic_points_query_exact_pagination_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: PASS — https://qdrant.tech/documentation/search/search/ fetched successfully via MCP webReader (primary WebFetch tool returned domain_blocked for qdrant.tech; the reader mechanism succeeded, so the link is reachable, not dead). version: PARTIAL — no version in URL ('current (site latest; no version archive)' per the contract itself; page is the live Hugo site, content markers v1.10+ Query API / v1.16 ACORN consistent with v1.18). content: SPLIT — (a) the cited assertion's own domain is verbatim grounded: the page's '### Stable Ordering' section says 'Because HNSW search is approximate, the ranking of results can shift slightly between requests. As a result, paginating with offset can return the same point on multiple pages or skip points entirely.' and '#### Exact Search' says 'Use exact searches to bypass HNSW and scan all vectors, returning results in a stable, deterministic order. This ensures that offset-based pagination works correctly.'; (b) the claim's score-formula expectation ('scores must be 1/(1+distance)') appears NOWHERE on the cited page, nor on the vectors page (https://qdrant.tech/documentation/manage-data/vectors/), nor in the versioned v1.18.x API schema the contract ingested — the repo's own ScoredPoint doc comment (lib/api/src/rest/schema.rs:447, served at api.qdrant.tech/v-1-18-x) defines the field as 'Points vector distance to the query vector'. endpoint: PASS — endpoint_registry points+query = POST /collections/{collection_name}/points/query (raw_knowledge source https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points); the script used exactly this URL.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "raw: {\"result\":{\"points\":[{\"id\":401,\"version\":1,\"score\":0.0},{\"id\":402,\"version\":1,\"score\":1.0},{\"id\":403,\"version\":1,\"score\":2.0},{\"id\":404,\"version\":1,\"score\":3.0},{\"id\":405,\"version\":1,\"score\":4.0},{\"id\":406,\"version\":1,\"score\":5.0},{\"id\":407,\"version\":1,\"score\":6.0},{\"id\":408,\"version\":1,\"score\":7.0}",
+      "secondary_observations": [
+        "C1 full exact limit=25 -> status=200 [this log, line 3 — whole log is 5 lines: leg status, raw response, VERDICT]",
+        "recording limitation: the raw response line is truncated at 305 chars INSIDE the log itself (script prints raw[:300]); response tail (points 409..425, next_page_offset) is not preserved",
+        "control-flow fact from whole-log + script review: the C1 id-order check (ids == [401..425] ascending, script line 199) did NOT fire — exact ordering was stable as documented; the score-formula check (script line 204) fired first, so the C2 pagination legs and C3 monotonicity legs were never executed",
+        "sibling rest face, same endpoint, same pattern (exact=true Euclid, raw distances as scores): semantic_points_query_params_bounds_001 — 'exact self-match must be top-1 id 301 score 1.0, got id=301 score=0.0' followed by scores 1.4142135, 2.828427 (= sqrt(2), 2*sqrt(2))",
+        "sibling rest face, same endpoint, same pattern: semantic_points_query_variant_domain_001 — 'exact Euclid self-match must be top-1 id 101 score 1.0, got id=101 score=0.0' followed by scores 1.7320508, 2.236068 (= sqrt(3), sqrt(5)) — raw Euclid distances",
+        "sibling rest face, same constraint, ORDERING face (different phenomenon than this candidate's score face): boundary_points_query_offset_exact_001 — 'X1: exact=true pagination must give stable ordering (a partition of the stored ids), but observed duplicates=[] missing=[6, 7, 8, 9, 10, 11, 12] extras=[] (constraint: with exact=true ordering is stable)'",
+        "source-level face comparison: legacy /points/search (the other REST face) converts to the same CoreSearchRequestBatch/QueryEnum::Nearest core path (lib/collection/src/collection/search.rs:288 uses is_distance_scored(); lib/collection/src/shards/local_shard/search.rs:157 postprocesses Nearest identically) — both REST faces are distance-scored for Euclid in v1.18.0; no face discrepancy found (comparison obtained from source, not re-probed live: sandbox re-probe not performed, faces compared via code path identity)"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "HTTP 200 with a well-formed result envelope; the dispute is output-value semantics (score = raw distance vs expected similarity), not client-error routing"
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_points_query_exact_pagination_001",
+        "semantic_points_query_params_bounds_001",
+        "semantic_points_query_variant_domain_001"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_003",
+      "assertion_text_quoted": "by-design: without exact=true, points may repeat/skip across offset pages; with exact=true ordering is stable - page overlap under HNSW is not a defect",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check: the fired observation (score values 0.0/1.0/2.0 = raw Euclidean distances) lies OUTSIDE the quoted assertion's constraint domain, which governs ordering stability only — and that promise held in this very log (the C1 id-order check passed, ids 401..425 ascending; the pagination legs were never reached because the script's self-invented score oracle fired first). No other constraint in structured_contract.json asserts a score formula (grep over the whole contract: '1/(1' 0 hits, 'similarity' 0 hits), so the wrong constraint was cited for the fired phenomenon and there is no re-citable one — the 1/(1+d) expectation exists only in the script's own oracle (docstring line: 'Euclid -> distance = b, score = 1/(1+b)'). api_violates_assertion=false is therefore a domain judgment about the CITED assertion, not a claim that the score values are compliant with some other rule.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: candidates.jsonl constraint_id field is EMPTY (mechanical extraction gap); the id qdrant_behavioral_points_query_003 is carried only in the attack string; the assertion exists in structured_contract.json assertions[] but its domain is ordering stability under exact=true — it says nothing about score values",
+        "doc: https://qdrant.tech/documentation/search/search/ reachable; its 'Stable Ordering' and 'Exact Search' sections ground the assertion text verbatim; the page contains NO score-formula text (1/(1+d) absent); the versioned v1.18.x API schema defines score as 'Points vector distance to the query vector'",
+        "script: debate_logs/semantic_points_query_exact_pagination_001.py — creates Euclid collection, upserts 25 collinear points id 401+b at vector [b,0,0,0] (reverse order), queries POST {\"query\":{\"nearest\":[0,0,0,0]},\"params\":{\"exact\":true},\"limit\":25,\"offset\":0}; the 1/(1+b) score oracle is script-derived (docstring '(search-correctness face of the same constraint)' — a co-grounding claim unsupported by the assertion text)",
+        "log: 5-line log; C1 ordering check passed silently (raw ids 401..425 ascending), score-formula check fired at C1 with expected [1.0, 0.5] vs got [0.0, 1.0, 2.0]; VERDICT line matches the fired observation exactly"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The primary violation observation (score formula 1/(1+d) vs raw distance) is not grounded in the cited constraint nor in any constraint of the contract: qdrant_behavioral_points_query_003 covers ordering stability only, and its promise demonstrably held in this log (C1 id-order check passed; pagination legs never executed). The whole structured_contract.json contains zero occurrences of '1/(1' or 'similarity'. The expectation originates solely in the script's own oracle. The doc link corroborates the break rather than repairing it: the cited page documents exact=true stable ordering but no score semantics, and the versioned API reference (the endpoint registry's actual source) explicitly documents score as the distance. Links script and log are intact; the contract link does not cover the observed phenomenon.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "euclid_similarity",
+        "1.0 / (1.0 | 1/(1 (whole-repo formula search)",
+        "postprocess (lib/, benches excluded then included)",
+        "is_distance_scored",
+        "distance_order",
+        "minimum distance | Distance variant | Look for vectors (REST schema doc-comments)",
+        "pub score: ScoreType (ScoredPoint schema definition)"
+      ],
+      "files_examined": [
+        "lib/segment/src/spaces/simple.rs",
+        "lib/segment/src/types.rs",
+        "lib/shard/src/query/query_enum.rs",
+        "lib/collection/src/shards/local_shard/search.rs",
+        "lib/collection/src/collection/search.rs (grep context)",
+        "lib/collection/src/operations/universal_query/shard_query.rs (grep context)",
+        "lib/segment/src/index/vector_index_search_common.rs",
+        "lib/common/common/src/math.rs",
+        "lib/api/src/rest/schema.rs",
+        "lib/collection/src/operations/conversions.rs (grep context)"
+      ],
+      "source_excerpt": "lib/segment/src/spaces/simple.rs:74-78 —\nimpl MetricPostProcessing for EuclidMetric {\n    fn postprocess(score: ScoreType) -> ScoreType {\n        score.abs().sqrt()\n    }\n}\n\nlib/segment/src/spaces/simple.rs:214-219 —\npub fn euclid_similarity(v1: &[VectorElementType], v2: &[VectorElementType]) -> ScoreType {\n    -v1.iter()\n        .zip(v2)\n        .map(|(a, b)| (a - b).powi(2))\n        .sum::<ScoreType>()\n}\n\nlib/segment/src/types.rs:319-327 —\nimpl Distance {\n    pub fn postprocess_score(&self, score: ScoreType) -> ScoreType {\n        match self {\n            Distance::Cosine => CosineMetric::postprocess(score),\n            Distance::Euclid => EuclidMetric::postprocess(score),\n            Distance::Dot => DotProductMetric::postprocess(score),\n            Distance::Manhattan => ManhattanMetric::postprocess(score),\n        }\n    }\n\nlib/segment/src/types.rs:344-349 —\n    pub fn distance_order(&self) -> Order {\n        match self {\n            Distance::Cosine | Distance::Dot => Order::LargeBetter,\n            Distance::Euclid | Distance::Manhattan => Order::SmallBetter,\n        }\n    }\n\nlib/collection/src/shards/local_shard/search.rs:155-166 —\n                let processed_res = vector_res.into_iter().map(|mut scored_point| {\n                    match req.query {\n                        QueryEnum::Nearest(_) => {\n                            scored_point.score = distance.postprocess_score(scored_point.score);\n                        }\n                        // Don't post-process if we are dealing with custom scoring\n                        QueryEnum::RecommendBestScore(_)\n                        | QueryEnum::RecommendSumScores(_)\n                        | QueryEnum::Discover(_)\n                        | QueryEnum::Context(_)\n                        | QueryEnum::FeedbackNaive(_) => {}\n                    };\n                    scored_point\n                });\n\nlib/shard/src/query/query_enum.rs:30-33 —\n    /// Only when the distance is the scoring, this will return true.\n    pub fn is_distance_scored(&self) -> bool {\n        match self {\n            QueryEnum::Nearest(_) => true,\n\nlib/api/src/rest/schema.rs:441-449 (schemars doc served by api.qdrant.tech/v-1-18-x) —\npub struct ScoredPoint {\n    /// Point id\n    pub id: PointIdType,\n    /// Point version\n    #[schemars(example = \"version_example\")]\n    pub version: segment::types::SeqNumberType,\n    /// Points vector distance to the query vector\n    #[schemars(example = \"score_example\")]\n    pub score: ScoreType,",
+      "call_chain_traced": "POST /collections/{name}/points/query -> local shard core search (SegmentsSearcher::search; exact=true routes to plain-storage full scan per lib/segment/src/index/vector_index_search_common.rs:23-24 is_quantized_search) -> raw scores from EuclidMetric::similarity = -sum((a-b)^2) (ordering-only quantity, SmallBetter) -> lib/collection/src/shards/local_shard/search.rs:157-158: QueryEnum::Nearest -> Distance::postprocess_score (types.rs:320) -> EuclidMetric::postprocess = score.abs().sqrt() = RAW EUCLIDEAN DISTANCE -> result ordering selected via distance_order() = Order::SmallBetter at lib/collection/src/collection/search.rs:288 and lib/collection/src/operations/universal_query/shard_query.rs:15. ZERO occurrences of a 1/(1+d) conversion anywhere in lib/ (whole-repo grep '1/(1' hits only an unrelated fast_sigmoid in lib/common/common/src/math.rs and turboquant constants). Observed [0.0, 1.0, 2.0, ...] for points at [b,0,0,0] vs query [0,0,0,0] equals sqrt(b^2)=b exactly — the output is precisely the designed distance score. Legacy /points/search converts to the same QueryEnum::Nearest core path (collection/search.rs:288) -> identical distance-scored output on both REST faces. Clone is shallow (1 commit db3fca3, 2026-05-11 = v1.18.0 tag state), so the historical commit that removed the pre-1.10 'euclid_similarity = 1/(1+d)' conversion could not be cited from git history.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "by_design_evidence_note": "intent evidence is structural+documented, not a prose 'we don't guarantee' comment: (1) doc comment at query_enum.rs:30 'Only when the distance is the scoring, this will return true.' with Nearest=true; (2) the type-level Order::SmallBetter modeling for Euclid/Manhattan threaded through is_ordered/check_threshold/result merging; (3) MetricPostProcessing deliberately maps -d^2 -> d via abs().sqrt(); (4) the versioned API schema (the contract's own endpoint source) documents the score field as 'Points vector distance to the query vector'. No maintainer prose or git citation was obtainable (shallow clone); the auditor weighs whether this meets the by-design bar or the weaker 'unannotated' bar.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "request_typo",
+        "approximate_index_artifact (exact=true bypasses HNSW per vector_index_search_common.rs:23; scores are exact deterministic geometric distances 0,1,2,...)"
+      ],
+      "surviving": "source-level by-design defense: v1.18.0's unified Query API defines Nearest scores as raw distances (Order::SmallBetter; postprocess=abs().sqrt(); versioned API schema 'Points vector distance to the query vector'), and the 1/(1+d) similarity expectation appears only in the script's own oracle — absent from the contract, from the cited search page, and from the vectors page. What remains for the auditor is not a code fault but an expectation-provenance question: whether the (historical, pre-Query-API) 1/(1+d) convention being absent from current docs while scores are distances constitutes a documentation gap worth reporting, or a non-defect."
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "defect_id": "boundary_v2_params_types_007",
+  "endpoint": "v2/vectordb/entities/search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "medium",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint milvus_type_v2_search_001 断言 params 为 map<string, float64> 仅数值；源码 request_v2.go:120 Params map[string]float64 逐字一致",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[params={'level': None}] http=200 body={\"code\":200,\"data\":[]}（主观测：null 值绕过 float64 类型约束）",
+      "secondary_observations": [
+        "[params={'level': 'not-a-number-str'}] http=200 code=1801 \"json: cannot unmarshal string into Go struct field SearchReqV2.params of type float64\"",
+        "[params={'level': [1, 2]}] http=200 code=1801 unmarshal array→float64",
+        "[params={'level': {'nested': 1}}] http=200 code=1801 unmarshal object→float64",
+        "[params={'level': True}] http=200 code=1801 unmarshal bool→float64",
+        "[numeric control] http=200 body={\"code\":200,\"data\":[]}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "string/array/object/bool 均以 HTTP 200 + 1801 拒绝；仅 null 为 HTTP 200 + code 200 接受"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_v2_params_types_007.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_v2_search_001",
+      "assertion_text_quoted": "params is map<string, float64> numeric values only",
+      "api_violates_assertion": true,
+      "note": "null 不是 numeric 值却以 200+code 200 通过，严格违反 float64-only 断言；但 null 在 Go JSON 解码中使 map 项保持零值语义（见 source），severity 交 auditor",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_v2_search_001 params 仅数值",
+        "doc: request_v2.go:120 Params map[string]float64 reachable 一致",
+        "script: boundary_v2_params_types_007.py 提交 str/array/object/bool/null 五类值",
+        "log: level=None → 200 code 200（主观测）"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["Params map\\[string\\]float64", "func generateSearchParams"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/request_v2.go:110-121",
+        "internal/distributed/proxy/httpserver/handler_v2.go:840-866"
+      ],
+      "source_excerpt": "request_v2.go:120: Params map[string]float64 `json:\"params\"`\nhandler_v2.go:840-846: func generateSearchParams(ctx, c, reqParams map[string]float64) — 进入后仅处理 ParamRadius/ParamRangeFilter 两个键，其他键（如 level）完全忽略，无任何值域/存在性校验。\nGo encoding/json 特性：JSON null 解码到 float64 字段不报错（保持零值 0），而 string/bool/array/object 报 unmarshal 错 → 精确解释观测矩阵（唯一放行 null）",
+      "call_chain_traced": "SearchReqV2 binding（ShouldBindJSON）→ map[string]float64：null→零值通过、其他类型→1801 → generateSearchParams 只透传 radius/range_filter → null 项（level）既不被校验也不进入 searchParams，静默丢弃",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "Go stdlib null 解码语义（by-design 容错）与契约 numeric-only 文本的冲突；实际影响为'未知 null 参数被静默忽略'——severity 判定交 auditor"
+    }
+  }
+}

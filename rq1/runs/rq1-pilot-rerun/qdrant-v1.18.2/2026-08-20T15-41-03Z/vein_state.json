@@ -1,0 +1,76 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "round": 3,
+  "session_id": "qdrant-v1.18.2-2026-08-20T15-41-03Z",
+  "session_dir": "<HOME>\.claude\plugins\cache\testvdb\testvdb\2.3.0\results\qdrant\v1.18.2\2026-08-20T15-41-03Z",
+  "top_endpoints": [
+    "collections+create",
+    "points+search",
+    "points+upsert",
+    "points+query"
+  ],
+  "richness_scores": {
+    "collections+create": 8.5,
+    "points+search": 7.0,
+    "points+upsert": 6.5,
+    "points+query": 6.0
+  },
+  "shape_sources": {
+    "collections+create": ["qdrant-parameter-validation-numeric-boundary"],
+    "points+search": ["qdrant-type-coercion-type-confusion"],
+    "points+upsert": ["qdrant-concurrency-race-concurrency-race"],
+    "points+query": ["qdrant-cardinality-oracle-count-exact-false"]
+  },
+  "condition_history": [
+    {"endpoint": "points+search", "condition_type": "params_hnsw_ef", "finding": "DEFECT_FOUND", "detail": "params.hnsw_ef=0 returns 200 (should reject with 400), control hnsw_ef=-1 correctly returns 400"},
+    {"endpoint": "points+batch", "condition_type": "ordering_validation", "finding": "DEFECT_FOUND", "detail": "ordering='invalid_value' returns 200 (should reject with 400), control weak/strong correctly return 200"},
+    {"endpoint": "collections+create", "condition_type": "replication_gt_shards", "finding": "DEFECT_FOUND", "detail": "replication_factor=2, shard_number=1 returns 200 (semantic invalidity)"},
+    {"endpoint": "collections+create", "condition_type": "write_consistency_gt_replication", "finding": "DEFECT_FOUND", "detail": "write_consistency_factor=3, replication_factor=2 returns 200 (semantic invalidity)"},
+    {"endpoint": "points+search", "condition_type": "params_exact", "finding": "NO_DEFECT", "detail": "params.exact=true accepted and works correctly"},
+    {"endpoint": "points+search", "condition_type": "params_unknown_field", "finding": "NO_DEFECT", "detail": "Unknown fields in params silently ignored (lenient API)"},
+    {"endpoint": "points+batch", "condition_type": "ordering_weak_strong", "finding": "NO_DEFECT", "detail": "ordering='weak' and 'strong' correctly accepted"},
+    {"endpoint": "collections+create", "condition_type": "shard_number_null", "finding": "NO_DEFECT", "detail": "shard_number=null accepted (uses default)"},
+    {"endpoint": "collections+create", "condition_type": "sharding_method_auto", "finding": "NO_DEFECT", "detail": "sharding_method='auto' correctly accepted"},
+    {"endpoint": "collections+create", "condition_type": "sharding_method_invalid", "finding": "NO_DEFECT", "detail": "Invalid sharding_method correctly rejected with 400"}
+  ],
+  "last_finding": {"endpoint": "collections+create", "condition_type": "write_consistency_gt_replication", "finding": "DEFECT_FOUND"},
+  "adjacent_pending": [],
+  "candidates_discovered": 4,
+  "defects_found": 4,
+  "by_design_excluded": 0,
+  "r1_r2_covered": [
+    "null_check",
+    "lookup_from",
+    "cluster_standalone",
+    "has_id",
+    "geo_filter",
+    "pagination_cursor",
+    "groups_group_size",
+    "collection_membership"
+  ],
+  "r3_focus_areas": [
+    "params_nested_objects",
+    "distributed_config_params",
+    "upsert_wait_ordering"
+  ],
+  "r3_objectives_complete": true,
+  "r3_summary": {
+    "total_tests": 10,
+    "defects_found": 4,
+    "no_defect": 6,
+    "inconclusive": 0,
+    "key_findings": [
+      "params.hnsw_ef=0 accepted in search (Type1_IllegalSuccess)",
+      "Invalid ordering value accepted in batch operations (Type1_IllegalSuccess)",
+      "replication_factor > shard_number semantic invalidity (Type1_IllegalSuccess)",
+      "write_consistency_factor > replication_factor semantic invalidity (Type1_IllegalSuccess)"
+    ],
+    "next_steps": [
+      "Cross-pollinate params.hnsw_ef test to points+query endpoint",
+      "Test distributed params in collections+update (PATCH)",
+      "Test write_consistency_factor in upsert operations"
+    ]
+  },
+  "total_defects_r1_r2_r3": 17
+}

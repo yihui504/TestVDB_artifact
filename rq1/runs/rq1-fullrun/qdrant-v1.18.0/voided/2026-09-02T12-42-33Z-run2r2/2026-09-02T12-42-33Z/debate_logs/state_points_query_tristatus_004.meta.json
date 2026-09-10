@@ -1,0 +1,12 @@
+{
+ "defect_id": "state_points_query_tristatus_004",
+ "endpoint": "points+query",
+ "param": "query",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "delete_consistency",
+ "oracle": {
+  "statement": "never-existing collection -> 404; valid query -> 200 with result.points array; invalid queries -> 400 (2xx = Type1); after collection drop query -> 404 (200 = zombie, Type4); 5xx with /healthz alive = Type3",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

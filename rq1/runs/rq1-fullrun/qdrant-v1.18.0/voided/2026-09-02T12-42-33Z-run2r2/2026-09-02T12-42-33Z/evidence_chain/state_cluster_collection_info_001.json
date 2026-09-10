@@ -1,0 +1,102 @@
+{
+  "defect_id": "state_cluster_collection_info_001",
+  "endpoint": "cluster+collection+info (GET /collections/{collection_name}/cluster)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists anywhere in the plugin tree; live re-verify performed — the WebFetch tool was domain_blocked for api.qdrant.tech, an alternate web reader retrieved the page successfully (title 'Retrieve cluster details | Qdrant | API Reference'). Version: page carries version selector 'v1.18.x' and the versioned URL v-1-18-x, matching target v1.18.0 (major.minor equal). Content: the page's worked 200 example DOES include all six CollectionClusterInfo fields including \"resharding_operations\" (array of {direction, shard_id, peer_id, shard_key}) — supporting the flat assertion — BUT the normative schema artifact shipped in-repo for this same version (docs/redoc/v1.18.x/openapi.json:12168-12221, the generator source of this site) lists CollectionClusterInfo.required = [local_shards, peer_id, remote_shards, shard_count, shard_transfers] and declares resharding_operations as \"nullable\": true and NOT required, so the unconditional containment claim ('response contains ... resharding_operations') is example-derived and overstates the normative required list. Endpoint: the page documents exactly GET /collections/:collection_name/cluster and the runtime path map (scripts/runtime/qdrant.py:44, key collection_cluster) sends the script to that exact path — precise match, no SDK/REST confusion (REST reference page, REST-tested face).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[B existing] status=200 raw={\"result\":{\"peer_id\":285485119185529,\"shard_count\":1,\"local_shards\":[{\"shard_id\":0,\"points_count\":0,\"state\":\"Active\"}],\"remote_shards\":[],\"shard_transfers\":[]},\"status\":\"ok\",\"time\":0.000093078} || DEFECT: (B) 200 but documented fields missing from CollectionClusterInfo: ['resharding_operations'] — Type4_StateLogicViolation",
+      "secondary_observations": [
+        "[A unknown-name] status=404 raw={\"status\":{\"error\":\"Not found: Collection `scci1_1788370004_24260_never_existed` doesn't exist!\"},\"time\":6.207e-6} (never-existed probe behaved as documented)",
+        "[C drop] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.008651359}",
+        "[C quiescence] describe(scci1_1788370004_24260_col) -> 404? True",
+        "[C post-delete] status=404 raw={\"status\":{\"error\":\"Not found: Collection `scci1_1788370004_24260_col` doesn't exist!\"},\"time\":4.312e-6} (post-DELETE face behaved as documented: no ghost/stale row)",
+        "DEFECT: (B) 200 but field types violate the documented shape: ['resharding_operations not list: NoneType'] — Type4_StateLogicViolation (derivative of the same missing key: node.get() on an absent field returns None)",
+        "The dispatched state faces (A unknown-name and C post-delete) both returned the documented 404; the DEFECT_FOUND verdict rests solely on the branch-B response-shape check, which the script header explicitly declares in-scope (constraint_ids line 6 includes qdrant_type_cluster_collection_info_001; docstring line 23-25 '+ shape clause of qdrant_type_cluster_collection_info_001 on the positive side')",
+        "Multi-script reproduction, same endpoint, same missing-key pattern: output_state_cluster_collection_info_002.log:13 'DEFECT: documented fields missing: [\\'resharding_operations\\'] — Type4_StateLogicViolation'",
+        "output_state_cluster_collection_info_003.log:8 'DEFECT: cluster info 200 after recreate but shape broken: [\\'resharding_operations\\'] — Type4_StateLogicViolation'",
+        "output_state_cluster_collection_info_004.log:7 'DEFECT: 2 x degraded shape on cluster-info 200s during writes — Type4_StateLogicViolation — samples: [\"200 missing [\\'resharding_operations\\']\", \"200 missing [\\'resharding_operations\\']\"]'",
+        "output_semantic_cluster_collection_info_002.log:6 'documented CollectionClusterInfo member \\'resharding_operations\\' is absent from the 200 payload of an idle (no-resharding-in-flight) collection, while the explicit-tier constraint states the response contains it'",
+        "grep across all output_*.log: no response body anywhere contains the key \"resharding_operations\" — every observed 200 on this endpoint omitted it (deterministic for idle collections), not intermittent"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The triggering request is a legal GET on an existing collection; no request-side-decidable error (illegal parameter/malformed format/out of range) is involved. The phenomenon is a 200 response omitting a documented optional-marked field — a response-shape question, not an illegal-input-accepted question."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_cluster_collection_info_001",
+        "state_cluster_collection_info_002",
+        "state_cluster_collection_info_003",
+        "state_cluster_collection_info_004",
+        "semantic_cluster_collection_info_002"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_cluster_collection_info_001",
+      "assertion_text_quoted": "response contains peer_id, shard_count (minimum 0), local_shards, remote_shards, shard_transfers, resharding_operations",
+      "api_violates_assertion": true,
+      "note": "Dispatch constraint_id was EMPTY in candidates.jsonl (mechanical extraction gap); recovered from the script header (debate_logs/state_cluster_collection_info_001.py line 6 declares both qdrant_behavioral_cluster_collection_info_001 and qdrant_type_cluster_collection_info_001) — the missing-field DEFECT semantics map to the type face, so the type constraint is grounded here. api_violates_assertion=true is literal: the observed 200 body does not contain resharding_operations while the quoted assertion says the response contains it. The behavioral twin ('existing collection: HTTP 200 with cluster info; unknown collection: HTTP 404') was SATISFIED by branches A/B/C of this very log. Material nuance for the auditor: the same version's normative schema artifact (in-repo docs/redoc/v1.18.x/openapi.json:12171-12177,12198) does NOT put resharding_operations in CollectionClusterInfo.required and marks it nullable — the flat contract text is stricter than the normative required list of the documentation it cites.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: constraint_id empty in the dispatch record; recovered from script header to qdrant_type_cluster_collection_info_001, verified present at results/qdrant/v1.18.0/structured_contract.json:6131-6142 (type_constraint, explicit tier, source_url .../distributed/collection-cluster-info, doc_version '1.18.x (versioned v-1-18-x api-reference)'); behavioral twin qdrant_behavioral_cluster_collection_info_001 at :7660-7671",
+        "doc: source_url https://api.qdrant.tech/v-1-18-x/api-reference/distributed/collection-cluster-info retrieved (WebFetch tool domain_blocked; alternate reader succeeded); page v1.18.x documents GET /collections/:collection_name/cluster with a 200 example containing all six fields including resharding_operations; its normative required list (per shipped openapi.json) excludes resharding_operations and marks it nullable",
+        "script: state_cluster_collection_info_001.py requests GET /collections/{name}/cluster via runtime path_key collection_cluster (scripts/runtime/qdrant.py:44 maps it to exactly that documented path) and checks six documented fields (REQUIRED_FIELDS lines 82-83) plus list-typedness (shape_ok lines 115-127) on the 200 body of branch B",
+        "log: branch B raw 200 body lacks the resharding_operations key; DEFECT lines 8-9 quote the missing field and the derived NoneType type-violation; VERDICT: DEFECT_FOUND is consistent with the raw observation (exit_code 1 per exit convention)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "resharding_operations (whole tree, 22 hit files)",
+        "CollectionClusterInfo (docs/redoc/v1.18.x/openapi.json)",
+        "collection_cluster (scripts/runtime/qdrant.py)",
+        "cluster_info / collection_cluster_info (lib/api/src, src/actix, src/common)",
+        "get_resharding_operations_info (lib/collection)"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/types.rs:326-343 (CollectionClusterInfo struct)",
+        "docs/redoc/v1.18.x/openapi.json:12168-12221 (CollectionClusterInfo schema) and :2085-2093 (endpoint response ref)",
+        "lib/collection/src/collection/collection_ops.rs:398,440-468 (cluster_info builder)",
+        "lib/collection/src/shards/shard_holder/mod.rs:534-544 (get_resharding_operations_info)",
+        "lib/collection/src/operations/conversions.rs:1537-1566 (REST struct -> gRPC response conversion)",
+        "src/actix/api/collections_api.rs:198-210 (REST route get_cluster_info) and :335 (.service registration)",
+        "src/common/collections.rs:235-245 (do_get_collection_cluster returns CollectionClusterInfo directly)",
+        "lib/api/src/grpc/proto/collections.proto:958-967 (grpc face of the same response)",
+        "scripts/runtime/qdrant.py:38-57 (plugin runtime path map, not clone)"
+      ],
+      "source_excerpt": "lib/collection/src/operations/types.rs:326-343 — /// Current clustering distribution for the collection\n#[derive(Debug, Serialize, JsonSchema)]\npub struct CollectionClusterInfo {\n    /// ID of this peer\n    pub peer_id: PeerId,\n    /// Total number of shards\n    pub shard_count: usize,\n    /// Local shards\n    pub local_shards: Vec<LocalShardInfo>,\n    /// Remote shards\n    pub remote_shards: Vec<RemoteShardInfo>,\n    /// Shard transfers\n    pub shard_transfers: Vec<ShardTransferInfo>,\n    /// Resharding operations\n    // TODO(resharding): remove this skip when releasing resharding\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub resharding_operations: Option<Vec<ReshardingInfo>>,\n}\n\n— corroborated by docs/redoc/v1.18.x/openapi.json:12168-12219 — \"CollectionClusterInfo\": { \"description\": \"Current clustering distribution for the collection\", \"type\": \"object\", \"required\": [ \"local_shards\", \"peer_id\", \"remote_shards\", \"shard_count\", \"shard_transfers\" ], ... \"resharding_operations\": { \"description\": \"Resharding operations\", \"type\": \"array\", \"items\": { \"$ref\": \"#/components/schemas/ReshardingInfo\" }, \"nullable\": true } } — resharding_operations is NOT in the required list.",
+      "call_chain_traced": "REST: src/actix/api/collections_api.rs:198 #[get(\"/collections/{collection_name}/cluster\")] get_cluster_info -> src/common/collections.rs:244 do_get_collection_cluster -> lib/collection/src/collection/collection_ops.rs:460-467 builds CollectionClusterInfo with resharding_operations = shards_holder.get_resharding_operations_info() -> lib/collection/src/shards/shard_holder/mod.rs:534-541 returns None when self.resharding_state is None (idle collection, no resharding in flight) -> types.rs:341 #[serde(skip_serializing_if = \"Option::is_none\")] omits the key from the 200 JSON. The observed branch-B body (freshly created idle collection, key absent) is exactly this deterministic path. Face comparison (source-level; live cross-face comparison face_unavailable — sandbox is REST-only): the gRPC face of the same response (lib/api/src/grpc/proto/collections.proto:966 'repeated ReshardingInfo resharding_operations = 6'; conversions.rs:1559-1563 flattens Option via into_iter().flatten()) always materializes the field as an (empty) repeated list, so the omission disposition differs between the rest face (key absent when idle) and the grpc face (empty list when idle).",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (endpoint healthy: setup create 200, describe control worked, drop 200, no transport failures)",
+        "concurrency race (branch B is a freshly created idle collection; the omission is deterministic in source: resharding_state None -> serde skip)",
+        "cache delay (no staleness involved: same-request serialization path)",
+        "request-parameter typo (runtime path map sends the exact documented path /collections/{name}/cluster)"
+      ],
+      "surviving": "by-design defense, source-grounded: explicit maintainer comment '// TODO(resharding): remove this skip when releasing resharding' directly above the skip attribute, plus resharding_operations being optional/nullable (not in required) in the version's own shipped OpenAPI — recorded as by_design_in_source; the auditor weighs this against the flat contract assertion text and the doc page's all-six-fields example"
+    }
+  }
+}

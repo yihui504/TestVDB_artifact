@@ -1,0 +1,18 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] describe_collection = /collections/{name} (runtime PATHS; matches raw_knowledge api_endpoints[collections+get].url /collections/{collection_name})
+ownership prefix: scg01ecd279
+[assertion quote] existing collection: HTTP 200 with resolved config including defaults; missing collection: HTTP 404 with an error message (runtime verified: 'Not found: Collection ... doesn't exist!'), never 200 with config
+[pre-probe] /healthz status=200 raw=healthz check passed
+[create scg01ecd279_live] status=200 raw={"result":true,"status":"ok","time":0.32292058}
+[leg A existing collection] name='scg01ecd279_live' status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_construct":100,"full_scan_threshold":10000,"max_indexing_threads":0,"on_disk":false},"optimizer_config":{"
+[observed note] leg A existing collection: config.quantization_config=None (grid type any - absence on a quantization-free collection is not adjudicated, D3b-2)
+[observed note] leg A existing collection: points_count=0 indexed_vectors_count=0 segments_count=8
+[conform] leg A existing collection: 200 with full resolved-config grid
+[leg B never-created] name='scg01ecd279_never' status=404 error="Not found: Collection `scg01ecd279_never` doesn't exist!" raw={"status":{"error":"Not found: Collection `scg01ecd279_never` doesn't exist!"},"time":0.000015516}
+[conform] leg B never-created: 404 with non-empty error message
+[drop scg01ecd279_live] status=200 raw={"result":true,"status":"ok","time":0.01077123}
+[leg C post-drop] name='scg01ecd279_live' status=404 error="Not found: Collection `scg01ecd279_live` doesn't exist!" raw={"status":{"error":"Not found: Collection `scg01ecd279_live` doesn't exist!"},"time":0.000035389}
+[conform] leg C post-drop: 404 with non-empty error message
+OK: describe answers 200 with the full resolved-config grid for an existing collection, and 404 with a non-empty error message for never-created and just-dropped names (never 200 with config)
+VERDICT: NO_DEFECT

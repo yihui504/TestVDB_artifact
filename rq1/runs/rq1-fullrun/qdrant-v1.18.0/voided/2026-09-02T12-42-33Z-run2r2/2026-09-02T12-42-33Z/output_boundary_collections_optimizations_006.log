@@ -1,0 +1,35 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+setup create b1opt6m_57eba70d85: status=200
+setup raw: {"result":true,"status":"ok","time":0.340621644}
+control GET optimizations (no params) -> status=200
+control raw: {"result":{"summary":{"queued_optimizations":0,"queued_segments":0,"queued_points":0,"idle_segments":8},"running":[]},"status":"ok","time":0.000084621}
+probe 'with=ZZUNRECOGNIZED (unrecognized literal)' -> status=400
+raw (first 400 chars): {"status":{"error":"Wrong input: Unknown field in 'with' parameter: ZZUNRECOGNIZED"},"time":0.000039996}
+probe with=ZZUNRECOGNIZED (unrecognized literal): clean 400 reject (recorded)
+probe 'with empty value' -> status=200
+raw (first 400 chars): {"result":{"summary":{"queued_optimizations":0,"queued_segments":0,"queued_points":0,"idle_segments":8},"running":[]},"status":"ok","time":0.000093664}
+probe with empty value: 200 accepted with envelope intact (recorded)
+probe 'with NUL byte value' -> status=400
+raw (first 400 chars): {"status":{"error":"Wrong input: Unknown field in 'with' parameter: a\u0000b"},"time":0.000010239}
+probe with NUL byte value: clean 400 reject (recorded)
+probe 'with overlong 10k value' -> status=400
+raw (first 400 chars): {"status":{"error":"Wrong input: Unknown field in 'with' parameter: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+probe with overlong 10k value: clean 400 reject (recorded)
+probe 'foreign param zz_unknown=abc123' -> status=200
+raw (first 400 chars): {"result":{"summary":{"queued_optimizations":0,"queued_segments":0,"queued_points":0,"idle_segments":8},"running":[]},"status":"ok","time":0.000068743}
+probe foreign param zz_unknown=abc123: 200 accepted with envelope intact (recorded)
+probe 'foreign param limit=abc' -> status=200
+raw (first 400 chars): {"result":{"summary":{"queued_optimizations":0,"queued_segments":0,"queued_points":0,"idle_segments":8},"running":[]},"status":"ok","time":0.000100396}
+probe foreign param limit=abc: 200 accepted with envelope intact (recorded)
+probe 'with + foreign param combined' -> status=400
+raw (first 400 chars): {"status":{"error":"Wrong input: Unknown field in 'with' parameter: info"},"time":0.000011117}
+probe with + foreign param combined: clean 400 reject (recorded)
+probe 'empty collection-name path segment' -> status=404
+raw (first 400 chars): {"status":{"error":"Not found: Collection `optimizations` doesn't exist!"},"time":0.000028657}
+probe empty collection-name path segment: clean 404 reject (recorded)
+probe '1-char invalid collection name' -> status=404
+raw (first 400 chars): {"status":{"error":"Not found: Collection `x` doesn't exist!"},"time":5.202e-6}
+probe 1-char invalid collection name: clean 404 reject (recorded)
+OK: all malformed/foreign-input probes answered without 5xx/crash; 200s kept the result envelope
+VERDICT: NO_DEFECT

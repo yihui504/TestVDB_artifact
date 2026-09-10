@@ -1,0 +1,69 @@
+{
+  "defect_id": "boundary_bd_match_where_01",
+  "endpoint": "DELETE /batch/objects",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint source_url 为 go-func 定位（go-func: entities/models/batch_delete.go Validate()/validateMatch()）而非网页文档，本地 clone 可达即视为可达；契约 endpoint_registry 含 DELETE /batch/objects（doc_version v1.38.2）；api_endpoints 中 match/match.where 标 required=true（docs 语义）与 assertion 一致。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "ATTACK match.where missing: 500 / Body: {\"error\":[{\"message\":\"validate: empty match.where clause\"}]}",
+      "secondary_observations": [
+        "CONTROL valid match: 200 {\"deletionTimeUnixMilli\":-62135596800000,\"dryRun\":false,\"match\":{\"class\":\"BoundaryBdWhere1\",\"where\":{\"operands\":null,\"operator\":\"Equal\",\"path\":[\"name\"],\"valueText\":\"target\"}},\"output\":\"minimal\",...} — 同端点合法 match 正常 200，排除环境/类不存在因素",
+        "setup create class: 200 / setup insert: 200"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "客户端错误（缺 required 字段）以 HTTP 500 返回而非 4xx——这是缺陷本身；对照同 handler 内 ErrInvalidUserInput 正确映射 422"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_bd_match_where_01", "boundary_bd_match_empty_08", "boundary_bd_match_resources_09", "semantic_match_missing_01"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_type_batch_delete_match_001",
+      "assertion_text_quoted": "DELETE /batch/objects: match.class AND match.where present, else 4xx（description: verified: match.class/match.where 文档标记 required；缺失应 422（同端点 class-not-found 已由 PR#11497 修正为 422；match 缺失分支遗留 500 通道——GT issue #12041））",
+      "api_violates_assertion": true,
+      "note": "主观测 match.where 缺失 → 500，直接违反 constraint 的 'else 4xx' 分支；观测值（缺失字段）确在 constraint 约束域（required 字段缺失）内。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_type_batch_delete_match_001 (evidence_tier=verified, source_verified=true) 要求 match.where 缺失 → 4xx",
+        "doc: 契约 api_endpoints DELETE /batch/objects 参数 match.where required=true, evidence_tier=verified, source_url go-struct: entities/models/batch_delete.go#L137-L139",
+        "script: boundary_bd_match_where_01.py 发送 match 含 class 无 where 的 DELETE /batch/objects",
+        "log: 'ATTACK match.where missing: 500' + body 'validate: empty match.where clause'"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["empty match", "empty match.where", "ErrInvalidUserInput", "NewErrInvalidUserInput"],
+      "files_examined": [
+        "usecases/objects/batch_delete.go (L110-150)",
+        "adapters/handlers/rest/handlers_batch_objects.go (L170-210)"
+      ],
+      "source_excerpt": "usecases/objects/batch_delete.go L122-L137 (BatchManager.validateBatchDelete):\n  if match == nil {\n    return nil, 0, errors.New(\"empty match clause\")\n  }\n  if len(match.Class) == 0 {\n    return nil, 0, errors.New(\"empty match.class clause\")\n  }\n  if match.Where == nil {\n    return nil, 0, errors.New(\"empty match.where clause\")\n  }\n\nadapters/handlers/rest/handlers_batch_objects.go L189-L202 (batchObjectHandlers.BatchObjectsDelete 错误映射):\n  res, err := h.manager.DeleteObjects(ctx, principal, params.Body.Match, ...)\n  if err != nil {\n    if errors.As(err, &objects.ErrInvalidUserInput{}) {\n      return batch.NewBatchObjectsDeleteUnprocessableEntity()...   // 422\n    } else if errors.As(err, &objects.ErrMultiTenancy{}) {\n      return batch.NewBatchObjectsDeleteUnprocessableEntity()...   // 422\n    } else if errors.As(err, &autherrs.Forbidden{}) {\n      return batch.NewBatchObjectsDeleteForbidden()...             // 403\n    } else {\n      return batch.NewBatchObjectsDeleteInternalServerError()...  // 500\n    }\n  }",
+      "call_chain_traced": "REST handler → BatchManager.DeleteObjects → validateBatchDelete：match==nil / class 空 / where nil 三分支均返回裸 errors.New（非 ErrInvalidUserInput 类型）；handler 仅将 ErrInvalidUserInput/ErrMultiTenancy/Forbidden 映射为 4xx，裸 error 落入 else 分支 → 500。同函数内紧随其后的 class-not-found 分支已改用 NewErrInvalidUserInput（注释注明 'classify other lookup failures as caller input (→ 422)'，对应 PR#11497），三个 empty-match 分支遗漏同款修正。",
+      "verification_outcome": "validation_present",
+      "note": "校验存在但错误类型选错导致 5xx 通道——真缺陷信号成立（错误分类缺陷，非缺校验）；对照代码（同函数 NewErrInvalidUserInput 用法）即修复方案。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo", "class_not_found"],
+      "surviving": null
+    }
+  }
+}

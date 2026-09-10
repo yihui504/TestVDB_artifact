@@ -1,0 +1,506 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "boundary_upsert_batch_size_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": "qdrant_range_upsert_points_001",
+          "assertion_text_quoted": "batch_size >= 1 and batch_size <= 1000"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界",
+          "reason": "API accepted batch_size=1001 violating explicit upper bound 1000 from contract"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "reason": "Target returned HTTP 200 + acknowledged for out-of-range value, no by-design evidence available (source not cloned)"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null,
+          "reason": "No matching pattern in developer cognition for parameter validation gaps"
+        },
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical) → implied_verdict=DEFECT → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Mechanical check confirmed constraint_id qdrant_range_upsert_points_001 with assertion 'batch_size <= 1000'. API accepted batch_size=1001 returning HTTP 200, violating explicit upper bound. No source available to refute. verdict_A=CONFIRMED forces DEFECT per ADR-0008 mechanical aggregation rule."
+    },
+    {
+      "defect_id": "boundary_upsert_vector_dim_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": "qdrant_type_create_collection_001",
+          "assertion_text_quoted": "vectors.size must be positive integer (dimension fixed at collection creation)",
+          "reason": "quote_mismatch - assertion not verbatim in contract"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "HTTP语义恒真",
+          "reason": "API accepted 3D vector to 2D collection returning HTTP 200 despite contract/observation claiming should reject. Type1_IllegalSuccess."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "reason": "Source confirms check_vector_against_config exists at segment layer (line 196: if vector.len() != dim) but HTTP 200 indicates validation not enforced at API boundary. Architectural gap between validation presence and enforcement."
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_NOT_DEFECT",
+          "matched_pattern": "what_developers_prioritize",
+          "developer_quote": "API backward compatibility over strict validation; Production stability over edge case handling",
+          "reason": "Developer prioritizes stability/compatibility, suggesting tolerance is intentional. However, this does not override Type1 HTTP semantic violation."
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE (A=NEUTRAL) → B=CONFIRMED (HTTP语义恒真 triggers) → final=DEFECT. B=CONFIRMED forces DEFECT in grey zone per ADR-0008 aggregation rule. D signal cannot override B."
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Mechanical B confirmed HTTP semantic恒真: target returned HTTP 200 accepting 3D vector to 2D collection while contract/observation claim rejection should occur. Source shows validation check_vector_against_config EXISTS at segment layer but HTTP 200 proves it's not enforced at API request boundary. This is Type1 validation gap (by-design validation exists but is architecturally bypassed at request layer). verdict_B=CONFIRMED forces DEFECT per ADR-0008 grey zone aggregation rule, even though D=SUPPORTS_NOT_DEFECT (developer stability priority doesn't override Type1 HTTP semantic violation)."
+    },
+    {
+      "defect_id": "boundary_upsert_vector_dim_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": "qdrant_type_create_collection_001",
+          "assertion_text_quoted": "vectors.size must be positive integer (implies non-empty vector)",
+          "reason": "quote_mismatch - 'positive integer' doesn't explicitly forbid empty vector arrays in upsert"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "HTTP语义恒真",
+          "reason": "API accepted empty vector [] returning HTTP 200 despite positive integer requirement. Type1_IllegalSuccess."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "reason": "Source confirms same validation check_vector_against_config exists (for dim>0 collections, len=0 should fail) but HTTP 200 indicates empty vector bypassed or not checked. Validation present but not enforced at API layer."
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_NOT_DEFECT",
+          "matched_pattern": "what_developers_prioritize",
+          "developer_quote": "API backward compatibility over strict validation; Production stability over edge case handling",
+          "reason": "Developer stance prioritizes stability, suggesting empty vector tolerance is intentional. Does not override Type1 HTTP semantic violation."
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE (A=NEUTRAL) → B=CONFIRMED (HTTP语义恒真 triggers) → final=DEFECT. B=CONFIRMED forces DEFECT in grey zone per ADR-0008 aggregation rule. D signal cannot override B."
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Mechanical B confirmed HTTP semantic恒真: target returned HTTP 200 accepting empty vector [] while contract claims positive integer (non-zero) requirement. Source shows check_vector_against_config exists (empty len=0 should fail for dim>0) but HTTP 200 proves validation bypassed or not triggered at API layer. This is Type1 validation gap - same architectural issue as dim_001: validation exists at segment layer but enforcement missing at request boundary. verdict_B=CONFIRMED forces DEFECT per ADR-0008 grey zone aggregation. Developer stability priority (D=SUPPORTS_NOT_DEFECT) cannot override Type1 HTTP semantic violation."
+    },
+    {
+      "defect_id": "semantic_search_correctness_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": null,
+          "reason": "no_reference - 'nearest neighbor ranking' is behavioral expectation, not an explicit constraint in structured_contract.json"
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "reason": "Non-deterministic ranking with uniform scores (0.0) is HNSW approximation behavior, not a physical constraint violation"
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED",
+          "reason": "HNSW approximate search is by-design - uniform scores indicate distance precision limits of approximate index, not a defect. Exact match not ranked first is documented HNSW trade-off"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_NOT_DEFECT",
+          "matched_pattern": "by_design_patterns: HNSW approximation duplicates in pagination",
+          "developer_quote": "Accepted limitation of approximate search",
+          "reason": "Developer explicitly acknowledges HNSW approximation limitations as by-design (pattern_id in cognition)"
+        },
+        "aggregation_applied": "verdict_A=NEUTRAL → B=NEUTRAL → C=REFUTED (by-design in HNSW) → D=SUPPORTS_NOT_DEFECT → final=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "Search ranking uniformity (all score=0.0) and non-first exact match are HNSW approximation characteristics, not validation failures. Developer cognition explicitly lists 'HNSW approximation' as by-design pattern. contract has no explicit constraint on ranking precision. verdict_C=REFUTED + D=SUPPORTS_NOT_DEFECT → NOT_DEFECT."
+    },
+    {
+      "defect_id": "semantic_search_limit_quality_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": "qdrant_range_search_points_001",
+          "assertion_text_quoted": "limit >= 1 and limit <= 1000"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界",
+          "reason": "limit=1001 exceeds explicit upper bound 1000, violating numeric constraint"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "reason": "Inconsistent validation: limit=-1/0 reject with 4xx/5xx, but limit=1001 returns HTTP 200. Validation inconsistency confirms defect"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null,
+          "reason": "No specific cognition pattern for limit parameter validation gaps"
+        },
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical) → implied_verdict=DEFECT → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Mechanical check confirmed qdrant_range_search_points_001 (limit <= 1000). API accepted limit=1001 returning HTTP 200, while limit=-1/0 correctly rejected with validation errors. Inconsistent validation on boundary confirms defect. verdict_A=CONFIRMED forces DEFECT."
+    },
+    {
+      "defect_id": "semantic_search_params_hnsw_ef_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": null,
+          "reason": "no_reference - hnsw_ef range not explicitly specified in structured_contract.json"
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "reason": "hnsw_ef=-1 correctly rejected with format error (usize type constraint). Valid values (16, 128) accepted. No objective violation."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "reason": "Error message 'Format error...expected usize' is poor diagnostic quality - should specify parameter name and valid range. Type2 defect (poor diagnostics)."
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_NOT_DEFECT",
+          "matched_pattern": "what_developers_prioritize",
+          "developer_quote": "Performance optimization over diagnostic completeness",
+          "reason": "Developer prioritization explains poor error messages as by-design trade-off"
+        },
+        "aggregation_applied": "verdict_A=NEUTRAL → B=NEUTRAL → C=CONFIRMED (Type2) → D=SUPPORTS_NOT_DEFECT (cognitive trade-off) → final=NOT_DEFECT (Type2 not sufficient when A NEUTRAL and developer accepts trade-off)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "mundane_api_semantics",
+      "rationale": "hnsw_ef=-1 rejected correctly (validation works), only error message quality poor (Type2). No contract constraint exists. Developer cognition explicitly accepts 'performance over diagnostic completeness' as by-design. A=NEUTRAL + D=SUPPORTS_NOT_DEFECT → NOT_DEFECT."
+    },
+    {
+      "defect_id": "semantic_upsert_batch_size_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": "qdrant_range_upsert_points_001",
+          "assertion_text_quoted": "batch_size >= 1 and batch_size <= 1000"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界",
+          "reason": "batch=1001 violates explicit upper bound 1000. batch=0 also violates lower bound >= 1."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "reason": "Both violations handled poorly: batch=0 error lacks context, batch=1001 silently accepted. Dual failure confirms validation gap."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null,
+          "reason": "No cognition pattern for batch validation gaps"
+        },
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical) → implied_verdict=DEFECT → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Mechanical check confirmed qdrant_range_upsert_points_001 (batch_size 1-1000). API both rejected batch=0 poorly ('Empty update request') and silently accepted batch=1001. Clear validation gap. verdict_A=CONFIRMED forces DEFECT."
+    },
+    {
+      "defect_id": "state_upsert_points_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "CONFIRMED",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": "qdrant_state_upsert_points_001",
+          "assertion_text_quoted": "UPSERT(points) implies each point inserted or updated atomically"
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "reason": "State invariant violation is not a physical constraint (not type/range/enum), but logical state consistency issue"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "reason": "Scroll returned 10 points but count=0 - state consistency broken between point visibility and aggregation. Grade B evidence (clear execution log)"
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "blindspot_indicators: WAL replay state consistency (point resurrection)",
+          "developer_quote": "WAL replay state consistency (point resurrection)",
+          "reason": "Developer cognition lists 'WAL replay state consistency' as known blindspot - this state invariant violation matches that pattern class"
+        },
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanical) → implied_verdict=DEFECT → final=DEFECT (D signal doesn't override mechanical A)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Mechanical check confirmed qdrant_state_upsert_points_001 (atomic upsert invariant). Execution showed upsert 10 points acknowledged but count remained 0, violating state invariant. Developer cognition acknowledges 'WAL replay state consistency' as known blindspot class. verdict_A=CONFIRMED forces DEFECT."
+    },
+    {
+      "defect_id": "vein_compound_and_points_delete_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": null,
+          "reason": "no_reference - compound filter validation rules not explicit in structured_contract.json"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "互斥参数",
+          "reason": "Invalid range (score>=100 AND score<=50) is logically contradictory - API should detect mutual exclusion violation"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "reason": "4 defect candidates (invalid range, mixed valid/invalid, empty must, contradictory) all returned HTTP 200 without validation. Clear validation gap on compound filter logic."
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "blindspot_indicators: Parameter validation on filter/condition APIs (min_should, value_count)",
+          "developer_quote": "Parameter validation on filter/condition APIs",
+          "reason": "Developer cognition explicitly lists 'Parameter validation on filter/condition APIs' as blindspot - compound filter validation falls under this pattern class"
+        },
+        "aggregation_applied": "verdict_A=NEUTRAL → B=CONFIRMED (mutually exclusive range constraint violation) → D=SUPPORTS_DEFECT (cognitive blindspot match) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "No contract constraint (A=NEUTRAL), but B=CONFIRMED on objective mutually exclusive range violation (score>=100 AND score<=50 is logical impossibility). Execution evidence confirmed 4 validation gaps. Developer cognition lists 'Parameter validation on filter/condition APIs' as known blindspot. B=CONFIRMED forces DEFECT in grey zone."
+    },
+    {
+      "defect_id": "vein_type_mismatch_points_upsert_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": null,
+          "reason": "no_reference - candidate metadata has no constraint_id"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "HTTP语义恒真",
+          "reason": "API returned HTTP 200 OK + 'acknowledged' for dimension-mismatched vector (3D to 4D collection) while silently discarding point. Contract/doc absence doesn't prevent objective Type1 violation: invalid input accepted with success response but not stored."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "reason": "Source confirms validation check_vector_against_config EXISTS at segment layer (lib/segment/src/common/mod.rs:196: if vector.len() != dim returns WrongVectorDimension error) but HTTP 200 proves error suppressed/ignored at API request boundary. Same architectural bypass as boundary_upsert_vector_dim_001."
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "blindspot_indicators: Parameter validation on filter/condition APIs (min_should, value_count)",
+          "developer_quote": "Parameter validation on filter/condition APIs",
+          "reason": "Dimension validation is parameter validation - matches blindspot pattern class. Developer acknowledges parameter validation gaps as known issue category."
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE (A=NEUTRAL) → B=CONFIRMED (HTTP语义恒真: invalid input returns 200 + success status) → D=SUPPORTS_DEFECT (cognitive blindspot) → final=DEFECT. B=CONFIRMED forces DEFECT in grey zone per ADR-0008 aggregation rule."
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "A=NEUTRAL (no constraint reference) but B=CONFIRMED on HTTP semantic恒真: dimension-mismatched vector (3D to 4D) returned HTTP 200 OK + 'acknowledged' while scroll confirmed silent discard. Source proves validation EXISTS (check_vector_against_config at segment layer) but is architecturally bypassed - error logged internally not propagated to client. This is Type1_IllegalSuccess with same root cause as dim_001/dim_002. Developer cognition lists 'Parameter validation on filter/condition APIs' as blindspot. B=CONFIRMED + D=SUPPORTS_DEFECT forces DEFECT."
+    },
+    {
+      "defect_id": "vein_type_mismatch_points_upsert_2",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": null,
+          "reason": "no_reference - candidate metadata has no constraint_id"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "HTTP语义恒真",
+          "reason": "API returned HTTP 200 OK + 'acknowledged' for empty vector [] while silently discarding. Empty vector (len=0) violates positive integer requirement implicit in vector operations. Invalid input accepted with success response but not stored = Type1 violation."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "reason": "Source confirms same validation check_vector_against_config would catch len=0 vs dim>0 (lib/segment/src/common/mod.rs:196) but HTTP 200 proves error suppressed at API boundary. Source excerpt states 'error caught by handle_point_version_and_failure → logged internally but still allows 200 OK'. Architectural bypass confirmed."
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "blindspot_indicators: Parameter validation on filter/condition APIs (min_should, value_count)",
+          "developer_quote": "Parameter validation on filter/condition APIs",
+          "reason": "Empty vector validation is parameter validation - falls under blindspot pattern. Developer cognition acknowledges parameter validation as known gap area."
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE (A=NEUTRAL) → B=CONFIRMED (HTTP语义恒真: empty vector returns 200 + success) → D=SUPPORTS_DEFECT (cognitive blindspot) → final=DEFECT. B=CONFIRMED forces DEFECT in grey zone per ADR-0008 aggregation rule."
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "A=NEUTRAL (no constraint) but B=CONFIRMED on HTTP semantic恒真: empty vector [] returned HTTP 200 OK + 'acknowledged' while scroll confirmed silent discard. Source proves validation EXISTS (check_vector_against_config would detect len=0) but error is 'caught and suppressed' by handle_point_version_and_failure resulting in silent discard rather than 4xx error. Same architectural issue as other dim mismatches. Developer cognition lists parameter validation gaps as blindspot. B=CONFIRMED + D=SUPPORTS_DEFECT forces DEFECT."
+    },
+    {
+      "defect_id": "vein_range_filter_points_count_1",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": null,
+          "reason": "no_reference - count endpoint accuracy not explicitly constrained in structured_contract.json"
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "reason": "Cardinality estimation inaccuracy is not a physical constraint violation (not type/range/mutually exclusive). Histogram approximation is documented behavior, not objective invariant breach."
+        },
+        "behavioral": {
+          "verdict_C": "NEUTRAL",
+          "reason": "Execution shows 50% error (exact=false returns 3 vs ground truth 2) but source grep found FIXME comment acknowledging estimator issues. Error is documented limitation ('Approximate count might be unreliable') not validation failure. No evidence of by-design intent or architectural bypass."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null,
+          "reason": "No cognition pattern matches histogram estimation accuracy - blindspots list focuses on parameter validation, HNSW approximation, WAL replay, concurrency. Estimator quality not in known patterns."
+        },
+        "aggregation_applied": "verdict_A=NEUTRAL → B=NEUTRAL → C=NEUTRAL (no by-design evidence nor validation failure) → D=NO_SIGNAL → final=NOT_DEFECT (grey zone with no objective violation). Documentation allows approximation - 50% error on trivial dataset is poor quality but not Type1 defect per ADR-0008."
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "non_deterministic_unreproducible",
+      "rationale": "A=NEUTRAL (no constraint). B=NEUTRAL (estimation inaccuracy not physical constraint). Execution shows 50% overcount (3 vs 2) but OpenAPI doc explicitly warns 'Approximate count might be unreliable during indexing' - this is documented approximation tolerance not hidden failure. Source grep found FIXME comment at numeric_index/mod.rs:277 acknowledging estimator issues, confirming developer awareness. This is poor estimator quality (Type2) not Type1 validation breach. No objective invariant violated, no by-design refutation, no cognitive blindspot match. Grey zone defaults to NOT_DEFECT per ADR-0008 conservative aggregation (B not CONFIRMED, D not SUPPORTS_DEFECT)."
+    },
+    {
+      "defect_id": "vein_wait_semantics_points_upsert_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": null,
+          "reason": "no_reference - contract has no constraint covering wait parameter validation semantics (grey zone)"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "HTTP语义恒真",
+          "reason": "API returned HTTP 200 + acknowledged for invalid vectors (empty/dimension-mismatched) regardless of wait=false/true setting. Invalid input accepted with success response but silently not stored = Type1_IllegalSuccess"
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "reason": "Source confirms UpdateParams.wait only controls acknowledgment timing (WAL vs Visible) per WaitUntil enum. Vector validation in PointStruct decorator exists but invalid vectors still return HTTP 200 acknowledged without storage. Validation bypass at API boundary confirmed."
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "blindspot_indicators: Parameter validation on filter/condition APIs (min_should, value_count)",
+          "developer_quote": "Parameter validation on filter/condition APIs",
+          "reason": "Wait parameter validation falls under parameter validation blindspot pattern class. Developer cognition acknowledges parameter validation gaps as known issue area."
+        },
+        "aggregation_applied": "implied_verdict=GREY_ZONE (A=NEUTRAL) → B=CONFIRMED (HTTP语义恒真: invalid vectors return 200 + success) → D=SUPPORTS_DEFECT (cognitive blindspot) → final=DEFECT. B=CONFIRMED forces DEFECT in grey zone per ADR-0008 aggregation rule."
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "A=NEUTRAL (no constraint for wait parameter validation - grey zone). B=CONFIRMED on HTTP semantic恒真: invalid vectors (empty, dimension-mismatched) returned HTTP 200 OK + acknowledged regardless of wait setting, while scroll confirmed silent discard. Source confirms UpdateParams.wait only controls acknowledgment timing (WaitUntil enum: Wal vs Visible) not validation order. PointStruct validation exists but error suppressed at API boundary (same architectural bypass as vein_type_mismatch_points_upsert_1). Developer cognition lists parameter validation gaps as blindspot. B=CONFIRMED + D=SUPPORTS_DEFECT forces DEFECT."
+    },
+    {
+      "defect_id": "vein_compound_or_points_scroll_1",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": null,
+          "reason": "no_reference - no constraint for scroll compound OR semantics"
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "reason": "Empty should clause not numeric/enum/type/mutual_exclusive violation. Filter semantics not in B constraint classes."
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED",
+          "reason": "by_design_in_source: Filter.should is Option<Vec<Condition>> with serde(default) - empty vec structurally valid, no explicit rejection logic."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null,
+          "reason": "No cognition pattern matches empty filter behavior"
+        },
+        "aggregation_applied": "A=NEUTRAL -> B=NEUTRAL -> C=REFUTED(by_design) -> D=NO_SIGNAL -> NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "A=NEUTRAL, B=NEUTRAL (filter semantics not objective constraint), C=REFUTED (source shows by-design serde default), D=NO_SIGNAL -> NOT_DEFECT per grey zone aggregation."
+    },
+    {
+      "defect_id": "vein_pagination_cursor_points_scroll_1",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "constraint_id": null,
+          "reason": "no_reference - no constraint for scroll offset indexing semantics"
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "reason": "offset=5 returning point_id 5 first is cursor semantics, not numeric violation. Not in B constraint classes."
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED",
+          "reason": "by_design_in_source: ScrollRequestInternal.offset is Option<PointIdType> with comment Start ID to read points from - inclusive lower bound cursor, not skip-count. Observed behavior matches design."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null,
+          "reason": "No cognition pattern matches pagination cursor semantics"
+        },
+        "aggregation_applied": "A=NEUTRAL -> B=NEUTRAL -> C=REFUTED(by_design) -> D=NO_SIGNAL -> NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "A=NEUTRAL, B=NEUTRAL (offset semantics not objective constraint), C=REFUTED (source proves by-design cursor), D=NO_SIGNAL -> NOT_DEFECT per grey zone aggregation."
+    }
+  ],
+  "summary": {
+    "total": 15,
+    "defect": 10,
+    "not_defect": 5,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {
+      "doc": 1,
+      "source": 2,
+      "both": 1,
+      "behavior": 1
+    },
+    "root_cause_distribution": {
+      "approximate_by_design": 1,
+      "mundane_api_semantics": 1,
+      "non_deterministic_unreproducible": 1
+    }
+  }
+}

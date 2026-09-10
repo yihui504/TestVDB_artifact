@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_peer_delete_004",
+  "endpoint": "cluster+peer+delete",
+  "param": "peer_id",
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "concurrent",
+  "oracle": {
+    "statement": "under a 20-thread removal storm (unique ghost peer ids + the derived self peer_id as carriers) every removal stays 4xx (any 2xx = Type1_IllegalSuccess; >=2 5xx = Type3_RuntimeFailure only after /healthz liveness, single 5xx = inconclusive observation), every GET /cluster read stays 200 with the baseline peers set (>=2 membership flips = Type4_StateLogicViolation), the final GET /cluster returns 200 with the baseline peers set, and the data plane keeps the exact point count N_POINTS (drift = Type4_StateLogicViolation)",
+    "source": "docstring"
+  }
+}

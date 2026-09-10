@@ -1,0 +1,91 @@
+{
+  "defect_id": "boundary_collections_create_02",
+  "endpoint": "collections+create (PUT /collections/{name})",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url 可达（api.qdrant.tech v-1-18-x，WebFetch 被网络策略拦截、经 webReader 抓取成功，canonical 一致）；页面顶层确认 quantization_config 为可选 object，但 Fern 渲染页未展开 binary.encoding 的嵌套枚举与 nullable 语义；本地 v1.18.0 openapi.json 中 BinaryQuantizationConfigEncoding 为 oneOf [enum ref, Any type]，schema 层面未声明 null——与源码 Option<Enum> 接受 null 存在表述张力，故 PARTIAL。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "CASE binary.encoding=null: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.324057806}",
+      "secondary_observations": [
+        "CASE product.compression=x2 invalid: status=400 body={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum QuantizationConfig at line 1 column 105\"}}",
+        "CASE product.compression=null rejected with same generic untagged-enum error lacking 'compression'",
+        "CASE product.compression=8 int: status=400 (同 generic error)",
+        "CASE scalar.type=int16 invalid: status=400 (generic error lacking 'type')",
+        "CASE scalar.type=null: status=400 (generic error)",
+        "CASE scalar.quantile=0.4 below min: status=422 body={\"status\":{\"error\":\"Validation error in JSON body: [quantization_config.scalar.quantile: value 0.4000000059604645 invalid, must be from 0.5 to 1.0]\"}}",
+        "CASE scalar.quantile=1.1 above max: status=422 (must be from 0.5 to 1.0)",
+        "CASE scalar.quantile='0.8' string: status=400 (generic error)",
+        "CASE binary.encoding=four_bits invalid: status=400 (generic error lacking 'encoding')",
+        "CASE quantization_config='scalar' string: status=400",
+        "CASE quantization_config=[] array: status=400"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务成功码",
+        "note": "主观测：非法的 encoding=null 以 HTTP 200 + result:true/status:ok 返回。次观测：多个非法枚举值以 HTTP 400 + generic 'data did not match any variant of untagged enum QuantizationConfig' 返回，错误不含具体字段名（Type2 诊断质量差的候选面，非本链主观测）。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_create_02"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_collections_create_004",
+      "assertion_text_quoted": "quantization_config.product.compression IN {x4, x8, x16, x32, x64}",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "派发 constraint_id=004（product.compression）与主观测（binary.encoding=null）不匹配——候选提取的 constraint 归属错位。主观测对应的约束实为 qdrant_type_collections_create_006（'quantization_config.binary.encoding IN {one_bit, two_bits, one_and_half_bits}'，同 endpoint、同 source_url、evidence_tier=explicit）。对 004 本身：log 显示 compression 非法值全部被 400 拒绝、compression=null 也被 400 拒绝，004 未被违反，故 violates=false。对 006：null 不在枚举集内但被 200 接受——然而源码显示该字段为 Option 且有 by-design 默认（见 source_grounding），null 语义等价于省略字段。violates 终判留待 chain-auditor 综合两约束与 doc 表述张力。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 派发条目 constraint_id=qdrant_type_collections_create_004 (product.compression IN {x4..x64})；主观测实际对应 qdrant_type_collections_create_006 (binary.encoding IN {one_bit,two_bits,one_and_half_bits})",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection 可达，quantization_config optional 确认；binary.encoding 嵌套枚举/nullable 未在渲染页展开（本地 v1.18.0 openapi.json: BinaryQuantizationConfigEncoding oneOf[enum, Any]，未声明 null）",
+        "script: boundary_collections_create_02 发送 PUT /collections body 含 quantization_config.binary.encoding=null（脚本见 vein_scripts/ 同名，log 全文 22 行已读）",
+        "log: CASE binary.encoding=null → status=200 result:true status:ok（主观测）；VERDICT 行: DEFECT_FOUND (Type1_IllegalSuccess)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "派发 constraint_id (004, product.compression) 与主观测 (binary.encoding) 不对应——contract 环引用错位。若改挂 006（binary.encoding），其余三环（doc/script/log）连续一致。另 doc 环存在表述张力：渲染页与 openapi.json 均未明确声明 encoding 可为 null，与源码 Option+serde(default) 接受 null 的行为不完全一致（次要断裂风险，auditor 裁量）。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "BinaryQuantizationConfig",
+        "enum BinaryQuantizationEncoding",
+        "BinaryQuantizationEncoding",
+        "enum QuantizationConfig",
+        "convert_binary_encoding"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs (L833-899)",
+        "lib/segment/src/vector_storage/quantized/quantized_vectors.rs (L2260-2295)",
+        "lib/api/src/grpc/qdrant.rs (L2418, grep 命中)",
+        ".sourcedeps/qdrant/v1.18.0/openapi.json (BinaryQuantizationConfig schema)"
+      ],
+      "source_excerpt": "// lib/segment/src/types.rs:833-856 (qdrant v1.18.0)\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, Copy, PartialEq, Eq, Hash, Default)]\n#[serde(rename_all = \"snake_case\")]\npub enum BinaryQuantizationEncoding {\n    #[default]\n    OneBit,\n    TwoBits,\n    OneAndHalfBits,\n}\n\n#[derive(Clone, Debug, Eq, PartialEq, Hash, Deserialize, Serialize, JsonSchema, Validate)]\n#[serde(rename_all = \"snake_case\")]\npub struct BinaryQuantizationConfig {\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub always_ram: Option<bool>,\n    #[serde(default)]\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub encoding: Option<BinaryQuantizationEncoding>,\n    // ...\n}\n\n// lib/segment/src/vector_storage/quantized/quantized_vectors.rs:2269-2281\nfn convert_binary_encoding(\n    encoding: Option<BinaryQuantizationEncoding>,\n) -> quantization::encoded_vectors_binary::Encoding {\n    match encoding {\n        Some(BinaryQuantizationEncoding::OneBit) => Encoding::OneBit,\n        Some(BinaryQuantizationEncoding::TwoBits) => Encoding::TwoBit,\n        Some(BinaryQuantizationEncoding::OneAndHalfBits) => Encoding::OneAndHalfBits,\n        None => quantization::encoded_vectors_binary::Encoding::OneBit,\n    }\n}",
+      "call_chain_traced": "PUT /collections body → serde 反序列化 QuantizationConfig(untagged enum, types.rs:894) → BinaryQuantization.binary: BinaryQuantizationConfig (types.rs:859) → encoding 字段 Option<BinaryQuantizationEncoding> 且 #[serde(default)]：JSON null/缺省均反序列化为 None，不触发枚举校验 → 建量化索引时 convert_binary_encoding(None) => OneBit（quantized_vectors.rs:2280），即 null 等价于省略字段并落入枚举默认值 OneBit。对比：非法字符串值（four_bits）无法匹配 untagged enum 任一变体 → serde 报 'data did not match any variant of untagged enum QuantizationConfig' → HTTP 400，与 log 次观测吻合。product/scalar 路径同理（product.compression、scalar.type 为具体类型字段，null 直接变体匹配失败 → 400）。",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env（log 内 10 个对照 case 中非法枚举字符串均稳定 400，环境正常）",
+        "concurrency（单请求串行触发）",
+        "request_typo（encoding 字段名正确，null 为显式构造）",
+        "cache_delay（响应即时 result:true）"
+      ],
+      "surviving": "by_design（serde Option + default + convert None=>OneBit）：null 被接受属源码显式默认值语义，非校验缺失；但 doc/openapi 未声明该字段 nullable（表述张力），Type1 成立与否取决于 auditor 对'文档声称枚举 vs 源码接受 null'的取舍。"
+    }
+  }
+}

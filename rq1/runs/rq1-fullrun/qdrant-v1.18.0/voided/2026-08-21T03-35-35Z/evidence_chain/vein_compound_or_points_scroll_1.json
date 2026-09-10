@@ -1,0 +1,76 @@
+{
+  "defect_id": "vein_compound_or_points_scroll_1",
+  "endpoint": "/collections/{collection_name}/points/scroll:POST",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "FAIL",
+      "version_match": "N/A",
+      "content_consistency": "N/A",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url (https://api.qdrant.tech/api-reference/points/scroll-points) unreachable (source_status: unreachable, source_verified: false) - unable to verify documented compound OR (should clause) behavior for scroll endpoint from official docs",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[Test 1] Empty should clause: Response status: 200, Returned points count: 30, Expected: 0 (empty result)",
+      "secondary_observations": [
+        "[Test 2] Single condition in should: Response status: 200, Returned IDs: [...10 items], Total count: 10, Expected count: 10, PASS: single condition returns correct count",
+        "[Test 3] Compound OR - union of two conditions: Response status: 200, Total count: 20, Expected count: 20, PASS: compound OR returns correct union without duplicates",
+        "[Test 4] Compound OR - union of three conditions: Response status: 200, Total count: 30, Expected count: 30, PASS: compound OR with 3 conditions returns correct union"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Empty should clause (filter: {should: []}) returns HTTP 200 with 30 points instead of expected 0. No business error code in response - full result set returned"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_compound_or_points_scroll_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "unconstrained",
+      "assertion_text_quoted": "N/A - No constraint exists for scroll compound OR (should clause) semantics in structured_contract.json",
+      "api_violates_assertion": false,
+      "note": "Contract gap: structured_contract.json has no constraint covering scroll endpoint filter behavior or empty should clause handling. Endpoint exists in endpoint_registry but without behavioral constraints for compound filters.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: N/A - no constraint exists for scroll compound OR behavior",
+        "doc: source_url unreachable - cannot verify documented should clause semantics",
+        "script: vein_compound_or_points_scroll_1.py (tests scroll with should clause: empty, single condition, 2-condition OR, 3-condition OR)",
+        "log: DEFECT_FOUND - 1 observation: empty should returns 30 points instead of 0 (Type4_StateViolation)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "Contract gap: No constraint in structured_contract.json defines expected behavior for scroll endpoint filter.should clause, particularly edge case of empty should array. Missing constraint: 'scroll filter with empty should clause must return empty result set (not match-all)'",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "should.*clause OR should.*filter OR Filter.*should",
+        "scroll.*offset OR offset.*scroll",
+        "empty.*should OR is_empty.*filter"
+      ],
+      "files_examined": [
+        "lib/shard/src/scroll.rs",
+        "lib/segment/src/types.rs",
+        "lib/segment/src/segment/read_view/scroll.rs",
+        "lib/segment/src/index/query_optimization/optimized_filter.rs"
+      ],
+      "source_excerpt": "From lib/shard/src/scroll.rs:10-20:\npub struct ScrollRequestInternal {\n    /// Start ID to read points from.\n    pub offset: Option<PointIdType>,\n    /// Page size. Default: 10\n    #[validate(range(min = 1))]\n    pub limit: Option<usize>,\n    /// Look only for points which satisfies this conditions. If not provided - all points.\n    #[validate(nested)]\n    pub filter: Option<Filter>,\n    [...]\n}\n\nFrom lib/segment/src/types.rs (Filter struct):\npub struct Filter {\n    /// At least one of those conditions should match\n    #[validate(nested)]\n    #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")]\n    pub should: Option<Vec<Condition>>,\n    [...]\n}\n\nNote: Filter.should field is Option<Vec<Condition>> with validate(nested) decorator and serde(default) - this means empty vec [] is valid default. No explicit validation rejecting empty should array observed in source grep results.",
+      "call_chain_traced": "ScrollRequestInternal.filter accepts Option<Filter> where Filter.should is Option<Vec<Condition>> with validate(nested) and serde(default). Empty should: [] passes validation as valid default. No observed code path explicitly rejects empty should or treats it as match-none vs match-all. Scroll comment says 'If not provided - all points' but this refers to filter=None, not filter.should=[]",
+      "verification_outcome": "by_design_in_source",
+      "note": "Source shows should clause accepts Option<Vec<Condition>> with serde(default). Empty array [] is structurally valid per serde and passes validate(nested) (nested validator iterates conditions, empty vec produces no errors). No explicit check found that would reject empty should or treat it as empty result vs match-all. Observed behavior (30 points returned with should:[]) suggests empty should is treated as 'no filter applied' rather than 'match nothing'.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "by_design"],
+      "surviving": null
+    }
+  }
+}

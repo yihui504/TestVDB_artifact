@@ -1,0 +1,95 @@
+{
+  "defect_id": "boundary_collections_delete_12",
+  "endpoint": "DELETE /collections/{collection_name}",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachable via web reader (Fern page, build 2026-08-05, versioned v1.18.x = target v1.18.0). Endpoint registry lookup PASS (collections+delete, doc_quote 'Drop the collection and all of its data'). Content consistency FAIL: the page documents ONLY the 200 'Deleted' response with schema 'result boolean Optional' and contains no 404/4xx/not-found statement anywhere; the constraint's 'DELETE missing => 404' half has no textual provenance on source_url — worse, 'result boolean Optional' is fully compatible with the observed 200 + result:false body. Constraint description says '(runtime verified)' yet the live runtime returns 200+false, not 404.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[lower] DELETE /collections/bd12_case_a -> 200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000055436}  (real collection created as 'bd12_Case_A'; 'bd12_case_a' does not exist — constraint says DELETE missing => 404, got 200)",
+      "secondary_observations": [
+        "create bd12_Case_A: 200",
+        "[upper] DELETE /collections/BD12_CASE_A -> 200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000071999}",
+        "[trailing-space] DELETE /collections/bd12_Case_A%20 -> 200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000065686}",
+        "[leading-space] DELETE /collections/%20bd12_Case_A -> 200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000057635}",
+        "[prefix] DELETE /collections/xbd12_Case_A -> 200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000061006}",
+        "[lower..prefix] real collection GET after lookalike delete: 200 (x5 — the real collection SURVIVED every lookalike delete; name matching was precise, no accidental deletion occurred)",
+        "sibling scripts, same endpoint same pattern: boundary_collections_delete_01 'contract says deleting non-existent collection returns 404, got 200'; boundary_collections_delete_02 'second DELETE of already-deleted collection returned 200'; boundary_collections_delete_05 '[unicode-missing] DELETE -> 200 {result:false}'; state_collections_delete_001 'DELETE of missing collection returned 200 (contract: 404)'"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Deletion of a non-existent resource (client-detectable error per the constraint) is acknowledged as HTTP 200 with business-level result:false / status:'ok' instead of 404. Body shape matches the documented 200 response schema exactly."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_delete_12", "boundary_collections_delete_01", "boundary_collections_delete_02", "boundary_collections_delete_05", "state_collections_delete_001", "semantic_collections_delete_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_collections_delete_001",
+      "assertion_text_quoted": "DELETE existing => 200; DELETE missing => 404 (description: 'deleting non-existent collection returns 404; deleting existing collection returns 200 (runtime verified)'; evidence_tier: explicit; source_url: https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection)",
+      "api_violates_assertion": true,
+      "note": "violates=true taken literally against the contract text: the probed name is in the constraint's domain (a missing collection) and the API returned 200, directly contradicting 'DELETE missing => 404'. However the 404 clause itself has no doc provenance (see doc layer) and contradicts by-design source behavior (see source layer) — the doc+source layers agree with each other; the contract is the outlier. Flagged for auditor adjudication.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_collections_delete_001 exists in structured_contract.json with assertion 'DELETE existing => 200; DELETE missing => 404' — link OK",
+        "doc: source_url (v-1-18-x delete-collection page) reachable and versioned correctly, but contains NO 'missing => 404' statement; only 200 'Deleted' with result:boolean Optional — link BROKEN (assertion half is unsupported by the cited doc)",
+        "script: boundary_collections_delete_12 issued raw DELETEs with case/space/prefix lookalike names against existing 'bd12_Case_A' — link OK (attack semantics match)",
+        "log: raw responses show http=200 + result:false for all 5 lookalike names; VERDICT Type1_IllegalSuccess is consistent with the raw response lines — link OK"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The constraint cites the v1.18.x API reference as evidence for 'DELETE missing => 404', but that page documents only a 200 response whose schema (result boolean Optional) admits the observed 200+result:false. The chain's doc ring does not ground the violated clause. (Constraint description's '(runtime verified)' claim is itself contradicted by this run's runtime observation of 200+false.)",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "fn delete_collection|delete_collection\\(",
+        "collections/:collection_name|/collections/\\{collection_name\\}",
+        "fn process_response",
+        "NotFound|404",
+        "fn status_code",
+        "struct Collections|Collections\\b",
+        "collections:\\s*RwLock|collections:\\s*Arc",
+        "DeleteCollection\\(op|perform"
+      ],
+      "files_examined": [
+        "src/actix/api/collections_api.rs (handler, lines 160-178)",
+        "src/actix/helpers.rs (process_response 52-89, HttpError status_code 242-261)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (perform 37-110, delete_collection 211-296)",
+        "lib/storage/src/content_manager/toc/collection_container.rs (internal callers only)",
+        "lib/storage/src/content_manager/toc/mod.rs (collections field, line 70)",
+        "lib/storage/src/content_manager/collections_ops.rs (line 11: type Collections)",
+        "lib/storage/src/rbac/auditable_operation.rs (audit label string only — unrelated)",
+        "lib/storage/src/content_manager/snapshots/mod.rs (snapshot fn name only — unrelated)"
+      ],
+      "source_excerpt": "// lib/storage/src/content_manager/toc/collection_meta_ops.rs:211-296 (excerpt)\n211  pub(super) async fn delete_collection(\n212      &self,\n213      collection_name: &str,\n214  ) -> Result<bool, StorageError> {\n215      let _collection_create_guard = self.collection_create_lock.lock().await;\n...\n227      let removed_opt = self.collections.write().await.remove(collection_name);\n228      if let Some(removed) = removed_opt {\n...          // (stop collection, delete dir from disk)\n271          result = true;\n272      } else {\n273          // we hold the collection_create lock to make sure no one is creating this collection\n274          // otherwise we would delete its content now\n275          if collection_path.exists() {\n...              to_delete = Some(safe_delete_in_tmp(&collection_path, &safe_delete_path)?);\n280          } else {\n281              to_delete = None;\n282          }\n284          result = false;          // <-- missing collection: NOT an error\n285      }\n295      Ok(result)                 // <-- Ok(false) travels to HTTP layer\n\n// lib/storage/src/content_manager/collections_ops.rs:11\n11  pub type Collections = BTreeMap<CollectionId, Arc<Collection>>;  // exact-key remove; case/space/prefix lookalikes can never match\n\n// src/actix/helpers.rs:52-70 (excerpt)\n61      match response {\n62          Ok(res) => HttpResponse::Ok().json(ApiResponse {   // Ok(false) => HTTP 200\n63              result: Some(res),\n64              status: ApiStatus::Ok,\n...           }),\n71          Err(err) => process_response_error_with_inference_usage(...)  // only Err maps to 4xx/5xx\n\n// src/actix/helpers.rs:243-247 — 404 mapping EXISTS but is only reachable via Err:\n246          StorageError::NotFound { .. } => http::StatusCode::NOT_FOUND,",
+      "call_chain_traced": "actix route #[delete(\"/collections/{collection_name}\")] (src/actix/api/collections_api.rs:160) -> dispatcher.submit_collection_meta_op(DeleteCollection) -> perform_collection_meta_op (toc/collection_meta_ops.rs:78-81 -> self.delete_collection) -> BTreeMap::remove(name): exact match, lookalike names miss -> else branch result=false -> Ok(false) -> process_response (src/actix/helpers.rs:61-70) Ok => HttpResponse::Ok() 200 + {\"result\":false,\"status\":\"ok\"}. No code path from delete-missing to StorageError::NotFound; the NotFound->404 mapping (helpers.rs:246) is used by other endpoints (e.g. GET collection details) but deliberately not by DELETE.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "Every file matching grep 'delete_collection' across lib/ and src/ was either read or confirmed an unrelated/child call site. The 200+result:false behavior is an explicit, commented code path (idempotent-style delete: Ok(false) means 'nothing was deleted'), not a missing validation. It nonetheless flatly contradicts the contract's 'DELETE missing => 404' clause — implementation vs contract-text divergence for the auditor to weigh, with the doc layer siding with the implementation.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (responses come from the standard REST endpoint with schema-conformant bodies; six independent scripts agree)",
+        "concurrency (sequential script, single client, no races)",
+        "cache/staleness (this is not a false-delete case: the real collection survived every lookalike delete, verified by GET 200 immediately after)",
+        "request typo (log shows exact name pairs: created 'bd12_Case_A' vs probed 'bd12_case_a'/'BD12_CASE_A'/'xbd12_Case_A'/space variants — divergence is the test intent)"
+      ],
+      "surviving": "by-design REST semantics divergence: v1.18.0 source intentionally returns 200+result:false for delete-missing, and the v1.18.x doc page documents a 200-only response with result:boolean Optional that admits exactly this body; the contract's 'missing => 404' clause is the only artifact claiming 404 and cites a page that does not contain it. Whether this is a contract-fabrication issue rather than an API defect is the auditor's call."
+    }
+  }
+}

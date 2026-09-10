@@ -1,0 +1,11 @@
+{
+ "defect_id": "boundary_collections_update_001",
+ "endpoint": "collections+update",
+ "param": "hnsw_config.m",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "on a live bcu001_* collection, PATCH hnsw_config.m=-1 and m=-100 each return HTTP 400/422 (any 2xx = Type1_IllegalSuccess probe; 5xx with /healthz alive = Type3_RuntimeFailure); PATCH m=0 and m=8 each return HTTP 200 with envelope result true (4xx = Type1_IllegalRejection of a documented-legal value)",
+  "source": "docstring"
+ }
+}

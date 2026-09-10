@@ -1,0 +1,29 @@
+{
+  "target": "weaviate",
+  "version": "v1.38.1",
+  "round": 1,
+  "top_endpoints": ["POST /v1/schema", "PUT /v1/schema/{className}/shards/{shardName}", "POST /v1/graphql"],
+  "richness_scores": {
+    "POST /v1/schema": 9.5,
+    "PUT /v1/schema/{className}/shards/{shardName}": 6.0,
+    "POST /v1/graphql": 8.0
+  },
+  "shape_sources": {
+    "POST /v1/schema": "schema config cross-validation (constraints 组合与交叉层面)",
+    "PUT /v1/schema/{className}/shards/{shardName}": "failure-path state consistency",
+    "POST /v1/graphql": "filter cardinality / numeric boundary (Aggregate count)"
+  },
+  "condition_history": [
+    {"endpoint": "POST /v1/schema", "condition_type": "schema_config_cross", "finding": "DEFECT_FOUND", "detail": "dynamicEfMin=500 > dynamicEfMax=100 accepted 200, persisted verbatim; single-field efConstruction/maxConnections controls return 422. Source: entities/vectorindex/hnsw/config.go:260 validate() omits DynamicEF checks", "script": "vein_scripts/vein_hnsw_dynamic_ef_cross_1.py"},
+    {"endpoint": "POST /v1/schema", "condition_type": "silent_substitution", "finding": "DEFECT_FOUND", "detail": "replicationConfig.asyncEnabled=true input silently dropped; readback false. Output shim restcompat/wrappers.go:40", "script": "vein_scripts/vein_replication_async_input_drop_5.py", "inspired_by": "schema_config_cross"},
+    {"endpoint": "POST /v1/schema", "condition_type": "silent_substitution", "finding": "DEFECT_FOUND", "detail": "properties[].indexNullState misplaced key accepted then dropped; runtime IsNull filter fails while class-level control works", "script": "vein_scripts/vein_schema_silent_drop_nested_4.py", "inspired_by": "schema_config_cross"},
+    {"endpoint": "PUT /v1/schema/{c}/shards/{s}", "condition_type": "failure_path_state", "finding": "DEFECT_FOUND", "detail": "invalid status on nonexistent shard: 200 + body echo, no validation/no existence check; real shard correctly 422. handlers_schema.go:431", "script": "vein_scripts/vein_shard_status_echo_2.py"},
+    {"endpoint": "POST /v1/graphql", "condition_type": "numeric_boundary", "finding": "DEFECT_FOUND", "detail": "bm25 searchOperator.minimumOrTokensMatch accepts negative (-5) silently, behaves as no-threshold; no input validation common_filters/bm25.go:86", "script": "vein_scripts/vein_bm25_motm_negative_3.py", "inspired_by": "schema_config_cross (silent accept pattern)"},
+    {"endpoint": "POST /v1/schema", "condition_type": "schema_config_cross", "finding": "by_design_excluded", "detail": "replicationConfig.factor=2 on 1-node cluster correctly 422; multiTenancy+factor combos properly rejected"},
+    {"endpoint": "POST /v1/schema", "condition_type": "range_filter", "finding": "NO_DEFECT", "detail": "bm25 b=-1, k1=-2, cleanupIntervalSeconds=-5 all correctly 422 (positive-path validation exists for invertedIndexConfig)"},
+    {"endpoint": "POST /v1/graphql", "condition_type": "compound_and", "finding": "NO_DEFECT", "detail": "Aggregate count AND/OR compounds on range filters return correct cardinality (verified vs known data)"},
+    {"endpoint": "POST /v1/graphql", "condition_type": "null_check", "finding": "NO_DEFECT", "detail": "IsNull true/false counts correct with class-level indexNullState=true; without it runtime error message is actionable (guided, not silent)"}
+  ],
+  "last_finding": {"endpoint": "POST /v1/schema", "condition_type": "silent_substitution", "finding": "DEFECT_FOUND"},
+  "adjacent_pending": []
+}

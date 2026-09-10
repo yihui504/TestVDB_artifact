@@ -1,0 +1,68 @@
+{
+ "defect_id": "boundary_name_len_255_007",
+ "endpoint": "collections+create",
+ "defect_type": "Type1",
+ "built_by": "evidence-builder",
+ "steps": {
+  "doc_verification": {
+   "result": "DOC_MISMATCH",
+   "link_reachability": "PASS",
+   "version_match": "PASS",
+   "content_consistency": "FAIL",
+   "endpoint_precision": "PASS",
+   "sdk_rest_confusion": false,
+   "detail": "constraint milvus_range_collections_create_002 断言 len(name)<=255（proxy.maxNameLength），长度上界在源码与实测均成立（256/257/1000 均 1100）；但 '_leading' 下划线开头被接受不违反该断言——源码 validateName 显式允许首字符为下划线。链的约束域覆盖不含首字符规则，候选现象与所引约束不匹配",
+   "evidence_source": "doc"
+  },
+  "execution_evidence": {
+   "grade": "B",
+   "log_pattern": "name='_leading' -> http=200 ok=True raw={\"code\":0,\"data\":{}}",
+   "secondary_observations": [
+    "name len=254 -> http=200 ok=True raw={\"code\":0,\"data\":{}}",
+    "name len=255 -> http=200 ok=True raw={\"code\":0,\"data\":{}}",
+    "name len=256 -> http=200 ok=False raw={\"code\":1100,\"message\":\"Invalid collection name: nnn...\"}",
+    "name len=257 -> http=200 ok=False raw={\"code\":1100,...}",
+    "name len=1000 -> http=200 ok=False raw={\"code\":1100,...}"
+   ],
+   "claim_alignment": "partial",
+   "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "长度越界被正确拒绝（200+1100）；仅下划线开头被接受"},
+   "reproducibility": "单脚本",
+   "script_error": false,
+   "triggering_scripts": ["debate_logs/boundary_name_len_255_007.py"],
+   "evidence_source": "behavior"
+  },
+  "contract_grounding": {
+   "constraint_id": "milvus_range_collections_create_002",
+   "assertion_text_quoted": "len(name) <= 255",
+   "api_violates_assertion": false,
+   "note": "'_leading' 长度 8，在 len<=255 约束域内且合规；候选攻击的是首字符规则，但契约中不存在首字符约束——violates=False 因值确实合规于所引断言（约束引用面不覆盖观测现象）",
+   "evidence_source": "doc"
+  },
+  "chain_trace": {
+   "chain_links": [
+    "contract: milvus_range_collections_create_002 (len(name)<=255)",
+    "doc: 源码 proxy/util.go validateNameWithCustomChars L1317-1344 证实 255 上界 + 首字符允许 '_'",
+    "script: boundary_name_len_255_007.py 传 '_leading'",
+    "log: name='_leading' -> code:0"
+   ],
+   "chain_broken_at": "contract",
+   "break_detail": "断链在 contract 环：观测（下划线开头被接受）不在任何契约断言的约束域内，且源码明确 by-design 允许首字符 '_'（internal/proxy/util.go:1331-1334）",
+   "evidence_source": "doc+behavior"
+  },
+  "source_grounding": {
+   "grep_queries": ["Invalid collection name", "func ValidateCollectionName", "validateNameWithCustomChars", "firstChar"],
+   "files_examined": [
+    "internal/proxy/util.go (validateNameWithCustomChars L1317-1344, ValidateCollectionName L1367-1372)",
+    "internal/proxy/validate_util.go"
+   ],
+   "source_excerpt": "internal/proxy/util.go L1331-1334:\n\tfirstChar := entity[0]\n\tif firstChar != '_' && !isAlpha(firstChar) {\n\t\treturn merr.WrapErrParameterInvalid('_', firstChar, fmt.Sprintf(\"the first character of %s must be an underscore or letter\", nameType))\n\t}\n—— 源码显式将下划线列为合法首字符（与字母并列），'_leading' 接受是精确按设计执行。",
+   "call_chain_traced": "HTTP create -> CreateCollection RPC -> rootcoord/proxy validateName -> validateNameWithCustomChars（长度 L1324 maxNameLength 255 + 首字符 L1331 允许 _ + 其余字符白名单 L1337-1342）",
+   "verification_outcome": "by_design_in_source",
+   "evidence_source": "source"
+  },
+  "mundane_explanation": {
+   "excluded": ["env", "concurrency"],
+   "surviving": null
+  }
+ }
+}

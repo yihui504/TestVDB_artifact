@@ -1,0 +1,14 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[probe vacuum_min_vector_number=99 (min-1)] PATCH optimizers_config.vacuum_min_vector_number=99 -> status=422
+OK(reject): 'vacuum_min_vector_number=99 (min-1)' -> 422: {"status":{"error":"Validation error in JSON body: [optimizers_config.vacuum_min_vector_number: value 99 invalid, must be 100 or larger]"},"time":0.0}
+[probe vacuum_min_vector_number=0 (deep below)] PATCH optimizers_config.vacuum_min_vector_number=0 -> status=422
+OK(reject): 'vacuum_min_vector_number=0 (deep below)' -> 422: {"status":{"error":"Validation error in JSON body: [optimizers_config.vacuum_min_vector_number: value 0 invalid, must be 100 or larger]"},"time":0.0}
+[probe vacuum_min_vector_number=-1 (negative)] PATCH optimizers_config.vacuum_min_vector_number=-1 -> status=400
+OK(reject): 'vacuum_min_vector_number=-1 (negative)' -> 400: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 53"},"time":0.0}
+[probe vacuum_min_vector_number=100 (at-min)] PATCH optimizers_config.vacuum_min_vector_number=100 -> status=200 raw={"result":true,"status":"ok","time":0.019276481}
+OK(echo): after 'vacuum_min_vector_number=100 (at-min)' readback optimizer_config.vacuum_min_vector_number=100 (present=True)
+[probe vacuum_min_vector_number=1000 (runtime default)] PATCH optimizers_config.vacuum_min_vector_number=1000 -> status=200 raw={"result":true,"status":"ok","time":0.021522282}
+OK(echo): after 'vacuum_min_vector_number=1000 (runtime default)' readback optimizer_config.vacuum_min_vector_number=1000 (present=True)
+OK: vacuum_min_vector_number 99/0/-1 rejected (400/422); 100 and 1000 accepted with result true
+VERDICT: NO_DEFECT

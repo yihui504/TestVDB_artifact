@@ -1,0 +1,95 @@
+{
+  "defect_id": "boundary_cluster_telemetry_002",
+  "endpoint": "cluster+telemetry (GET /cluster/telemetry)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists in the contract tree; sanctioned WebFetch failed with an environment network restriction for api.qdrant.tech, but the page was recovered via the alternate web reader with full content — page IS reachable, so PASS recorded honestly with the WebFetch block noted. Version: page served under v-1-18-x selector = 1.18.x vs target 1.18.0, major.minor match. Content: doc Query parameters section verbatim 'timeout integer Optional `>=1` Defaults to `60`' / 'Timeout for this request' — exact match with the contract assertion 'timeout default 60, minimum 1'; page documents only '200 Retrieved' (no 500 documented, no standalone-mode caveat prose). Endpoint: contract endpoint_registry entry cluster+telemetry GET lists timeout (integer, 'default 60, min 1') and details_level (integer), and raw_knowledge api_endpoints maps cluster+telemetry -> /cluster/telemetry, matching the tested REST face.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[class-B timeout='+1'] status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000209122} (output_boundary_cluster_telemetry_002.log L20, followed by [healthz attempt 1] status=200 raw=healthz check passed L21)",
+      "secondary_observations": [
+        "class-A conforming rejections (same log L6-L19, rest face): timeout='abc'/'1.5'/'true'/'1e3'/' 1'/'0x10' each -> status=400 {\"status\":{\"error\":\"Deserialize error in query parameters: invalid digit found in string\"},\"time\":0.0}; timeout='' -> 400 'cannot parse integer from empty string' — every type-invalid token properly rejected 4xx",
+        "hidden Type2 leg suppressed by rank ordering (script findings rank1-Type3 beat rank2-Type2; verifiable from raw bodies): the class-A 400 bodies do NOT name the violated parameter ('timeout' absent from 'Deserialize error in query parameters: invalid digit found in string')",
+        "baseline confound, sibling output_boundary_cluster_telemetry_001.log L7 (rest face): [timeout omitted (default-60 form)] params=None status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.003408097} — the documented-valid baseline ALSO 500s",
+        "same-value control, sibling output_boundary_cluster_telemetry_001.log L9 (rest face): [timeout=1 (min closure)] params={'timeout': 1} status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000267159} — the plain in-domain integer 1 (what '+1' deserializes to) gets the identical 500, so '+1' is not the operative cause",
+        "sign-grammar asymmetry, sibling output_boundary_cluster_telemetry_001.log L17 (rest face): [timeout=-1] params={'timeout': -1} status=400 raw={\"status\":{\"error\":\"Deserialize error in query parameters: invalid digit found in string\"},\"time\":0.0} — u64 rejects '-' but accepts '+' prefix, corroborating that '+1' parsed to integer 1 and reached the handler",
+        "minimum validation present, sibling output_boundary_cluster_telemetry_001.log L15 (rest face): [timeout=0 (min-1)] params={'timeout': 0} status=422 raw={\"status\":{\"error\":\"Validation error in query parameters: [timeout: value 0 invalid, must be 1 or larger]\"},\"time\":0.0} — the 422 body DOES name 'timeout'",
+        "second baseline, sibling output_boundary_cluster_telemetry_004.log L7 (rest face): [documented no-param call] params=None status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000164451}",
+        "deployment-mode proof, sibling output_boundary_cluster_recover_001.log L15 (rest face): [recover] status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.024100829} — the sandbox runs a standalone single-node qdrant"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "Request-side-decidable errors were NOT masked as 2xx: all seven type-invalid timeout tokens returned proper 400 with serde diagnostics, and timeout=0 returned 422 naming the parameter and rule. The observed 500 is an internal error returned for a fully valid request ('+1' deserializes to in-domain 1), not a business-code-masked client error."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_cluster_telemetry_002 (primary: timeout='+1' -> 500)",
+        "boundary_cluster_telemetry_001 (timeout omitted / =1 / =2 / =60 all -> identical 500)",
+        "boundary_cluster_telemetry_003 (timeout=1000000 / i32max / u64max -> identical 500)",
+        "boundary_cluster_telemetry_004 (documented no-param call and details_level=0 -> identical 500)",
+        "boundary_cluster_telemetry_005 (details_level=0/1/10/11 -> identical 500)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_cluster_telemetry_001",
+      "assertion_text_quoted": "timeout default 60, minimum 1",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "violates-declaration self-check: the claim's phenomenon is a 5xx on an in-domain value, not an illegal value silently accepted. '+1' deserializes to integer 1, which satisfies 'minimum 1'; source implements both faces of the assertion (range(min=1) validator at cluster_api.rs:45 — behaviorally confirmed by the 422 on timeout=0 — and default 60 at cluster_api.rs:236 via DEFAULT_GRPC_TIMEOUT=60s). The value is genuinely compliant, so the range constraint was not violated by this behavior. The expectation actually failed by the 500 is the sibling behavioral assertion qdrant_behavioral_cluster_telemetry_001 ('returns 200 TelemetryData') — which fails for ALL inputs in this deployment including the documented no-param baseline (sibling log 004) — noted for the auditor; the wrong-constraint alternative would be re-anchoring to that behavioral assertion, which is the auditor's call."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_range_cluster_telemetry_001 exists in structured_contract.json (L6458-6468; range_constraint; endpoint cluster+telemetry; assertion 'timeout default 60, minimum 1'; source_url versioned api-reference; source_status reachable). Dispatch constraint_id was truncated to 'qdra'; resolved to the full id via the script docstring (debate_logs/boundary_cluster_telemetry_002.py L34 'Constraint: qdrant_range_cluster_telemetry_001').",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/distributed/cluster-telemetry reachable (recovered via alternate web reader after the sanctioned WebFetch hit an environment network block) and contains verbatim 'timeout integer Optional `>=1` Defaults to `60`' — prose matches the assertion; only 200 Retrieved documented, no 500 and no standalone caveat.",
+        "script: debate_logs/boundary_cluster_telemetry_002.py — GET {BASE_URL}/cluster/telemetry with requests params={'timeout': '+1'} (URL-encoded %2B1); log L5 constraint quote matches the contract assertion verbatim; oracle pre-declared class-B '+1' 5xx-with-live-healthz = Type3 DEFECT, 4xx/200 both conform.",
+        "log: output_boundary_cluster_telemetry_002.log L20-L22 — raw 500 body quoted matches the verdict DEFECT_FOUND (Type3_RuntimeFailure) exactly; internally consistent. Attribution caveat (not a link break): the identical 500 occurs for documented-valid baselines in sibling logs 001/004, so the 500 is the endpoint's uniform response in this deployment rather than a '+1'-specific runtime fault — see secondary_observations and mundane_explanation."
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Could not get telemetry from cluster",
+        "cluster/telemetry",
+        "id_to_address",
+        "DEFAULT_GRPC_TIMEOUT",
+        "fn newest_telemetry",
+        "running in standalone mode"
+      ],
+      "files_examined": [
+        "src/actix/api/cluster_api.rs (L23-47 params+validator, L203-290 get_cluster_telemetry handler)",
+        "src/common/telemetry_ops/distributed_telemetry.rs (L150-178 resolve_telemetries, L544-560 newest_telemetry)",
+        "src/main.rs (L282-319 init_channel_service)",
+        "lib/api/src/grpc/transport_channel_pool.rs (L21-27 DEFAULT_GRPC_TIMEOUT=60s)"
+      ],
+      "source_excerpt": "// src/actix/api/cluster_api.rs L42-47 — the documented minimum-1 validation IS present:\n#[derive(Deserialize, JsonSchema, Validate)]\npub struct ClusterTelemetryParams {\n    details_level: Option<u32>,\n    #[validate(range(min = 1))]\n    timeout: Option<u64>,\n}\n\n// src/actix/api/cluster_api.rs L203-260 (excerpt) — handler:\n#[get(\"/cluster/telemetry\")]\nasync fn get_cluster_telemetry(\n    dispatcher: web::Data<Dispatcher>,\n    ActixAuth(auth): ActixAuth,\n    params: Query<ClusterTelemetryParams>,\n) -> HttpResponse {\n    ...\n    let timeout = params.timeout.unwrap_or(DEFAULT_GRPC_TIMEOUT.as_secs()); // default 60 (transport_channel_pool.rs L25: Duration::from_secs(60))\n    let all_peers: Vec<_> = channel_service\n        .id_to_address\n        .read()\n        .keys()\n        .copied()\n        .collect();\n    let mut futures = all_peers\n        .into_iter()\n        .map(|peer_id| {\n            channel_service\n                .with_qdrant_client(peer_id, |mut client| {\n                    let request = grpc::GetTelemetryRequest {\n                        collections_selector: collections_selector.clone(),\n                        details_level,\n                        timeout,\n                    };\n                    async move { client.get_telemetry(request).await }\n                })\n                .map_err(move |err| (peer_id, err))\n        })\n        .collect::<FuturesUnordered<_>>();\n    let mut telemetries = Vec::with_capacity(futures.len());\n    ...\n    let distributed_telemetry =\n        DistributedTelemetryData::resolve_telemetries(access, telemetries, missing_peers)?;\n\n// src/common/telemetry_ops/distributed_telemetry.rs L150-158 — the 500 origin:\nimpl DistributedTelemetryData {\n    pub fn resolve_telemetries(\n        access: &Access,\n        telemetries: Vec<TelemetryData>,\n        missing_peers: Vec<PeerId>,\n    ) -> StorageResult<Self> {\n        // Use the telemetry from node with highest term/commit\n        let base_telemetry = newest_telemetry(&telemetries)\n            .ok_or_else(|| StorageError::service_error(\"Could not get telemetry from cluster\"))?; // <- empty telemetries vec => HTTP 500\n\n// src/main.rs L282-316 — why telemetries is empty on this deployment:\n/// Create and configure the channel service used to manage connections between peers.\n///\n/// In single-node mode a default-configured service is returned. In distributed mode\n/// the service is populated with a TLS-aware channel pool and peer metadata loaded\n/// from the persisted consensus state.\nfn init_channel_service(\n    settings: &Settings,\n    persistent_consensus_state: &Persistent,\n    is_distributed_deployment: bool,\n) -> anyhow::Result<ChannelService> {\n    let mut channel_service = ChannelService::new(...);\n    if is_distributed_deployment {\n        ...\n        channel_service.id_to_address = persistent_consensus_state.peer_address_by_id.clone(); // ONLY in distributed mode\n    }\n    Ok(channel_service)\n}",
+      "call_chain_traced": "GET /cluster/telemetry -> actix Query<ClusterTelemetryParams> (serde_urlencoded u64 deserialization; '+1' accepted as 1 per Rust integer FromStr sign grammar, '-' rejected — behaviorally corroborated by 400 on '-1' in sibling log 001 L17) -> validator range(min=1) passes for 1 (422 only for 0, sibling log 001 L15) -> get_cluster_telemetry (cluster_api.rs L203) reads channel_service.id_to_address, which init_channel_service (main.rs L299-315) leaves EMPTY in single-node mode -> zero peer futures -> empty telemetries -> resolve_telemetries (distributed_telemetry.rs L150-158) -> newest_telemetry(&[]) = None -> StorageError::service_error(\"Could not get telemetry from cluster\") -> HTTP 500 for every request reaching the handler, independent of the timeout value.",
+      "verification_outcome": "validation_present",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "by_design_note": "The standalone-empty-peer 500 has NO explicit design declaration: no comment, docstring, or maintainer citation in the handler or resolve_telemetries marks standalone behavior as intended (contrast: cluster_api.rs L23-25 carries an explicit TODO for details_level, and sibling endpoints L125/L146 return the distinct 'Qdrant is running in standalone mode' error via consensus_state()-None guards — the telemetry handler lacks any such guard). Not marked by_design_in_source; outcome recorded as validation_present for the cited range constraint, with the 500 mechanism explained but its defect-vs-environment status left to the auditor."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "concurrency (deterministic sub-millisecond responses, /healthz 200 on first attempt across all 5 telemetry logs, no shared state involved)",
+        "request-parameter typo (script echoes exact params; requests encoded '+1' as %2B1)",
+        "cache delay (no caching semantics on this read-only ops endpoint; failure immediate and stable)"
+      ],
+      "surviving": "environment/deployment mode: the sandbox qdrant runs standalone (proven by sibling recover log's 'Qdrant is running in standalone mode' 500), and in single-node mode init_channel_service leaves the peer map empty, making GET /cluster/telemetry return 500 'Could not get telemetry from cluster' for EVERY request including the documented no-param baseline — the '+1' token is not the operative cause of the 500. Cannot be fully excluded at raw-access level because a distributed deployment was not available to test the 200 path (face_unavailable: single deployment mode in sandbox); counterpoint for the auditor: the same contract marks cluster+status as 'valid on single-node deployments too' and that endpoint DOES return 200 here, while the cluster-telemetry doc documents only 200 with no standalone caveat and no 500 — whether an unconditionally-500ing documented-200 endpoint on standalone is a genuine defect or an environment artifact is the auditor's adjudication."
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_facet_002",
+ "endpoint": "facet",
+ "param": "key (value/count readout tracked across point CRUD, cross-faced with points/count)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_facet_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/points/facet",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "facet counts equal the seeded/CRUD-tracking frequencies at every leg (A:{A:150,B:100,C:50}; C:{A:120,B:80}; D:{A:175,B:100,C:50}; E:{A:175,B:100} with C absent), each facet-sum equals the exact point count face over the same scope, and facet on a missing collection is 404; a mismatch = Type4_StateLogicViolation, 5xx with /healthz alive = Type3_RuntimeFailure",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

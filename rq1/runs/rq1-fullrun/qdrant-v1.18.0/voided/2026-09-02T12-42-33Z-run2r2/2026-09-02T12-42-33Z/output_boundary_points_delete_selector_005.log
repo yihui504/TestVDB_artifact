@@ -1,0 +1,15 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+seed baseline: exact count == 5
+
+G guard valid ids-delete [1] -> status=200
+raw: {"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.003628378}
+G: 200, count == 4 == 4 (guard baseline set)
+
+S1 selector-less body {} -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PointsSelector"},"time":0.0}
+S1: 400/422 clean rejection (no selector = invalid request)
+
+S2 both selectors (points [2] AND filter grp=red) -> status=200
+raw: {"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.002670554}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — S2: ambiguous selector (points AND filter simultaneously) accepted with status 200; resolution: ONE branch silently resolved the ambiguity (count 4 -> 3): {"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.002670554}

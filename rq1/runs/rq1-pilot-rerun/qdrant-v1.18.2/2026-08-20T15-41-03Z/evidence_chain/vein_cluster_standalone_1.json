@@ -1,0 +1,64 @@
+{
+  "defect_id": "vein_cluster_standalone_1",
+  "endpoint": "cluster+recover",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "POST /cluster/recover is documented. The endpoint returns 500 'Service internal error: Qdrant is running in standalone mode' when called in standalone deployment. HTTP semantics suggest client misuse (calling cluster operation in standalone mode) should return 4xx, not 5xx.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c3: POST /cluster/recover in standalone mode → http=500, error='Service internal error: Qdrant is running in standalone mode'",
+      "secondary_observations": ["c1: GET /cluster → http=200", "c2: GET /cluster in standalone mode → http=200", "c4: Empty recover payload → http=500", "c5: GET /cluster/telemetry → http=500"],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 5xx (server error code for client misuse)",
+        "note": "Client misuse (calling cluster operation in standalone mode) returns 500 instead of 4xx. HTTP semantics: 5xx indicates server fault, 4xx indicates client error. This is a server error code misuse."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_cluster_standalone_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A - This is a semantic/HTTP specification issue, not a contract constraint violation",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:N/A (HTTP semantic issue)",
+        "doc:POST /cluster/recover documented",
+        "script:Recover operation called in standalone mode",
+        "log:500 returned instead of 4xx for client misuse"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "No contract constraint violated. Issue is HTTP semantics: server returns 500 for client-side misuse (calling cluster operation in standalone mode). RFC 9110 Section 15: 5xx codes indicate server failure, 4xx indicate client error. This is misclassification of error type.",
+      "evidence_source": "behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["cluster.*recover", "standalone.*mode", "Service internal error", "Qdrant is running in standalone mode"],
+      "files_examined": [
+        "src/actix/api/cluster_api.rs",
+        "lib/storage/src/content_manager/consensus_ops.rs"
+      ],
+      "source_excerpt": "File: src/actix/api/cluster_api.rs, Lines 115-133\n\n#[get(\"/cluster/metadata/keys\")]\nasync fn get_cluster_metadata_keys(\n    dispatcher: web::Data<Dispatcher>,\n    ActixAuth(auth): ActixAuth,\n) -> HttpResponse {\n    helpers::time(async move {\n        auth.check_global_access(AccessRequirements::new(), \"get_cluster_metadata_keys\")?;\n\n        let keys = dispatcher\n            .consensus_state()\n            .ok_or_else(|| StorageError::service_error(\"Qdrant is running in standalone mode\"))?\n            .persistent\n            .read()\n            .get_cluster_metadata_keys();\n        ...\n    })\n}\n\nFile: src/actix/api/cluster_api.rs, Lines 60-73\n\n#[post(\"/cluster/recover\")]\nfn recover_current_peer(\n    dispatcher: web::Data<Dispatcher>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Future<Output = HttpResponse> {\n    let pass = new_unchecked_verification_pass();\n\n    helpers::time(async move {\n        auth.check_global_access(AccessRequirements::new().manage(), \"recover_current_peer\")?;\n        dispatcher.toc(&auth, &pass).request_snapshot()?;\n        Ok(true)\n    })\n}\n\nObservation: cluster_api.rs uses `StorageError::service_error(\"Qdrant is running in standalone mode\")` which generates HTTP 500. The recover endpoint does NOT check if consensus_state() is None before attempting operations. No explicit 4xx error path for standalone mode detected.",
+      "call_chain_traced": "recover_current_peer function calls dispatcher.toc().request_snapshot() without checking consensus_state(). When consensus is None (standalone mode), operations fail. The error is generated via StorageError::service_error() which maps to HTTP 500. No validation logic returns 4xx for standalone cluster operations.",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "payload_mismatch"],
+      "surviving": "Server returns 500 for client misuse (calling cluster operation in standalone mode). RFC 9110 classifies 5xx as server fault, 4xx as client error. This is HTTP semantic violation, not by-design behavior. Historical issue qdrant#9421 documents same phenomenon."
+    }
+  }
+}

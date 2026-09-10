@@ -1,0 +1,14 @@
+setup: ready
+dim mismatch (1) -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: []float32 size 1 doesn't equal to vector dimension 8 of FloatVector"}
+dim mismatch (DIM-1) -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: []float32 size 7 doesn't equal to vector dimension 8 of FloatVector"}
+dim mismatch (DIM+1) -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: []float32 size 9 doesn't equal to vector dimension 8 of FloatVector"}
+dim mismatch (32768) -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: []float32 size 32768 doesn't equal to vector dimension 8 of FloatVector"}
+no vector -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: missing vector field: vector: invalid parameter[expected=FloatVector][actual=]"}
+no pk -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: strconv.ParseInt: parsing \"\": invalid syntax: invalid parameter[expected=Int64][actual=]"}
+pk type confusion str -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: strconv.ParseInt: parsing \"not-an-int\": invalid syntax: invalid parameter[expected=Int64][actual=not-an-int]"}
+pk null -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: strconv.ParseInt: parsing \"\": invalid syntax: invalid parameter[expected=Int64][actual=]"}
+vector as string -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: Mismatch type []float32 with value number \"at index 0: mismatched type with value\\n\\n\\t0.1,0.2\\n\\t^......\\n\": invalid parameter[expected=FloatVector][a
+vector scalar float -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: Mismatch type []float32 with value number \"at index 0: mismatched type with value\\n\\n\\t0.1\\n\\t^..\\n\": invalid parameter[expected=FloatVector][actual=0.
+unknown extra field -> http=200 ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[107]}}
+stats after illegal inserts: {"code":0,"data":{"rowCount":0}}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) - illegal rows accepted: ['unknown extra field']

@@ -1,0 +1,54 @@
+{
+  "defect_id": "vein_dbname_cross_endpoint_1",
+  "endpoint": "collections+drop (vs 15 sibling endpoints)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraint state_collections_create_002 (nonexistent dbName => 800, live-confirmed) is create-path; the matrix generalizes db-existence gating across endpoints. All 16 tested endpoints present in endpoint_registry. The cross-endpoint uniformity expectation is synthesis-level (no single constraint demands drop return 800) - honest gap.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "collections/drop         dbName=no_such_db_vn -> code=0 None ... code 800 (db-not-found): [15 endpoints listed, drop absent] ... DEFECT: operations SUCCEED (code 0) against nonexistent dbName - idempotent-success semantics inconsistent with create's 800 gate: ['collections/drop']",
+      "secondary_observations": ["15/16 endpoints returned code=800 'database not found[database=no_such_db_vn]' (create/list/has/describe/load/get_stats/truncate/insert/query/search/delete/aliases+create/aliases+list/partitions+create/indexes+create)", "CONTROL create default: 200 code 0; CONTROL list default ok - server healthy, dbName key honored on default db"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "drop of nonexistent-db target returns bare code 0 (no error at all); inconsistent with sibling 800s - Type2 diagnostics-inconsistency surface (primary framing) with idempotent-success semantics as competing interpretation"},
+      "reproducibility": "单脚本 (but 16-endpoint in-script matrix is its own internal control; corroborated cross-script by semantic_error_diag_1 drop-nonexistent code 0)",
+      "script_error": false,
+      "triggering_scripts": ["vein_dbname_cross_endpoint_1", "semantic_error_diag_1 (collection-level analog)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_state_collections_create_002",
+      "assertion_text_quoted": "NOT exists(dbName) AND collections/create => code 800 message 'database not found[database=<dbName>]' (live-confirmed v2.6.16)",
+      "api_violates_assertion": false,
+      "note": "the quoted assertion's domain is collections/create, which behaved correctly (800). The drop code-0 observation violates no quoted must/should in this constraint - it is a cross-endpoint consistency/diagnostics finding (15-vs-1 split). violates=false against THIS assertion text; auditor to weigh whether constraint-family extrapolation (state_002 as evidence of the db-gate contract) plus source-confirmed intent covers drop.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:state_002 db-existence gate (create path, live)", "doc:drop_collection_task.go:52-57 + root_coord.go:958-963", "script:vein_dbname_cross_endpoint_1.py 16-endpoint matrix dbName=no_such_db_vn + default-db controls", "log:15x code 800, drop code 0; DEFECT recorded"],
+      "chain_broken_at": "doc",
+      "break_detail": "no constraint asserts drop's behavior for nonexistent db; the doc layer for drop (drop succeeds from any load state, state_collections_drop_001) does not address db existence. Chain to a promised behavior is therefore incomplete - the defect claim rests on cross-endpoint uniformity synthesis + source intent, not on a quoted contract line.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["errIgnoredDropCollection (meta_table.go:58, drop_collection_task.go:55, root_coord.go:959)", "GetCollectionByName ErrDatabaseNotFound (drop_collection_task.go:52-57)", "database not found (task_db.go create-path contrast)"],
+      "files_examined": ["internal/rootcoord/drop_collection_task.go:42-87", "internal/rootcoord/root_coord.go:950-967", "internal/rootcoord/meta_table.go:58"],
+      "source_excerpt": "meta_table.go:58: errIgnoredDropCollection = errors.New(\"ignored drop collection\") // drop collection or database not found, so it can be ignored. drop_collection_task.go:52-57: collMeta, err := t.meta.GetCollectionByName(ctx, ...); if err != nil { if errors.Is(err, merr.ErrCollectionNotFound) || errors.Is(err, merr.ErrDatabaseNotFound) { return errIgnoredDropCollection } return err }. root_coord.go:958-963: if err := c.broadcastDropCollectionV1(ctx, in); err != nil { if errors.Is(err, errIgnoredDropCollection) { logger.Info(\"drop collection that not found, ignore it\"); ...; return merr.Success(), nil } } - EXPLICIT source intent: db/collection-not-found on drop is deliberately converted to success (idempotent drop), directly producing code 0.",
+      "call_chain_traced": "REST drop(dbName nonexistent) -> proxy -> rootcoord.DropCollection -> broadcastDropCollectionV1 -> dropCollectionTask.validate -> GetCollectionByName fails ErrDatabaseNotFound -> errIgnoredDropCollection -> merr.Success() -> code 0",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (15 siblings 800 on same server)", "typo (same dbName string across all 16)"],
+      "surviving": "by_design defense is STRONG here: source comment and error name explicitly declare ignore-on-not-found semantics (idempotent drop). What survives is the diagnostics-consistency question (15 endpoints diag 800, 1 reports success) - a Type2/policy inconsistency, not a validation gap"
+    },
+    "evidence_weight": "high factual (16-point matrix + explicit source intent); weight FOR DEFECT is low-to-medium (by-design in source; Type2 diagnostics framing only)"
+  }
+}

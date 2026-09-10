@@ -1,0 +1,76 @@
+{
+  "defect_id": "vein_compound_and_schema_pairing_1",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Network blocked doc verification. OpenAPI spec defines parameters but pairing invariant (Min<=Max) undocumented. Parameter validation constraints not documented.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: [Inverted Pairing] FAIL: DEFECT: Server accepts inverted pairing (Min=500 > Max=100) without validation → http=200",
+      "secondary_observations": [
+        "c2: [Negative Values] FAIL: DEFECT: Server accepts negative values (Min=-100, Max=-500) without validation → http=200",
+        "c3: [Zero Values] FAIL: DEFECT: Server accepts zero values for EF parameters without validation → http=200",
+        "c4: [Extreme Values] FAIL: DEFECT: Server accepts extreme values (999999999) without validation → http=200"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 with success for all 4 invalid pairing combinations. No error indication."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_compound_and_schema_pairing_1",
+        "boundary_schema_dynamicEf_inverted",
+        "boundary_schema_dynamicEfMax_negative",
+        "boundary_schema_dynamicEfMin_negative"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint in structured_contract.json. Contract lacks pairing invariant assertions (Min<=Max).",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (no pairing invariant constraint)",
+        "doc: (partial, network blocked)",
+        "script: POST /schema with 4 invalid pairing combinations",
+        "log: All 4 accepted with HTTP 200"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "No constraint defined for pairing invariant. Contract lacks semantic assertions for dynamicEfMin/Max relationship validation.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "dynamicEfMin|dynamicEfMax",
+        "validate.*hnsw"
+      ],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go (lines 183-193: parameter parsing)",
+        "entities/vectorindex/hnsw/config.go (lines 260-323: validate function missing pairing check)"
+      ],
+      "source_excerpt": "From entities/vectorindex/hnsw/config.go:\n\n// Line 183-193: dynamicEfMin and dynamicEfMax parsed independently\nif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"dynamicEfMax\", func(v int) {\n\tuc.DynamicEFMax = v\n}); err != nil {\n\treturn uc, err\n}\nif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"dynamicEfMin\", func(v int) {\n\tuc.DynamicEFMin = v\n}); err != nil {\n\treturn uc, err\n}\n\n// Line 260-323: validate() function DOES NOT CHECK:\n// - u.DynamicEFMin < u.DynamicEFMax (inverted pairing check missing)\n// - u.DynamicEFMin < 0 (negative check missing)\n// - u.DynamicEFMax < 0 (negative check missing)\n// - u.DynamicEFMin == 0 (zero check missing)\n// - u.DynamicEFMax == 0 (zero check missing)\n// - extreme values (no upper bound check)",
+      "call_chain_traced": "ParseAndValidateConfig → assign both values independently → validate() skips pairing check → all combinations persisted",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Source confirms validation_absent for pairing invariant. 4/4 test cases confirm. Type1: inverted pairing (Min>Max) is semantic violation."
+    }
+  }
+}

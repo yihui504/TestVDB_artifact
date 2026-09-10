@@ -1,0 +1,23 @@
+=== DELETE /collections/demo ===
+
+-> 200 {"result":true,"status":"ok","time":0.008931534}
+=== PUT /collections/demo ===
+{"vectors": {"size": 4, "distance": "Euclid"}}
+-> 200 {"result":true,"status":"ok","time":0.223161745}
+=== PUT /collections/demo/points?wait=true ===
+{"points": [{"id": 1, "vector": [0.1, 0.2, 0.3, 0.4]}, {"id": 2, "vector": [0.2, 0.3, 0.4, 0.5]}, {"id": 3, "vector": [0.3, 0.4, 0.5, 0.6]}]}
+-> 200 {"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.003837353}
+=== POST /collections/demo/snapshots?wait=true ===
+
+-> 200 {"result":{"name":"demo-8799445405866919-2026-09-09-08-58-50.snapshot","creation_time":"2026-09-09T08:58:50","size":139264,"checksum":"63f8d98b0eb47ff72931db5c9aecaa27c0c83956da254f8e88da64a160a911b5"},"status":"ok","time":0.167109493}
+=== PUT /collections/demo/points?wait=true ===
+{"points": [{"id": 50, "vector": [0.9, 0.9, 0.9, 0.9]}]}
+-> 200 {"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.002972055}
+=== PUT /collections/demo/snapshots/recover?wait=true ===
+{"location": "file:///qdrant/snapshots/demo/demo-8799445405866919-2026-09-09-08-58-50.snapshot", "priority": "replica"}
+-> 200 {"result":true,"status":"ok","time":0.122351839}
+=== POST /collections/demo/points/count ===
+{"exact": true}
+-> 200 {"result":{"count":3},"status":"ok","time":0.000518211}
+
+[VERDICT] recover=200 | count after=3 (issue: 3 = id50 silently destroyed; correct behavior = 4)

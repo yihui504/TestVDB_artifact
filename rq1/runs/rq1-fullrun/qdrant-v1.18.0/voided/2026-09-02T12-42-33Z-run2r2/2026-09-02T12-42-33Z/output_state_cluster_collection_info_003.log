@@ -1,0 +1,10 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[R] reader loop finished
+[L] lifecycle loop finished
+[quiescence] describe(scci3_1788370006_19648_col) -> 404? True
+[post-race absent] status=404 raw={"status":{"error":"Not found: Collection `scci3_1788370006_19648_col` doesn't exist!"},"time":7.305e-6}
+[post-recreate] status=200 raw={"result":{"peer_id":285485119185529,"shard_count":1,"local_shards":[{"shard_id":0,"points_count":0,"state":"Active"}],"remote_shards":[],"shard_transfers":[]},"status":"ok","time":0.000146718}
+DEFECT: cluster info 200 after recreate but shape broken: ['resharding_operations'] — Type4_StateLogicViolation
+DEFECT: race window: 16 x shape on cluster-info reads while the collection lifecycle interleaved (graceful 404/200-with-shape expected) — Type4_StateLogicViolation — samples: ["R#0: 200 missing fields ['resharding_operations']", "R#1: 200 missing fields ['resharding_operations']", "R#2: 200 missing fields ['resharding_operations']"]
+VERDICT: DEFECT_FOUND

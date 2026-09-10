@@ -1,0 +1,75 @@
+{
+  "defect_id": "state_concurrent_upsert_search",
+  "endpoint": "points+upsert + points+search",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Upsert and search endpoints documented. Consistency guarantees not explicitly documented in REST API reference - consistency parameter mentioned but semantics unclear for concurrent ops.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Upsert errors: 0, Search errors: 0, Final count: {'count': 100}, Expected: 100, Got: {'count': 100}",
+      "secondary_observations": [
+        "VERDICT claims mismatch but log shows Expected=100, Got=100 - matches",
+        "Count after concurrent ops is correct (100)"
+      ],
+      "claim_alignment": "drifted",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "All operations succeed with HTTP 200. No count mismatch visible in logs - verdict contradicts log data"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_concurrent_upsert_search"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "State consistency invariant: after upsert operations complete, count() should reflect total points inserted",
+      "api_violates_assertion": false,
+      "note": "Log shows Expected: 100, Got: 100 - no violation. Verdict message 'Count mismatch' contradicts actual log output showing correct count.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "script: upserts 100 points concurrently",
+        "script: searches collection",
+        "script: counts points",
+        "log: count=100, expected=100 - match",
+        "verdict: claims DEFECT_FOUND - contradicts log"
+      ],
+      "chain_broken_at": "verdict",
+      "break_detail": "Verdict logic or interpretation error - logs show no state inconsistency yet verdict reports Type4_StateLogicViolation",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "consistency.*upsert",
+        "concurrent.*write",
+        "count.*consistency"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/verification/update.rs",
+        "lib/collection/src/operations/verification/mod.rs"
+      ],
+      "source_excerpt": "lib/collection/src/operations/verification/mod.rs:172-173: self.check_request_query_limit(strict_mode_config)?; self.check_request_search_params(strict_mode_config)?;",
+      "call_chain_traced": "Concurrent upsert operations processed through update verification. Search operations have separate verification path. No cross-transaction consistency check found between concurrent upsert+search.",
+      "verification_outcome": "by_design_in_source",
+      "note": "No source code violation found. Logs confirm count consistency (100=100). This appears to be test script verdict error, not actual state inconsistency.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [],
+      "surviving": "verdict_misinterpretation"
+    }
+  }
+}

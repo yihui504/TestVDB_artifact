@@ -1,0 +1,75 @@
+{
+  "auditor": "chain-auditor",
+  "audited_at": "2026-08-21T10:18:00Z",
+  "total_chains": 6,
+  "verdicts": [
+    {
+      "defect_id": "boundary_schema_tokenization_empty_001",
+      "final_verdict": "DEFECT",
+      "defect_type": "Type1_IllegalSuccess",
+      "confidence": "high",
+      "rationale": "Chain complete: OpenAPI enum (8 values) excludes empty string; source code shows swag.IsZero('') returns true, bypassing enum validation (validateTokenization early return); execution confirms empty string accepted with HTTP 200 and defaulted to 'word'. Clear Type1: illegal value accepted despite documented enum constraint.",
+      "evidence_weight": "enum_constraint(strong) + source_bypass(strong) + execution_confirmation(strong)",
+      "cognition_evidence": "NOT_AVAILABLE"
+    },
+    {
+      "defect_id": "boundary_schema_distance_empty_009",
+      "final_verdict": "DEFECT",
+      "defect_type": "Type1_IllegalSuccess",
+      "confidence": "high",
+      "rationale": "Chain complete: OpenAPI enum (5 values) excludes empty string; source shows DefaultDistanceMetric=cosine with no explicit empty string validation; execution confirms empty string accepted with HTTP 200 and defaulted to cosine. Type1: illegal value accepted (empty string not in enum) despite documented constraint.",
+      "evidence_weight": "enum_constraint(strong) + source_omission(medium) + execution_confirmation(strong)",
+      "cognition_evidence": "NOT_AVAILABLE"
+    },
+    {
+      "defect_id": "boundary_tenants_activitystatus_empty_011",
+      "final_verdict": "DEFECT",
+      "defect_type": "Type2_PoorDiagnostics",
+      "confidence": "medium",
+      "rationale": "Chain complete: OpenAPI enum (10 values) excludes empty string; source shows swag.IsZero('') bypasses validation (same pattern as tokenization); execution shows HTTP 422 rejection but with misleading error message ('multi-tenancy not enabled' instead of enum violation). Type2: validation fails but error message doesn't cite parameter or enum constraint. Root cause: empty string bypasses validation, multi-tenancy check fires first with poor diagnostics.",
+      "evidence_weight": "enum_constraint(strong) + source_bypass(strong) + poor_error_message(strong)",
+      "cognition_evidence": "NOT_AVAILABLE"
+    },
+    {
+      "defect_id": "boundary_tenants_activitystatus_invalid_013",
+      "final_verdict": "NOT_DEFECT",
+      "defect_type": "Type2_PoorDiagnostics",
+      "confidence": "high",
+      "rationale": "Chain complete: Invalid value correctly rejected with HTTP 422 and enum list. Type2 diagnosis only: error message lacks explicit 'enum' keyword but provides full valid value list. This is acceptable diagnostics behavior - NOT_DEFECT.",
+      "evidence_weight": "correct_rejection(strong) + adequate_diagnostics(medium)",
+      "cognition_evidence": "NOT_AVAILABLE"
+    },
+    {
+      "defect_id": "boundary_tenants_activitystatus_lowercase_014",
+      "final_verdict": "NOT_DEFECT",
+      "defect_type": "Type2_PoorDiagnostics",
+      "confidence": "high",
+      "rationale": "Chain complete: Lowercase 'hot' rejected with HTTP 422 and enum list. Type2 diagnosis only: case-sensitive rejection is correct behavior; enum list provided. Acceptable diagnostics - NOT_DEFECT.",
+      "evidence_weight": "correct_rejection(strong) + case_sensitivity_documented(medium) + adequate_diagnostics(medium)",
+      "cognition_evidence": "NOT_AVAILABLE"
+    },
+    {
+      "defect_id": "boundary_schema_distance_null_semantics",
+      "final_verdict": "NOT_DEFECT",
+      "defect_type": "Type4_StateViolation",
+      "confidence": "medium",
+      "rationale": "Chain complete: Null accepted with silent default to cosine. This is by-design behavior (DefaultDistanceMetric). GT issue 11732 frames this as defect due to poor告知性 (readback shows cosine but POST response doesn't notify default was applied). However, this is reasonable default behavior, not a Type1 violation. Comparison to v1.37.4 replicationFactor翻案 is weak precedent (不同参数不同语义). NOT_DEFECT: silent default is acceptable design for omitted optional parameters.",
+      "evidence_weight": "by_design_default(medium) + gt_advocacy(weak) + inconsistency_precedent(weak)",
+      "cognition_evidence": "NOT_AVAILABLE"
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "defect": 3,
+    "not_defect": 3,
+    "defect_type_counts": {
+      "Type1_IllegalSuccess": 2,
+      "Type2_PoorDiagnostics": 1,
+      "Type4_StateViolation": 0
+    },
+    "confidence_distribution": {
+      "high": 5,
+      "medium": 1
+    }
+  }
+}

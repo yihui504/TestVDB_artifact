@@ -1,0 +1,93 @@
+{
+  "defect_id": "boundary_collections_delete_01",
+  "endpoint": "collections+delete (DELETE /collections/{collection_name})",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url reachable via web reader (WebFetch blocked by network policy, fallback reader succeeded); page is v1.18.x (canonical URL confirms version match). Content split: half 'DELETE existing => 200' IS documented (200 'successful operation' with result:boolean field); half 'DELETE missing => 404' is NOT documented — the v1.18.x delete-collection page documents ONLY a 200 response, no 404/4xx response section exists (verified both rendered page and .md export). The 404 half originates from raw_knowledge.md L131-133 ('deleting non-existent collection -> 404 ... runtime verified 200 on real delete' — note: runtime verification was claimed only for the 200 half; L133 'Expected Responses: 200 / 404' is a convention-based inference, not a doc quote). Endpoint registry lookup PASS: collections+delete -> DELETE method, doc_quote 'Drop the collection and all of its data'.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "DELETE missing: status=200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000076543} (target: bd01_never_created_col, never created; followed by script verdict line 7: 'VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — contract says deleting non-existent collection returns 404, got 200')",
+      "secondary_observations": [
+        "setup create: 200 {\"result\":true,\"status\":\"ok\",\"time\":0.243116376} — server healthy before attack",
+        "DELETE existing: status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.006874066} — first half of two-sided contract PASSES (result:true = something deleted)",
+        "GET after delete: status=404 raw={\"status\":{\"error\":\"Not found: Collection `bd01_existing_col` doesn't exist!\"},\"time\":6.845e-6} — deletion fully committed before the missing-DELETE probe; excludes zombie/state-delay explanations",
+        "same pattern in sibling logs: boundary_collections_delete_02.log:6 (second DELETE of already-deleted => 200); semantic_collections_delete_001.log:9 ('delete#2 (missing): 200 {\"result\":false,...}'); semantic_collections_delete_002.log:3 ('DELETE missing collection: 200'); state_collections_delete_001.log:12 ('delete missing (just deleted): 200'); boundary_collections_delete_05.log:15 (4 name variants: 200 DELETE on non-existent name)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Client-detectable error condition (DELETE of a resource that does not exist) returned as HTTP 200 + status:'ok'. The falseness IS signalled in-band via the documented result:boolean field (result:false), which is a falseness flag rather than an error code — not a fully silent success, but the HTTP status channel carries no error."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_collections_delete_01 (primary)",
+        "boundary_collections_delete_02",
+        "boundary_collections_delete_05",
+        "semantic_collections_delete_001",
+        "semantic_collections_delete_002",
+        "state_collections_delete_001"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_collections_delete_001",
+      "assertion_text_quoted": "DELETE existing => 200; DELETE missing => 404 (description: 'deleting non-existent collection returns 404; deleting existing collection returns 200 (runtime verified)'; evidence_tier: explicit; source_url: https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection)",
+      "api_violates_assertion": true,
+      "note": "violates=true is textual and unambiguous: observed HTTP 200 where the assertion's second half demands 404, on a name verifiably never created. However the violated half ('DELETE missing => 404') is the half WITHOUT doc grounding (doc documents only 200; see doc_verification), and the API communicates in-band falseness via the documented result:boolean field (=false). Source shows this is deliberate Ok(false) design, not a masked error. The doc-grounded half ('DELETE existing => 200') behaved exactly as documented. These are auditor inputs, not a verdict.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_collections_delete_001 in structured_contract.json state_constraints — 'DELETE existing => 200; DELETE missing => 404', evidence_tier explicit",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection reachable, v1.18.x — documents ONLY 200 'successful operation' (result/time/status/usage); NO 404 response documented; assertion's 404 half absent from cited source",
+        "script: debate_logs/boundary_collections_delete_01.py — raw request DELETE /collections/bd01_never_created_col (name never created, distinct from fixture bd01_existing_col); two-sided design tests both halves sequentially",
+        "log: output_boundary_collections_delete_01.log — 'DELETE missing: status=200 raw={\"result\":false,\"status\":\"ok\"}'; no script_error markers; prior GET-after-delete 404 proves state was clean before the violating request"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The violated half of the assertion ('DELETE missing => 404') has no support in the cited doc page — the page documents only a 200 response. raw_knowledge.md's own entry (L131) claims runtime verification only for the 200-on-existing half and asserts the 404 half without a doc quote; 'Expected Responses: 200 / 404' (L133) appears inferred from qdrant-wide conventions (sibling endpoints like GET collection / update-collection do 404 on missing). Contract→doc link is therefore broken for exactly the half that failed, while behavior-side links (script→log) are intact and consistent.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "delete_collection (files_with_matches, 7 hits)",
+        "DeleteCollectionOperation (content, 6 files)",
+        "fn submit_collection_meta_op|fn perform_meta_op|fn delete_collection (content, 2 hits)",
+        "delete-collection (0 hits — Fern-hosted spec not in OSS repo)",
+        "delete_collection.*404|404.*delete_collection (0 hits)"
+      ],
+      "files_examined": [
+        "src/actix/api/collections_api.rs (delete_collection handler, L160-178; service registration L323-338)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (perform_collection_meta_op dispatch L37-81; delete_collection implementation L211-296)",
+        "lib/storage/src/dispatcher.rs (submit_collection_meta_op L72-262; single-node branch L257-261)",
+        "src/actix/helpers.rs (process_response L52-89; error->status mapping L91-117)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/toc/collection_meta_ops.rs L211-296 (TableOfContent::delete_collection, verbatim key sections):\n\n    pub(super) async fn delete_collection(\n        &self,\n        collection_name: &str,\n    ) -> Result<bool, StorageError> {\n        let _collection_create_guard = self.collection_create_lock.lock().await;\n        self.alias_persistence.write().await.remove_collection(collection_name)?;\n        ...\n        let removed_opt = self.collections.write().await.remove(collection_name);\n        if let Some(removed) = removed_opt {\n            ... // stop collection, abort resharding, delete files from disk\n            result = true;\n        } else {\n            // we hold the collection_create lock to make sure no one is creating this collection\n            // otherwise we would delete its content now\n            if collection_path.exists() {\n                log::warn!(\"Collection {collection_name} is not loaded, but its directory still exists. Deleting it.\");\n                to_delete = Some(safe_delete_in_tmp(&collection_path, &safe_delete_path)?);\n            } else {\n                to_delete = None;\n            }\n            result = false;   // <-- missing collection: NO Err(NotFound), deliberate Ok(false)\n        }\n        ...\n        Ok(result)\n    }\n\nDispatch (same file L78-81):\n            CollectionMetaOperations::DeleteCollection(operation) => {\n                log::info!(\"Deleting collection {}\", operation.0);\n                self.delete_collection(&operation.0).await\n            }\n\nHTTP mapping (src/actix/helpers.rs L61-70):\n        Ok(res) => HttpResponse::Ok().json(ApiResponse { result: Some(res), status: ApiStatus::Ok, ... })  // -> HTTP 200, result:false when collection missing\n        Err(err) => ... HttpError::from(err).status_code()  // NotFound would map to 404, but storage never returns it for delete",
+      "call_chain_traced": "REST #[delete(\"/collections/{collection_name}\")] handler (src/actix/api/collections_api.rs:160) submits CollectionMetaOperations::DeleteCollection(DeleteCollectionOperation(name)) -> Dispatcher::submit_collection_meta_op (lib/storage/src/dispatcher.rs:72; single-node deployment takes else-branch L257-261: tokio::spawn(toc.perform_collection_meta_op(op))) -> perform_collection_meta_op match arm DeleteCollection => self.delete_collection (toc/collection_meta_ops.rs:78-81) -> storage removes name from collections map; missing name hits else-branch returning Ok(false) (never Err(StorageError::NotFound)) -> process_response (src/actix/helpers.rs:62) serializes Ok(false) as HTTP 200 {\"result\":false,\"status\":\"ok\"}. The observed response is byte-for-byte the designed output of this path.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "sufficiency_note": "Claim keyword 'delete_collection' hit 7 files; all execution-path hits read (handler, dispatcher, toc implementation, response mapper). 'delete-collection' (doc slug) and 'delete_collection.*404' have zero hits in repo — the Fern-hosted OpenAPI spec is not in the OSS tree, so no source-side 404 declaration exists to find. Clone is single-commit shallow (db3fca3 = v1.18.0 tag), so git blame history for the else-branch is unavailable (recorded as-is).",
+      "by_design_evidence": "Missing-collection branch is deliberately engineered: it holds collection_create_lock (comment explains race-with-creation hazard), cleans an orphaned on-disk directory, and returns structured Ok(false) — the boolean is a first-class part of the fn signature Result<bool, StorageError> and is surfaced in the API response as the DOCUMENTED result:boolean field. Same never-404 convention as sibling endpoint GET /collections/{name}/exists (raw_knowledge L140: 'never 404 for missing collection (existence expressed in body)'). Contrast: update_collection (L160-162) uses get_collection_unchecked(...).await? which DOES propagate NotFound -> 404 for missing collections, showing the codebase distinguishes the two endpoints' missing-resource semantics on purpose.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (setup create 200 immediately before; server responsive throughout, no transport errors in log)",
+        "concurrency/race (single sequential DELETE; code path itself holds collection_create_lock)",
+        "cache/state-delay (GET after delete returned 404 proving deletion fully committed before the violating probe)",
+        "request-typo/name-collision (script source verified: probe name bd01_never_created_col is distinct from fixture bd01_existing_col)"
+      ],
+      "surviving": "contract-expectation error (doc-side): the violated half ('DELETE missing => 404') is not grounded in the cited doc — doc documents only 200 with result:boolean; raw_knowledge's 'Expected Responses: 200 / 404' reads as convention inference. Combined with source's deliberate Ok(false)+in-band result:false design and the sibling exists-endpoint's explicit never-404 convention, the by-design defense is material and survives mundane exclusion. Whether the contract's 404 expectation is authoritative is for chain-auditor to decide."
+    }
+  }
+}

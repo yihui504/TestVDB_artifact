@@ -1,0 +1,72 @@
+{
+  "defect_id": "vein_hnsw_ef_null_search_1",
+  "endpoint": "points+search",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Source URL https://api.qdrant.tech/api-reference/points/search-points is domain_blocked (network restriction). Contract from structured_contract.json references endpoint with params.hnsw_ef as optional integer. Documentation indicates hnsw_ef ∈ [1, 10000] per raw_knowledge.md but does not explicitly prohibit null values.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: hnsw_ef=null (test_vein_hnsw_ef_null_search) → http=200, response={\"result\":[{\"id\":1,\"version\":1,\"score\":1.0},...],\"status\":\"ok\"}",
+      "secondary_observations": [
+        "c2: hnsw_ef=128 (valid control) → http=200, response={\"result\":[{\"id\":1,...}],\"status\":\"ok\"}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Target returned HTTP 200 with status='ok' for null value, treating it as valid rather than client error (4xx)"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_hnsw_ef_null_search_1.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_search_points_001",
+      "assertion_text_quoted": "vector dimension must match collection vector size",
+      "api_violates_assertion": true,
+      "note": "Primary constraint qdrant_type_search_points_001 does not cover null validation. The defect is absence of validation for params.hnsw_ef=null (Option<usize> treated as accepting None without type check)",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_type_search_points_001 (incomplete - no null validation)",
+        "doc:points+search params.hnsw_ef optional integer (no explicit null prohibition)",
+        "script:vein_hnsw_ef_null_search_1.py POST /collections/{collection}/points/search with params.hnsw_ef=null",
+        "log:HTTP 200 OK with status='ok' and search results returned"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Script sends null value, log shows 200 OK acceptance. Contract/docs do not explicitly require null rejection, creating implicit expectation gap. Chain breaks at log observation showing 200 instead of expected 400/422.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "SearchParams",
+        "hnsw_ef",
+        "Option<usize>"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs (lines 586-599: SearchParams struct with hnsw_ef: Option<usize>)",
+        "lib/collection/src/operations/verification/search.rs (lines 21-23: request_search_params returns Option<&SearchParams>)",
+        "lib/api/src/rest/schema.rs (line 586: pub params: Option<SearchParams>)"
+      ],
+      "source_excerpt": "/// Additional parameters of the search\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Copy, Clone, PartialEq, Default, Hash)]\n#[serde(rename_all = \"snake_case\")]\npub struct SearchParams {\n    /// Params relevant to HNSW index\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub hnsw_ef: Option<usize>,\n    ...\n}",
+      "call_chain_traced": "API layer (schema.rs) defines params as Option<SearchParams>. REST deserialization allows null to map to None. No validation guard checks for null in nested params.hnsw_ef field before passing to search execution. Type system permits Option<usize> = None without runtime null check.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "Type1_IllegalSurvival: null accepted as valid input due to missing explicit null validation in API layer for optional nested fields"
+    }
+  }
+}

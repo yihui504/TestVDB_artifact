@@ -1,0 +1,84 @@
+{
+  "defect_id": "vein_range_filter_points_count_14",
+  "endpoint": "POST /collections/{collection_name}/points/scroll + /points/count (integer payload index range-filter path)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS via mcp web_reader (direct WebFetch was domain_blocked for qdrant.tech and api.qdrant.tech): filtering concepts page 200 (canonical now /documentation/search/filtering/) and v-1-18-x scroll-points API reference 200. Version PARTIAL: API-reference page is pinned v1.18.x (PASS) but the filtering concepts page is unversioned-latest (page contains v1.19-marked features; the Range section itself carries no version marker and predates v1.18). Content consistency PASS: doc defines range comparisons 'gt - greater than, gte - greater than or equal, lt - less than, lte - less than or equal' and states 'Can be applied to float and integer payloads', with REST examples using fractional bounds (population gte 9.0; price gte 100.0 / lte 450.0); no truncation semantics documented anywhere. Caveat: the doc never explicitly addresses a fractional bound against an integer payload field — the violation is against the plain operator definitions plus applicability to integer payloads. Endpoint precision PASS: points+scroll and points+count are both in endpoint_registry with v-1-18-x source_urls.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[num] gte2.5=[2, 3, 4, 5, 6, 7, 8, 9] gt2.5=[3, 4, 5, 6, 7, 8, 9] gte2.0=[2, 3, 4, 5, 6, 7, 8, 9] lt7.5=[0, 1, 2, 3, 4, 5, 6] — num is the integer-indexed field (payload index field_schema=integer) holding values 0..9; HTTP 200 scroll returns id 2 for gte 2.5 (2 < 2.5, out of range) and omits id 7 for lt 7.5 (7 < 7.5, wrongly dropped). VERDICT: DEFECT_FOUND — fractional range bounds on integer fields are floor-truncated: num: gte 2.5 includes num=2 (out of range); num: lt 7.5 drops num=7 (7 < 7.5).",
+      "secondary_observations": [
+        "[num2] gte2.5=[3, 4, 5, 6, 7, 8, 9] gt2.5=[3, 4, 5, 6, 7, 8, 9] gte2.0=[2, 3, 4, 5, 6, 7, 8, 9] lt7.5=[0, 1, 2, 3, 4, 5, 6, 7] — num2 is the UNINDEXED twin field with identical data 0..9: both fractional-bound filters evaluate CORRECTLY. Same data + same query, different result depending on whether an integer payload index exists — rules out by-design truncation semantics.",
+        "Controls on num bracket the correct answer: gt2.5=[3..9] and gte2.0=[2..9], so correct gte2.5 answer is 3..9 (= gt 2); observed gte2.5=[2..9] equals gte2.0 — proving 2.5 is silently treated as 2 (floor truncation, not rounding).",
+        "No '[field] NOTE count(exact)=N vs scroll=M' line in the log: count(exact=true) with gte 2.5 returned the same (wrong) cardinality as scroll for both fields — count endpoint agrees with scroll on the wrong answer through the index path; the two index-path endpoints are consistently wrong together."
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The request is schema-valid (Range bounds are plain numbers; docs' own examples use fractional values like gte 9.0), so no client error is involved. This is HTTP 200 + success body whose RESULT CONTENT violates the documented comparison semantics (out-of-range ids returned / in-range ids dropped)."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_range_filter_points_count_14"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": null,
+      "assertion_text_quoted": "(no constraint bound — dispatch carried constraint_id=\"\") Nearest contract anchors, neither exact: qdrant_type_filter_001 'Filter clause structure {should?, min_should?, must?, must_not?}, recursively nestable' (source: qdrant.tech/documentation/concepts/filtering/) and qdrant_state_index_create_001 'integer index defaults lookup=true, range=true' (source: qdrant.tech/documentation/concepts/indexing/). Grounding assertion taken from the doc layer instead: 'The range condition sets the range of possible values for stored payload values... Comparisons that can be used: gt - greater than, gte - greater than or equal, lt - less than, lte - less than or equal. Can be applied to float and integer payloads.'",
+      "api_violates_assertion": true,
+      "note": "violates=true is direct, not conservative: the observed results contain id 2 for gte 2.5 (2 is not 'greater than or equal to' 2.5) and lack id 7 for lt 7.5 (7 IS 'less than' 7.5) on a field type ('integer payloads') the doc explicitly says range applies to. The doc quote is the constraint actually violated; the formal contract simply never encoded range-comparison semantics, which is recorded as the contract chain break below.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: MISSING/empty — candidates.jsonl entry has constraint_id:\"\"; structured_contract.json (all 3 constraint groups + assertions + behavioral_contracts + state_invariants + data_types) contains no constraint pinning range-filter numeric comparison semantics; FieldCondition data type only declares 'range: Range' structurally",
+        "doc: https://qdrant.tech/documentation/concepts/filtering/ (canonical /documentation/search/filtering/, fetched 2026-08-24) — range = gt/gte/lt/lte numeric comparisons, 'Can be applied to float and integer payloads', fractional-bound REST examples; no truncation documented. Versioned API ref https://api.qdrant.tech/v-1-18-x/api-reference/points/scroll-points 200 (filter param: 'Look only for points which satisfies this conditions')",
+        "script: vein_scripts/vein_range_filter_points_count_14.py — creates collection vein_c14 (10 points, payload num=num2=0..9), integer payload index on num only, then scroll+count(exact) with {gte:2.5}/{gt:2.5}/{gte:2.0}/{lt:7.5} on both fields; oracle: gte 2.5 must equal gt 2 (ids 3..9), lt 7.5 must keep id 7",
+        "log: output_vein_range_filter_points_count_14.log L3-5 — [num] gte2.5 includes id 2 and lt7.5 drops id 7 (wrong); [num2] both correct; VERDICT: DEFECT_FOUND (floor-truncated fractional bounds); exit_code 0"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The contract ring is absent: dispatch constraint_id is empty and structured_contract.json encodes no constraint on range-filter comparison semantics (gt/gte/lt/lte numeric comparison on integer payloads). Doc -> script -> log rings are mutually consistent: the script's oracle is exactly the doc's operator definitions, and the log's [num] observation violates them; the divergence between num (indexed, wrong) and num2 (unindexed, correct) is explained at source level. Doc layer caveat: violation is derived from the documented operator semantics ('greater than or equal'), not from a doc sentence that literally addresses fractional bounds on integer fields.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["RangeInterface", "fn from_f64", "fn check_range", "range_cardinality", "stream_range", "as_index_key_bounds"],
+      "files_examined": [
+        "lib/segment/src/index/field_index/numeric_index/mod.rs (filter L831-879, stream_range L1149-1184, range_cardinality L313-324)",
+        "lib/segment/src/index/field_index/numeric_point.rs (impl Numericable for i64 L105-126; impl for f64 L128-146)",
+        "lib/segment/src/payload_storage/condition_checker.rs (ValueChecker for Range<OrderedFloat<FloatPayloadType>> L224-234)",
+        "lib/segment/src/types.rs (Range::check_range L2811-2819, Range::map L2798-2809)"
+      ],
+      "source_excerpt": "lib/segment/src/index/field_index/numeric_index/mod.rs L831-858 — IntIndex filter execution:\n    fn filter<'a>(\n        &'a self,\n        condition: &FieldCondition,\n        hw_counter: &'a HardwareCounterCell,\n    ) -> OperationResult<Option<Box<dyn Iterator<Item = PointOffsetType> + 'a>>> {\n        ...\n        let Some(range_cond) = condition.range.as_ref() else {\n            return Ok(None);\n        };\n\n        let (start_bound, end_bound) = match range_cond {\n            RangeInterface::Float(float_range) => float_range.map(|float| T::from_f64(float.0)),\n            RangeInterface::DateTime(datetime_range) => {\n                datetime_range.map(|dt| T::from_u128(dt.timestamp() as u128))\n            }\n        }\n        .as_index_key_bounds();\n\nlib/segment/src/index/field_index/numeric_point.rs L105-126 — the conversion for the integer index (T=i64):\nimpl Numericable for i64 {\n    ...\n    fn to_f64(self) -> f64 {\n        self as f64\n    }\n    fn from_f64(x: f64) -> Self {\n        x as Self          // truncating cast: 2.5 as i64 == 2, 7.5 as i64 == 7\n    }\n    fn from_u128(x: u128) -> Self {\n        x as i64\n    }\n    ...\n}\n(Identical T::from_f64 conversion also at mod.rs L319-323 range_cardinality and L1158-1163 stream_range.)\n\nlib/segment/src/payload_storage/condition_checker.rs L224-234 — the UNINDEXED full-scan path, which is correct:\nimpl ValueChecker for Range<OrderedFloat<FloatPayloadType>> {\n    fn check_match(&self, payload: &Value) -> bool {\n        match payload {\n            Value::Number(num) => num\n                .as_f64()\n                .map(|number| self.check_range(OrderedFloat(number)))\n                .unwrap_or(false),\n            _ => false,\n        }\n    }\n}\nwith check_range in lib/segment/src/types.rs L2811-2819 doing exact f64 comparisons (lt: number < x, gte: number >= x).",
+      "call_chain_traced": "REST filter.must[].range {gte:2.5} deserializes to RangeInterface::Float. INDEXED path (field num, integer payload index): FieldCondition.range -> NumericIndex<i64> filter()/stream_range()/range_cardinality() each convert bounds via Numericable::<i64>::from_f64 = 'x as i64' — Rust truncation toward zero — turning gte 2.5 into Included(2) and lt 7.5 into Excluded(7) index key bounds, so the BTree numeric index returns id 2 and skips id 7. UNINDEXED path (field num2): condition_checker.rs converts payload to f64 and compares exactly in types.rs check_range, yielding correct 3..9 / 0..7. The truncating cast carries no comment or by-design marker, and the two paths disagree on identical data and identical query — an unintended type-narrowing in the index path, not documented semantics.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "validation_absent means: the required exact-bound comparison is absent from the integer-index evaluation path — the bound is lossily narrowed (floor-cast) before the index lookup, so out-of-range points pass. All three index-path entry points (filter/stream_range/range_cardinality) share the defect; the full-scan checker shows the intended semantics. Source mechanism reproduces the exact observed asymmetry (num wrong, num2 correct) and the exact floor direction (gte2.5 == gte2.0, lt7.5 == lt7).",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "cache/eventual-consistency delay",
+        "request-typo/encoding"
+      ],
+      "surviving": null
+    }
+  },
+  "notes": {
+    "mundane_detail": "env/concurrency excluded: deterministic oracle, wait=true upsert + wait=true index creation + sleep 3, controls pass on the same collection in the same run. Cache delay excluded: wrong answers are stable and directional (floor), not stale. Request typo excluded: gt2.5 and gte2.0 on the same field return textbook-correct sets, proving request encoding and data are correct. By-design defense excluded at source level: truncating cast is uncommented/unmarked, and the unindexed path implements exact f64 comparison — identical query on identical data diverges by path, which documented semantics cannot justify (doc: gte = 'greater than or equal', applicable to integer payloads).",
+    "reproducibility_detail": "Single script for this exact phenomenon (fractional bounds on integer-indexed field); sibling vein_range_filter_points_count_1 tests a different range defect (approximate count drops one of two same-direction bounds). Within the script the wrong answer is consistent across two endpoints (scroll + count exact) and 4 filter variants, and the log is the summary output only — the script prints scroll id lists, not raw REQ/RESP bodies; raw HTTP bodies were not captured in this log.",
+    "defect_type_detail": "meta.json declares expected_defect_type Type1; verdict line carries no explicit type tag. Behavior is HTTP 200 + success body whose content violates the documented filter semantics (out-of-range ids returned) — IllegalSuccess family. Final classification is the auditor's call.",
+    "clone": "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.3.0/.qdrant-src-1180 (git describe: v1.18.0, exact target version)"
+  }
+}

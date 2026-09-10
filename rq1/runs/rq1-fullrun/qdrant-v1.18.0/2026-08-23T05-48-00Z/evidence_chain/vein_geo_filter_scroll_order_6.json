@@ -1,0 +1,121 @@
+{
+  "defect_id": "vein_geo_filter_scroll_order_6",
+  "endpoint": "POST /collections/{collection_name}/points/count + POST /collections/{collection_name}/points/scroll (filter: geo_bounding_box / geo_polygon, geo payload index present)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "endpoint_registry 查表 PASS: 'points+count POST / Count points which satisfy the given filter'（source_url api.qdrant.tech/v-1-18-x/.../count-points, doc_version 1.18.x）；round2 复核 raw_knowledge.md（实际位于 results/qdrant/v1.18.0/raw_knowledge.md，round1 误记为 SESSION_DIR 同级）L1013 'geo ({lon, lat} doubles)' 与 L1018 'GeoBoundingBox {top_left:{lon,lat}, bottom_right:{lon,lat}}; GeoPolygon {exterior:{points:[GeoPoint]}, interiors?}' 原文核对一致（DOC payload/filtering 节）；文档未给出 lat 数值域断言（无 [-90,90] 原话），lat=90 合法性由源码 GeoPoint::validate 闭区间佐证；api.qdrant.tech 直连 domain_blocked（不计 FAIL）。scroll 端点同文档树（points/scroll POST），round2 已实际执行验证。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "bbox top lat=90.0: 200 count=0（主违规观测：indexed 路径，集合 vein_r2c6，geo payload index 已建）",
+      "secondary_observations": [
+        "bbox top lat=89.9999 (control): 200 count=10",
+        "polygon pole vertex lat=90.0: 200 count=0",
+        "polygon pole vertex 89.9999 (control): 200 count=40",
+        "[round2 工单① unindexed 对照，output_rework2_vein_geo_filter_scroll_order_6.log] '[vein_r2c6_unidx] payload_schema = {}'（服务端状态证实无 geo index）",
+        "[round2 ①] 'unindexed count box_pole: 200 count=10'（lat=90 无索引路径返回正确计数！）",
+        "[round2 ①] 'unindexed count poly_pole: 200 count=40'（正确计数；box_ctl/poly_ctl 亦为 10/40，两路径对照完全一致）",
+        "[round2 ② scroll 地面真值] 'unindexed scroll box_pole: 200 points=10' / 'unindexed scroll poly_pole: 200 points=40'（scroll+filter 全扫路径证实真值 10/40）",
+        "[round2 ②] 'indexed scroll box_pole: 200 points=0' / 'indexed scroll poly_pole: 200 points=0'（indexed scroll 同样归零——缺陷非 count API 专属，filter 索引路径两 API 通杀）",
+        "[round2 ③ 复现] '[vein_r2c6_idx2] payload_schema = {\"loc\": {\"data_type\": \"geo\", \"points\": 50}}' + 'indexed count box_pole: 200 count=0' / 'indexed count poly_pole: 200 count=0'（独立集合重建后原模式复现）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "全部 16 组请求（8 count + 8 scroll，indexed/unindexed × pole/ctl）均 HTTP 200 正常业务响应；缺陷形态是正确性而非错误码语义：indexed 路径合法 lat=90 查询静默假阴性（count 与 scroll 均 0），unindexed 同库同数据同 filter 返回正确计数 10/40。工单①分支裁决：unindexed 正确 → 缺陷为 geo payload index 路径专属，根因保持在 geohash 位折叠（不需上移 check_point 语义层）。"
+      },
+      "reproducibility": "多脚本稳定触发（原 vein 脚本 vein_r2c6 + rework2 脚本独立集合 vein_r2c6_idx2 重建后同模式复现 count=0；同 run 内 ctl 组恒 10/40 佐证非间歇）",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_geo_filter_scroll_order_6",
+        "rework2_vein_geo_filter_scroll_order_6"
+      ],
+      "execution_artifacts": {
+        "round1_script": "vein_scripts/vein_geo_filter_scroll_order_6.py",
+        "round1_log": "output_vein_geo_filter_scroll_order_6.log",
+        "round2_script": "vein_scripts/rework2_vein_geo_filter_scroll_order_6.py",
+        "round2_log": "output_rework2_vein_geo_filter_scroll_order_6.log"
+      },
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "NONE — geo filter lat 数值域未结构化入契约（结构性缺失，工单明示勿再向契约要锚点）",
+      "assertion_text_quoted": "契约层：无（structured_contract.json 全量检索 type/range/state 无 lat 域约束；最近 qdrant_type_index_create_001 'field_schema type IN {...geo...}' 仅锚 payload 类型）。规范锚点为文档+源码双补位：\n[doc/raw_knowledge.md L1018] 'GeoBoundingBox {top_left:{lon,lat}, bottom_right:{lon,lat}}; GeoRadius {center:{lon,lat}, radius: meters}; GeoPolygon {exterior:{points:[GeoPoint]}, interiors?}'（DOC filtering，source_url https://qdrant.tech/documentation/concepts/filtering/）\n[doc/raw_knowledge.md L1013] 'geo ({lon, lat} doubles)'（DOC payload）——文档将 lat 定义为普通 double，未声明排除 ±90 端点。\n[source lib/segment/src/types.rs:1919-1930] GeoPoint::validate 闭区间 (min_lat..=max_lat).contains(&lat)，min_lat=-90.0, max_lat=90.0（round2 已重新 Read 核对原文）——lat=90.0 通过校验、输入合法。",
+      "api_violates_assertion": false,
+      "evidence_source": "doc+source",
+      "note": "violates=False 判定理由（round2 维持）：锚点为 raw_knowledge geo 结构条目（doc 层，无 must/should 断言词）+ GeoPoint::validate 闭区间语义（source 层）。观测（indexed 路径 lat=90 → count/scroll 均 0，unindexed 路径同请求返回正确 10/40）与两锚点一致表明：输入在文档与源码双重接受域内而 indexed 实现路径结果错误——实现正确性缺陷（Type2 语义类），非文档断言违反。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (无对应 constraint — geo lat 域未入契约；锚点补位= raw_knowledge.md L1018 filtering 节 GeoBoundingBox/GeoPolygon 结构 + L1013 geo {lon,lat} doubles)",
+        "doc: raw_knowledge.md L1018/L1013（round2 重新核对原文，文件实际位于 results/qdrant/v1.18.0/raw_knowledge.md）；api.qdrant.tech 直连 domain_blocked；文档定义 lat 为 double 且未排除 ±90",
+        "script: vein_scripts/vein_geo_filter_scroll_order_6.py c1-c4（indexed）+ vein_scripts/rework2_vein_geo_filter_scroll_order_6.py（unindexed 对照 vein_r2c6_unidx + indexed 复现 vein_r2c6_idx2 + scroll 地面真值，两集合数据分布相同：50 pts lon 10-14/lat 40-44）",
+        "log: indexed 'bbox top lat=90.0: 200 count=0'/'polygon pole vertex lat=90.0: 200 count=0' vs ctl 10/40；round2 unindexed 'count box_pole: 200 count=10'/'count poly_pole: 200 count=40'，unindexed scroll 真值 10/40，indexed scroll 0 → VERDICT: DEFECT_FOUND（indexed 路径专属）",
+        "source(两分支闭环): [indexed 分支] GeoMapIndex::filter (geo_index/mod.rs:544-583，round2 重核) → rectangle_hashes/polygon_hashes → GeohashBoundingBox::from → encode_max_precision → geohash 0.13.1 encode 于 lat=90 位折叠 lat32=0（Cargo.lock:2887-2889 锁定版本，数值复算：lat=90/-90 撞同一退化 hash '80bh2n0p0581'）→ 候选网格不覆盖数据点 → iterator 空 → count/scroll 均 0（check_point 只做精筛、网格空则无从命中）",
+        "source(unindexed 分支，round2 新增闭环): query_optimization/condition_converter.rs:310-333 get_geo_bounding_box_checkers 对无 GeoIndex 字段返回 None → 回退 payload_storage/condition_checker.rs:245-296 ValueChecker for GeoBoundingBox/GeoPolygon 直接 check_point 逐点判值（不经过 geohash）→ types.rs:2880-2891 latitude_check 'bottom_right.lat < point.lat && point.lat < top_left.lat' 对 top=90/数据 40-44 判真 → unindexed 返回正确 10/40——与执行观测互洽，证实缺陷不在语义层"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "contract 环仍为结构性缺失（constraint_id 空、structured_contract.json 无 geo lat 域约束——工单明示属结构性缺失勿再索锚，以 doc geo 结构 + GeoPoint::validate 闭区间语义补位）。round1 drift_point（'unindexed scan 路径不受影响'仅出自脚本注释、无对照执行记录）已于 round2 以双集合执行对照 + 源码两分支闭环消除：unindexed 路径实测返回正确计数且源码证实其绕过 geohash 网格。其余四环（doc/script/log/source 双分支）互洽，工单①分支裁决落定：缺陷为 indexed geo-hash 路径专属，根因无需上移 check_point。链已自洽——按工单建议提请主进程人工复核（极点边界 bug 信号强）。",
+      "evidence_source": "doc+behavior+source"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "check_point（lib/segment/src 全树 → 命中 condition_checker.rs:253/270/289 + types.rs:2880/2916/2933）",
+        "geo_bounding_box（lib/segment/src 全树 → 命中 condition_converter.rs:224/310 + condition_checker.rs:70-135 + geo_hash.rs 等）",
+        "geo_index|GeoMapIndex（payload_index 路径探测 → 实际位于 index/field_index/geo_index/mod.rs）",
+        "LAT_RANGE / sphere_lat（geo_hash.rs:57-59, 240-250，round2 重核原文）",
+        "GeoPoint validate（types.rs:1919-1930，round2 重核原文）",
+        "[round1] rectangle_hashes / sphere_neighbor / encode_max_precision（geo_hash.rs）；geohash 0.13.1 src/core.rs:121-150 encode 位折叠数值复算（lat=90/-90 → lat32=0 同 hash）"
+      ],
+      "files_examined": [
+        ".qdrant-src-1180/lib/segment/src/index/field_index/geo_index/mod.rs:544-583（round2 重核：filter 三分支均先 rectangle_hashes/circle_hashes/polygon_hashes 取候选网格再 check_point 精筛）",
+        ".qdrant-src-1180/lib/segment/src/index/query_optimization/condition_converter.rs:300-333（round2 新增：get_geo_bounding_box_checkers 仅 FieldIndex::GeoIndex 给 checker；geo check_point 只做精筛不做候选）",
+        ".qdrant-src-1180/lib/segment/src/payload_storage/condition_checker.rs:245-296（round2 新增：ValueChecker for GeoBoundingBox/GeoRadius/GeoPolygon → check_point 直判 payload 值，unindexed 全扫路径）",
+        ".qdrant-src-1180/lib/segment/src/types.rs:1919-1930（round2 重核 GeoPoint::validate 闭区间）+ 2879-2892（round2 重核 GeoBoundingBox::check_point）",
+        ".qdrant-src-1180/lib/segment/src/index/field_index/geo_hash.rs:50-69, 232-261（round2 重核 LAT_RANGE 开区间/sphere_neighbor/sphere_lat 无 ==90 分支）",
+        "[round1] geo_hash.rs 全景（GeohashBoundingBox::from 343-358 / geohash_regions 309-338 / rectangle_hashes 447 / polygon_hashes 464）、geo_index/immutable_geo_index.rs、Cargo.lock:2887-2889（geohash 0.13.1）、geohash-0.13.1/src/core.rs:121-150（raw.githubusercontent 拉取）"
+      ],
+      "source_excerpt": "// ==== 双分支机制（round2 补 unindexed 环）====\n\n// [indexed 分支] lib/segment/src/index/field_index/geo_index/mod.rs:544-558\n//   fn filter(&self, condition: &FieldCondition, ...) {\n//       if let Some(geo_bounding_box) = &condition.geo_bounding_box {\n//           let geo_hashes = rectangle_hashes(geo_bounding_box, GEO_QUERY_MAX_REGION)?;   // ← 候选完全由 geohash 网格决定\n//           return Ok(Some(Box::new(self.iterator(geo_hashes)?.filter(               // ← 网格空 → iterator 空 → 0 点\n//               move |&point| { self.check_values_any(point, ..., |gp| geo_condition_copy.check_point(gp)) })))); // check_point 仅精筛，无法挽回空网格\n\n// [unindexed 分支] lib/segment/src/payload_storage/condition_checker.rs:245-260\n//   impl ValueChecker for GeoBoundingBox {\n//       fn check_match(&self, payload: &Value) -> bool {\n//           match payload {\n//               Value::Object(obj) => {\n//                   let lon_op = obj.get(\"lon\").and_then(|x| x.as_f64());\n//                   let lat_op = obj.get(\"lat\").and_then(|x| x.as_f64());\n//                   if let (Some(lon), Some(lat)) = (lon_op, lat_op) {\n//                       return self.check_point(&GeoPoint::new_unchecked(lon, lat));   // ← 直接语义判值，无 geohash 参与\n//                   }\n//                   false }  _ => false } } }\n//   （GeoPolygon 同构，condition_checker.rs:279-296 → PolygonWrapper::check_point）\n\n// [共同语义层] lib/segment/src/types.rs:2879-2891\n//   impl GeoBoundingBox {\n//       pub fn check_point(&self, point: &GeoPoint) -> bool {\n//           let longitude_check = ... self.top_left.lon < point.lon && point.lon < self.bottom_right.lon ...;\n//           let latitude_check = self.bottom_right.lat < point.lat && point.lat < self.top_left.lat;  // top=90, 数据 lat 40-44 → 判真\n//           longitude_check && latitude_check } }\n\n// [输入合法性] lib/segment/src/types.rs:1919-1930\n//   impl GeoPoint { pub fn validate(lon: f64, lat: f64) -> Result<(), GeoPointValidationError> {\n//       let max_lat = 90f64; let min_lat = -90f64;\n//       if !(min_lon..=max_lon).contains(&lon) || !(min_lat..=max_lat).contains(&lat) {   // 闭区间：lat=90.0 合法\n//           return Err(...); }  Ok(()) } }\n\n// [根因，round1 已定位 round2 维持] geo_hash.rs:57-58 'const LAT_RANGE: Range<f64> = -90.0..90.0;'（开区间）\n//   + geo_hash.rs:240-250 sphere_lat 仅 'res_lat > LAT_RANGE.end'（90.0>90.0==false，==90 不修正）\n//   + GeohashBoundingBox::from(geo_hash.rs:343-358) north_west = encode_max_precision(min_lon, max_lat=90.0)\n//   → geohash 0.13.1 encode（Cargo.lock:2887-2889 锁定）：闭区间校验放行 lat=90 后，归一化\n//     lat*0.005555555555555556+1.5 == 2.0 越出位提取假定域 [1,2)，to_bits()>>20 as u32 折叠为 0\n//   （数值复算：lat=90 与 lat=-90 同产退化 hash '80bh2n0p0581'；lat=89.9999 lat32=4294964909 正常）\n//   → geohash_regions(309-338) 从退化原点 sphere_neighbor 外推，候选网格不覆盖数据点(lat 40-44)\n//   → indexed filter 候选空 → count=0 且 scroll=0；unindexed 分支不经过该网格 → 10/40 正确（与执行观测一致）",
+      "call_chain_traced": "双路径：(A indexed，缺陷路径) POST /points/count|scroll (filter.geo_bounding_box|geo_polygon) → segment filter 求值 → FieldIndex::GeoIndex 存在 → GeoMapIndex::filter (geo_index/mod.rs:544-583) → rectangle_hashes/polygon_hashes (geo_hash.rs:447/464) → GeohashBoundingBox::from (343-358) north_west=encode_max_precision(min_lon, max_lat=90.0) → geohash 0.13.1 encode 归一化位折叠 lat32=0（core.rs:121-150）→ geohash_regions (309-338) 网格外推错位（LAT_RANGE 开区间 + sphere_lat 无 ==90 分支）→ 候选网格对数据点(lat 40-44)覆盖空 → iterator 0 点 → check_point 精筛无从命中 → count=0 / scroll points=0（两 API 同源，round2 执行证实）。(B unindexed，正确路径) 同请求但字段无 payload index → condition_converter get_geo_bounding_box_checkers 对无索引字段回退 payload_storage condition_checker (condition_checker.rs:245-296) ValueChecker 直接 check_point（types.rs:2880-2891 语义判值，无 geohash）→ 返回正确 10/40（round2 执行证实）。三层语义不一致汇总：validate 闭区间 [-90,90] 接受 / LAT_RANGE 开区间不修正 ==90 / geohash 位提取假定 [1,2) 半开区间——极点端点在三层间无一处被处理。",
+      "verification_outcome": "validation_present",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "输入校验存在且显式接受 lat=90（validate 闭区间），非 validation_absent。工单①裁决：unindexed 对照实测返回正确计数（box_pole=10/poly_pole=40）→ 缺陷为 indexed geo-hash 覆盖路径专属，根因维持 geohash encode 位折叠，无需上移至 GeoBoundingBox::check_point（该函数 round2 已重读：语义对 top=90/数据 40-44 判真，正确）。工单②：unindexed scroll 真值 10/40 确认地面真值；indexed scroll 同样 0 → 缺陷影响 scroll API，非 count 专属。未发现任何标注极点查询为 by-design 不支持的注释或测试。round1 drift_point（unindexed 说法无执行记录）已消除。极点边界 bug 信号强，建议主进程人工复核。"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env（对照组同库同请求成功返回 10/40；round2 同一容器独立重建集合复现同模式，排除容器/连通性）",
+        "concurrency（单线程串行请求）",
+        "cache_delay（round1: index 建立 wait=true + sleep 8s 且 ctl 组命中证明索引生效；round2: GET /collections 证实 payload_schema={loc:geo,points:50}）",
+        "request_typo（pole/control 请求体仅 lat 数值一个字段差异，JSON 结构相同；同一 filter 对象分别发往两集合）",
+        "index_absence_confounded（round2 以服务端 payload_schema 状态双向证实：unidx={} / idx2={loc:geo}，对照变量唯一即索引存在性）",
+        "data_distribution（两集合同 50 点同分布；unindexed 全扫路径 count 与 scroll 交叉验证一致 10/40，真值确立）"
+      ],
+      "surviving": null
+    }
+  },
+  "rework": {
+    "rework_order_type": "EVIDENCE_GAP",
+    "rework_round": 2,
+    "claim": "lat=90合法geo查询静默count=0(bbox 10/50,polygon 40/50)",
+    "drift_point_disposition": "已消除（执行级）：工单①unindexed 对照实测正确计数（10/40）→ 缺陷裁定为 indexed geo-hash 路径专属，与 geohash 位折叠根因互洽，根因未上移 check_point；工单②scroll 对照确立地面真值（unindexed scroll 10/40）并证实 indexed scroll 同样归零（缺陷非 count API 专属）；工单③结果已写入 secondary_observations 并更新 chain_trace/source_grounding（双分支源码闭环）。",
+    "additional_evidence": [
+      "execution: vein_scripts/rework2_vein_geo_filter_scroll_order_6.py + output_rework2_vein_geo_filter_scroll_order_6.log（16 组请求：2 集合 × {count,scroll} × {box_pole,box_ctl,poly_pole,poly_ctl}，含 payload_schema 服务端状态双向验证）",
+      "source: condition_checker.rs:245-296（unindexed ValueChecker → check_point 直判，无 geohash）",
+      "source: condition_converter.rs:310-333（checker 分发；GeoIndex 候选仍由 geohash 网格决定）",
+      "source: geo_index/mod.rs:544-583 + types.rs:2879-2892 + geo_hash.rs:50-69/232-261 + types.rs:1919-1930（round2 重核 round1 全部引用行）"
+    ],
+    "chain_now_self_consistent": true,
+    "human_review_recommended": true,
+    "rework_built_at": "2026-08-23T13:45:44Z"
+  }
+}

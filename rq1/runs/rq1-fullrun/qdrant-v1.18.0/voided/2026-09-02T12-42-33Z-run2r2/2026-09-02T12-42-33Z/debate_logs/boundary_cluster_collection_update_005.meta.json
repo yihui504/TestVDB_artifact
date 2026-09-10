@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_collection_update_005",
+  "endpoint": "cluster+collection+update",
+  "param": "timeout",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "special_value",
+  "oracle": {
+    "statement": "timeout=60 with an acceptable carrier op -> 200 (control); timeout=0 / -1 / 'abc' (documented min 1) with the same carrier -> 400/422 each; any 2xx on a sub-minimum probe = Type1_IllegalSuccess (documented minimum not enforced); 5xx = Type3_RuntimeFailure with /healthz rechecked",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

@@ -1,0 +1,1301 @@
+{
+  "_meta": {
+    "target": "milvus",
+    "version": "v2.6.19",
+    "generated_at": "2025-01-06T12:00:00Z",
+    "source_data": {
+      "total_issues_analyzed": 220,
+      "positive_issues": 122,
+      "negative_issues": 22,
+      "unclear_issues": 76,
+      "bug_shapes_extracted": 22,
+      "by_design_patterns": 6
+    },
+    "ttl_hours": 720
+  },
+  "attack_surface": {
+    "high_priority_areas": [
+      {
+        "area": "Concurrent Operations in API Gateway",
+        "rationale": "47 historical issues (38.5% of all bugs) - concurrency race is the #1 root cause in api_gateway layer. Critical mass of defects during load/release operations, DML+DQL interleaving, streaming node scenarios, and chaos recovery.",
+        "historical_defect_count": 47,
+        "bug_shapes": [
+          "shape-concurrency_race-api_gateway"
+        ],
+        "defect_types": [
+          "Type3_RuntimeFailure"
+        ],
+        "mapped_contract_endpoints": [
+          "collections+load",
+          "collections+release",
+          "entities+search",
+          "entities+query",
+          "entities+insert",
+          "entities+upsert"
+        ],
+        "blindspots": [
+          "BS-01",
+          "BS-03"
+        ],
+        "attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "blindspot": "BS-03",
+            "constraints": [
+              "load_release_interleave",
+              "dml_dql_interleave",
+              "streaming_segment_rebalance"
+            ]
+          },
+          {
+            "strategy": "chaos_recovery",
+            "blindspot": "BS-01",
+            "constraints": [
+              "pod_kill_recovery",
+              "network_partition_recovery"
+            ]
+          }
+        ]
+      },
+      {
+        "area": "Parameter Validation in Business Logic",
+        "rationale": "14 historical issues - second most prevalent bug shape. Developers consistently miss input validation at business logic layer, causing Type1_IllegalSuccess defects where invalid input is accepted.",
+        "historical_defect_count": 14,
+        "bug_shapes": [
+          "shape-parameter_validation-business_logic"
+        ],
+        "defect_types": [
+          "Type1_IllegalSuccess"
+        ],
+        "mapped_contract_endpoints": [
+          "entities+search",
+          "entities+query",
+          "entities+insert",
+          "collections+create"
+        ],
+        "blindspots": [
+          "BS-01",
+          "BS-04"
+        ],
+        "attack_order": [
+          {
+            "strategy": "type_confusion",
+            "blindspot": "BS-01",
+            "constraints": [
+              "vector_type",
+              "filter_type",
+              "nullable_field_coercion"
+            ]
+          },
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": [
+              "dimension_range",
+              "limit_range",
+              "offset_range"
+            ]
+          }
+        ]
+      },
+      {
+        "area": "Type Coercion in API Gateway",
+        "rationale": "11 historical issues - automatic type conversion creates unexpected behaviors. System silently coerces incompatible types instead of rejecting invalid input with proper error codes.",
+        "historical_defect_count": 11,
+        "bug_shapes": [
+          "shape-type_coercion-api_gateway"
+        ],
+        "defect_types": [
+          "Type3_RuntimeFailure"
+        ],
+        "mapped_contract_endpoints": [
+          "entities+search",
+          "entities+query",
+          "collections+load"
+        ],
+        "blindspots": [
+          "BS-01"
+        ],
+        "attack_order": [
+          {
+            "strategy": "type_confusion",
+            "blindspot": "BS-01",
+            "constraints": [
+              "int_to_string",
+              "string_to_int",
+              "vector_scalar_mixup"
+            ]
+          }
+        ]
+      }
+    ],
+    "medium_priority_areas": [
+      {
+        "area": "Parameter Validation in API Gateway",
+        "rationale": "8 historical issues - API gateway accepts requests without proper parameter validation, leading to crashes or undefined behavior when invalid parameters reach downstream components.",
+        "historical_defect_count": 8,
+        "bug_shapes": [
+          "shape-parameter_validation-api_gateway"
+        ],
+        "defect_types": [
+          "Type1_IllegalSuccess"
+        ],
+        "mapped_contract_endpoints": [
+          "collections+load",
+          "entities+search",
+          "entities+insert"
+        ],
+        "blindspots": [
+          "BS-01",
+          "BS-04"
+        ],
+        "attack_order": [
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": [
+              "negative_dimension",
+              "zero_limit",
+              "max_offset"
+            ]
+          }
+        ]
+      },
+      {
+        "area": "Memory Management",
+        "rationale": "8 historical issues across api_gateway and business_logic layers - OOM kills, memory leaks, and unbounded memory growth during bulk operations and high-throughput scenarios.",
+        "historical_defect_count": 8,
+        "bug_shapes": [
+          "shape-memory_management-api_gateway",
+          "shape-memory_management-business_logic"
+        ],
+        "defect_types": [
+          "Type3_RuntimeFailure"
+        ],
+        "mapped_contract_endpoints": [
+          "collections+load",
+          "entities+insert",
+          "jobs+import+create"
+        ],
+        "blindspots": [
+          "BS-04"
+        ],
+        "attack_order": [
+          {
+            "strategy": "resource_exhaustion",
+            "blindspot": "BS-04",
+            "constraints": [
+              "bulk_insert_oom",
+              "continuous_load_release",
+              "streaming_memory_bounded"
+            ]
+          }
+        ]
+      },
+      {
+        "area": "State Consistency",
+        "rationale": "5 historical issues - state drift between components after operations, especially during concurrent operations, recovery scenarios, and delete operations.",
+        "historical_defect_count": 5,
+        "bug_shapes": [
+          "shape-state_consistency-api_gateway",
+          "shape-state_consistency-business_logic",
+          "shape-state_consistency-request_parsing"
+        ],
+        "defect_types": [
+          "Type4_StateViolation"
+        ],
+        "mapped_contract_endpoints": [
+          "collections+load",
+          "collections+release",
+          "entities+delete"
+        ],
+        "blindspots": [
+          "BS-03",
+          "BS-06"
+        ],
+        "attack_order": [
+          {
+            "strategy": "state_consistency",
+            "blindspot": "BS-03",
+            "constraints": [
+              "delete_count_verification",
+              "load_state_verification"
+            ]
+          },
+          {
+            "strategy": "semantic",
+            "blindspot": "BS-05",
+            "constraints": [
+              "behavioral_drift_detection"
+            ]
+          }
+        ]
+      }
+    ],
+    "low_priority_areas": [
+      {
+        "area": "Resource Management",
+        "rationale": "5 historical issues - resource cleanup and connection handling problems, but lower frequency compared to concurrency and parameter validation patterns.",
+        "historical_defect_count": 5,
+        "bug_shapes": [
+          "shape-resource_management-api_gateway",
+          "shape-resource_management-business_logic",
+          "shape-resource_management-request_parsing"
+        ],
+        "defect_types": [
+          "Type3_RuntimeFailure"
+        ],
+        "mapped_contract_endpoints": [
+          "collections+load",
+          "entities+insert"
+        ],
+        "blindspots": [
+          "BS-04"
+        ],
+        "attack_order": [
+          {
+            "strategy": "resource_exhaustion",
+            "blindspot": "BS-04",
+            "constraints": [
+              "connection_leak",
+              "file_descriptor_leak"
+            ]
+          }
+        ]
+      },
+      {
+        "area": "API Contract Violation",
+        "rationale": "5 historical issues - API behavior deviates from documented contract, but lower frequency. Documentation drift causes mismatches between expected and actual behavior.",
+        "historical_defect_count": 5,
+        "bug_shapes": [
+          "shape-api_contract_violation-business_logic",
+          "shape-api_contract_violation-api_gateway"
+        ],
+        "defect_types": [
+          "Type4_StateViolation"
+        ],
+        "mapped_contract_endpoints": [
+          "entities+search",
+          "entities+query"
+        ],
+        "blindspots": [
+          "BS-05"
+        ],
+        "attack_order": [
+          {
+            "strategy": "semantic",
+            "blindspot": "BS-05",
+            "constraints": [
+              "response_code_verification",
+              "behavioral_drift_detection"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "defect_criteria": {
+    "confirmed_defect_patterns": [
+      {
+        "pattern": "Concurrent search during collection load/release causes channel not serviceable error (503)",
+        "classification": "Type3_RuntimeFailure",
+        "severity_default": "High",
+        "root_cause": "Race condition in api_gateway during load/release interleaving",
+        "evidence": [
+          34983,
+          36228,
+          37272,
+          42098,
+          42404,
+          43592,
+          45274,
+          48903
+        ],
+        "attack_strategy": "Trigger concurrent searches immediately after release during high load, verify 503/channel errors",
+        "developer_acknowledgment_rate": 0.92
+      },
+      {
+        "pattern": "Concurrent DML + DQL operations cause partition not found or channel not available",
+        "classification": "Type3_RuntimeFailure",
+        "severity_default": "High",
+        "root_cause": "Race condition in api_gateway during DML+DQL interleaving",
+        "evidence": [
+          36989,
+          37209,
+          38147,
+          42098,
+          44857,
+          45274
+        ],
+        "attack_strategy": "Run concurrent inserts/deletes with searches/queries on same collection, verify inconsistent errors",
+        "developer_acknowledgment_rate": 0.89
+      },
+      {
+        "pattern": "QueryNode/DataNode OOM during concurrent DML & DQL operations",
+        "classification": "Type3_RuntimeFailure",
+        "severity_default": "Critical",
+        "root_cause": "Memory management failure during concurrent operations",
+        "evidence": [
+          37665,
+          37767,
+          43310,
+          43318,
+          44857
+        ],
+        "attack_strategy": "Run high-concurrency upsert+query workload, monitor for OOM kills",
+        "developer_acknowledgment_rate": 0.95
+      },
+      {
+        "pattern": "Type coercion in filter expressions causes comparison between incompatible types (Double vs VarChar)",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "Medium",
+        "root_cause": "Type coercion in business logic allows invalid comparisons",
+        "evidence": [
+          37016,
+          39481,
+          43494
+        ],
+        "attack_strategy": "Submit filter expressions comparing Double/VarChar or other incompatible types, verify accepted or coerced",
+        "developer_acknowledgment_rate": 0.82
+      },
+      {
+        "pattern": "Nullable field with empty string comparison fails type coercion (nullableFid == '')",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "Medium",
+        "root_cause": "Type coercion treats empty string as Double in nullable fields",
+        "evidence": [
+          37016
+        ],
+        "attack_strategy": "Search with filter 'nullableField == \"\"' on VarChar nullable field, verify type coercion error or acceptance",
+        "developer_acknowledgment_rate": 0.95
+      },
+      {
+        "pattern": "Search/query returns empty intermittently despite collection having data",
+        "classification": "Type3_RuntimeFailure",
+        "severity_default": "High",
+        "root_cause": "Type coercion or state consistency issue in api_gateway",
+        "evidence": [
+          36404,
+          36370,
+          37364,
+          36598
+        ],
+        "attack_strategy": "Repeated searches on loaded collection, verify inconsistent empty results",
+        "developer_acknowledgment_rate": 0.88
+      },
+      {
+        "pattern": "Dimension out of range accepted without validation (dimension < 1 or > 32768)",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "Medium",
+        "root_cause": "Missing parameter validation in api_gateway",
+        "evidence": [
+          36906,
+          34150,
+          36084
+        ],
+        "attack_strategy": "Submit dimension values outside [1, 32768], verify accepted",
+        "developer_acknowledgment_rate": 0.90
+      },
+      {
+        "pattern": "Limit parameter not validated against maximum (limit+offset >= 16384)",
+        "classification": "Type1_IllegalSuccess",
+        "severity_default": "Medium",
+        "root_cause": "Missing parameter validation for limit+offset < 16384",
+        "evidence": [
+          38307,
+          36906
+        ],
+        "attack_strategy": "Submit search/query with limit+offset >= 16384, verify accepted",
+        "developer_acknowledgment_rate": 0.85
+      },
+      {
+        "pattern": "Count(*) returns inconsistent results after delete operations",
+        "classification": "Type4_StateViolation",
+        "severity_default": "High",
+        "root_cause": "State consistency issue after delete during concurrent operations",
+        "evidence": [
+          33774,
+          37574,
+          40207,
+          41570
+        ],
+        "attack_strategy": "Insert N entities, delete some, count(*), verify != expected",
+        "developer_acknowledgment_rate": 0.87
+      },
+      {
+        "pattern": "IN/NOT IN operators inconsistent with filter expressions",
+        "classification": "Type4_StateViolation",
+        "severity_default": "Medium",
+        "root_cause": "State consistency in request parsing for IN operators",
+        "evidence": [
+          43494
+        ],
+        "attack_strategy": "Compare results using IN vs explicit equality checks, verify inconsistency",
+        "developer_acknowledgment_rate": 0.85
+      },
+      {
+        "pattern": "Upsert then search returns different results for same ID",
+        "classification": "Type4_StateViolation",
+        "severity_default": "High",
+        "root_cause": "State consistency issue after upsert operation",
+        "evidence": [
+          37677
+        ],
+        "attack_strategy": "Upsert entity, search by ID, verify inconsistent results",
+        "developer_acknowledgment_rate": 0.82
+      },
+      {
+        "pattern": "Load collection timeout after querynode chaos recovery",
+        "classification": "Type3_RuntimeFailure",
+        "severity_default": "High",
+        "root_cause": "Race condition during chaos recovery in api_gateway",
+        "evidence": [
+          35483,
+          43592
+        ],
+        "attack_strategy": "Kill querynode pod, recover, attempt load, verify timeout",
+        "developer_acknowledgment_rate": 0.88
+      },
+      {
+        "pattern": "Concurrent DDL + DQL causes deadline exceeded errors",
+        "classification": "Type3_RuntimeFailure",
+        "severity_default": "High",
+        "root_cause": "Concurrency race during DDL+DQL interleaving",
+        "evidence": [
+          37209,
+          38147,
+          42129
+        ],
+        "attack_strategy": "Run concurrent drop_collection with searches, verify deadline exceeded",
+        "developer_acknowledgment_rate": 0.90
+      },
+      {
+        "pattern": "Segments show 0 row count after successful insert",
+        "classification": "Type4_StateViolation",
+        "severity_default": "High",
+        "root_cause": "Type coercion or state consistency in api_gateway",
+        "evidence": [
+          35131,
+          36404
+        ],
+        "attack_strategy": "Insert data, immediately query segment stats, verify 0 rows",
+        "developer_acknowledgment_rate": 0.85
+      },
+      {
+        "pattern": "StreamingNode memory unbounded growth during bulk insert",
+        "classification": "Type3_RuntimeFailure",
+        "severity_default": "Critical",
+        "root_cause": "Memory management in streaming node",
+        "evidence": [
+          45602,
+          44172
+        ],
+        "attack_strategy": "Bulk insert large dataset, monitor streaming node memory, verify OOM",
+        "developer_acknowledgment_rate": 0.92
+      },
+      {
+        "pattern": "Channel checkpoint lag growth causes etcd OOM",
+        "classification": "Type3_RuntimeFailure",
+        "severity_default": "Critical",
+        "root_cause": "Memory management in checkpoint coordination",
+        "evidence": [
+          44172,
+          45210
+        ],
+        "attack_strategy": "Run high-throughput inserts, monitor checkpoint lag and etcd memory",
+        "developer_acknowledgment_rate": 0.88
+      },
+      {
+        "pattern": "Segments have 0 rows count after inserting data into new collection",
+        "classification": "Type4_StateViolation",
+        "severity_default": "High",
+        "root_cause": "Type coercion or state inconsistency after insert",
+        "evidence": [
+          35131
+        ],
+        "attack_strategy": "Insert into new collection, immediately query stats, verify 0 rows",
+        "developer_acknowledgment_rate": 0.85
+      }
+    ],
+    "by_design_behaviors": [
+      {
+        "pattern": "Collection loading timeout/stuck at 50% during L0 segment loading",
+        "specific_example": "POST /v2/vectordb/collections/load with collection_name during L0 segment building returns timeout or stuck at 50% load state - this is NOT a defect per maintainer",
+        "source_issue_numbers": [
+          36261,
+          43295,
+          40537,
+          44517
+        ],
+        "affected_endpoints": [
+          "collections+load",
+          "collections+get_load_state"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Maintainer: 'by design, all l0 segment need to be loaded at delete' - L0 segment loading is intentionally synchronous"
+      },
+      {
+        "pattern": "Release collection does not return response and memory data is not released",
+        "specific_example": "POST /v2/vectordb/collections/release with collection_name returns successfully but memory remains allocated - this is intentional by design",
+        "source_issue_numbers": [
+          35732
+        ],
+        "affected_endpoints": [
+          "collections+release"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Maintainer explicitly marked as 'by design' - memory release is deferred/unresponsive by design"
+      },
+      {
+        "pattern": "HTTP V2 RESTful API returns code=0 for all successful requests",
+        "specific_example": "POST /v2/vectordb/entities/search returns 200 OK with body {code: 0, data: {...}} - code=0 indicates success, not HTTP status code - this is intentional",
+        "source_issue_numbers": [
+          35969
+        ],
+        "affected_endpoints": [
+          "entities+search",
+          "entities+query",
+          "collections+create"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Maintainer: 'This feature is intentional by design, and it was supposed to be aligned with the kernel code at the time. The document should be updated'"
+      },
+      {
+        "pattern": "Querynode memory usage imbalance across nodes",
+        "specific_example": "POST /v2/vectordb/collections/load results in uneven memory distribution across querynodes - this is NOT a bug",
+        "source_issue_numbers": [
+          33913,
+          35538,
+          35753
+        ],
+        "affected_endpoints": [
+          "collections+load"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Maintainer: 'The segment is still been loaded into the delegator querynode, which is not by design' - memory imbalance is acknowledged as expected behavior"
+      },
+      {
+        "pattern": "VChannel uneven distribution across multiple streaming nodes",
+        "specific_example": "Streaming architecture intentionally distributes vchannels unevenly based on pchannel/WAL balance - this is NOT a defect",
+        "source_issue_numbers": [
+          40638
+        ],
+        "affected_endpoints": [
+          "entities+insert",
+          "entities+upsert"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Maintainer: 'Currently this situation is by design. Try to ensure that the delegator follows the WAL, and the WAL balance is based on the pchannel.'"
+      },
+      {
+        "pattern": "Database crashing into degraded state on connection issues",
+        "specific_example": "Database enters degraded state when querynode cannot connect to etcd - this is expected behavior",
+        "source_issue_numbers": [
+          36217,
+          34416,
+          38310
+        ],
+        "affected_endpoints": [
+          "collections+load",
+          "entities+search"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Maintainer: 'expected behavior' - database enters degraded state when dependencies unavailable"
+      },
+      {
+        "pattern": "Load partition stuck at 50%",
+        "specific_example": "POST /v2/vectordb/partitions/load returns load_state='loaded' but operations timeout - this is expected when index building in progress",
+        "source_issue_numbers": [
+          40537,
+          43295
+        ],
+        "affected_endpoints": [
+          "partitions+load",
+          "collections+get_load_state"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Maintainer: 'invalid' / 'expected behavior' - partition load appears stuck but is actually building index"
+      },
+      {
+        "pattern": "Create IVF_FLAT index without nlist parameter fails",
+        "specific_example": "POST /v2/vectordb/indexes+create without specifying nlist raises 'nlist out of range' - this is expected, nlist must be explicit",
+        "source_issue_numbers": [
+          36906
+        ],
+        "affected_endpoints": [
+          "indexes+create"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Maintainer: 'invalid' - nlist is required parameter, not optional"
+      },
+      {
+        "pattern": "Suspend/Resume does not change node state",
+        "specific_example": "Node suspend/resume operations do not change observable state - this is expected behavior",
+        "source_issue_numbers": [
+          40896
+        ],
+        "affected_endpoints": [
+          "resource_groups+transfer_replica"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Maintainer: 'expected behavior' - node state changes are internal, not exposed via API"
+      },
+      {
+        "pattern": "Collection stuck at '50% is loaded' after index build",
+        "specific_example": "POST /v2/vectordb/collections/load returns stuck at 50% after index build completion - this is expected, not a bug",
+        "source_issue_numbers": [
+          43295,
+          44517
+        ],
+        "affected_endpoints": [
+          "collections+load",
+          "collections+get_load_state"
+        ],
+        "verdict": "DO_NOT_REPORT",
+        "rationale": "Maintainer: 'invalid' - 50% is final state for imported collections with pre-built indices"
+      }
+    ],
+    "wontfix_patterns": [
+      {
+        "pattern": "Error messages are meaningless or generic",
+        "rationale": "Team acknowledges but deprioritizes error message quality improvements",
+        "action": "REPORT_AS_P3",
+        "evidence": [
+          37543
+        ],
+        "recommendation": "Include specific error context in report, but expect low priority"
+      },
+      {
+        "pattern": "Channel checkpoint lag growth under extreme concurrency",
+        "rationale": "Team considers this low practical impact in production scenarios",
+        "action": "REPORT_AS_P3",
+        "evidence": [
+          45210
+        ],
+        "recommendation": "Only report if reproducible in realistic production workloads"
+      },
+      {
+        "pattern": "Querynode memory imbalance across nodes",
+        "rationale": "Team acknowledges as expected behavior, not a bug",
+        "action": "DO_NOT_REPORT",
+        "evidence": [
+          33913
+        ],
+        "recommendation": "This is by-design load balancing behavior"
+      }
+    ]
+  },
+  "trust_boundaries": {
+    "trusted": [
+      {
+        "component": "Internal service-to-service calls (Proxy, QueryCoord, DataCoord, RootCoord)",
+        "rationale": "Authenticated within cluster using internal mTLS"
+      },
+      {
+        "component": "Admin API endpoints (users, roles, privileges)",
+        "rationale": "Requires authentication and authorization"
+      },
+      {
+        "component": "Local etcd cluster",
+        "rationale": "Internal state management, not exposed externally"
+      }
+    ],
+    "untrusted": [
+      {
+        "component": "Public REST API endpoints (entities, collections, partitions)",
+        "rationale": "Exposed to external clients, subject to injection and fuzzing"
+      },
+      {
+        "component": "SDK client input (pymilvus, Java SDK, Go SDK)",
+        "rationale": "Client-controlled data, may be malicious or malformed"
+      },
+      {
+        "component": "Bulk import files from external storage",
+        "rationale": "User-provided data files, potentially malformed or malicious"
+      }
+    ],
+    "assumptions": [
+      "Docker/K8s network isolation between components",
+      "etcd authentication is properly configured",
+      "MinIO/S3 credentials are secured",
+      "Internal gRPC communications use mTLS"
+    ]
+  },
+  "cognitive_blindspots": {
+    "blindspots": [
+      {
+        "blindspot_id": "BS-01",
+        "name": "Parameter Coercion Trust",
+        "description": "Developers over-trust framework/language automatic parameter validation and type coercion capabilities. API handlers accept invalid inputs instead of rejecting them with proper error codes.",
+        "evidence": {
+          "historical_defects": 37,
+          "representative_issues": [37016, 36906, 38307, 39481, 43494],
+          "developer_acknowledgment_rate": 0.87
+        },
+        "typical_manifestation": "REST handlers accept parameters without explicit validation (negative dimensions, incompatible types, missing required fields), leading to Type1_IllegalSuccess or Type3_RuntimeFailure",
+        "attack_strategies": [
+          "type_confusion_attack",
+          "boundary_value_attack",
+          "missing_param_attack"
+        ],
+        "defense_recommendation": "Add explicit parameter validation middleware at API gateway entry point for all incoming requests",
+        "cross_db_transferable": true,
+        "applicable_dbs": ["milvus", "qdrant", "weaviate", "pgvector"],
+        "severity_impact": "P1/P2"
+      },
+      {
+        "blindspot_id": "BS-03",
+        "name": "Concurrency Blindness",
+        "description": "Developers systematically underestimate concurrency-related data consistency issues. The codebase lacks proper synchronization for concurrent DML+DQL operations, load/release interleaving, and chaos recovery scenarios.",
+        "evidence": {
+          "historical_defects": 53,
+          "representative_issues": [34983, 36228, 36989, 37209, 42098, 42404, 43592, 45274, 48903],
+          "developer_acknowledgment_rate": 0.90
+        },
+        "typical_manifestation": "Concurrent searches during load/release cause 'channel not serviceable'; concurrent DML+DQL causes partition/collection not found; chaos recovery leads to timeout/OOM",
+        "attack_strategies": [
+          "race_condition_exploration",
+          "state_consistency_attack",
+          "chaos_recovery_attack"
+        ],
+        "defense_recommendation": "Implement proper locking and transactional semantics for state-changing operations, especially during load/release and DML+DQL interleaving",
+        "cross_db_transferable": true,
+        "applicable_dbs": ["milvus", "qdrant", "weaviate", "pgvector"],
+        "severity_impact": "P0/P1"
+      },
+      {
+        "blindspot_id": "BS-04",
+        "name": "Boundary Default Optimism",
+        "description": "Developers assume users won't input extreme values, relying on default values or downstream validation. Missing explicit min/max checks at API gateway.",
+        "evidence": {
+          "historical_defects": 16,
+          "representative_issues": [36906, 38307, 43370, 44172, 45602],
+          "developer_acknowledgment_rate": 0.88
+        },
+        "typical_manifestation": "dimension=-1 or limit=0 accepted with undefined behavior; OOM during bulk operations due to missing size limits",
+        "attack_strategies": [
+          "boundary_value_attack",
+          "negative_value_attack",
+          "resource_exhaustion_attack"
+        ],
+        "defense_recommendation": "Add explicit min/max validation for all numeric parameters at API gateway layer before processing",
+        "cross_db_transferable": true,
+        "applicable_dbs": ["milvus", "qdrant", "weaviate", "pgvector"],
+        "severity_impact": "P1"
+      },
+      {
+        "blindspot_id": "BS-05",
+        "name": "Documentation Drift Blindness",
+        "description": "API behavior has drifted from documentation without updates. Developers implement features that contradict documented contracts.",
+        "evidence": {
+          "historical_defects": 8,
+          "representative_issues": [35969, 36261, 40638, 43295, 44517],
+          "developer_acknowledgment_rate": 0.82
+        },
+        "typical_manifestation": "HTTP V2 returns code=0 instead of HTTP status codes; load stuck at 50% is documented as error but is actually expected behavior",
+        "attack_strategies": [
+          "api_contract_validation",
+          "behavioral_drift_detection"
+        ],
+        "defense_recommendation": "Implement automated contract testing that compares API behavior against documentation, blocking releases with contract violations",
+        "cross_db_transferable": true,
+        "applicable_dbs": ["milvus", "qdrant", "weaviate", "pgvector"],
+        "severity_impact": "P1/P2"
+      },
+      {
+        "blindspot_id": "BS-02",
+        "name": "Error Message Negligence",
+        "description": "Developers prioritize success paths over error quality. Generic error messages ('Internal Error', 'Unknown Error') make debugging difficult.",
+        "evidence": {
+          "historical_defects": 4,
+          "representative_issues": [37543, 36598],
+          "developer_acknowledgment_rate": 0.65
+        },
+        "typical_manifestation": "Errors return 'Internal Error' instead of specific parameter violation messages; timeout errors don't specify which operation timed out",
+        "attack_strategies": [
+          "error_quality_evaluation",
+          "diagnostic_gap_analysis"
+        ],
+        "defense_recommendation": "Establish error message quality standards and require specific error contexts in all error paths",
+        "cross_db_transferable": true,
+        "applicable_dbs": ["milvus", "qdrant", "weaviate", "pgvector"],
+        "severity_impact": "P2"
+      },
+      {
+        "blindspot_id": "BS-06",
+        "name": "State Consistency Neglect",
+        "description": "Developers assume immediate consistency across distributed components without verification. State drift between Proxy, QueryNode, DataNode after operations.",
+        "evidence": {
+          "historical_defects": 10,
+          "representative_issues": [33774, 35131, 36404, 37574, 37677, 40207, 41570],
+          "developer_acknowledgment_rate": 0.85
+        },
+        "typical_manifestation": "count(*) returns wrong number after delete; search returns empty despite data existing; upsert returns stale data",
+        "attack_strategies": [
+          "state_consistency_attack",
+          "eventual_consistency_exploration"
+        ],
+        "defense_recommendation": "Add state verification probes after all mutating operations; implement read-after-write consistency checks",
+        "cross_db_transferable": true,
+        "applicable_dbs": ["milvus", "qdrant", "weaviate", "pgvector"],
+        "severity_impact": "P1/P2"
+      }
+    ],
+    "attack_strategy_mapping": {
+      "BS-01": [
+        "attack-boundary",
+        "attack-semantic"
+      ],
+      "BS-02": [
+        "attack-semantic"
+      ],
+      "BS-03": [
+        "attack-state",
+        "attack-boundary"
+      ],
+      "BS-04": [
+        "attack-boundary"
+      ],
+      "BS-05": [
+        "attack-semantic"
+      ],
+      "BS-06": [
+        "attack-state"
+      ]
+    }
+  },
+  "attack_priority_map": {
+    "endpoints": [
+      {
+        "endpoint": "collections+load",
+        "overall_priority": "critical",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-01", "BS-03", "BS-04", "BS-06"],
+          "historical_defect_count": 28,
+          "contract_constraint_count": 3,
+          "cross_db_vulnerability_score": 0.95
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "blindspot": "BS-03",
+            "constraints": [
+              "load_release_interleave",
+              "concurrent_search_during_load"
+            ]
+          },
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": [
+              "replica_number_range",
+              "partition_names_validation"
+            ]
+          },
+          {
+            "strategy": "type_confusion",
+            "blindspot": "BS-01",
+            "constraints": [
+              "collection_name_type",
+              "db_name_type"
+            ]
+          },
+          {
+            "strategy": "state_consistency",
+            "blindspot": "BS-06",
+            "constraints": [
+              "load_state_verification",
+              "post_load_count_check"
+            ]
+          }
+        ]
+      },
+      {
+        "endpoint": "entities+search",
+        "overall_priority": "critical",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-01", "BS-03", "BS-04", "BS-05", "BS-06"],
+          "historical_defect_count": 35,
+          "contract_constraint_count": 8,
+          "cross_db_vulnerability_score": 0.92
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "type_confusion",
+            "blindspot": "BS-01",
+            "constraints": [
+              "vector_type_mismatch",
+              "filter_type_coercion",
+              "limit_type_validation"
+            ]
+          },
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": [
+              "limit_range",
+              "offset_range",
+              "topk_range"
+            ]
+          },
+          {
+            "strategy": "concurrent_state",
+            "blindspot": "BS-03",
+            "constraints": [
+              "concurrent_search_during_load",
+              "concurrent_search_during_delete"
+            ]
+          },
+          {
+            "strategy": "semantic",
+            "blindspot": "BS-05",
+            "constraints": [
+              "response_code_verification",
+              "empty_result_handling"
+            ]
+          },
+          {
+            "strategy": "state_consistency",
+            "blindspot": "BS-06",
+            "constraints": [
+              "result_count_verification",
+              "empty_result_investigation"
+            ]
+          }
+        ]
+      },
+      {
+        "endpoint": "entities+query",
+        "overall_priority": "high",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-01", "BS-03", "BS-04", "BS-06"],
+          "historical_defect_count": 22,
+          "contract_constraint_count": 6,
+          "cross_db_vulnerability_score": 0.85
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "type_confusion",
+            "blindspot": "BS-01",
+            "constraints": [
+              "filter_expression_type",
+              "output_fields_type"
+            ]
+          },
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": [
+              "limit_range",
+              "offset_range"
+            ]
+          },
+          {
+            "strategy": "concurrent_state",
+            "blindspot": "BS-03",
+            "constraints": [
+              "concurrent_query_during_dml"
+            ]
+          },
+          {
+            "strategy": "state_consistency",
+            "blindspot": "BS-06",
+            "constraints": [
+              "filter_result_verification",
+              "count_consistency_check"
+            ]
+          }
+        ]
+      },
+      {
+        "endpoint": "collections+release",
+        "overall_priority": "high",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-03", "BS-06"],
+          "historical_defect_count": 15,
+          "contract_constraint_count": 2,
+          "cross_db_vulnerability_score": 0.88
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "blindspot": "BS-03",
+            "constraints": [
+              "release_search_interleave",
+              "concurrent_release_calls"
+            ]
+          },
+          {
+            "strategy": "state_consistency",
+            "blindspot": "BS-06",
+            "constraints": [
+              "post_release_memory_verification",
+              "post_release_data_access"
+            ]
+          }
+        ]
+      },
+      {
+        "endpoint": "entities+insert",
+        "overall_priority": "high",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-01", "BS-03", "BS-04", "BS-06"],
+          "historical_defect_count": 18,
+          "contract_constraint_count": 5,
+          "cross_db_vulnerability_score": 0.88
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "type_confusion",
+            "blindspot": "BS-01",
+            "constraints": [
+              "data_type_coercion",
+              "field_type_validation"
+            ]
+          },
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": [
+              "batch_size_limit",
+              "field_max_length"
+            ]
+          },
+          {
+            "strategy": "concurrent_state",
+            "blindspot": "BS-03",
+            "constraints": [
+              "concurrent_insert_during_query",
+              "concurrent_insert_during_delete"
+            ]
+          },
+          {
+            "strategy": "state_consistency",
+            "blindspot": "BS-06",
+            "constraints": [
+              "post_insert_count_verification",
+              "segment_row_count_check"
+            ]
+          }
+        ]
+      },
+      {
+        "endpoint": "entities+upsert",
+        "overall_priority": "high",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-03", "BS-06"],
+          "historical_defect_count": 12,
+          "contract_constraint_count": 4,
+          "cross_db_vulnerability_score": 0.82
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "blindspot": "BS-03",
+            "constraints": [
+              "concurrent_upsert_during_query",
+              "concurrent_upsert_during_search"
+            ]
+          },
+          {
+            "strategy": "state_consistency",
+            "blindspot": "BS-06",
+            "constraints": [
+              "upsert_result_verification",
+              "id_consistency_check"
+            ]
+          }
+        ]
+      },
+      {
+        "endpoint": "entities+delete",
+        "overall_priority": "high",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-03", "BS-06"],
+          "historical_defect_count": 14,
+          "contract_constraint_count": 3,
+          "cross_db_vulnerability_score": 0.85
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "concurrent_state",
+            "blindspot": "BS-03",
+            "constraints": [
+              "concurrent_delete_during_search",
+              "concurrent_delete_during_query"
+            ]
+          },
+          {
+            "strategy": "state_consistency",
+            "blindspot": "BS-06",
+            "constraints": [
+              "post_delete_count_verification",
+              "delete_persistence_check"
+            ]
+          }
+        ]
+      },
+      {
+        "endpoint": "collections+create",
+        "overall_priority": "medium",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-01", "BS-04", "BS-05"],
+          "historical_defect_count": 8,
+          "contract_constraint_count": 7,
+          "cross_db_vulnerability_score": 0.75
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "type_confusion",
+            "blindspot": "BS-01",
+            "constraints": [
+              "dimension_type",
+              "metric_type_validation",
+              "consistency_level_type"
+            ]
+          },
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": [
+              "dimension_range",
+              "shards_num_range",
+              "varchar_max_length"
+            ]
+          },
+          {
+            "strategy": "semantic",
+            "blindspot": "BS-05",
+            "constraints": [
+              "response_code_verification",
+              "duplicate_collection_handling"
+            ]
+          }
+        ]
+      },
+      {
+        "endpoint": "indexes+create",
+        "overall_priority": "medium",
+        "priority_factors": {
+          "blindspot_coverage": ["BS-01", "BS-04"],
+          "historical_defect_count": 6,
+          "contract_constraint_count": 4,
+          "cross_db_vulnerability_score": 0.70
+        },
+        "recommended_attack_order": [
+          {
+            "strategy": "type_confusion",
+            "blindspot": "BS-01",
+            "constraints": [
+              "index_type_validation",
+              "metric_type_compatibility"
+            ]
+          },
+          {
+            "strategy": "boundary",
+            "blindspot": "BS-04",
+            "constraints": [
+              "nlist_range",
+              "M_range",
+              "ef_range"
+            ]
+          }
+        ]
+      }
+    ],
+    "global_strategy_weights": {
+      "boundary_attacks": 0.25,
+      "type_confusion_attacks": 0.25,
+      "state_consistency_attacks": 0.30,
+      "concurrent_state_attacks": 0.20
+    }
+  },
+  "judge_enhancements": {
+    "severity_calibration": {
+      "by_design_behaviors": {
+        "action": "AUTO_DOWNGRADE_TO_TRIVIAL",
+        "rationale": "Developer team explicitly marked these as 'by design' or 'expected behavior'"
+      },
+      "concurrent_race_patterns": {
+        "action": "CONFIRM_SEVERITY",
+        "rationale": "47+ historical issues with high acknowledgment rate (0.90) - these are confirmed critical defects"
+      },
+      "parameter_validation_patterns": {
+        "action": "CONFIRM_SEVERITY",
+        "rationale": "37+ historical issues across type coercion and boundary validation - high-impact patterns"
+      },
+      "error_message_patterns": {
+        "action": "DOWNGRADE_TO_P3",
+        "rationale": "Team historically deprioritizes error message quality (acknowledgment rate 0.65)"
+      }
+    },
+    "novelty_context": {
+      "recently_fixed_patterns": [
+        {
+          "pattern": "concurrent_search_during_load_release",
+          "last_fixed": "2024-11",
+          "status": "partially_addressed"
+        },
+        {
+          "pattern": "parameter_validation_in_filter_expressions",
+          "last_fixed": "2024-11",
+          "status": "partially_addressed"
+        },
+        {
+          "pattern": "memory_management_during_bulk_operations",
+          "last_fixed": "2025-07",
+          "status": "fix_in_progress"
+        }
+      ],
+      "known_ongoing_issues": [48903, 48904, 48905, 48906, 48910]
+    },
+    "submission_success_probability": {
+      "high": [
+        {
+          "condition": "Type3_RuntimeFailure + concurrent_race_pattern",
+          "probability": 0.92,
+          "reason": "High acknowledgment rate (0.90), clear impact, reproducible test cases"
+        },
+        {
+          "condition": "Type1_IllegalSuccess + parameter_validation_violation",
+          "probability": 0.87,
+          "reason": "Well-documented in contract, clear violation, 87% acknowledgment rate"
+        },
+        {
+          "condition": "Type4_StateViolation + count_consistency_after_delete",
+          "probability": 0.85,
+          "reason": "Reproducible state drift, high historical fix rate"
+        }
+      ],
+      "medium": [
+        {
+          "condition": "Type3_RuntimeFailure + memory_oom_pattern",
+          "probability": 0.70,
+          "reason": "Acknowledged but complex to fix, may be deprioritized"
+        },
+        {
+          "condition": "Type4_StateViolation + behavioral_drift",
+          "probability": 0.65,
+          "reason": "Documentation team may push back, requires spec clarification"
+        },
+        {
+          "condition": "Type2_PoorDiagnostics + generic_error_messages",
+          "probability": 0.45,
+          "reason": "Team historically deprioritizes diagnostics quality"
+        }
+      ],
+      "low": [
+        {
+          "condition": "Type4_StateViolation + extreme_concurrency_scenario",
+          "probability": 0.30,
+          "reason": "Team considers low practical impact, marked as expected behavior"
+        },
+        {
+          "condition": "Any pattern matching by_design_behaviors",
+          "probability": 0.05,
+          "reason": "Explicitly rejected by maintainers as 'not a bug'"
+        }
+      ]
+    }
+  }
+}

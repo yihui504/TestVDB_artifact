@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_collections_exists_006",
+ "endpoint": "collections+exists",
+ "param": "collection_name",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "strategy6_resource_limit",
+ "oracle": {
+  "statement": "control short-name probe returns 200 + result.exists bool False first; then for each overlong name: a clean 4xx (e.g. 400/414/404) or HTTP 200 with result.exists exactly bool False = no defect (accepting a large identifier on a read-only lookup is legal; only a crash is the defect); 5xx = Type3_RuntimeFailure; a transport failure with healthz dead = Type3 (server crashed under the request); a request-specific timeout while healthz AND the control probe still succeed = Type3 (endpoint hang/DoS); other transport failures = SCRIPT_ERROR per G8",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

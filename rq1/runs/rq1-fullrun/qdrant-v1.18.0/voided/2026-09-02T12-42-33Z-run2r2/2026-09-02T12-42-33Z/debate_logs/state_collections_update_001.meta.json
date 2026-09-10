@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_update_001",
+ "endpoint": "collections+update",
+ "param": "hnsw_config.m / optimizers_config.memmap_threshold / quantization_config.scalar (accepted-PATCH persistence echo on describe + data-plane survival)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "constraint_ids": [
+  "qdrant_state_collections_update_001"
+ ],
+ "source_url": "https://qdrant.tech/documentation/manage-data/collections/",
+ "doc_version": "current (site latest; no version archive)",
+ "oracle": {
+  "statement": "PATCH hnsw_config {m:8} and optimizers_config {memmap_threshold:512} on a data-bearing collection are 200 and describe echoes m==8 / memmap_threshold==512 with points_count==5 and search returning 5; PATCH quantization_config {scalar:{type:int8}} on an empty collection is 200 and describe echoes scalar.type==int8 — non-200 with /healthz alive or 200-without-echo = Type4_StateLogicViolation; 5xx = Type3 only with /healthz liveness",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

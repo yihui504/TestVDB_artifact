@@ -1,0 +1,70 @@
+{
+  "defect_id": "vein_phantom_class_failed_create_4",
+  "endpoint": "POST /v1/schema (shardingConfig desiredCount=0) + GET /v1/schema/{class} + POST /v1/objects",
+  "defect_type": "Type4",
+  "evidence_weight": "strong",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "structured_contract.json state_invariants: 'Collection exists in GET /schema response after POST /schema'（反向隐含：POST 失败后不应存在）。behavioral_contract weaviate_behavioral_collection_lifecycle_001: 'Created collection appears in list and is retrievable by name'。raw_knowledge.md L388+: POST /objects 前置 'metadata and schema values are validated'。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "FINDING: create returned 422 yet class persists in schema (GET 200, shardingConfig={'actualCount': 0, ..., 'desiredCount': 0, ...}) — no rollback",
+      "secondary_observations": [
+        "FINDING: write into phantom class -> HTTP 500 ({\"error\":[{\"message\":\"put object: import into non-existing index for VeinGhost4\"}]}",
+        "FINDING: control: desiredCount=1 create+readback OK => failure path uniquely leaks state"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "创建失败 422（正确拒绝），但状态残留：schema 读路径见类（200），写路径无索引（500）——读写通道状态分裂是核心观测。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_phantom_class_failed_create_4.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "state_invariant: 'Collection exists in GET /schema response after POST /schema'（语义反演适用）",
+      "assertion_text_quoted": "state_invariants 原文: 'Collection exists in GET /schema response after POST /schema'；behavioral_contracts: 'Created collection appears in list and is retrievable by name'。",
+      "api_violates_assertion": true,
+      "note": "violates=true：POST /schema 返回失败（422）后集合仍出现于 GET /schema/{class}（200）——破坏'成功创建才可见'的状态不变式；且该残留类不可用（写 500），用户无法从 schema 视图区分幻影类。control（desiredCount=1 全成功）排除普遍性失败。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: state_invariants 'Collection exists ... after POST /schema'（反演适用）",
+        "doc: raw_knowledge L640-647 shards 状态端点族；L388 对象创建前置校验",
+        "script: vein_phantom_class_failed_create_4.py L33-45 422 后 GET 200 + POST /objects 500",
+        "log: FINDING: create returned 422 yet class persists in schema ... no rollback"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["physical shards unavailable", "desiredCount", "DesiredCount", "import into non-existing index"],
+      "files_examined": [
+        "cluster/schema/reader.go",
+        "adapters/repos/db/crud.go"
+      ],
+      "source_excerpt": "cluster/schema/reader.go L93-113（读路径拒绝的来源）:\nfunc checkShardingState(s *sharding.State) error {\n\tif s == nil { return fmt.Errorf(\"invalid sharding state: state is nil\") }\n\tif s.PartitioningEnabled { return nil }\n\tif len(s.Physical) == 0 {\n\t\treturn fmt.Errorf(\"invalid sharding state: physical shards unavailable\")\n\t}\n\tif len(s.Virtual) == 0 { ... }\nadapters/repos/db/crud.go L41-47（写路径 500 的来源）:\n\tidx := db.GetIndex(object.Class())\n\tif idx == nil {\n\t\treturn fmt.Errorf(\"import into non-existing index for %s\", object.Class())\n\t}\n\tif err := idx.putObject(...); err != nil {\n\t\treturn fmt.Errorf(\"import into index %s: %w\", idx.ID(), err)\n\t}",
+      "call_chain_traced": "POST /schema desiredCount=0 → schema 条目已写入 raft/schema 层 → 物理 shard 创建失败 → 422 返回但 schema 条目未回滚 → GET /schema/{class} 走 schema 读（checkShardingState 拒绝读操作但 HTTP 层仍 200 返回类定义——readback 实测 200）→ POST /objects 走 db.GetIndex（无索引）→ 500。两个通道对'类存在性'的判定源不同（schema 层 vs index 层），失败路径未做补偿删除。",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "caching_delay", "request_typo（control 证实合法路径正常）"],
+      "surviving": null
+    }
+  }
+}

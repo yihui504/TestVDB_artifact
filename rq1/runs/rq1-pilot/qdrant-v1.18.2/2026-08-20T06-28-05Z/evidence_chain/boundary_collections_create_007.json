@@ -1,0 +1,70 @@
+{
+  "defect_id": "boundary_collections_create_007",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation unreachable (domain api.qdrant.tech blocked by network policy). Cannot verify if contract assertion [10, 1000] matches official docs. Version match: contract v1.18.2 vs source v1.18.3 (minor version drift acceptable).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: hnsw_config.ef_construct=9 → http=200, body={\"result\":true,\"status\":\"ok\",\"time\":0.342377604}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 (HTTP 200 + success=true)",
+        "note": "Target should reject ef_construct=9 with HTTP 4xx, but returned HTTP 200 with success=true. This indicates Type1_IllegalSuccess: constraint violation accepted as success."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_create_007"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_002",
+      "assertion_text_quoted": "hnsw_config.ef_construct (index build speed/accuracy) ∈ [10, 1000]; assertion: hnsw_config.ef_construct >= 10 AND hnsw_config.ef_construct <= 1000",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_002 asserts ef_construct ∈ [10, 1000]",
+        "doc:https://api.qdrant.tech/api-reference/collections/create-collection (unreachable, domain_blocked)",
+        "script:boundary_collections_create_007 sent ef_construct=9 (below 10)",
+        "log:HTTP 200 OK with success=true (constraint violated but accepted)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Chain breaks at log layer: contract and documentation agree ef_construct must be >= 10, script violates with ef_construct=9, but log shows HTTP 200 (success) instead of expected 4xx rejection. This confirms Type1_IllegalSuccess.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "ef_construct",
+        "HnswConfigDiff",
+        "validate.*range.*min",
+        "hnsw_config"
+      ],
+      "files_examined": [
+        "C:\\Users\\<user>\\Desktop\\pipelinehost\\TestVDB\\.sourcedeps\\qdrant\\v1.18.3\\lib\\collection\\src\\operations\\config_diff.rs",
+        "C:\\Users\\<user>\\Desktop\\pipelinehost\\TestVDB\\.sourcedeps\\qdrant\\v1.18.3\\src\\actix\\api\\collections_api.rs",
+        "C:\\Users\\<user>\\Desktop\\pipelinehost\\TestVDB\\.sourcedeps\\qdrant\\v1.18.3\\lib\\storage\\src\\content_manager\\collection_meta_ops.rs"
+      ],
+      "source_excerpt": "File: lib/collection/src/operations/config_diff.rs, lines 38-77\n\npub struct HnswConfigDiff {\n    /// Number of edges per node in the index graph.\n    pub m: Option<usize>,\n    /// Number of neighbours to consider during index building.\n    #[validate(range(min = 4))]   // ⚠️ BUG: Should be min = 10 per contract\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub ef_construct: Option<usize>,\n    ... \n}\n\nCRITICAL DISCREPANCY:\n- Source code validation: #[validate(range(min = 4))]\n- Contract assertion: ef_construct >= 10 AND ef_construct <= 1000\n- Observation: ef_construct=9 accepted with HTTP 200\n- Result: Validation present but at wrong threshold (4 vs 10)",
+      "call_chain_traced": "collections_api.rs:put(/collections/{name}) → CreateCollectionOperation → HnswConfigDiff.ef_construct with #[validate(range(min = 4))]. validator crate enforces this at deserialization. ef_construct=9 passes because 9 >= 4, violates contract which requires >= 10.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "race", "cache"],
+      "surviving": "Type1_IllegalSuccess confirmed: ef_construct=9 below contract minimum (10) accepted as HTTP 200. Source code reveals validation present but at incorrect threshold (min=4 instead of min=10). This is a genuine validation bug, not a by-design behavior or environmental artifact."
+    }
+  }
+}

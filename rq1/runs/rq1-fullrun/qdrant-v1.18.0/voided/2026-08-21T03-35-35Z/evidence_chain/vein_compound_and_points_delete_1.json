@@ -1,0 +1,66 @@
+{
+  "defect_id": "vein_compound_and_points_delete_1",
+  "endpoint": "/collections/{collection_name}/points/delete:POST",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url reachable, version mismatch, compound filter validation rules not explicitly documented (AND logic, range validation, emptiness checks)",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Test1: valid compound (score>=30 AND category=A) → 200 (PASS); Test2: invalid range (score>=100 AND score<=50) → 200 (DEFECT); Test3: triple compound → 200 (PASS); Test4: mixed valid/invalid → 200 (DEFECT); Test5: is_null AND → 200 (PASS); Test6: empty must[] + must_not → 200 (DEFECT); Test7: contradictory (score>=100 AND score<=50) → 200 (DEFECT); Test8: nested compound → 200 (PASS)",
+      "secondary_observations": [
+        "Test2 (invalid range gte>lte): HTTP 200, acknowledged - should validate bounds",
+        "Test4 (mixed valid/invalid): HTTP 200, acknowledged - should reject invalid part",
+        "Test6 (empty must + must_not): HTTP 200, acknowledged - semantics unclear",
+        "Test7 (contradictory): HTTP 200, acknowledged - always false condition should validate"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx",
+        "note": "All 8 compound filter tests returned HTTP 200, invalid filters not rejected"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_compound_and_points_delete_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "Compound filter validation: must validate range bounds (gte<=lte), reject contradictory conditions, handle empty arrays correctly",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:(none explicit - compound filter validation inferred from logical principles)",
+        "doc:https://api.qdrant.tech/api-reference/points/delete-points (filter documented, validation rules not)",
+        "script:vein_compound_and_points_delete_1 (8 compound filter tests)",
+        "log:Tests 2,4,6,7 → all HTTP 200 (invalid filters accepted)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "4 defect candidates: invalid range (gte>lte), mixed valid/invalid, empty must array, contradictory conditions - all accepted without validation, indicating missing filter validation logic",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["compound.*filter", "must.*must_not", "filter.*validation", "delete.*filter", "range.*validation"],
+      "files_examined": ["not_available_local"],
+      "source_excerpt": "",
+      "call_chain_traced": "not_available_local - v1.18.0 source not cloned",
+      "verification_outcome": "not_available_local",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "validation_absent"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: scu041bb534
+[assertion quote] 'after creation, size/distance of an existing (named) vector cannot be changed via PATCH update; index/quantization/disk config can'
+[setup create scu041bb534_named] status=200 raw={"result":true,"status":"ok","time":0.328378521}
+[baseline] vectors.img = size=4 distance=Dot
+[leg1 PATCH vectors.img.size=128] status=200 raw={"result":true,"status":"ok","time":0.018109707}
+[leg1 readback] vectors.img = size=4 distance=Dot
+[leg1 note] size attempt answered 200 result-ok with NO readback change - 200-without-echo silent-ignore (state unit promise satisfied); recorded as false-success evidence for the behavioral unit's invalid-diff-4xx claim (semantic_collections_update_001) - not claimed here
+[leg2 PATCH vectors.img.distance=Cosine] status=200 raw={"result":true,"status":"ok","time":0.017165383}
+[leg2 readback] vectors.img = size=4 distance=Dot
+[leg2 note] distance attempt answered 200 result-ok with NO readback change - false-success evidence recorded (see leg1 note), not claimed on this unit
+[leg3 PATCH vectors.nosuchvec.hnsw_config] status=400 raw={"status":{"error":"Wrong input: Not existing vector name error: nosuchvec"},"time":0.000667803}
+[leg3] unknown vector name refused 400 - OK
+[leg4 PATCH hnsw_config.ef_construct=64] status=200 raw={"result":true,"status":"ok","time":0.012532708}
+[leg4 echo] describe hnsw_config.ef_construct=64 (sent 64)
+[leg5 upsert] status=400 raw={"status":{"error":"Wrong input: Not existing vector name error: "},"time":0.006787975}
+VERDICT: SCRIPT_ERROR - post-patch upsert failed: 400 {"status":{"error":"Wrong input: Not existing vector name error: "},"time":0.006787975}

@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_facet_004",
+ "endpoint": "facet",
+ "param": "limit (spec-legal extreme values 1e6/1e12/9e18, no documented max; service survival + post-attack state)",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "resource_bound_state_survival",
+ "constraint_ids": [
+  "qdrant_resource_facet_limit_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/points/facet",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "every spec-legal limit probe (1, 1e6, 1e12, 9e18 x3) returns 200 or a descriptive 4xx/5xx with /healthz still 200 — never a connection abort/reset with /healthz failing (Type3_RuntimeFailure = service death or panic); after the extremes the control facet returns 10 hits and the count face reads 1000",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

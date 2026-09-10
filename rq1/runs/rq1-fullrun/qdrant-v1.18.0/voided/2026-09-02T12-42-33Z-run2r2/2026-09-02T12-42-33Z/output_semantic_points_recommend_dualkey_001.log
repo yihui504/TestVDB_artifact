@@ -1,0 +1,27 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+M1 positive=[301] (by id) -> status=200
+raw: {"result":[{"id":303,"version":1,"score":0.6999998},{"id":304,"version":1,"score":1.0},{"id":305,"version":1,"score":2.0},{"id":306,"version":1,"score":4.0},{"id":307,"version":1,"score":7.0},{"id":308,"version":1,"score":10.0}],"status":"ok","time":0.000851284}
+M1 OK: R1 = [303, 304, 305, 306, 307, 308]
+M2 positive=[[10.0,0,0,0]] (by raw vector) -> status=200
+raw: {"result":[{"id":301,"version":1,"score":0.0},{"id":303,"version":1,"score":0.6999998},{"id":304,"version":1,"score":1.0},{"id":305,"version":1,"score":2.0},{"id":306,"version":1,"score":4.0},{"id":307,"version":1,"score":7.0},{"id":308,"version":1,"score":10.0}],"status":"ok","time":0.000226954}
+M2 OK: R2 (n=7, 301 at index 0) minus 301 == R1
+M3 positive=[301, [10.0,0,0,0]] (mixed variants) -> status=200
+raw: {"result":[{"id":303,"version":1,"score":0.6999998},{"id":304,"version":1,"score":1.0},{"id":305,"version":1,"score":2.0},{"id":306,"version":1,"score":4.0},{"id":307,"version":1,"score":7.0},{"id":308,"version":1,"score":10.0}],"status":"ok","time":0.000302177}
+M3 OK: mixed-variant array accepted and equivalent to M1
+D1 no-variant object -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum RecommendExample at line 1 column 40"},"time":0.0}
+D1 no-variant object OK: rejected with 400 (400-family)
+D2 half-keyed SparseVector -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum RecommendExample at line 1 column 47"},"time":0.0}
+D2 half-keyed SparseVector OK: rejected with 400 (400-family)
+D4 non-uuid digit string -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum RecommendExample at line 1 column 33"},"time":0.0}
+D4 non-uuid digit string OK: rejected with 400 (400-family)
+D5 positive absent entirely -> status=400
+raw: {"status":{"error":"Bad request: At least one positive vector ID required with this strategy"},"time":5.973e-6}
+D5 positive absent entirely OK: rejected with 400 (400-family)
+D3 sparse example on dense collection (NOTE) -> status=400
+raw: {"status":{"error":"Wrong input: Conversion between sparse and regular vectors failed"},"time":0.000319758}
+NOTE D3: well-formed SparseVector example against the dense unnamed vector -> status=400 (rejected; the characteristics wording covers FETCHED vectors, so this face is recorded, not adjudicated)
+VERDICT: NO_DEFECT

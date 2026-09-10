@@ -1,0 +1,356 @@
+{
+ "auditor": "chain-auditor",
+ "target": "qdrant",
+ "version": "v1.18.0",
+ "batch_note": "R3 incremental round: 9 new chains only (R1=9, R2=1 already in chain_verdicts.json / chain_verdicts_r2.json). 19/19 chains have builders; batch within 12 cap. #9255 self-check: no filter-missing-field pattern present; closest shape (boundary_aliases_update_005) lands NOT_DEFECT.",
+ "verdicts": [
+  {
+   "defect_id": "boundary_aliases_update_002",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "doc",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "REFUTED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "mutually exclusive parameters"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=REFUTED (mechanized, id+quote_ok) -> final=NOT_DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": "contract_misread",
+   "constraint_category": "other",
+   "category_no_fit_reason": "element-key exclusivity norm lives only in the registry/anyOf face; no type/range/state/resource_bound/doc_consistency unit asserts it",
+   "candidate_class": "rejected",
+   "exploratory": {
+    "form": null,
+    "signal": null,
+    "rationale": null
+   },
+   "rationale": "Mechanized A=REFUTED (violates=false, quote verbatim in assertions/50): after serde untagged first-match the double-key element was a create_alias on an EXISTING collection, which is exactly the assertion's own 200 face, and the shipped OpenAPI is anyOf without additionalProperties:false, so the element is formally schema-valid. B recorded CONFIRMED (mutex discriminators create_alias+delete_alias accepted together, delete half silently dropped) but the mechanized NOT_DEFECT stands; sibling semantic_aliases_update_006 declared the identical phenomenon violates=true (->DEFECT) - asymmetry flagged for upstream dedup. Behavior itself (silent half-application of client instructions) remains a real hazard recorded by C=CONFIRMED.",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_aliases_update_004",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": true
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "none"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> final=DEFECT"
+   },
+   "chain_broken_at": "doc",
+   "root_cause_if_fp": null,
+   "constraint_category": "other",
+   "category_no_fit_reason": "per-action status-code promise of a behavioral assertion; none of type/range/state/resource_bound/doc_consistency expresses a status-matrix promise",
+   "candidate_class": "strict_defect",
+   "exploratory": {
+    "form": null,
+    "signal": null,
+    "rationale": null
+   },
+   "rationale": "Mechanized A=CONFIRMED: delete_alias of an unknown alias returned HTTP 200 {result:true} (log L9-10), literally outside the promised {404,500}; quote verbatim in assertions/50, so final=DEFECT per mechanized discipline. Doubt recorded, not acted on: chain_broken_at=doc (the 404/500 clause traces to raw_knowledge expected_responses, not the page/OpenAPI which document only 200/4XX) and C=REFUTED via the source docstring 'Delete alias if exists' plus the modeled Ok(None) no-op. Suggest main-process manual review of the contract clause; verdict kept.",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_aliases_update_005",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "doc",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "REFUTED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "none"
+    },
+    "behavioral": {
+     "verdict_C": "WEAK_REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=REFUTED (mechanized, id+quote_ok) -> final=NOT_DEFECT"
+   },
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": "contract_misread",
+   "constraint_category": "other",
+   "category_no_fit_reason": "alias-name charset is unconstrained by any contract unit (no pattern/length in contract, page, or OpenAPI); no existing category covers an undocumented charset expectation",
+   "candidate_class": "rejected",
+   "exploratory": {
+    "form": null,
+    "signal": null,
+    "rationale": null
+   },
+   "rationale": "Mechanized A=REFUTED (violates=false): the JSON-legal \u0000 escape in alias_name of an otherwise-valid create on an existing collection is exactly the assertion's 200 face, and no charset/pattern/length rule exists in the contract, the page, or the shipped OpenAPI - the 'expected 4xx' premise has no grounding rule (chain itself sets chain_broken_at=contract). The observation is genuine (NUL alias persisted and round-trips per P4) but B=NEUTRAL: bare-NUL's 400 is RFC 8259 JSON-grammar enforcement, not alias-name validation, so no objective constraint class applies. #9255-adjacent shape: the oracle expected a validation that no artifact promises; lands NOT_DEFECT as the prototype case prescribes.",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_aliases_update_008",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "none"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "constraint_category": "state",
+   "category_no_fit_reason": null,
+   "candidate_class": "strict_defect",
+   "exploratory": {
+    "form": null,
+    "signal": null,
+    "rationale": null
+   },
+   "rationale": "Mechanized A=CONFIRMED against qdrant_state_aliases_update_001 (type=state_constraint, evidence_tier=explicit, quote verbatim at constraints/state_constraints/18): the 404-rejected batch [neg1] left alias bau8b8f4c71bn1 durably created - an observable intermediate state violating 'applied atomically - no intermediate state is observable'. Grade-A multi-script reproduction incl. the destructive leaked delete; source shows the sequential loop persists each action eagerly (alias_mapping.rs save per op) with no rollback while the function's own comment claims 'performs several alias changes in an atomic fashion'. Cognition anchor 'batch operations are not promissed to be atomic' rejected as non-isomorphic (point-batch idempotent-write context vs alias ops whose shipped spec text promises atomicity), so D=NO_SIGNAL; the doc sentence's isolation-flavored 'meaning that' clause is noted as a residual interpretation gap.",
+   "rework_order": null
+  },
+  {
+   "defect_id": "semantic_aliases_update_002",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "none"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "constraint_category": "state",
+   "category_no_fit_reason": null,
+   "candidate_class": "strict_defect",
+   "exploratory": {
+    "form": null,
+    "signal": null,
+    "rationale": null
+   },
+   "rationale": "Mechanized A=CONFIRMED: caseA's mixed batch [valid create ay->c1, create az->no_such_collection] was rejected 404 yet the scoped map after-list shows ay durably added - partial application violating the atomicity assertion (quote verbatim, state unit explicit). B=NEUTRAL: batch atomicity is a state-consistency property, not a parameter-level objective class. Source grounds the mechanism (sequential for-loop, '?' early-return, eager per-action save, no staging/rollback); the invalid action itself was correctly 404-rejected per the co-anchor behavioral constraint, isolating the violation to the committed residue.",
+   "rework_order": null
+  },
+  {
+   "defect_id": "semantic_aliases_update_004",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "none"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "constraint_category": "other",
+   "category_no_fit_reason": "per-action status-code promise of a behavioral assertion; no existing category expresses a status-matrix promise",
+   "candidate_class": "strict_defect",
+   "exploratory": {
+    "form": null,
+    "signal": null,
+    "rationale": null
+   },
+   "rationale": "Mechanized A=CONFIRMED: case2 delete_alias of a fresh unknown alias returned 200 score=0/3 with a full success envelope, outside the promised {404,500}; quote verbatim in assertions/50, final=DEFECT per mechanized discipline. In-chain same-endpoint contrasts (create-on-missing 404, rename-unknown 404) show only the delete branch deviates; B=NEUTRAL because an unknown-target condition is state-dependent, not request-side decidable. C=REFUTED on the explicit 'Delete alias if exists' docstring/schema description (carried verbatim by sibling chains of this same phenomenon) - doubt recorded; the doc-side caveat that the per-case wording is a normalized reading of the generic 4XX family is flagged for manual review.",
+   "rework_order": null
+  },
+  {
+   "defect_id": "semantic_aliases_update_006",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "mutually exclusive parameters"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "constraint_category": "other",
+   "category_no_fit_reason": "element-key exclusivity norm lives only in the registry/anyOf face; no formal unit asserts it",
+   "candidate_class": "strict_defect",
+   "exploratory": {
+    "form": null,
+    "signal": null,
+    "rationale": null
+   },
+   "rationale": "Mechanized A=CONFIRMED (violates=true declared, quote verbatim): probe 11's double-discriminator element {create_alias, delete_alias} returned 200 {result:true} while the same log shows unknown-discriminator -> 400 - the server executed the create and silently discarded the requested delete. B=CONFIRMED (mutex discriminators accepted together; same-face inconsistent disposition), C=CONFIRMED (unannotated untagged-enum leniency, no intent comment; gRPC oneof makes the shape unrepresentable there). Honest tension recorded: the published OpenAPI schema is anyOf without additionalProperties:false, and sibling boundary_aliases_update_002 declared the identical phenomenon violates=false (->NOT_DEFECT) - flagged for upstream dedup; verdict kept per mechanized discipline.",
+   "rework_order": null
+  },
+  {
+   "defect_id": "state_aliases_update_001",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "none"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "constraint_category": "state",
+   "category_no_fit_reason": null,
+   "candidate_class": "strict_defect",
+   "exploratory": {
+    "form": null,
+    "signal": null,
+    "rationale": null
+   },
+   "rationale": "Mechanized A=CONFIRMED against the state unit (quote verbatim): mixed#1's batch was 404-rejected yet al3 appears in the post-rejection GET /aliases body, and mixed#3's valid delete leaked through a rejected batch - one-request alias operations demonstrably not applied atomically. B=NEUTRAL (state-consistency property, no parameter-level objective class); C=CONFIRMED: no failure-path intent evidence exists, the function comment asserts the opposite ('atomic fashion'), and alias_tests.rs is happy-path only. Order-dependence (mixed#2 invalid-first leaves clean map) mechanically matches the sequential validate-then-apply loop with eager per-action persistence and no rollback.",
+   "rework_order": null
+  },
+  {
+   "defect_id": "state_aliases_update_002",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": true
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "none"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> final=DEFECT"
+   },
+   "chain_broken_at": "doc",
+   "root_cause_if_fp": null,
+   "constraint_category": "other",
+   "category_no_fit_reason": "per-action status-code promise of a behavioral assertion; no existing category expresses a status-matrix promise",
+   "candidate_class": "strict_defect",
+   "exploratory": {
+    "form": null,
+    "signal": null,
+    "rationale": null
+   },
+   "rationale": "Mechanized A=CONFIRMED: N2 delete_alias of a never-created alias returned 200 {result:true}, outside the promised {404,500}; quote verbatim, final=DEFECT per mechanized discipline. Doubt recorded, not acted on: chain_broken_at=doc (live page and live v1.18.x OpenAPI shard document only 200; 'Delete alias if exists' schema description points to conditional semantics), and N1/N3 sibling arms behave exactly as promised, isolating the deviation to the delete branch. C=REFUTED on the documented conditional-delete semantics; manual main-process review of the contract-synthesized [404,500] clause suggested.",
+   "rework_order": null
+  }
+ ],
+ "summary": {
+  "total": 9,
+  "defect": 7,
+  "not_defect": 2,
+  "needs_more_evidence": 0,
+  "fp_evidence_source_distribution": {
+   "doc": 2,
+   "source": 0,
+   "both": 0,
+   "behavior": 0
+  },
+  "root_cause_distribution": {
+   "contract_misread": 2
+  },
+  "constraint_category_distribution": {
+   "other": 6,
+   "state": 3
+  },
+  "candidate_class_distribution": {
+   "strict_defect": 7,
+   "exploratory_candidate": 0,
+   "rejected": 2
+  }
+ }
+}

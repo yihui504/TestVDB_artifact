@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_peer_delete_001",
+  "endpoint": "cluster+peer+delete",
+  "param": "peer_id",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "type",
+  "oracle": {
+    "statement": "non-integer peer_id path forms ('abc', '-1', '1.5', '1e3', '+7', ' 7', '') -> DELETE /cluster/peer/{peer_id} returns 4xx each; any 2xx = Type1_IllegalSuccess (malformed peer id silently coerced and removal accepted); 5xx = Type3_RuntimeFailure with /healthz rechecked",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

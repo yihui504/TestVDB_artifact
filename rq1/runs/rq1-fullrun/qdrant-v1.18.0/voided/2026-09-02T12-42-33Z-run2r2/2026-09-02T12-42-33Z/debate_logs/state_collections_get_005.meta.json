@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_get_005",
+ "endpoint": "collections+get",
+ "param": "points_count (duplicate-id replay and in-place update readout)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "upsert_idempotence",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_get_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "after each wait=true upsert stage describe returns 200 with result.points_count an integer equal to the number of DISTINCT ids ever upserted (0 -> 6 -> 6 -> 6); integer 12 at the replay/update stages = Type4_StateLogicViolation; null = logged observation; non-200 on the existing collection with /healthz alive = Type4; 5xx = Type3 only with liveness",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

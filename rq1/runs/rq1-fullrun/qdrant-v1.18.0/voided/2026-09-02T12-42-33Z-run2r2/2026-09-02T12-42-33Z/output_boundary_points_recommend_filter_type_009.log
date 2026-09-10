@@ -1,0 +1,29 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+leg G valid filter must[grp=red] -> status=200
+raw: {"result":[{"id":2,"version":1,"score":0.0057622097,"payload":{"grp":"red"}},{"id":3,"version":1,"score":0.011524419,"payload":{"grp":"red"}}],"status":"ok","time":0.000774535}
+leg G OK: 2 red-only results — filter path live and correct
+
+leg T1 must as STRING -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"red\", expected null, array or map at line 1 column 105"},"time":0.0}
+leg T1 must as STRING OK: rejected with 400 (error names the filter family: False)
+
+leg T2 must_not as OBJECT -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [recommend_request.filter.must_not[0].__all__: Validation error: At least one field condition must be specified [{}]]"},"time":0.0}
+leg T2 must_not as OBJECT OK: rejected with 422 (error names the filter family: True)
+
+leg T3 should as INT -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: integer `42`, expected null, array or map at line 1 column 104"},"time":0.0}
+leg T3 should as INT OK: rejected with 400 (error names the filter family: False)
+
+leg T4 match=null -> status=422
+raw: {"status":{"error":"Validation error in JSON body: [recommend_request.filter.must[0].__all__: Validation error: At least one field condition must be specified [{}]]"},"time":0.0}
+leg T4 match=null OK: rejected with 422 (error names the filter family: True)
+
+leg T5 key missing -> status=400
+raw: {"status":{"error":"Format error in JSON body: Expected some form of condition, which can be a field condition (like {\"key\": ..., \"match\": ... }), or some other mentioned in the documentation: https://qdrant.tech/documentation/concepts/filtering/#filtering-conditions at line 1 column 129"},"time":0.0}
+leg T5 key missing OK: rejected with 400 (error names the filter family: True)
+
+post-certification: point count after all legs = 12 (seeded 12; read-only face by construction)
+VERDICT: NO_DEFECT

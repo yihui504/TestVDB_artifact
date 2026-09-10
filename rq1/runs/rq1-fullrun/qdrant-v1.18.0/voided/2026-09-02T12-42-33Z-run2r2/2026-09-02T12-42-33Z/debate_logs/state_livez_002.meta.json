@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_livez_002",
+ "endpoint": "livez",
+ "param": null,
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "concurrent",
+ "constraint_ids": [
+  "qdrant_behavioral_livez_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/livez",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "baseline+readers+tail GET probes all return HTTP 200 (0 anomalies) and every hostile-method probe (HEAD/OPTIONS/POST/PUT/PATCH/DELETE with unexpected bodies) lands outside the 5xx band; a 5xx status or transport loss on the /livez route followed by >=1 immediate 200 re-probe (livez or healthz) = DEFECT (any 5xx while alive = Type3; >=2 recovered transport losses = Type3; GET face persistently non-200 across 3 re-probes while healthz answers 200 = Type4 corrupted liveness signal); persistent non-200 with NO aliveness proof on either face = SCRIPT_ERROR; clean 4xx / permissive 2xx on non-GET = NO_DEFECT with G9 disposition NOTES printed",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

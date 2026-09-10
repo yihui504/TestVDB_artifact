@@ -1,0 +1,106 @@
+[vein_range_filter_points_delete_1] Testing range_filter on POST /collections/{c}/points/delete
+DB URL: http://localhost:6333
+Collection: vein_range_filter_delete_test_1
+
+[Test 1] Valid range filter - score >= 30
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 2,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 0.000418249
+}
+  [PASS] Valid range filter accepted
+
+[Test 2] Range with negative bounds - score <= -100
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 3,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 9.8161e-05
+}
+  [ACCEPTED] Negative range bounds accepted (may match zero points)
+
+[Test 3] Range with extreme values - score >= 999999999
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 4,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 8.2603e-05
+}
+  [ACCEPTED] Extreme range accepted (may match zero points)
+
+[Test 4] Range with gte > lte (invalid bounds) - gte=100, lte=50
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 5,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 0.000301571
+}
+  [DEFECT_CANDIDATE] Invalid bounds (gte > lte) accepted without error
+
+[Test 5] Range with fractional bounds - score >= 20.5
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 6,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 0.000180227
+}
+  [ACCEPTED] Fractional bounds accepted
+
+[Test 6] Filter is null
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: data did not match any variant of untagged enum PointsSelector"
+  },
+  "time": 0.0
+}
+  [EXPECTED] filter=null rejected with 400
+
+[Test 7] Empty filter object {}
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 7,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 0.000294183
+}
+  [DEFECT_CANDIDATE] Empty filter {{}} accepted - unclear semantics
+
+[Test 8] Range with both gte and gt - gte=20, gt=30
+  Status: 200
+  Response: {
+  "result": {
+    "operation_id": 8,
+    "status": "acknowledged"
+  },
+  "status": "ok",
+  "time": 0.000132653
+}
+  [ACCEPTED] Redundant bounds accepted (uses more restrictive)
+
+============================================================
+SUMMARY
+============================================================
+Findings:
+  - Range with gte=100, lte=50 accepted - should validate that gte <= lte
+  - Empty filter {} accepted - should specify behavior (no-op? delete all?)
+
+VERDICT: DEFECT_FOUND

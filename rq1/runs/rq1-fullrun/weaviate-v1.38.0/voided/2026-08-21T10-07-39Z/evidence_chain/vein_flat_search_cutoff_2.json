@@ -1,0 +1,69 @@
+{
+  "defect_id": "vein_flat_search_cutoff_2",
+  "endpoint": "POST /v1/schema (vectorIndexConfig.flatSearchCutoff / ef vs dynamicEfMin)",
+  "defect_type": "Type1",
+  "evidence_weight": "strong",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "raw_knowledge.md L796-814 机械提取 flatSearchCutoff 字段（默认 40000）。structured_contract.json 无 flatSearchCutoff 专属约束（range_constraint 仅 dynamicEfMin<=dynamicEfMax，同族）；负值禁令无明文文档——依赖'cutoff 为段大小阈值'的语义（DefaultFlatSearchCutoff=40000 隐含非负域）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "FINDING: negative flatSearchCutoff=-50000 persisted with HTTP 200",
+      "secondary_observations": [
+        "FINDING: control: default 40000 untouched (40000) => not a readback artifact",
+        "FINDING: ef=10 below dynamicEfMin=500 accepted without cross-check"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "负值 -50000 以 200 接受持久化，无任何错误/警告。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_flat_search_cutoff_2.py", "vein_dynamic_ef_minmax_1.py（同 validate() 缺口）"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_range_create_collection_001（同族，仅覆盖 dynamicEfMin<=Max；flatSearchCutoff 非负/ef>=dynamicEfMin 无对应 constraint）",
+      "assertion_text_quoted": "raw_knowledge.md L801: DefaultFlatSearchCutoff = 40000（隐含非负阈值语义）；无明文 'flatSearchCutoff must be >= 0' 断言。",
+      "api_violates_assertion": true,
+      "note": "violates=true 基于语义域：cutoff 是'段内对象数阈值'，负值使其比较语义退化（任何段都 > 负阈值 → 永远走 flat 搜索或永远不触发，取决于分支方向）——但这是 inferred 断言非明文约束，权重低于 dynamic_ef_minmax_1。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 无 flatSearchCutoff 专属 constraint——弱环",
+        "doc: raw_knowledge.md L796-814 字段提取（默认 40000）",
+        "script: vein_flat_search_cutoff_2.py L30-32 POST {vectorIndexConfig:{flatSearchCutoff:-50000}}",
+        "log: FINDING: negative flatSearchCutoff=-50000 persisted with HTTP 200"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "契约层缺口本身是发现的一部分：schema 校验只对 maxConnections/efConstruction/filterStrategy 设限（源码证实），flatSearchCutoff 完全无界。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["flatSearchCutoff", "FlatSearchCutoff", "DefaultFlatSearchCutoff"],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go"
+      ],
+      "source_excerpt": "entities/vectorindex/hnsw/config.go L201-205（解析无校验）:\n\tif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"flatSearchCutoff\", func(v int) {\n\t\tuc.FlatSearchCutoff = v\n\t}); err != nil { return uc, err }\nL34: DefaultFlatSearchCutoff = 40000\nL260-323 validate(): 无 FlatSearchCutoff 条目（grep FlatSearchCutoff 全库仅定义/默认/解析/序列化，无比较逻辑）。",
+      "call_chain_traced": "POST /schema → ParseAndValidateConfig → OptionalIntFromMap('flatSearchCutoff') 直写 → validate() 无该字段 → 持久化（control 证实非 readback artifact）",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "readback_artifact"],
+      "surviving": null
+    }
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "defect_id": "state_collections_delete_005",
+  "endpoint": "collections+delete (DELETE /collections/{collection_name})",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS: page live at https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection (WebFetch domain-blocked; mcp web-reader fetched full page 2026-09-03; endpoint_registry verified_at 2026-09-02T12:34:08Z). Version PASS: page header 'v1.18.x', URL segment v-1-18-x, target v1.18.0 major.minor match. Content PARTIAL: the current Fern page documents only the 200 branch ('200 Deleted', body result boolean, status ok) and describes the path param as 'Name of the collection to delete' with NO alias mention; the assertion's 404-for-non-existent branch is NOT stated on the current page — it matches the generic '4XX: error' envelope in the repo's own OpenAPI (openapi/openapi-collections.ytt.yaml line 110 uses template #@ response(type(\"boolean\")), whose lib template openapi/openapi.lib.yml lines 1-14 defines only '200 successful operation' + '4XX error' + 'default error'), so the 404 branch is doc-grounded only in the OpenAPI error-envelope layer, not as an explicit 404 promise. The 'half-delete through the alias seam' framing is NOT doc-grounded: the doc never promises alias resolution on DELETE. Endpoint precision PASS: registry entry collections+delete, method DELETE, path /collections/{collection_name}, matching source_url; script's raw requests match.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[L2 delete-by-alias scdl5_1788396119_36796_ala2] status=200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.00013607}",
+      "secondary_observations": [
+        "rest [L2 verify underlying scdl5_1788396119_36796_ali2] status=200 raw={\"result\":{\"status\":\"green\",\"optimizer_status\":\"ok\",\"indexed_vectors_count\":0,...}} (underlying collection survived the 200-confirmed delete-by-alias)",
+        "rest [L2 list] status=200 present=True (collection still listed after 200 delete-by-alias)",
+        "rest [L1 describe-by-alias sanity] status=200 (control: the READ face GET /collections/{name} RESOLVES the same path-parameter value family 'ala1' to the collection; DELETE does not — same name family, opposite disposition)",
+        "rest [L1 delete-by-name scdl5_1788396119_36796_ali1] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.020484098} followed by [L1 describe-by-alias AFTER delete] status=404 raw={\"status\":{\"error\":\"Not found: Collection `scdl5_1788396119_36796_ala1` doesn't exist!\"} (control: delete by literal name deletes and cascades alias removal — the 404 machinery works on this deployment)",
+        "rest sibling semantic_collections_delete_005 line 10: [DELETE by alias scd05e23ec9_alias] status=200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000074845}; line 11 GET real status=200; line 12 aliases list still maps scd05e23ec9_alias->scd05e23ec9_real (neither the collection nor the alias mapping was affected by the 200)",
+        "rest same-root disposition (delete of a name with no underlying collection): state_collections_delete_001 [A delete-never-created] status=200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000058973}; [D double-delete] status=200 raw={\"result\":false,...}; boundary_collections_delete_002/003/004 identical shape",
+        "grpc: face_unavailable (no gRPC probe of collections delete was run in this session's logs; comparison limited to the REST face)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "A request-side-decidable error condition (DELETE on a name with no existing collection — here an alias string) returns HTTP 200 with status:\"ok\" and the soft-fail boolean result:false in the body instead of the promised 404; the failure signal is body-level only (result:false), the HTTP status line reports success."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_collections_delete_005",
+        "semantic_collections_delete_005",
+        "state_collections_delete_001 (same-root phantom-200 on delete-nonexistent)",
+        "semantic_collections_delete_001 (same-root)",
+        "boundary_collections_delete_002 (same-root)",
+        "boundary_collections_delete_003 (same-root)",
+        "boundary_collections_delete_004 (same-root)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_collections_delete_001",
+      "assertion_text_quoted": "deleting an existing collection is confirmed with 200; a non-existent collection returns 404",
+      "api_violates_assertion": true,
+      "note": "Constraint binding annotation: the dispatch record's constraint_id field was empty; the anchor qdrant_behavioral_collections_delete_001 comes from the script's in-log DEFECT line and exists in structured_contract.json assertions. The contract's full expected_behavior for this ID reads: 'DELETE on an existing collection returns HTTP 200; DELETE on a non-existent collection returns 404, not 200'. violates-declaration self-check: the observed value (the alias string 'scdl5_1788396119_36796_ala2') IS inside the quote's constraint domain — an alias is not a collection, so DELETE on it is the 'non-existent collection' branch, and the observed 200 (not 404) violates that branch directly; the alternative framing ('delete should have resolved the alias and deleted the underlying collection' — i.e. a half-delete) is NOT the cited constraint's claim and is not doc-grounded (the doc scopes the path param to 'Name of the collection to delete'); the constraint citation is therefore kept on the 404 branch, where violates=true is genuine. The constraint's own defect_type_if_violated is Type1_IllegalSuccess while the script's verdict claims Type4_StateLogicViolation — recorded factually for the auditor.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: candidates.jsonl constraint_id is EMPTY (no mechanical binding); the script's in-log DEFECT line anchors qdrant_behavioral_collections_delete_001, which exists in structured_contract.json assertions; NO alias-interplay-with-delete constraint exists anywhere in the contract (checked assertions x87, behavioral_contracts x6, state_invariants x7)",
+        "doc: source_url reachable 2026-09-03, version v1.18.x matches target v1.18.0; the assertion's 200 branch is on the page, its 404 branch lives only in the OpenAPI generic 4XX envelope (openapi.lib.yml) — content layer PARTIAL, not fabricated",
+        "script: raw requests in output_state_collections_delete_005.log match DELETE /collections/{collection_name} from the registry; ownership prefix scdl5_1788396119_36796_; L1 literal-name control and L2 alias probe use exactly the names created in-log (no typo)",
+        "log: VERDICT DEFECT_FOUND; primary observation line quoted verbatim; raw response genuinely shows http 200 + result:false and the follow-up verify lines show the collection surviving — verdict pattern is consistent with the raw observation, no self-error markers"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The dispatch record's constraint_id is empty — the tested phenomenon ('alias interplay with collection delete') has no covering constraint in structured_contract.json, so the contract->doc link for the ALIAS semantics is missing. The in-log anchor qdrant_behavioral_collections_delete_001 exists and covers only the delete-nonexistent-404 branch, which the raw observation does violate; the script's Type4 'status lies about state' framing partially exceeds what any contract constraint asserts. Chain is complete and consistent ONLY through the 404-branch reading.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "delete_collection",
+        "fn delete_collection",
+        "fn resolve_name / resolve",
+        "validate_collection_exists",
+        "remove_collection",
+        "alias (content_manager tree)",
+        "fn process_response",
+        "delete.*non.existent / alias.*delete (tests)"
+      ],
+      "files_examined": [
+        "src/actix/api/collections_api.rs (lines 161-178, DELETE handler)",
+        "src/actix/helpers.rs (lines 52-89, process_response)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (lines 78-84, 211-296, delete_collection body)",
+        "lib/storage/src/content_manager/toc/mod.rs (lines 365-420, get_collection_unchecked + resolve_name)",
+        "lib/storage/src/content_manager/alias_mapping.rs (lines 62-93, get/remove/remove_collection)",
+        "lib/storage/src/content_manager/collections_ops.rs (lines 25-37, validate_collection_exists -> StorageError::not_found)",
+        "openapi/openapi-collections.ytt.yaml (lines 89-110, delete_collection operation)",
+        "openapi/openapi.lib.yml (lines 1-35, response() template: 200 + 4XX + default)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/toc/collection_meta_ops.rs:211-296 (load-bearing excerpt, v1.18.0 clone):\n```rust\npub(super) async fn delete_collection(\n    &self,\n    collection_name: &str,\n) -> Result<bool, StorageError> {\n    let _collection_create_guard = self.collection_create_lock.lock().await;\n\n    self.alias_persistence\n        .write()\n        .await\n        .remove_collection(collection_name)?;   // removes aliases MAPPING TO collection_name; never resolves collection_name AS an alias\n\n    let to_delete;\n    let result;\n    let collection_path = self.get_collection_path(collection_name);\n    let safe_delete_path = self.storage_config.storage_path.join(\".deleted\");\n\n    let removed_opt = self.collections.write().await.remove(collection_name);  // LITERAL name lookup — no resolve_name() call\n    if let Some(removed) = removed_opt {\n        ... // stop collection, delete files\n        result = true;\n    } else {\n        // we hold the collection_create lock to make sure no one is creating this collection\n        // otherwise we would delete its content now\n        if collection_path.exists() { ... }\n        else { to_delete = None; }\n        result = false;   // <- missing name: Ok(false), NO StorageError::not_found, NO 404\n    }\n    ...\n    Ok(result)\n}\n```\nContrast — the READ face resolves aliases and 404s (lib/storage/src/content_manager/toc/mod.rs:407-420):\n```rust\nfn resolve_name(\n    collection_name: &str,\n    collections: &Collections,\n    aliases: &AliasPersistence,\n) -> Result<String, StorageError> {\n    let alias_collection_name = aliases.get(collection_name);\n    let resolved_name = match alias_collection_name {\n        None => collection_name.to_string(),\n        Some(resolved_alias) => resolved_alias,\n    };\n    collections.validate_collection_exists(&resolved_name)?;  // -> StorageError::not_found(\"Collection `{name}` doesn't exist!\") -> HTTP 404\n    Ok(resolved_name)\n}\n```\nAnd the actix wrapper (src/actix/helpers.rs:61-65): Ok(res) -> HttpResponse::Ok().json(ApiResponse{ result: Some(res), status: ApiStatus::Ok, .. }) — so Ok(false) serializes exactly as the observed {\"result\":false,\"status\":\"ok\",...} with HTTP 200. Repo OpenAPI (openapi-collections.ytt.yaml:89-110) documents param 'Name of the collection to delete' and responses #@ response(type(\"boolean\")) = 200 + generic 4XX envelope.",
+      "call_chain_traced": "actix DELETE /collections/{name} (collections_api.rs:161) -> dispatcher.submit_collection_meta_op(CollectionMetaOperations::DeleteCollection(name)) (toc/collection_meta_ops.rs:78-80) -> TableOfContents::delete_collection (toc/collection_meta_ops.rs:211) -> alias_persistence.remove_collection(name) [treats name as alias TARGET] + collections.write().remove(name) [literal map lookup; miss -> Ok(false)] -> process_response (helpers.rs:80-89) -> HTTP 200 + result:false. Read face for comparison: get_collection (toc/mod.rs:383) -> get_collection_unchecked (365) -> resolve_name (407) -> validate_collection_exists (collections_ops.rs:25) -> StorageError::not_found -> HTTP 404. No caller along the delete path re-validates existence or resolves aliases; no test in tests/ or lib/storage/tests/ covers delete-by-alias or delete-on-missing HTTP status.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — /healthz pre-probe 200 in sibling semantic_collections_delete_005 (line 5) and the L1 control leg inside this very log behaved correctly (create 200, alias 200, delete-by-name 200/result:true, post-delete 404)",
+        "concurrency — strictly sequential single-client log, no parallel operations",
+        "cache/propagation delay — disposition is deterministic from source: the collections-map miss returns Ok(false) immediately; no eventual-consistency window is involved",
+        "request-parameter typo — the alias deleted in L2 (scdl5_1788396119_36796_ala2) is char-exact the alias created at L2 line 2 (raw line 11), and the verify targets the exact real name created at raw line 10"
+      ],
+      "surviving": "by-design defense on the ALIAS-RESOLUTION reading only: the doc and the repo OpenAPI scope the delete path param to 'Name of the collection to delete' and the read-face docstring (resolve_name: 'Name of the collection or alias to resolve') shows alias resolution is a read-path feature — but there is NO explicit intent evidence (comment/maintainer citation) for the 200-with-result:false disposition on missing names, so the 404-promise violation survives; adjudication of this defense belongs to the chain-auditor"
+    }
+  }
+}

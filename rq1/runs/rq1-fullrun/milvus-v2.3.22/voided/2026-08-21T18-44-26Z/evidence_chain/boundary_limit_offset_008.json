@@ -1,0 +1,75 @@
+{
+  "defect_id": "boundary_limit_offset_008",
+  "endpoint": "v2/vectordb/entities/query（对照组 v1/vector/search）",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "reanchored": "R2 消解重锚 2026-08-22：约束引用由 milvus_range_v1_search_defaults_001（错位——只描述 v1 默认值）改为新增 milvus_range_v2_query_limit_001；A 层引用与 violates 评估重写，B/C 观测原样保留",
+  "evidence_weight": "high",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "新约束 milvus_range_v2_query_limit_001 直接锚定 v2/vectordb/entities/query 的 limit 合法域 [1,16384]（同 v1 topk），source 为 go-func: handler_v2.go:565（if httpReq.Limit > 0 静默丢弃）vs :879（search 无条件 TopK=Limit）——与本链 source_grounding 之前已取证的 handler_v2.go:562-567 完全同一代码位置，reachable 且版本精确匹配。实测 limit=0/-1 被 200+code 200 接受并全量返回，正是该 inferred 条文断言应拒绝的行为——内容一致（行为违反条文）且端点精确（约束 endpoint == 主违规端点 v2 entities/query）",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[v2 query limit=0] http=200 body={\"code\":200,\"data\":[{\"id\":468539281520724788,\"vector\":[0.1,...]},{\"id\":468539281520724789,\"vector\":[0.2,...]}]}（主观测：limit=0 返回全部 2 行）",
+      "secondary_observations": [
+        "[v2 query limit=-1] http=200 同样返回全部 2 行",
+        "[limit=0]（v1 search） http=200 body={\"code\":65535,\"message\":\"topk [0] is invalid, top k should be in range [1, 16384], but got 0\"}",
+        "[limit=-1]（v1） http=200 code=65535 \"topk [-1] is invalid\"",
+        "[limit=null] http=200 body={\"code\":200,\"data\":[]}（v1 search null limit 走默认，非违规重点）",
+        "[offset=-5] http=200 code=65535 \"offset [-5] is invalid\"",
+        "[limit=16385] http=200 code=65535 \"topk [16385] is invalid\"",
+        "[limit=INT32_MAX] http=200 code=65535 topk [2147483647] invalid",
+        "[limit='3'] http=200 code=1801 unmarshal string→int32；[limit=1.5] code=1801",
+        "互证：vein_query_limit0_002 链同观测（v2 query limit=0/-1 → 200 code 200 全量返回），跨脚本独立触发同一模式"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "v1 侧拒绝均 HTTP 200 + 65535/1801；v2 query 违规值为 HTTP 200 + code 200 且返回实际数据行（最重形态：非法 limit 变成全量读取）"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_limit_offset_008.py", "vein_query_limit0_002.py（互证）"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_range_v2_query_limit_001",
+      "assertion_text_quoted": "v2 entities/query limit >= 1 且 <= 16384，否则业务码拒绝（同 v1 topk）",
+      "api_violates_assertion": true,
+      "note": "主观测（limit=0 → 200 code 200 返回全部 2 行；limit=-1 同）在新条文约束域内：0 与 -1 均不满足 limit>=1，条文要求业务码拒绝，实测未拒且成功返回数据——观测（200+code 200 静默接受）与条文（应拒绝）直接矛盾，violates=true。重锚后不再依赖 v1 对照锚的类推（旧 A 层 violates=false 系约束引用错位所致，非值合规）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_range_v2_query_limit_001（R2 新增，inferred，endpoint 即 v2/vectordb/entities/query）",
+        "doc: source_url go-func handler_v2.go:565 vs :879 reachable——:565 即本链已取证的 `Limit > 0` 静默丢弃点",
+        "script: boundary_limit_offset_008.py v1/v2 双侧提交 limit 0/-1/null/越界；vein_query_limit0_002.py 独立复现",
+        "log: v2 query limit=0 → 200 code 200 返回 2 行（主观测）；v1 search limit=0 → code 65535 拒绝（对照）——违反条文且与 search 同参数两面对照在案"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["func (h *HandlersV2) query", "httpReq.Limit > 0", "QueryReqV2"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go:547-590",
+        "internal/distributed/proxy/httpserver/request_v2.go:69-77"
+      ],
+      "source_excerpt": "handler_v2.go:562-567:\n\tif httpReq.Offset > 0 {\n\t\treq.QueryParams = append(... ParamOffset ...)\n\t}\n\tif httpReq.Limit > 0 && !matchCountRule(httpReq.OutputFields) {\n\t\treq.QueryParams = append(req.QueryParams, &commonpb.KeyValuePair{Key: ParamLimit, Value: strconv.FormatInt(int64(httpReq.Limit), 10)})\n\t}\n——QueryReqV2.Limit int32 `json:\"limit\"`（request_v2.go:75）无 binding 校验；limit<=0 时 ParamLimit 键整个被省略，下游 Query 无 limit 即返回全部命中行",
+      "call_chain_traced": "v2 query → QueryReqV2.Limit (request_v2.go:75, 无 validate) → handler_v2.go:565 `Limit > 0` 静默丢弃非法/零值 limit → milvuspb.QueryRequest 不带 ParamLimit → 全量返回。对照组 v1 search：TopKKey 直接 format httpReq.Limit（handler_v1.go:874），下游 proxy 校验 topk∈[1,16384] 返回 65535。新约束 source_url 引用的 :565/:879 即此同一调用链取证点",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

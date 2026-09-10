@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_collections_create_015",
+  "endpoint": "collections+create",
+  "param": "strict_mode_config.max_resident_memory_percent",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract",
+  "oracle": {
+    "statement": "strict_mode_config.max_resident_memory_percent=1 and =100 each answer 200 result=true with an echo equal to the value, or a clean 400/422 (deprecation guard; 5xx with /healthz alive = Type3_RuntimeFailure); =0 and =101 are refused 4xx or accepted-but-not-persisted - a persisted 0/101 in result.config.strict_mode_config.max_resident_memory_percent is Type4_StateLogicViolation (with persistence the acceptance is additionally Type1_IllegalSuccess); the 0-case refusal is Type-2 rubric scored - constraint qdrant_range_collections_create_006",
+    "source": "docstring"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_collections_create_016",
+  "endpoint": "collections+create",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract",
+  "oracle": {
+    "statement": "valid create (vectors {size:4, distance:Cosine}) returns HTTP 200 with body result==true (boolean), status a string, time a number - any missing/mistyped envelope field = Type4_StateLogicViolation; and the immediate describe returns 200 with result.config.params.vectors.size==4 and .distance=='Cosine' - a describe 404 or a config echo mismatch = Type4_StateLogicViolation; 4xx on the valid create = Type1_IllegalRejection; 5xx with /healthz alive = Type3_RuntimeFailure - constraint qdrant_behavioral_collections_create_001",
+    "source": "docstring"
+  }
+}

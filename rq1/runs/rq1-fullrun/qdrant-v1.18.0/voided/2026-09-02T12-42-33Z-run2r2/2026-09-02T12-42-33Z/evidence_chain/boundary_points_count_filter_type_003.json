@@ -1,0 +1,97 @@
+{
+  "defect_id": "boundary_points_count_filter_type_003",
+  "endpoint": "points+count (POST /collections/{collection_name}/points/count)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: live fetch 2026-09-04 of https://api.qdrant.tech/v-1-18-x/api-reference/points/count-points succeeded (title 'Count points | Qdrant | API Reference'); contract build-time records agree (assertion source_status 'reachable', endpoint_registry verified_at 2026-09-02T12:34:08Z). Version: URL/selector v-1-18-x matches target v1.18.0. Endpoint precision: points+count present in endpoint_registry with doc_quote 'exact=true (default) gives an exact count (slower); returns 200 {count}; 404 for a missing collection.'. Content consistency is only PARTIAL: the page prose DOES contain the referenced assertion's behavior ('If true, count exact number of points... Default: true' plus 'Counts the number of points that match a specified filtering condition.'), but the claim's premise — that a single Condition OBJECT for must is a 'filter type violation' — is contradicted by the same version's authoritative machine spec (qdrant repo docs/redoc/v1.18.x/openapi.json, Filter.must = anyOf [Condition, Condition[], nullable]): the Fern HTML page renders the filter schema shallowly ('filter object or any Optional') and its only example uses the array form, which is how the array-only misreading arises. No SDK/REST confusion involved.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "F5 filter={\"must\": {...}} (object for conditions array) -> status=200 | raw: {\"result\":{\"count\":8},\"status\":\"ok\",\"time\":0.000412256} | VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — F5 filter={\"must\": {...}} (object for conditions array): filter type violation silently accepted with 200; the count then derives from an undefined filter shape",
+      "secondary_observations": [
+        "F1 filter=null (null vs omitted consistency) -> status=200 | raw: {\"result\":{\"count\":12},\"status\":\"ok\",\"time\":0.000268523} | F1 ...: 200 with count == 12 == N_SEED (consistent)",
+        "F2 filter={} (legal empty Filter) -> status=200 | raw: {\"result\":{\"count\":12},\"status\":\"ok\",\"time\":0.000296402} | F2 ...: 200 with count == 12 == N_SEED (consistent)",
+        "F3 filter=\"berlin\" (string for object) -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: invalid type: string \\\"berlin\\\", expected struct Filter at line 1 column 20\"},\"time\":0.0} | rejected with 400 (clean)",
+        "F4 filter=[{...}] (array for object) -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: invalid length 1, expected struct Filter with 4 elements at line 1 column 59\"},\"time\":0.0} | rejected with 400 (clean) [note: seq-form struct-deserialize quirk family, matches the known serde untagged/seq-form instance pattern]",
+        "comparative probe (live re-fire 2026-09-04, own 4-point collection, 2 berlin / 2 paris, container self-reports commit db3fca3): C1 rest/count filter={'must': <berlin-cond-object>} (candidate's exact value re-fired) -> http=200 {\"result\":{\"count\":2},\"status\":\"ok\",...} — deterministic reproduction; count == exact number of berlin points (correct for the submitted filter)",
+        "comparative probe: C2 rest/count filter={'must_not': <berlin-cond-object>} (same-family parameter, same type domain Vec<Condition>) -> http=200 {\"result\":{\"count\":2},\"status\":\"ok\",...} — object coerced to 1-element list and must_not semantics correctly applied (the 2 paris points)",
+        "comparative probe: C3 rest/count filter={'should': <berlin-cond-object>} (same-family parameter) -> http=200 {\"result\":{\"count\":2},\"status\":\"ok\",...}",
+        "comparative probe: C4 rest/scroll filter={'must': <berlin-cond-object>} (other REST face, same value) -> http=200 {\"result\":{\"points\":[{\"id\":1,\"payload\":{\"city\":\"berlin\"}},{\"id\":2,\"payload\":{\"city\":\"berlin\"}}],\"next_page_offset\":null},\"status\":\"ok\",...} — identical acceptance on the scroll face (shared Filter type)",
+        "comparative probe: C5 rest/count filter={'must': 5} (scalar-for-condition control) -> http=400 {\"status\":{\"error\":\"Format error in JSON body: invalid type: integer `5`, expected null, array or map at line 1 column 38\"},\"time\":0.0} — the server's own rejection message names must's accepted grammar: null, array or MAP (single object is a declared legal form at the error boundary)",
+        "comparative probe: C6 rest/count filter={'must': null} (null clause) -> http=200 {\"result\":{\"count\":4},\"status\":\"ok\",...} — null clause behaves as absent (count == all 4 points)",
+        "comparative probe: C7 rest/count filter=<berlin-cond-object> (Condition where Filter expected) -> http=400 {\"status\":{\"error\":\"Format error in JSON body: unknown field `key`, expected one of `should`, `min_should`, `must`, `must_not` at line 1 column 72\"},...} — outer Filter struct remains strictly typed",
+        "grpc face: face_unavailable (no gRPC client in this sandbox; not probed live). Static shape only: lib/api/src/grpc/qdrant.rs L136-144 grpc Filter.must is prost repeated Condition (tag 2)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The F5 value returned HTTP 200 + status ok + a correct count. Judged as a request-side-decidable error only under the script's array-only premise; per the versioned v1.18.x OpenAPI the single-Condition form for must is spec-legal (anyOf [Condition, Condition[], null]), so no client error occurred and no business error code was returned — the semantics field is N/A rather than '2xx + business error code'. The genuinely illegal shapes in the same log (F3 string, F4 array-for-Filter) were returned as HTTP 400 with a Format error body, i.e. proper 4xx semantics."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["boundary_points_count_filter_type_003"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_count_001",
+      "assertion_text_quoted": "exact=true (default) performs an exact count (slower); an omitted filter counts all points",
+      "api_violates_assertion": false,
+      "note": "constraint_id was empty in candidates.jsonl; resolved from the script header (debate_logs/boundary_points_count_filter_type_003.py L7 'constraint_ids: qdrant_behavioral_points_count_001') and matched 1:1 in structured_contract.json assertions (assertion_text_quoted is the verbatim description field; the contract's expected_behavior field additionally reads 'HTTP 200 with {count}; exact=true returns the exact number of points matching the filter (all points when the filter is omitted)'). Violates-declaration self-check: the in-chain observation shows 200+success, but the quoted assertion is an exactness-of-count claim, and the observed count (8) IS the exact number of points matching the submitted filter (8 berlin of 12 seeded) — re-verified live (C1: count=2 for 2 berlin of 4). The value is genuinely compliant with this assertion; violates=false. The 'type violation' premise the script enforces (must must be an array) exists nowhere in the contract: type_constraints contains no Filter-clause shape constraint and the data_types entry 'Filter: {should?, min_should?, must?, must_not?}' is shape-agnostic; the versioned OpenAPI explicitly declares the single-object form legal. The wrong premise was cited, not the wrong observation.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_count_001 present in structured_contract.json assertions (behavioral, points+count, exact-count-with-filter promise) — contains NO type constraint on Filter.must; the object-for-array 'violation' premise is absent from the contract",
+        "doc: source_url reachable and version-matched (v-1-18-x); page prose carries the exact-count promise ('If true, count exact number of points... Default: true'); but the same version's authoritative spec (docs/redoc/v1.18.x/openapi.json) declares Filter.must = anyOf [Condition, Condition[], nullable] — the premise that the object form is a violation is contradicted, not supported, by the doc layer",
+        "script: F5 request body {\"filter\": {\"must\": {\"key\": \"city\", \"match\": {\"value\": \"berlin\"}}}} (script L152-153) matches the logged request exactly; script oracle L45 declares any 2xx on F5 = Type1_IllegalSuccess",
+        "log: F5 -> status=200, raw {\"result\":{\"count\":8},...}; count 8 == BERLIN_N (the correct exact count for the filter); verdict line quotes Type1_IllegalSuccess with 'silently accepted ... derives from an undefined filter shape' — the raw response itself is a successful, arithmetically correct exact count"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Break is at the doc/content link for the claim's premise: the chain contract->doc never asserts array-only must, and the version-matched OpenAPI spec actively declares the single-Condition object legal (anyOf [Condition, array-of-Condition, null]), so the log's 'type violation' adjudication rests on a premise the cited documentation contradicts. The count itself (8) is the exact matching count, so the behavioral assertion that IS in the contract was honored. Contributing (lesser) gap at the contract link: the premise was never grounded in any constraint. The log link is internally consistent (verdict matches the observed 200) — the observation is real, its legality judgment is what fails.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "pub struct Filter",
+        "MaybeOneOrMany",
+        "pub struct CountRequest",
+        "points/count|CountRequest|must (in openapi/*.ytt.yaml and docs/redoc/v1.18.x/openapi.json)"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs (Filter struct, L3794-3826)",
+        "lib/segment/src/common/utils.rs (MaybeOneOrMany, L80-132; unit tests L141-232)",
+        "lib/api/src/rest/schema.rs (MaybeOneOrMany on QueryRequestInternal.prefetch L549-555, Prefetch.prefetch L755-761, ContextExample-positive/context L836-852, QueryGroupsRequestInternal.prefetch L1222-1228)",
+        "lib/shard/src/count.rs (CountRequestInternal, L11-25)",
+        "lib/collection/src/operations/types.rs (CountRequest, L885-892)",
+        "lib/api/src/grpc/qdrant.rs (grpc Filter, L136-144)",
+        "docs/redoc/v1.18.x/openapi.json (components.schemas.Filter)",
+        "openapi/openapi-main.ytt.yaml"
+      ],
+      "source_excerpt": "lib/segment/src/common/utils.rs L80-107 (docstring + deserializer):\n/// Deserializer helper for `Option<Vec<T>>` that allows deserializing both single and an array of values.\n///\n/// Use via `#[serde(with = \"MaybeOneOrMany\")]` and `#[schemars(with=\"MaybeOneOrMany<T>\")]` field attributes\npub struct MaybeOneOrMany<T>(pub Option<Vec<T>>);\n\nimpl<T: Serialize> MaybeOneOrMany<T> {\n    pub fn serialize<S>(value: &Option<Vec<T>>, serializer: S) -> Result<S::Ok, S::Error>\n    where S: serde::Serializer,\n    { value.serialize(serializer) }\n}\n\nimpl<'de, T: Deserialize<'de>> MaybeOneOrMany<T> {\n    pub fn deserialize<D>(deserializer: D) -> Result<Option<Vec<T>>, D::Error>\n    where D: serde::Deserializer<'de>,\n    {\n        use serde_untagged::UntaggedEnumVisitor;\n        UntaggedEnumVisitor::new()\n            .unit(|| Ok(None))\n            .seq(|x| x.deserialize().map(Some))\n            .map(|x| x.deserialize().map(|x| vec![x]).map(Some))\n            .deserialize(deserializer)\n    }\n}\n\nlib/segment/src/types.rs L3808-3816 (Filter.must field):\n    /// All conditions must match\n    #[validate(nested)]\n    #[serde(\n        default,\n        with = \"MaybeOneOrMany\",\n        skip_serializing_if = \"Option::is_none\"\n    )]\n    #[schemars(with = \"MaybeOneOrMany<Condition>\")]\n    pub must: Option<Vec<Condition>>,\n(docs/redoc/v1.18.x/openapi.json, Filter.must):\n\"must\": { \"description\": \"All conditions must match\", \"anyOf\": [ {\"$ref\": \"#/components/schemas/Condition\"}, {\"type\": \"array\", \"items\": {\"$ref\": \"#/components/schemas/Condition\"}}, {\"nullable\": true} ] }\n(unit test test_deserialize_one_or_many at utils.rs L141-194 asserts {\"data\": {\"key\": \"value\"}} deserializes to a 1-element vec)",
+      "call_chain_traced": "REST POST /collections/{c}/points/count -> CountRequest (lib/collection/src/operations/types.rs L885, #[serde(flatten)] CountRequestInternal) -> CountRequestInternal.filter: Option<Filter> (lib/shard/src/count.rs L11-18, exact default true) -> Filter.must: Option<Vec<Condition>> with #[serde(default, with = \"MaybeOneOrMany\")] (lib/segment/src/types.rs L3810-3816; same attr on should L3797-3803 and must_not L3820-3825) -> MaybeOneOrMany::deserialize (lib/segment/src/common/utils.rs L94-107): unit -> None, seq -> vec, map -> vec![x] — the single Condition object is deliberately wrapped into a 1-element conditions list, then normal must semantics apply, yielding the exact count 8. The same MaybeOneOrMany pattern is applied API-wide (rest/schema.rs prefetch L553/L759/L1226, context L841/L849), i.e. a systematic one-or-many convention, not an isolated leak. The schemars JsonSchema impl (utils.rs L109-132) publishes anyOf [T, Vec<T>, null] into the generated spec, which is exactly what the shipped v1.18.x OpenAPI carries. Running container self-reports commit db3fca327851e360c521065649e0f65a57fe7d3c (deployment_meta.json) == clone HEAD db3fca3 — source and server are the same build.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "by_design_evidence": "Explicit intent evidence per v3.4 tightened clause: (1) docstring 'allows deserializing both single and an array of values' (utils.rs L80-82); (2) maintained unit test asserting the single-object form (utils.rs L154-193); (3) the deliberate schemars anyOf publication into the shipped versioned OpenAPI; (4) consistent application to should/must_not/prefetch/context; (5) live C5 rejection message for a scalar names the accepted grammar 'expected null, array or map' — the object form is enforced-as-legal at the error boundary, not silently leaked",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (healthz live throughout; F1/F2 correct; live re-fire C1-C7 all deterministic)",
+        "concurrency (wait=true durable seed; identical result on re-fire with a fresh collection)",
+        "cache delay (stateless count face; same disposition on a brand-new collection)",
+        "request-parameter typo (F5 body byte-identical to the claim; re-fired deliberately)",
+        "by_design (source-confirmed: MaybeOneOrMany docstring + unit test + versioned OpenAPI anyOf + live 'null, array or map' grammar message — this is a documented, spec-published convenience form)"
+      ],
+      "surviving": null
+    }
+  }
+}

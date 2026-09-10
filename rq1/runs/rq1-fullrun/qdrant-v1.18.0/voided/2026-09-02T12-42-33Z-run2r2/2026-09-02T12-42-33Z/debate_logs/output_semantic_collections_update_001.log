@@ -1,0 +1,15 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: scu0182f0bd
+[assertion quote] expected_behavior: 'valid update on an existing collection returns HTTP 200; a missing collection returns 404; an invalid diff returns 400'
+[setup] created scu0182f0bd_live (dim=4)
+[PATCH scu0182f0bd_live] body={"hnsw_config": {"ef_construct": 64}} -> status=200 raw={"result":true,"status":"ok","time":0.0186469}
+[leg1 echo] describe hnsw_config.ef_construct=64 (sent 64)
+[PATCH scu0182f0bd_never_c291fb] body={"hnsw_config": {"ef_construct": 64}} -> status=404 raw={"status":{"error":"Not found: Collection `scu0182f0bd_never_c291fb` doesn't exist!"},"time":0.000039212}
+[PATCH scu0182f0bd_never_c291fb] body={"hnsw_config": {"ef_construct": 64}} -> status=404 raw={"status":{"error":"Not found: Collection `scu0182f0bd_never_c291fb` doesn't exist!"},"time":0.000042854}
+[PATCH scu0182f0bd_live] body={"optimizers_config": "not-an-object"} -> status=400 raw={"status":{"error":"Format error in JSON body: invalid type: string \"not-an-object\", expected struct OptimizersConfigDiff at line 1 column 37"},"time":0.0}
+[PATCH scu0182f0bd_live] body={"hnsw_config": {"ef_construct": 3}} -> status=422 raw={"status":{"error":"Validation error in JSON body: [hnsw_config.ef_construct: value 3 invalid, must be 4 or larger]"},"time":0.0}
+[leg3/leg4 note] measured rejection statuses 400/422 are both documented error responses in the versioned v-1-18-x OpenAPI; the assertion's loose '400' wording is satisfied by either (spec wins, R16)
+[PATCH scu0182f0bd_live] body={"hnsw_config": {"ef_construct": 64}} -> status=200 raw={"result":true,"status":"ok","time":0.01785737}
+OK: legal PATCH on scu0182f0bd_live -> 200 result:true with ef_construct=64 echoed in describe (twice, stable); never-created scu0182f0bd_never_c291fb -> 404 twice without flapping; format-invalid and value-invalid diffs refused with 4xx as documented
+VERDICT: NO_DEFECT

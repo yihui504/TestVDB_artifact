@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_delete_005",
+ "endpoint": "payload+delete",
+ "param": null,
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "face 1 — delete {\"points\":[1],\"keys\":[\"city\"],\"wait\":true} on an existing collection returns exactly 200 with a result object whose status field is a string (operation_id integer|null when present), and scroll readback afterwards shows the point payload exactly {\"n\":..} (\"city\" gone, \"n\" byte-equal baseline value) — a 200-ack with \"city\" surviving or \"n\" damaged = Type4_StateLogicViolation, an envelope violating the response_shape grid = Type4, non-200 = Type1_IllegalSuccess; face 2 — the same body against a nonexistent collection returns exactly 404 (200-299 = Type1_IllegalSuccess, 5xx = Type3_RuntimeFailure with /healthz re-check, other 4xx = clean-reject NOTE); a 404 body naming neither the collection name nor the resource word \"collection\" = Type2_PoorDiagnostics",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

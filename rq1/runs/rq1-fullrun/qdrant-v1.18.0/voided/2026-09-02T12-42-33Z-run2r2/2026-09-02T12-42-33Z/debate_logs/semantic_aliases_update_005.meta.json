@@ -1,0 +1,12 @@
+{
+ "defect_id": "semantic_aliases_update_005",
+ "endpoint": "aliases+update",
+ "param": "actions",
+ "strategy": "illegal_rejection",
+ "expected_defect_type": "Type1_IllegalRejection",
+ "oracle": {
+  "statement": "all 6 legal batches return HTTP 200 with result=true (aliases+update response_shape result:boolean): (1) single create_alias; (2) rename_alias body carrying ONLY old_alias_name+new_alias_name (request_required_paths for rename_alias lists no collection_name); (3) delete_alias body carrying ONLY alias_name (request_required_paths for delete_alias lists alias_name alone); (4) create->rename->delete chain of one alias inside ONE atomic batch (end state: both chain names absent from the scoped map); (5) unicode alias name; (6) 128-char alias name; any non-200 => Type1_IllegalRejection (legal-per-contract input refused); 5xx while /healthz alive => Type3_RuntimeFailure",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,13 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] drop_collection = /collections/{name} (raw_knowledge api_endpoints[collections+delete].url); update_aliases = /collections/aliases + list_aliases = /aliases (api_endpoints[aliases+update / aliases+list].url)
+ownership prefix: scd05e23ec9 (real=scd05e23ec9_real alias=scd05e23ec9_alias)
+[pre-probe] /healthz status=200 raw=healthz check passed
+[create real scd05e23ec9_real] status=200 raw={"result":true,"status":"ok","time":0.25650463}
+[create_alias scd05e23ec9_alias -> scd05e23ec9_real] status=200 raw={"result":true,"status":"ok","time":0.013591052}
+[premise: read via alias scd05e23ec9_alias] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"dista
+[aliases list] status=200 mapping(scd05e23ec9_alias)='scd05e23ec9_real' raw={"result":{"aliases":[{"alias_name":"scd05e23ec9_alias","collection_name":"scd05e23ec9_real"}]},"status":"ok","time":7.301e-6}
+[DELETE by alias scd05e23ec9_alias] status=200 raw={"result":false,"status":"ok","time":0.000074845}
+[state: GET real scd05e23ec9_real] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"dista
+[aliases list] status=200 mapping(scd05e23ec9_alias)='scd05e23ec9_real' raw={"result":{"aliases":[{"alias_name":"scd05e23ec9_alias","collection_name":"scd05e23ec9_real"}]},"status":"ok","time":7.667e-6}
+VERDICT: DEFECT_FOUND (Type4_StateLogicViolation: DELETE by alias returned 200 but the underlying collection 'scd05e23ec9_real' is still gettable (status 200) - half-delete through the alias seam (qdrant_bc_delete_invisibility_001: a successfully deleted collection disappears; GET must 404))

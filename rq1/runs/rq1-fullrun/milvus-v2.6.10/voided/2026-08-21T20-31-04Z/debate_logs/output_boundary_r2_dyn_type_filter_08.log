@@ -1,0 +1,10 @@
+insert dyn int+str -> ok=True raw={"code":0,"cost":0,"data":{"insertCount":2,"insertIds":[1,2]}}
+index create -> ok=True raw={"code":0,"data":{}}
+insert dyn field = None -> ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[3]}}
+  then nullf=5 -> ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[4]}}
+query filter nf=='10' (int field, str literal) -> ok=True raw={"code":0,"cost":0,"data":[]}
+
+query filter sf==0 (str field, int literal) -> ok=True raw={"code":0,"cost":0,"data":[]}
+
+delete filter nf=='10' -> ok=True raw={"code":0,"data":{"deleteCount":0}}
+VERDICT: NO_DEFECT

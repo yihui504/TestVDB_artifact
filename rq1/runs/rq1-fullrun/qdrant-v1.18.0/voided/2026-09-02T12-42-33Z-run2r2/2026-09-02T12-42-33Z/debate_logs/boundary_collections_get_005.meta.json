@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_collections_get_005",
+ "endpoint": "collections+get",
+ "param": "collection_name",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "strategy7_malformed_input",
+ "oracle": {
+  "statement": "for malformed never-created path probes (NUL %00, %2F-in-name, %zz, lone-surrogate %ED%A0%80, dot-segments): 404 or 400/422 = clean; HTTP 2xx = Type1_IllegalSuccess (config for a nonexistent/malformed name); 5xx = Type3_RuntimeFailure; other channels = Type4_StateLogicViolation; dot-segments additionally tolerate 200 of a non-describe shape (routing normalization) but fail on 5xx or a describe-envelope 200",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

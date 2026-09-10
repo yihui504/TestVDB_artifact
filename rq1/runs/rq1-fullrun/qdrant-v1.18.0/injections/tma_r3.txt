@@ -1,0 +1,126 @@
+## 威胁模型与认知盲点注入（v2.1 Strategic Intelligence）
+
+### Attack Surface Priority
+
+#### POST /collections/{collection}/points/query (Priority: critical)
+- Hist defects: 67
+- Blindspots: BS-01, BS-04, BS-05
+- Cross-DB: 0.92
+
+**Attack order:**
+  - type_confusion -> BS BS-01: filter.should=null, filter.must_not=object, query=null
+  - boundary -> BS BS-04: limit=0, limit=999999999, offset with large values
+  - semantic -> BS BS-05: min_should with empty conditions, nested filter validation
+
+#### PUT /collections/{collection} (Priority: critical)
+- Hist defects: 55
+- Blindspots: BS-01, BS-04
+- Cross-DB: 0.88
+
+**Attack order:**
+  - type_confusion -> BS BS-01: vectors config missing, vectors={}, hnsw_config={}
+  - boundary -> BS BS-04: shard_number=0, shard_number=-1, replication_factor=-1
+
+#### POST /collections/{collection}/points (Priority: critical)
+- Hist defects: 42
+- Blindspots: BS-01, BS-04, BS-07
+- Cross-DB: 0.85
+
+**Attack order:**
+  - boundary -> BS BS-04: empty vector=[], dimension > 65536, wait=false with empty vectors
+  - resource_exhaustion -> BS BS-07: upsert 1M points, high dimension vectors
+
+#### POST /collections/{collection}/points/search (Priority: high)
+- Hist defects: 35
+- Blindspots: BS-01, BS-04, BS-05
+- Cross-DB: 0.8
+
+**Attack order:**
+  - type_confusion -> BS BS-01: filter=null, vectors config invalid
+  - boundary -> BS BS-04: limit=0, limit extreme value, ef construct validation
+  - semantic -> BS BS-05: HNSW pagination duplicates, indexed filter bounds
+
+#### POST /collections/{collection}/points/recommend (Priority: high)
+- Hist defects: 15
+- Blindspots: BS-01, BS-10
+- Cross-DB: 0.75
+
+**Attack order:**
+  - semantic -> BS BS-10: missing positive point IDs, missing negative point IDs
+  - type_confusion -> BS BS-01: invalid filter structure
+
+#### POST /collections/{collection}/snapshots (Priority: medium)
+- Hist defects: 42
+- Blindspots: BS-03, BS-06, BS-07
+- Cross-DB: 0.7
+
+**Attack order:**
+  - concurrent_state -> BS BS-03: snapshot during writes, snapshot during resharding
+  - platform_specific -> BS BS-06: Windows Docker snapshot, large collection snapshot
+
+#### POST /collections/{collection}/points/count (Priority: medium)
+- Hist defects: 12
+- Blindspots: BS-01, BS-09
+- Cross-DB: 0.68
+
+**Attack order:**
+  - type_confusion -> BS BS-01: filter with null conditions, empty filter with min_should
+  - semantic -> BS BS-09: payload index cardinality estimation
+
+#### DELETE /collections/{collection}/points (Priority: medium)
+- Hist defects: 25
+- Blindspots: BS-03
+- Cross-DB: 0.72
+
+**Attack order:**
+  - concurrent_state -> BS BS-03: concurrent delete + upsert, delete during WAL replay
+  - boundary -> BS BS-04: delete with empty selector
+
+### Global Weights
+
+  - boundary_attacks: 35%
+  - type_confusion_attacks: 25%
+  - state_consistency_attacks: 20%
+  - semantic_contract_attacks: 20%
+
+### Cognitive Blindspots
+
+#### BS-01: Parameter Type Coercion Trust
+  Developer team assumes REST API framework/serde validates complex nested structures like filter conditions, but validation gaps allow null/object/array type mismatches through silently
+  Manifestation: filter.should=null, filter.must_not=object, query=null, vectors={} all accepted with 200 OK but produce undefined behavior
+  Attacks: type_confusion_attack, missing_parameter_attack, boundary_value_attack
+
+#### BS-02: Error Message Negligence
+  Team prioritizes functional correctness over diagnostic quality - generic 'internal error' messages considered acceptable for edge cases
+  Manifestation: Dimension-mismatched vectors silently discarded or return 'Internal Error' instead of 'Vector dimension mismatch'
+  Attacks: error_quality_evaluation, diagnostics_gap_analysis
+
+#### BS-03: Concurrency State Blindness
+  Team underestimates data consistency impact of concurrent operations during resharding, WAL replay, and distributed scenarios
+  Manifestation: WAL replay resurrects deleted points, resharding causes replica count inconsistencies, concurrent updates corrupt state
+  Attacks: state_consistency_attack, race_condition_exploration, concurrent_operation_sequence
+
+(No mapping data)
+
+### By-Design Behaviors (Avoid)
+
+  - HNSW approximation may return duplicate points across offset-based pagination: Issue #9523 - maintainer confirmed this is a known limitation of HNSW approximate search, not a defect
+
+  - jemalloc crashes with 'Unsupported system page size' on ARM64/aarch64: External jemalloc dependency limitation - maintainer acknowledged but deprioritized as infrastructure constraint
+
+  - Snapshot creation timeout/ReadTimeout on large collections: May be resource exhaustion vs defect - check if collection is truly large or if snapshot process is stuck
+
+  - Idempotent DELETE returns 200 even if point doesn't exist: RESTful idempotent delete design - 200 OK is correct response for successful idempotent operation
+
+  - wait=false operations succeed but errors are not logged: Issue #4925 - acknowledged limitation of async operations - low priority enhancement request
+
+  - filter=null in query/search is treated as no-filter: May be intentional API design (null means no filter) vs validation bug - check API specification
+
+  - with_payload parameter defaults to false: Documented default behavior - API specification defines with_payload=false as default
+
+  - Distance enum uses 'Euclid' not 'Euclidean': API design choice - 'Euclid' is the official enum name per specification
+
+  - HNSW search with high ef/limit may return non-deterministic tie-breaking results: Approximate search non-determinism is documented HNSW characteristic
+
+  - Error message field names like 'status', 'time', 'error' are not part of contract: Error message structure is implementation detail, not guaranteed API contract
+

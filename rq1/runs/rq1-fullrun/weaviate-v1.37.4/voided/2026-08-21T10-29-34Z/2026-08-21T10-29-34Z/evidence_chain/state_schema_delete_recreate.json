@@ -1,0 +1,75 @@
+{
+  "defect_id": "state_schema_delete_recreate",
+  "endpoint": "POST /v1/schema (delete->recreate lifecycle; count 校验走 POST /v1/graphql)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "FAIL",
+      "version_match": "FAIL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PARTIAL",
+      "sdk_rest_confusion": false,
+      "detail": "candidates.jsonl 的 constraint_id='contract' 在 structured_contract.json 中不存在（constraints.type/range/state 三列表全空，无任何 constraint 记录）→ 无 source_url → 可达性/版本/内容三 FAIL；端点层面脚本使用的 POST /v1/schema + DELETE /v1/schema/{name} + POST /v1/graphql 与 OpenAPI 路径一致但无 contract 记录 → PARTIAL。脚本 docstring 引用的 OpenAPI 'permanently deletes all data' 无 contract 载体。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "D",
+      "log_pattern": "c4: Recreated class aggregate raw: {\"code\":400,\"message\":\"parsing body body from \\\"\\\" failed, because json: cannot unmarshal string into Go value of type models.GraphQLQuery\"} + Recreated class count: None (expected 0 for isolated recreate) + DEFECT signal — recreated class not queryable / count unparsable + VERDICT: DEFECT_FOUND",
+      "secondary_observations": [
+        "c1: First create Status: 200 raw={\"class\":\"StateSchemaDeleteRecreate\",...}",
+        "c2: Object insert Status: 200 raw={...\"id\":\"e81bbe60-...\"...}",
+        "c3: Delete class Status: 200 raw=",
+        "c3.5: Second create Status: 200 raw={...}（重建成功，服务端 delete+recreate 本身 200）",
+        "同一客户端 bug 在同批 log 复现: output_state_schema_query_visibility.log 同串 'parsing body body from \"\" failed, because json: cannot unmarshal string into Go value of type models.GraphQLQuery'",
+        "脚本后半段（recreate 后 describe 读回新配置 dynamicEfMax=300）因 count=None 提前 exit(1)，从未执行"
+      ],
+      "claim_alignment": "drifted",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "target 正确拒绝了畸形 GraphQL body（400）；畸形来自客户端：脚本 _class_count() 把 JSON 编码的查询字符串直接作为 body 传给 runtime.request('POST','graphql',q)，runtime 以 requests json=<str> 发送 → wire body 为带引号 JSON 字符串，target 的 models.GraphQLQuery 解码失败。DEFECT verdict 是客户端请求构造错误的产物，非服务端状态缺陷"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": true,
+      "triggering_scripts": ["state_schema_delete_recreate", "state_schema_query_visibility", "state_schema_mutate_data_consistency"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "contract",
+      "assertion_text_quoted": "（structured_contract.json 无此 constraint，无断言原文；脚本 docstring 引 OpenAPI: DELETE /schema/{className} 'permanently deletes all data'）",
+      "api_violates_assertion": false,
+      "note": "claim 引用的 OpenAPI 语义在 structured_contract.json 中无对应 constraint 记录（constraint_id 'contract' 为占位）；且脚本判定步骤从未到达服务端状态检验——无 assertion 可被判定违反",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: constraint_id 'contract' 占位（structured_contract.json 中不存在，constraints 全空）",
+        "doc: 无 source_url（OpenAPI 引文仅在脚本 docstring，无 contract 载体）",
+        "script: state_schema_delete_recreate.py（create/insert/delete/recreate 均 200；count 校验用 rt.request('POST','graphql', q=JSON字符串) —— body 构造错误）",
+        "log: 判 DEFECT_FOUND 但 raw GraphQL 响应为 HTTP 400（target 拒绝畸形 body）"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "log 判 DEFECT_FOUND 但 raw 响应显示 HTTP 400 'cannot unmarshal string into Go value of type models.GraphQLQuery'——target 拒绝的是客户端畸形请求（脚本把 GraphQL 查询以 JSON 字符串体发送，runtime json=<str> 落盘带引号字符串），count=None 为该构造错误的产物；claim 的 delete->recreate 状态隔离行为（旧数据清零 count=0、新配置读回=300）从未被实际检验。另 constraint_id 'contract' 在 structured_contract.json 不存在 → contract 环同样断裂",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["parsing body", "GraphQLQuery", "graphql_post_parameters", "cannot unmarshal"],
+      "files_examined": [
+        "adapters/handlers/rest/operations/graphql/graphql_post_parameters.go",
+        "adapters/handlers/rest/handlers_graphql.go",
+        "debate_logs/runtime.py",
+        "debate_logs/state_schema_delete_recreate.py"
+      ],
+      "source_excerpt": "adapters/handlers/rest/operations/graphql/graphql_post_parameters.go:52-87：'Body *models.GraphQLQuery' / 'var body models.GraphQLQuery; if err := route.Consumer.Consume(r.Body, &body); err != nil { ... errors.NewParseError(\"body\", \"body\", \"\", err) }' —— target 的 /v1/graphql 期望 JSON 对象体（models.GraphQLQuery），string 体解码失败即 400 'parsing body body from \"\" failed, because ...'，与 log 逐字一致。客户端侧 debate_logs/runtime.py:47 'r = requests.request(method.upper(), url, json=body or {}, timeout=30)' 在 body 为字符串时把字符串当整体体发送。",
+      "call_chain_traced": "客户端: script _class_count() → rt.request('POST','graphql', q='{\"query\":...}')（q 是 JSON 编码字符串）→ runtime json=<str> → wire body 为带引号 JSON 字符串 → target: graphql.post BindRequest → route.Consumer.Consume 把 string 解码进 models.GraphQLQuery 失败 → NewParseError → 400。target 侧 body 类型校验按预期工作（validation present）；客户端构造错误导致 400，claim 的 delete->recreate 服务端状态行为在源码层面无证据可查（未被执行）",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "script_graphql_body_construction_error（客户端把 GraphQL 查询以 JSON 字符串体发送，target 400 拒绝；DEFECT verdict 为该客户端错误的产物，非服务端状态缺陷）"
+    }
+  }
+}

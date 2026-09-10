@@ -1,0 +1,82 @@
+{
+  "defect_id": "semantic_points_query_groups_filter_001",
+  "endpoint": "points+query+groups (POST /collections/{collection_name}/points/query/groups)",
+  "defect_type": "Type4 (claimed by script verdict; fixture reconstruction shows the observation is an oracle artifact — final disposition belongs to the chain-auditor)",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists in the contract tree; contract's own build-time record for this constraint has source_status='reachable' (structured_contract.json L7354), but the current re-verify WebFetch of https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points-groups was network-restricted (domain_blocked) -> PARTIAL, not FAIL. Version: URL is version-routed v-1-18-x matching target v1.18.0, doc_version '1.18.x' -> PASS. Content: live page unfetchable (domain_blocked); the pipeline's vendored snapshot of this exact source_url (raw_knowledge.json L1687-1798, OpenAPI backfill) documents group_by (required, 'payload field to group by; requires payload values'), group_size (min 1), limit (min 1) AND an optional request-body `filter` (object) on the groups endpoint — consistent with the assertion's 200-groups-shape/400/404 text and with the script's use of a filter on this face; graded PARTIAL because the live page could not be re-checked. Endpoint: candidate endpoint matches the contract endpoint field 'points+query+groups' and the vendored URL /collections/{collection_name}/points/query/groups; the script's qpath is verbatim this URL -> PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "D",
+      "log_pattern": "[F1 must grp==g02] status=200 raw: {\"result\":{\"groups\":[{\"hits\":[{\"id\":2100,\"version\":1,\"score\":0.5},{\"id\":2101,\"version\":1,\"score\":0.6},{\"id\":2102,\"version\":1,\"score\":0.7},{\"id\":2103,\"version\":1,\"score\":0.8}],\"id\":\"g02\"}]},\"status\":\"ok\",\"time\":0.001535341}",
+      "secondary_observations": [
+        "log L4: F1 fingerprint = [('g02', [2100, 2101, 2102, 2103])]",
+        "fixture reconstruction from the script actually executed (debate_logs/semantic_points_query_groups_filter_001.py L113-121): for gi,d0 in ((1,0.0),(2,0.5),(3,1.0)) with id = gi*1000+100+k (k=0..3) -> g01={1100,1101,1102,1103} val 0.0-0.3, g02={2100,2101,2102,2103} val 0.5-0.8, g03={3100,3101,3102,3103} val 1.0-1.3; plus g04..g12 singletons id=1404..1412. Full id inventory: 1100-1103, 2100-2103, 3100-3103, 1404-1412. ids 1201-1204 DO NOT EXIST in the fixture.",
+        "script oracle L231: if got != [(\"g02\", [1201, 1202, 1203, 1204])] -> the oracle was written for a different id scheme (blocks 1000+gi*100: g01->11xx, g02->12xx, g03->13xx) than the fixture code builds (gi*1000+100). Same wrong scheme also infects F2/F4 oracles (L244 expects g01->[1101,1102,1103,1104] though actual g01 ids are 1100-1103; L269 same).",
+        "correct-oracle evaluation: filter must grp==g02 selects exactly g02's 4 points; with group_size=4, limit=12 the unique correct answer is [('g02',[2100,2101,2102,2103])] — byte-for-byte what the server returned. The F1 leg PASSED a correct oracle; the DEFECT verdict is a script-oracle artifact.",
+        "same-family sibling (oracle family, not an API defect): output_semantic_points_query_groups_semantics_001.log L5 expected [('g01',[1101,1102]),('g02',[1201,1202]),('g03',[1301,1302])] got [('g01',[1100,1101]),('g02',[2100,2101]),('g03',[3100,3101])] — identical impossible 12xx expected ids; that raw response also shows correctly ranked grouping (g01 dist 0.0/0.1, g02 0.5/0.6, g03 1.0/1.1).",
+        "log completeness note: output_semantic_points_query_groups_filter_001.log (5 lines) contains ONLY the F1 response leg + verdict; setup REQ/RESP (collection create, 15-point upsert, grp/val index create) printed nothing on success — fixture reconstructed from the executed script source instead of upsert legs."
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "F1 is a fully valid documented request (optional filter on the groups face); HTTP 200 is the correct disposition. No request-side-decidable client error was masked by a 2xx."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["semantic_points_query_groups_filter_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_groups_001",
+      "assertion_text_quoted": "valid group query returns HTTP 200 with groups [{id, hits}]; invalid group_by returns 400; missing collection returns 404",
+      "api_violates_assertion": false,
+      "note": "violates=false because the value is genuinely compliant on both prongs of the self-check: (1) the observed F1 response IS 'HTTP 200 with groups [{id, hits}]' exactly as the assertion pins, and (2) the hit-set the script checked ({1201..1204}) is outside this assertion's constraint domain anyway — the assertion text pins status/shape/error-code dispositions only, not filter hit-set membership; no constraint-citation change needed since the 200-shape prong is the operative one and it holds.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_query_groups_001 (structured_contract.json L7346-7357) — valid group query -> 200 {groups:[{id,hits}]}; invalid group_by -> 400; missing collection -> 404. Note: this text pins status/shape dispositions only; it says nothing about filter hit-set membership.",
+        "doc: source_url v-1-18-x query-points-groups — live re-fetch domain_blocked; contract-time record 'reachable'; vendored OpenAPI backfill (raw_knowledge.json L1687-1798) documents filter/group_by/group_size/limit on this endpoint.",
+        "script: F1 leg sends a well-formed groups query (filter must grp==g02, group_by=grp, group_size=4, limit=12, params.exact=true) against fixture g02={2100,2101,2102,2103}; but the script's oracle expects [('g02',[1201,1202,1203,1204]) — ids its own SEED never generates (id-scheme mismatch between oracle table and fixture code).",
+        "log: DEFECT_FOUND (Type4) verdict printed, yet the raw response in the same log line is exactly the correct filtered-grouped result for the executed fixture; the verdict is the mechanical output of the impossible oracle."
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The script link is internally inconsistent: the oracle expectation (ids 1201-1204, plus 1101-1104/1301-1304 in F2/F4) contradicts the script's own fixture generator (g02 ids are 2100-2103; no 12xx ids exist). The log's DEFECT_FOUND verdict is the downstream artifact of that oracle error — the raw HTTP observation itself is correct behavior (200, exactly one group g02 with exactly its 4 points). Per dispatch instruction the F1 observation did not survive fixture reconstruction, so the filter-before-group vs filter-after-group source forensics was run only as corroboration (see source_grounding), and the oracle error is recorded as the mundane explanation.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "group_by (lib/, files_with_matches -> 21 files incl. grouping/* and universal_query/collection_query.rs)",
+        "GroupsAggregator::new|CollectionQueryGroupsRequest (lib/)",
+        "filter (lib/collection/src/operations/universal_query/collection_query.rs, content)"
+      ],
+      "files_examined": [
+        "lib/collection/src/grouping/aggregator.rs",
+        "lib/collection/src/grouping/group_by.rs",
+        "lib/collection/src/operations/universal_query/collection_query.rs"
+      ],
+      "source_excerpt": "lib/collection/src/grouping/group_by.rs L267-306 (filter carried into the search source):\n267  impl From<CollectionQueryGroupsRequest> for GroupRequest {\n268      fn from(request: CollectionQueryGroupsRequest) -> Self {\n269          let CollectionQueryGroupsRequest { prefetch, query, using, filter, params, score_threshold,\n270              with_vector, with_payload, lookup_from, group_by, group_size, limit, with_lookup } = request;\n285          let collection_query_request = CollectionQueryRequest {\n286              prefetch: prefetch.into_iter().collect(),\n287              query,\n288              using,\n289              filter,                      // <-- user filter forwarded into the source query\n290              score_threshold, limit, offset: 0, params, with_vector, with_payload, lookup_from,\n297          };\n299          GroupRequest { source: SourceRequest::Query(collection_query_request), group_by, group_size, limit, with_lookup }\n\nlib/collection/src/grouping/group_by.rs L339-380 (filter applied at query time, before aggregation):\n339          // Construct filter to exclude already found groups\n340          let full_groups = aggregator.keys_of_filled_groups();\n344              let exclude_groups = Filter { must: Some(except_any), ..Default::default() };\n348              source.filter = Some(source.filter.as_ref().map(|filter| filter.merge(&exclude_groups)).unwrap_or(exclude_groups));\n358          // Exclude already aggregated points\n361          let exclude_ids = Filter::new_must_not(Condition::HasId(ids.into()));\n362              source.filter = Some(source.filter.as_ref().map(|filter| filter.merge(&exclude_ids)).unwrap_or(exclude_ids));\n371          // Make request\n372          let points = request.r#do(collection, read_consistency, shard_selection.clone(), timeout, hw_measurement_acc.clone()).await?;\n382          if points.is_empty() { break; }\n\n(aggregator.rs L46-120: GroupsAggregator::add_point/add_points only bucket the points handed to it by group_by.rs; it applies no filtering of its own)",
+      "call_chain_traced": "REST groups request -> CollectionQueryGroupsRequest{filter: Option<Filter>} (collection_query.rs L73-87, filter at L77) -> From<CollectionQueryGroupsRequest> wraps the user filter into the source CollectionQueryRequest (group_by.rs L285-297) -> group_by() merges the user filter with group/id exclusions into source.filter (L339-369) -> request.r#do() executes the filtered point search (L372-380) -> only already-filtered points reach GroupsAggregator (aggregator.rs L46+). Filter is therefore applied BEFORE grouping: a filter grp==g02 must produce exactly one group 'g02' whose hits are g02's own point ids (2100-2103 in this fixture) — exactly the observed response. Source and observed behavior agree; the script oracle disagrees with both.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service healthy: correct well-formed 200 responses with plausible scores/timings throughout)",
+        "concurrency (sequential single-threaded script, fresh per-run collection name spqgL1+uuid8)",
+        "state_bleed from other scripts (returned group 'g02' with exactly this fixture's g02 id set {2100-2103} and vals 0.5-0.8 as scores — matches only this script's SEED)"
+      ],
+      "surviving": "CONFIRMED mundane explanation: script oracle/fixture id-scheme mismatch. The oracle table was authored for id blocks 1000+gi*100 (g01->1101-1104, g02->1201-1204, g03->1301-1304) while the executed fixture generator emits gi*1000+100+k (g01->1100-1103, g02->2100-2103, g03->3100-3103); expected ids 1201-1204 are unreachable by construction, so F1 (and F2/F4 had execution reached them) could never pass. The API's filter-before-group semantics are correct (behaviorally and per source). The DEFECT_FOUND verdict is an artifact of the script, not an API defect; the same oracle family also produced semantic_points_query_groups_semantics_001's false-positive verdict."
+    }
+  }
+}

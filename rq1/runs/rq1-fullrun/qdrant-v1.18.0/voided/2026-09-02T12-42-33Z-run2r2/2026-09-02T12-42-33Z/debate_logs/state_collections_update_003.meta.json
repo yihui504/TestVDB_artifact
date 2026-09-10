@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_update_003",
+ "endpoint": "collections+update",
+ "param": "hnsw_config.m / ef_construct / full_scan_threshold / payload_m (update-time diff minima closure + below-min rejection)",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "count_consistency",
+ "constraint_ids": [
+  "qdrant_range_collections_update_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "PATCH with the inclusive HnswConfigDiff minima (m=0, ef_construct=4, full_scan_threshold=10, payload_m=0) -> 200 with describe echoing each minimum; each below-min PATCH (m=-1 / ef_construct=3 / full_scan_threshold=9 / payload_m=-1) -> 400/422 with the describe readback unchanged — 2xx on a below-min diff = Type1_IllegalSuccess, 2xx-without-echo on a closure value or changed state after a rejection = Type4_StateLogicViolation; 5xx = Type3 only with /healthz liveness",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

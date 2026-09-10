@@ -1,0 +1,95 @@
+{
+  "defect_id": "boundary_points_query_offset_exact_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: source_url https://qdrant.tech/documentation/search/search/ fetched live 2026-09-04 with full content (WebFetch was domain-blocked for qdrant.tech; the session's web reader succeeded; the pipeline's own 2026-09-02 capture in raw_knowledge.json was a degraded 45-char stub, hence contract source_status=degraded/source_verified=false — now re-verified reachable). Version: concept doc has no version archive (raw_knowledge provenance: concept docs current-only, API contract taken from versioned v-1-18-x api-reference) -> PARTIAL by the no_version_in_url rule, which is the normal state for qdrant concept docs. Content: the page contains verbatim the constraint's claims — 'Because HNSW search is approximate, the ranking of results can shift slightly between requests. As a result, paginating with `offset` can return the same point on multiple pages or skip points entirely.' and 'Use exact searches to bypass HNSW and scan all vectors, returning results in a stable, deterministic order. This ensures that offset-based pagination works correctly.' — but the page NEVER mentions next_page_offset; its documented pagination mechanism is client-computed offset arithmetic ('This is equivalent to retrieving the 11th page with 10 records per page.'). Endpoint: points+query registry entry matches the tested route (POST /collections/{collection_name}/points/query, versioned v-1-18-x api-reference, verified_at 2026-09-02); caveat recorded for the auditor: the registry doc_quote 'QueryResponse {result: [ScoredPoint], next_page_offset?}' is NOT grounded in the shipped v1.18.x OpenAPI, where QueryResponse has only {points} and next_page_offset exists solely on ScrollResult (a registry-side conflation with the scroll face).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "X1 exact=true page 1 (offset=None) -> status=200 || raw: {\"result\":{\"points\":[{\"id\":1,\"version\":1,\"score\":0.0057622097},{\"id\":2,\"version\":1,\"score\":0.011524419},{\"id\":3,\"version\":1,\"score\":0.01728663},{\"id\":4,\"version\":1,\"score\":0.023048839},{\"id\":5,\"version\":1,\"score\":0.028811049}]},\"status\":\"ok\",\"time\":0.000376424} — no next_page_offset member anywhere in the raw body; the script's extract_next_offset() returns None and walk_pages() returns after page 1",
+      "secondary_observations": [
+        "(same log) X1 exact=true pages: [[1, 2, 3, 4, 5]] — walk terminated after a single page of the 12 seeded points",
+        "(same log) VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — X1: exact=true pagination must give stable ordering (a partition of the stored ids), but observed duplicates=[] missing=[6, 7, 8, 9, 10, 11, 12] extras=[] (constraint: with exact=true ordering is stable): see pages above",
+        "(cross-script, face=rest, same endpoint points+query) output_boundary_points_query_offset_001.log:6 — VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — leg [Of0 offset=0]: next_page_offset must be 5 (5 shown from offset 0), got None: {\"result\":{\"points\":[{\"id\":1,...},{\"id\":5,...}]},\"status\":\"ok\"}",
+        "(cross-script, face=rest, same endpoint points+query) output_boundary_points_query_limit_001.log:6 — VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — leg [L1 limit=1]: with 12 seeded points and offset default 0, next_page_offset must be 1, got None",
+        "(cross-script, face=rest, same endpoint points+query) output_state_points_query_exact_pagination_005.log:17 — [E3] next_page_offset log: [None, None, None, None, None, None]",
+        "(cross-script, face=rest, same endpoint points+query) output_boundary_points_query_offset_huge_001.log:10 — leg H1 offset=100000 OK: 200 with 0 points, no next_page_offset (envelope result.points)",
+        "(comparative face=rest/scroll, same points family) output_state_cluster_collection_update_003.log:10 — [scroll spot-check] status=200 raw={\"result\":{\"points\":[{\"id\":1},{\"id\":2},{\"id\":3},{\"id\":4},{\"id\":5}],\"next_page_offset\":6},\"status\":\"ok\",\"time\":0.001708381} — the scroll face of the same collection DOES return the continuation marker (next_page_offset=6), while the query face never does"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No request-side-decidable error is involved: the request (query.nearest + limit=5 + params.exact=true) is well-formed and returned 200/success. The claim concerns a missing optional-class response member (next_page_offset), not an illegal input accepted as 2xx."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_points_query_offset_exact_001",
+        "boundary_points_query_offset_001",
+        "boundary_points_query_limit_001",
+        "state_points_query_exact_pagination_005"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_003",
+      "assertion_text_quoted": "by-design: without exact=true, points may repeat/skip across offset pages; with exact=true ordering is stable - page overlap under HNSW is not a defect",
+      "api_violates_assertion": false,
+      "note": "Violates-declaration self-check: the observed phenomenon (query response carries no next_page_offset, so the walk stops after page 1) is OUTSIDE the quoted constraint's domain. The constraint governs ordering stability / page overlap under exact=true; the single page actually returned WAS deterministically ordered (ids 1-5 by ascending score, consistent with the exact full-scan path in hnsw.rs), duplicates=[] and extras=[] — no instability was ever observed. The missing=[6..12] arises from the script's own convention (absence of next_page_offset treated as end-of-data), a member the v1.18.0 query face structurally never emits and which no contract assertion requires on points+query (the only next_page_offset assertion, qdrant_behavioral_points_scroll_001, governs the scroll face — which does return it, e.g. next_page_offset=6 in the comparative observation). This is the wrong-constraint-cited situation, not a genuine violation of constraint 003.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_query_003 present in structured_contract.json assertions (category behavioral, evidence_tier explicit, level system, source_status degraded, source_verified false, source_url qdrant.tech/documentation/search/search/)",
+        "doc: page fetched live and reachable; contains verbatim the constraint's claims ('paginating with `offset` can return the same point on multiple pages or skip points entirely' + 'Use exact searches to bypass HNSW and scan all vectors, returning results in a stable, deterministic order. This ensures that offset-based pagination works correctly.'); the page documents client-computed offset paging and NEVER mentions next_page_offset",
+        "script: boundary_points_query_offset_exact_001.py seeds 12 points and walks limit=5 pages via next_page_offset, treating its absence as end-of-data (walk_pages: 'if nxt is None: return pages') — a client convention grounded neither in the doc nor in the shipped v1.18.x OpenAPI (QueryResponse defines no such member)",
+        "log: DEFECT_FOUND (Type4) derives entirely from the walk terminating after page 1 (union [1..5] vs seeded [1..12]); the ordering-stability promise was never falsified — duplicates=[] extras=[], only one page was ever fetched, and the X2 stability-repetition leg and XH plain-HNSW leg never executed"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The script's oracle (partition witnessed by walking next_page_offset under exact=true) depends on a response member the v1.18.0 universal Query API structurally never emits — absent from the REST handler (query_api.rs: 'Ok(QueryResponse { points })'), from the QueryResponse struct (schema.rs), from the shipped v1.18.x OpenAPI (only ScrollResult carries next_page_offset), and from gRPC (only ScrollResponse). The doc's exact=true promise (stable deterministic order for client-computed offset pages, per 'equivalent to retrieving the 11th page with 10 records per page') was never actually exercised beyond page 1, so the log's Type4 verdict tests an undocumented walk convention rather than the phenomenon the cited constraint describes.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "next_page_offset (whole tree, 67 file hits incl. code + redoc archives v0.4-v1.18)",
+        "QueryResponse (lib + src, 18 file hits)",
+        "struct QueryResponse (lib/api/src/rest/schema.rs)",
+        "is_exact|params\\.exact|exact_search (lib/segment/src)",
+        "next_page_offset in structured_contract.json assertions (2 hits: points_scroll_001, points_query_001)"
+      ],
+      "files_examined": [
+        "src/actix/api/query_api.rs",
+        "lib/api/src/rest/schema.rs",
+        "lib/collection/src/collection/query.rs",
+        "lib/collection/src/collection/point_ops.rs",
+        "lib/segment/src/index/hnsw_index/hnsw.rs",
+        "docs/redoc/v1.18.x/openapi.json (+ cross-version checks v1.10.x/v1.14.x/v1.16.x/v1.17.x)",
+        "lib/api/src/grpc/proto/points.proto"
+      ],
+      "source_excerpt": "[1] lib/api/src/rest/schema.rs:609-612 — pub struct QueryResponse { pub points: Vec<ScoredPoint> }  (NO next_page_offset member exists on the query response type)\n[2] src/actix/api/query_api.rs:93-97 — .map(api::rest::ScoredPoint::from).collect_vec(); Ok(QueryResponse { points })  (the REST query_points handler constructs the response with points only; there is no code path that could ever emit next_page_offset on this face)\n[3] lib/collection/src/collection/query.rs:437 — let result: Vec<ScoredPoint> = result.into_iter().skip(*offset).take(*limit).collect();  (offset/limit are applied as skip/take; the collection layer returns a plain point list with no continuation marker)\n[4] lib/collection/src/collection/point_ops.rs:394-404 — let next_page_offset = if points.len() < limit || order_by.is_some() { None } else { Some(points.pop().unwrap().id) }; Ok(ScrollResult { points, next_page_offset })  (the ONLY face computing a continuation marker is scroll)\n[5] docs/redoc/v1.18.x/openapi.json — QueryResponse schema: {\"type\":\"object\",\"required\":[\"points\"],\"properties\":{\"points\":{\"type\":\"array\",\"items\":{\"$ref\":\"#/components/schemas/ScoredPoint\"}}}} ; the only schema containing next_page_offset is ScrollResult; the /points/search 200 schema also lacks next_page_offset in every archived version checked (v1.10.x, v1.14.x, v1.16.x, v1.17.x, v1.18.x) — so the contract registry's 'QueryResponse {..., next_page_offset?}' quote is not grounded in any shipped spec\n[6] lib/api/src/grpc/proto/points.proto:1491-1498 — message ScrollResponse { optional PointId next_page_offset = 1; ... }  (gRPC: marker likewise scroll-only)\n[7] lib/segment/src/index/hnsw_index/hnsw.rs:1449,1473-1475,1498-1499 — let exact = params.is_some_and(|params| params.exact); ... let plain_search = exact || is_hnsw_disabled || ...; ... // if exact search is requested, we should not use HNSW index — if exact || is_hnsw_disabled { ...search_vectors_plain... }  (explicit code comment: exact=true bypasses HNSW for a plain deterministic full scan — the constraint's actual promise IS implemented in source; no prose by-design annotation about the absent query-face marker was found anywhere in the clone, so by_design_in_source is not claimed)",
+      "call_chain_traced": "REST POST /collections/{name}/points/query -> actix query_points (src/actix/api/query_api.rs) -> convert_query_request_from_rest -> dispatcher.toc().query_batch -> collection::query::do_query_batch -> intermediates_to_final_list applies offset/limit via skip().take() (lib/collection/src/collection/query.rs:437) -> response built as QueryResponse{points} only (query_api.rs:97). next_page_offset exists solely on the scroll face: point_ops.rs scroll() computes it as points.pop().unwrap().id when len>=limit and no order_by, carried by ScrollResult (types.rs:529); gRPC likewise only ScrollResponse (points.proto:1491). Shipped v1.18.x OpenAPI agrees (QueryResponse = points-only; next_page_offset only in ScrollResult), and this holds in every archived version back to v1.10. exact=true IS honored in the segment layer: hnsw.rs forces plain (brute-force, deterministic) search when params.exact, with explicit comment 'if exact search is requested, we should not use HNSW index'.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (script exit 0; service healthy throughout; every request returned 200)",
+        "concurrency (single-threaded sequential walk on a script-owned freshly created collection; no other writers)",
+        "cache-delay/staleness (collection created and upserted with wait=true inside the same script run before the walk)",
+        "request-parameter typo (request shape query.nearest + limit + params.exact matches the documented example exactly)"
+      ],
+      "surviving": "script-oracle convention: the walk treats an absent next_page_offset as end-of-data; since the v1.18.0 query face structurally never emits that member (source-verified across handler, struct, OpenAPI, gRPC), ANY next_page_offset-style walk of this API deterministically loses every point beyond page 1 — this interpretive step, not an environmental cause, is the sole bridge from the observed 200-without-marker to the claimed missing=[6..12]"
+    }
+  }
+}

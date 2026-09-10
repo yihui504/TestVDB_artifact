@@ -1,0 +1,12 @@
+create: 200 {"code":200,"data":{}}
+insert: 200 {"code":200,"data":{"insertCount":3,"insertIds":[1,2,3]}}
+get_stats: 200 {"code":200,"data":{"rowCount":0}}
+search1: 200 {"code":200,"data":[{"distance":0,"id":1},{"distance":0.020000005,"id":2},{"distance":26,"id":3}]}
+delete_by_id: 200 {"code":1802,"message":"missing required parameters, error: Key: 'CollectionFilterReq.Filter' Error:Field validation for 'Filter' failed on the 'required' tag"}
+delete_by_filter: 200 {"code":200,"data":{}}
+search2: 200 {"code":200,"data":[{"distance":0.020000005,"id":2},{"distance":26,"id":3}]}
+get_stats2: 200 {"code":200,"data":{"rowCount":0}}
+VERDICT: DEFECT_FOUND (Type4_StateLogicViolation)
+- rowCount 0 != 3 inserted (Type4_StateLogicViolation)
+- entities/delete by id rejected (code 1802, msg "missing required parameters, error: Key: 'CollectionFilterReq.Filter' Error:Field validation for 'Filter' failed on the ") though contract lists id as supported param (BS-05 Documentation Drift / Type2)
+- rowCount after delete = 0, expected 2 (Type4)

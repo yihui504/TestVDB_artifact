@@ -1,0 +1,66 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "R31 (incremental)",
+  "verdicts": [
+    {
+      "defect_id": "state_percol_create_queryable_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none",
+          "note": "no documented face accepted a violating value: the only failing request hit a nonexistent route and received a correct actix unmatched-route 404 (plain 4xx, not 2xx masking); no numeric/enum/type/mutex/HTTP-tautology class engaged"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED",
+          "note": "behavior correct (unknown route -> 404) and all promised faces implemented/registered (validation_present in the behavioral sense), but no explicit intent statement for the claimed phenomenon — chain itself declines by_design_in_source"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+          "matched_pattern": "no phenomenon-level anchor: blindspots cover filter validation / HNSW pagination / WAL replay / cluster classes — none isomorphic to route-surface or batch-get URL registration",
+          "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, mechanical: qdrant_inv_create_queryable_001) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanized layer; B/C/D recorded, cannot overturn)"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "Mechanical A: qdrant_inv_create_queryable_001 quote verified verbatim, api_violates_assertion=false — every face the assertion enumerates returned 200 in the same log (exists line 8, list line 11, count line 19, single get line 21). The sole 404 came from POST .../points/get, a URL the script self-registered (py:95) contradicting the raw_knowledge entry its own comment cites (rk:720 = /collections/{collection_name}/points, no /get suffix); grep 'points/get' = zero hits in the clone and get_points is registered at /points (retrieve_api.rs:125), with the script's exact body deserializing cleanly via PointRequest serde-flatten. Grade-A 'multi-script' upgrade is one common-origin template line copied into 2 siblings with divergent dispositions (DEFECT_FOUND / SCRIPT_ERROR / NO_DEFECT) — chain_broken_at=script: the verdict measures the script's URL construction, not the constraint's phenomenon.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_percol_payload_overwrite_007",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none",
+          "note": "every request was well-formed and legal and every response correct; no violating value was accepted and no objective constraint class engaged — the claimed phenomenon (vector mutation) lies outside any physical constraint on this endpoint"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED",
+          "note": "in-domain behavior elegant (T1/T2/T3 payload faces all OK) and source structurally proves the write reaches payload_index only, but the simple.rs:168 comment documents cosine preprocessing, not an intent declaration for the claimed phenomenon -> not explicit per C's standard"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+          "matched_pattern": "no phenomenon-level anchor: payload-overwrite/vector-immutability absent from blindspots and by_design (the 'payload-only collections' blindspot is a different phenomenon class, not isomorphic)",
+          "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, mechanical: qdrant_inv_payload_overwrite_readback_001) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanized layer; B/C/D recorded, cannot overturn)"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "Mechanical A: qdrant_inv_payload_overwrite_readback_001 quote verified verbatim, api_violates_assertion=false — every in-domain observation complies (T1 exact replace with seed keys removed, T2 zero-key closure, T3 type-strict rewrite, count=3 stable). The six DEFECT lines originate solely from the extra vector oracle comparing all 3 points against point 1's single BASEVEC (py:328) while seeds [float(i),1.0,0.5,0.25] differ per point in direction (maxdiff 0.2237/0.3462 vs tol 1e-6 at every checkpoint including baseline); the in-log impossibility — T1 flags point 3 which T1 never wrote (ids=[1,2]) — proves the flag fires on pre-existing inequality, and point 1 is byte-identical across all readbacks. Source: SetPayloadOp carries no vector field and the path reaches payload_index only (set_full_payload), cosine L2-normalization happens once at upsert — R27 artifact family, chain_broken_at=script.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "defect": 0,
+    "not_defect": 2,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 0, "both": 0, "behavior": 2},
+    "root_cause_distribution": {"script_error": 2},
+    "constraint_category_distribution": {"state": 2},
+    "candidate_class_distribution": {"strict_defect": 0, "exploratory_candidate": 0, "rejected": 2}
+  }
+}

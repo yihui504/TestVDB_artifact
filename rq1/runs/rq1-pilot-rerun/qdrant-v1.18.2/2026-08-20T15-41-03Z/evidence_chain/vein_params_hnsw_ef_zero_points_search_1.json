@@ -1,0 +1,62 @@
+{
+  "defect_id": "vein_params_hnsw_ef_zero_points_search_1",
+  "endpoint": "POST /collections/{collection}/points/search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "FAIL",
+      "version_match": "N/A",
+      "content_consistency": "N/A",
+      "endpoint_precision": "N/A",
+      "sdk_rest_confusion": false,
+      "detail": "source_url (https://api.qdrant.tech/api-reference/points/search-points) could not be fetched due to network restrictions (domain_blocked). Cannot verify documentation claims.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "VERDICT: DEFECT_FOUND; EVIDENCE: params.hnsw_ef=0 returns 200 (should reject with 400); CONTROL: params.hnsw_ef=-1 correctly returns 400; SEARCH_RESPONSE: {\"result\":[{\"id\":1,\"version\":1,\"score\":1.0},{\"id\":2,\"version\":1,\"score\":0.0}],\"status\":\"ok\",\"time\":0.00160396}; CONTROL_RESPONSE: {\"status\":{\"error\":\"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 72\"},\"time\":0.0}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx (业务成功码)",
+        "note": "API returns HTTP 200 with status=ok for invalid hnsw_ef=0, treating it as successful search rather than client error"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_params_hnsw_ef_zero_points_search_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint_id specified - this is an R3 vein mining candidate without contract grounding",
+      "api_violates_assertion": true,
+      "note": "No constraint to verify against - defect based on parameter semantics (hnsw_ef as HNSW exploration factor should reject non-positive values)",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:N/A (no constraint_id)", "doc:domain_blocked (api.qdrant.tech unreachable)", "script:vein_params_hnsw_ef_zero_points_search_1.py", "log:DEFECT_FOUND - hnsw_ef=0 returned 200"],
+      "chain_broken_at": "doc",
+      "break_detail": "Documentation unreachable (domain_blocked), cannot verify contract grounding or source_url content",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["hnsw_ef", "SearchParams", "check_limit_opt", "usize"],
+      "files_examined": [
+        "lib/segment/src/types.rs (lines 589-594: SearchParams struct with hnsw_ef: Option<usize>)",
+        "lib/collection/src/operations/verification/mod.rs (lines 383-387: check_limit_opt validation)",
+        "lib/collection/src/operations/verification/mod.rs (lines 337-354: check_limit_opt implementation)"
+      ],
+      "source_excerpt": "From lib/segment/src/types.rs:\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone, Copy, PartialEq, Default, Hash)]\n#[serde(rename_all = \"snake_case\")]\npub struct SearchParams {\n    /// Params relevant to HNSW index\n    /// Size of the beam in a beam-search. Larger the value - more accurate the result, more time required for search.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub hnsw_ef: Option<usize>,\n\nFrom lib/collection/src/operations/verification/mod.rs (check_limit_opt implementation):\npub(crate) fn check_limit_opt<T: PartialOrd + Display>(\n    value: Option<T>,\n    limit: Option<T>,\n    name: &str,\n) -> CollectionResult<()> {\n    let (Some(limit), Some(value)) = (limit, value) else {\n        return Ok(());\n    };\n\n    if value > limit {\n        return Err(CollectionError::strict_mode(\n            format!(\"Limit exceeded {value} > {limit} for \\\"{name}\\\"\"),\n            format!(\"Reduce the \\\"{name}\\\" parameter to or below {limit}.\"),\n        ));\n    }\n    Ok(())\n}",
+      "call_chain_traced": "1. REST request deserializes JSON payload into SearchParams (lib/segment/src/types.rs)\n2. hnsw_ef field: Option<usize> - serde rejects negative integers during deserialization (returns 400 for -1)\n3. But serde accepts 0 as valid usize (no validation at deserialization)\n4. Strict mode verification (lib/collection/src/operations/verification/mod.rs:383-387) only checks if hnsw_ef > search_max_hnsw_ef limit\n5. No lower bound check (>= 1) exists - check_limit_opt only validates upper bounds via value > limit\n6. Result: hnsw_ef=0 passes through as valid and reaches search execution",
+      "verification_outcome": "validation_absent",
+      "note": "Source confirms validation_absent: hnsw_ef defined as Option<usize> with only upper-bound validation in strict mode (check_limit_opt). Lower bound validation (hnsw_ef >= 1) is missing at API layer. usize type rejects negative values during serde deserialization (explains why -1 returns 400), but zero (0) is valid usize and passes through unchecked.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "by_design"],
+      "surviving": "Type1_IllegalSuccess - API accepts hnsw_ef=0 which is semantically invalid for HNSW exploration factor (should be >= 1)"
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "defect_id": "boundary_payload_delete_003",
+  "endpoint": "payload+delete (POST /collections/{collection_name}/points/payload/delete)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: full page content retrieved 2026-09-04 via fallback web reader after the WebFetch tool itself was domain-blocked by local network policy (page demonstrably live; contract mining of 2026-09-02 had also recorded source_status=reachable) -> PASS. version: page served under /v-1-18-x/ with v1.18.x selector; target v1.18.0 -> major.minor match PASS. content: the page marks keys as 'list of strings Required' (presence-only) and points/filter as Optional, with NO minItems, NO non-empty statement, and NO points|filter anyOf requirement on this endpoint; it grounds the constraint's listed-keys-only semantics but does NOT license the claim's oracle that {\"points\":[1],\"keys\":[]} must be 4xx-rejected (the observed body satisfies every documented requirement on the page) -> PARTIAL. endpoint: POST /collections/:collection_name/points/payload/delete matches endpoint_registry entry payload+delete (doc_quote 'Deletes only the listed keys of the targeted points; 200 ok / 400 / 404.') and the script's path registry -> PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "case keys=[] (empty keys list, spec: keys required) -> status=200 | raw: {\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.004055412} | VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — case keys=[] (empty keys list, spec: keys required) 200-accepted although the spec licenses no such request (keys required / selector anyOf); payloads intact (no-op ack)",
+      "secondary_observations": [
+        "baseline: both payloads visible via scroll (pre-condition confirmed before the probe)",
+        "builder comparative probe 2026-09-04, rest face (script evidence_chain/bpd003_comparative_probe.py): A-repro payload/delete {\"points\":[1],\"keys\":[]} -> status=200 raw: {\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.003658229}; final readback deep-equal baseline {1:{city:ams,n:1,tag:alpha},2:{city:par,n:2,tag:beta}} — primary observation independently re-triggered, no-op ack stable",
+        "builder comparative probe, rest face: B payload/delete {\"points\":[1]} keys omitted -> status=400 raw: {\"status\":{\"error\":\"Format error in JSON body: missing field `keys` at line 1 column 15\"},\"time\":0.0} — keys PRESENCE is enforced with 4xx",
+        "builder comparative probe, rest face: C payload/delete {\"keys\":[\"city\"]} selector absent -> status=400 raw: {\"status\":{\"error\":\"Format error in JSON body: Either list of point ids or filter must be provided\"},\"time\":0.0} — selector anyOf is enforced with 4xx",
+        "builder comparative probe, rest face, same-family parameter: D payload/set {\"points\":[1],\"payload\":{}} -> status=200 raw: {\"result\":{\"operation_id\":3,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.004006261}; readback deep-equal baseline — sibling payload-mutation face shows the SAME vacuous-body no-op-ack posture (only the empty-container boundary passes there too)",
+        "sibling log output_boundary_payload_delete_006.log, rest face: case keys='city' (string, spec types array[string]) -> status=400 raw: {\"status\":{\"error\":\"Format error in JSON body: invalid type: string \\\"city\\\", expected a sequence at line 1 column 30\"},\"time\":0.0} — keys TYPE domain is enforced with 4xx; contrast: type enforced, presence enforced, selector enforced, only cardinality-zero NOT enforced",
+        "sibling log output_boundary_payload_delete_001.log, rest face: delete points=[1] keys=[city] -> status=200 ... point 1 lost exactly 'city'; n/tag byte-equal — positive face honors the listed-keys-only constraint (NO_DEFECT)",
+        "grpc face: face_unavailable — no gRPC client in this sandbox; the gRPC DeletePayload disposition for keys=[] was not probed (recorded honestly, not fabricated)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The observed 200 carries a genuine success envelope (operation_id, status completed) of a no-op operation — there is no error remapped into 2xx. Under the documented spec the body is schema-valid (keys present as an empty array; no minItems documented), so the request is not a client error at all per the doc; only under the script's stricter undocumented oracle (empty keys must be rejected) would it count as a client error silently 200-acknowledged. For reference, genuine client errors on this endpoint DO surface as HTTP 400 (missing field keys / invalid type / Either list of point ids or filter must be provided — probes B, C and sibling log 006)."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_payload_delete_003"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_payload_delete_001",
+      "assertion_text_quoted": "only the listed payload keys are removed; unlisted keys persist",
+      "api_violates_assertion": false,
+      "note": "The observed no-op satisfies the cited assertion vacuously: zero keys listed -> zero keys removed -> all (unlisted) payload keys persist, readback deep-equal baseline. Per the violates-declaration self-check this is the wrong-constraint-cited branch: the Type1 claim requires an input-requiredness/cardinality norm ('keys must be non-empty' / 'empty keys must yield 4xx') that this constraint never states — its domain is removal selectivity, not request validation. The dispatch's constraint_id field was empty; the id was recovered from the script header (constraint_ids: qdrant_state_payload_delete_001) and does exist in the contract. The only spec-level requiredness on record is raw_knowledge's 'keys: array[string], required: true' (presence), which the observed request satisfies.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_payload_delete_001 exists (structured_contract.json /constraints/state_constraints[9]); assertion covers removal selectivity only, contains NO input-requiredness or cardinality claim for keys; NOTE the candidates.jsonl dispatch entry carried constraint_id=\"\" — the id was pinned only in the script header",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/points/delete-payload reachable, v1.18.x matched; page states keys 'list of strings Required' (presence, no minItems) and points/filter Optional with no anyOf requirement — the page does NOT contain the norm the claim's oracle needs (empty keys list must be rejected)",
+        "script: boundary_payload_delete_003 sends POST /collections/{coll}/points/payload/delete params wait=true json={\"points\":[1],\"keys\":[]} — matches the logged case exactly; script returns after the first 2xx case, so its other two designed cases (keys omitted / selector absent) never executed in the campaign log",
+        "log: output_boundary_payload_delete_003.log records case keys=[] -> status=200, raw success envelope, scroll readback deep-equal baseline (no-op ack), VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The chain is mechanically intact (constraint exists, doc reachable, script body matches log echo, log verdict follows the script's oracle), but the DEFECT verdict is unanchored at the doc link: the claim's premise 'the spec licenses no such request (keys required / selector anyOf)' draws from keys Required a cardinality rule the page never states (Required = presence; no minItems) and imports a selector anyOf requirement the page does not state for this endpoint (points and filter are both Optional here, unlike payload+set). The cited constraint adds no support either (different domain: removal selectivity). Live probes confirm the API enforces exactly what the doc marks: keys presence (400 missing field), keys type (400 invalid type), selector presence (400 Either list of point ids or filter must be provided) — and licenses what the doc licenses: empty keys (200 no-op). Whether accepting a vacuous destructive body is a defect is therefore a judgment call on an undocumented boundary, not a violation of a documented promise; chain-auditor to adjudicate.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "DeletePayload",
+        "do_delete_payload",
+        "payload/delete",
+        "DeletePayloadShadow",
+        "PointsSelectorValidationError",
+        "is_empty"
+      ],
+      "files_examined": [
+        "lib/shard/src/operations/payload_ops.rs (lines 96-125 struct DeletePayload/DeletePayloadOp, lines 160-204 DeletePayloadShadow try_from + PointsSelectorValidationError)",
+        "src/actix/api/update_api.rs (lines 255-291 REST handler delete_payload, line 481 route registration)",
+        "src/common/update.rs (lines 669-712 do_delete_payload)",
+        "lib/shard/src/update.rs (lines 119-137 PayloadOps::DeletePayload dispatch)",
+        "lib/api/src/grpc/validate.rs (lines 238-244 Update::DeletePayload -> op.validate() dispatch)",
+        "openapi/openapi-points.ytt.yaml (lines 326-341 delete-payload requestBody $ref DeletePayload; schema itself is schemars-generated from the Rust struct — no minItems source exists)"
+      ],
+      "source_excerpt": "lib/shard/src/operations/payload_ops.rs:96-110 (struct) —\n#[cfg(feature = \"api\")]\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone)]\n#[serde(try_from = \"DeletePayloadShadow\")]\npub struct DeletePayload {\n    /// List of payload keys to remove from payload\n    pub keys: Vec<PayloadKeyType>,\n    /// Deletes values from each point in this list\n    pub points: Option<Vec<PointIdType>>,\n    /// Deletes values from points that satisfy this filter condition\n    #[validate(nested)]\n    pub filter: Option<Filter>,\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub shard_key: Option<api::rest::ShardKeySelector>,\n}\n\nlib/shard/src/operations/payload_ops.rs:160-204 (the only validation seam) —\n#[cfg(feature = \"api\")]\n#[derive(Deserialize)]\nstruct DeletePayloadShadow {\n    pub keys: Vec<PayloadKeyType>,\n    pub points: Option<Vec<PointIdType>>,\n    pub filter: Option<Filter>,\n    pub shard_key: Option<api::rest::ShardKeySelector>,\n}\n\n#[cfg(feature = \"api\")]\nimpl TryFrom<DeletePayloadShadow> for DeletePayload {\n    type Error = PointsSelectorValidationError;\n\n    fn try_from(value: DeletePayloadShadow) -> Result<Self, Self::Error> {\n        let DeletePayloadShadow { keys, points, filter, shard_key } = value;\n        if points.is_some() || filter.is_some() {\n            Ok(DeletePayload { keys, points, filter, shard_key })\n        } else {\n            Err(PointsSelectorValidationError)\n        }\n    }\n}\n\n#[derive(Debug)]\npub struct PointsSelectorValidationError;\n\nimpl fmt::Display for PointsSelectorValidationError {\n    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {\n        write!(f, \"Either list of point ids or filter must be provided\")\n    }\n}\n\nlib/shard/src/update.rs:119-130 (execution; empty keys iterate zero keys -> no-op) —\n        PayloadOps::DeletePayload(dp) => {\n            if let Some(points) = dp.points {\n                delete_payload(segments, op_num, &points, &dp.keys, hw_counter)\n            } else if let Some(filter) = dp.filter {\n                delete_payload_by_filter(segments, op_num, &filter, &dp.keys, hw_counter)\n            } else {\n                // TODO: BadRequest (prev) vs BadInput (current)!?\n                Err(OperationError::validation_error(\n                    \"No points or filter specified\",\n                ))\n            }\n        }",
+      "call_chain_traced": "POST /collections/{name}/points/payload/delete -> src/actix/api/update_api.rs:260 delete_payload(Json<DeletePayload>) -> serde try_from=DeletePayloadShadow (lib/shard/src/operations/payload_ops.rs:99) which validates ONLY selector presence (points.is_some() || filter.is_some(), else PointsSelectorValidationError; belt-and-braces second guard at lib/shard/src/update.rs:126 'No points or filter specified') -> src/common/update.rs:669 do_delete_payload forwards keys unchecked into CollectionUpdateOperations::PayloadOperation(PayloadOps::DeletePayload(DeletePayloadOp)) -> lib/shard/src/update.rs:119 dispatches delete_payload(segments, op_num, &points, &dp.keys): an empty keys vec iterates zero keys, producing the observed 200 no-op ack. keys non-emptiness is validated NOWHERE on the chain; keys presence is enforced by serde (missing field -> 400, probe B) and keys element type by serde (string -> 400, sibling log 006). The only maintainer comment in the seam is a TODO about error-code naming (shard/update.rs:125), unrelated to empty keys — no by-design declaration about vacuous bodies exists.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (healthz 200 throughout; clean deterministic 200/400 responses; fresh re-trigger reproduced identical body shape)",
+        "concurrency (single sequential requests; scroll readbacks deep-equal baseline)",
+        "cache/async delay (wait=true plus grace polls in script; builder probe confirmed final state after all cases)",
+        "request-parameter typo (probe re-sent the exact body {\"points\":[1],\"keys\":[]} from the script; label matches body)"
+      ],
+      "surviving": "by-design leniency / spec-interpretation gap: qdrant uniformly accepts vacuous mutation bodies on the payload-mutation family with a no-op success ack (payload+set payload={} also 200, probe D) while enforcing presence/type/selector — under the documented spec (keys Required = presence, no minItems) the observed behavior is arguably compliant, i.e. the 'defect' may be an undocumented-boundary judgment call rather than a violation; no explicit by-design comment exists in source, so this cannot be recorded as by_design_in_source and survives as the auditor's call"
+    }
+  }
+}

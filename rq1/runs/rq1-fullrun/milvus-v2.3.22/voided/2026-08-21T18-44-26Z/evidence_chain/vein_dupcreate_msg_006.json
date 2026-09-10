@@ -1,0 +1,68 @@
+{
+  "defect_id": "vein_dupcreate_msg_006",
+  "endpoint": "v2/vectordb/collections/create (对照 v1/vector/collections/create)",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约 v1/create 条目明文 'duplicate name -> already-exists error'（milvus_state_create_collection_001）；v2/create 无重复创建条文。差异主张有 v1 面明文锚点",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "identical dup: v2 code=200, v1 code=65535 ('create duplicate collection with different parameters, collection: vei')",
+      "secondary_observations": [
+        "ctrl diff-param dup rejected: v2=True v1=True（不同参数重复创建两面都报错——v2 证明其具备查重能力）",
+        "Detail 行：identical duplicate create silently succeeds (code 200) on v2 face while v1 face correctly rejects ... v2 proves it can detect dups (diff-param case errors)",
+        "⚠️ 取证限制：vein 摘要级 log。'竞态窗口报误导性 CreateIndex failed' 的派发 prompt 声称在本 log 中未见逐字行——未能取证到该观测，如实记 not_in_log；v1 的 65535 消息体已由脚本摘要逐字带出（与源码 create_collection_task.go:476 文本吻合）"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "identical dup 在 v2 以 200+code:200 静默成功；v1 面同类操作 200+code:65535 报 duplicate——同操作两面相反信封"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_dupcreate_msg_006.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_state_create_collection_001",
+      "assertion_text_quoted": "collection auto-loaded after v1 quick-create (composite create->CreateIndex->LoadCollection); duplicate name -> already-exists error",
+      "api_violates_assertion": true,
+      "note": "二选一核对：本 log 同时实测了 v1 面——identical dup 在 v1 报 65535 duplicate（与断言的 already-exists 方向一致，虽错误码归类为 65535 而非更精确的 already-exists 码）；真正违反承诺的是 v2 面 identical dup 静默 200。violates=true 记在'同服务器 v2 面对 duplicate name 未报 already-exists error'——v1/v2 同一 rootcoord，v2 观测与 v1 条文的合理外推矛盾。若 auditor 认为 v1 条文不覆盖 v2，则本项应读为契约缺口（v2 无条文），两读均记录",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: v1/create 'duplicate name -> already-exists error'；v2/create 无条文",
+        "doc: source_url handler_v1.go/handler_v2.go v2.3.22 可达",
+        "script: vein_dupcreate_msg_006.py ctrl(diff-param dup 双面) + identical dup 双面",
+        "log: identical dup v2=200 / v1=65535 duplicate"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "断链在 target 环（v2 面）：identical dup 静默成功；diff-param 对照证明 v2 有查重能力却在 identical 情形放行——幂等实现路径与显式 duplicate 检测路径并存。派发 prompt 提及的 'CreateIndex failed 误导消息' 未在 log 中找到逐字证据，该子主张无取证",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["different parameters (rootcoord)", "create duplicate collection", "existedCollInfo.Equal", "add duplicate collection"],
+      "files_examined": [
+        "internal/rootcoord/create_collection_task.go (455-494)"
+      ],
+      "source_excerpt": "internal/rootcoord/create_collection_task.go:470-481: existedCollInfo, err := t.core.meta.GetCollectionByName(...); if err == nil { equal := existedCollInfo.Equal(*clone); if !equal { return fmt.Errorf(\"create duplicate collection with different parameters, collection: %s\", t.Req.GetCollectionName()) }; // make creating collection idempotent. log.Warn(\"add duplicate collection\", ...); return nil } —— 注释原话 'make creating collection idempotent'：同名同参重复创建显式设计为静默成功；不同参数才报 duplicate。v1 的 65535 消息即 476 行文本",
+      "call_chain_traced": "v1/v2 create -> 同一 rootcoord createCollectionTask.Execute -> GetCollectionByName 命中 -> Equal 比较：不等 -> duplicate 错误（v1 log 所见）；相等 -> 幂等静默成功（v2 log 所见）。两 REST 面行为差异实为同一 rootcoord 逻辑在不同参数形态下的表现（v1 quick-create 每次构造的 schema 含自动命名 index 等，与已存在集合 Equal 比较易不等；v2 相同 payload 构造出相等 clone）——v1 报错更可能是 Equal 比较把 index/shards 差异也算进去，而非 v1 面有额外语义承诺",
+      "verification_outcome": "by_design_in_source",
+      "note": "幂等创建是显式设计（注释明文）；v1/v2 差异可由 clone Equal 比较的输入差异机械解释——by_design 抗辩较强；错误消息文案（'different parameters' 在 identical-v1 情形出现的归因问题）是残余的 Type2 争点",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error(ctrl 对照双面正常)", "env", "concurrency(顺序请求，非竞态窗口)"],
+      "surviving": "identical 幂等为注释明文设计；但用户视角'同名创建返回成功却无新建'无任何消息提示，且派发 prompt 声称的误导 CreateIndex failed 消息未取证到——弱化主张，留 auditor"
+    }
+  },
+  "evidence_weight": "C+（摘要级 log、单脚本、一个子主张无证据；源码幂等路径逐字确证但方向支持 by_design）"
+}

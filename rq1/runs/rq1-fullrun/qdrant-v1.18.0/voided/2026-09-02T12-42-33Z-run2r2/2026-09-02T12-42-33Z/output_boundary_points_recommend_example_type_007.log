@@ -1,0 +1,36 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+read-back guard OK: stored vector of id 2 == submitted (R27)
+
+leg G1 positive=[1] (id variant) -> status=200
+raw: {"result":[{"id":2,"version":1,"score":0.0057622097},{"id":3,"version":1,"score":0.011524419},{"id":4,"version":1,"score":0.01728663}],"status":"ok","time":0.000268739}
+leg G1 positive=[1] (id variant) OK: variant live
+
+leg G2 positive=[[readback(2)]] (vector variant) -> status=200
+raw: {"result":[{"id":2,"version":1,"score":0.0},{"id":3,"version":1,"score":0.0057622097},{"id":1,"version":1,"score":0.0057622097}],"status":"ok","time":0.000208007}
+leg G2 positive=[[readback(2)]] (vector variant) OK: variant live
+
+leg T1 positive='1' (array as string) -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"1\", expected a sequence at line 1 column 56"},"time":0.0}
+leg T1 positive='1' (array as string) OK: rejected with 400
+
+leg T2 positive=[true] -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum RecommendExample at line 1 column 59"},"time":0.0}
+leg T2 positive=[true] OK: rejected with 400
+
+leg T3 positive=[{'id': 5}] (unlicensed object) -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum RecommendExample at line 1 column 64"},"time":0.0}
+leg T3 positive=[{'id': 5}] (unlicensed object) OK: rejected with 400
+
+leg T4 positive=[[]] (0-dim vector) -> status=400
+raw: {"status":{"error":"Wrong input: Vector dimension error: expected dim: 4, got 0"},"time":0.000272477}
+leg T4 positive=[[]] (0-dim vector) OK: rejected with 400
+
+leg T5 positive=[[0.5,0.25,0.125]] (3-dim vs 4) -> status=400
+raw: {"status":{"error":"Wrong input: Vector dimension error: expected dim: 4, got 3"},"time":0.000203046}
+leg T5 positive=[[0.5,0.25,0.125]] (3-dim vs 4) OK: rejected with 400
+
+leg T6 positive=[-1] (negative uint id) -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum RecommendExample at line 1 column 57"},"time":0.0}
+leg T6 positive=[-1] (negative uint id) OK: rejected with 400
+VERDICT: NO_DEFECT

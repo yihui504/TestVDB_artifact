@@ -1,0 +1,17 @@
+{
+ "defect_id": "boundary_metrics_004",
+ "endpoint": "metrics",
+ "param": "timeout (documented integer query param — boundary lattice 0/-1/-100/i32max/i32max+1/i64max/i64max+1 under a 10s bounded client clock)",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "boundary",
+ "constraint_ids": [
+  "qdrant_behavioral_metrics_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/metrics",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "bare and timeout=1 controls answer 200 in <2 s with >=1 HELP/TYPE and >=1 Prometheus sample; each boundary leg (timeout=0|-1|-100|2147483647|2147483648|9223372036854775807|9223372036854775808) answers either 400/422 (clean reject, NO_DEFECT leg) or 200 within the 10 s client clock (ignored/clamped, NO_DEFECT leg) — a leg whose 10 s client clock expires followed by an immediate /healthz 200 = DEFECT Type3_RuntimeFailure (hang-class: unbounded server-side wait on a documented integer param), any 5xx with /healthz alive = DEFECT Type3, 200 taking >= 8 s = near-hang NOTE (not claimed), post-matrix bare control must still answer 200 + Prometheus text (degraded face = Type3), 401/403 = SCRIPT_ERROR (auth-gated), 404 + healthz 200 = NO_DEFECT endpoint-absence evidence",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

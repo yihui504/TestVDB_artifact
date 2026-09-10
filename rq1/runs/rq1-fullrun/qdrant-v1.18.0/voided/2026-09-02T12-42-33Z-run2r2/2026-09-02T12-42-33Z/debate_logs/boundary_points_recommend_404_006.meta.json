@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_points_recommend_404_006",
+ "endpoint": "points+recommend",
+ "param": "collection_name",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "G same body on existing collection -> 200 non-empty (else SCRIPT_ERROR); N1 missing collection -> 404 EXACTLY (2xx = Type1_IllegalSuccess: answered against a nonexistent collection; 400/422 = Type4 mapping violation); N2 missing collection + limit=0 -> any 4xx (200 = Type1); N3 lookup_from to missing collection -> 4xx (200 = Type1 candidate); 5xx with /healthz alive = Type3",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

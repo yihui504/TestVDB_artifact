@@ -1,0 +1,57 @@
+{
+  "defect_id": "semantic_schema_typeCoercion",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint_id 为空；contract 参数表声明 dynamicEfMin type=int default=100（POST /schema 参数），string 值不在契约域内；类型契约来自 go-struct（openapi fallback）",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Type-probe[class=SemTypeCoercion dynamicEfMin='250'] status=200; Probe raw: {...\"dynamicEfMin\":0,\"dynamicEfMax\":400,...} → Read-back dynamicEfMin=None (type=NoneType) → DEFECT signal — string '250' silently coerced to None with no disclosure",
+      "secondary_observations": [
+        "POST 响应体 vectorIndexConfig.dynamicEfMin=0：string \"250\" 被静默落为 0（既非 250 也非默认值 100）",
+        "dynamicEfMax=400（int）正常生效 —— 对照证明只有 string 类型被破坏",
+        "脚本 GET 读回 None（字段解析差异），脚本归因 'coerced to None' 与 POST 响应 0 略有出入——实质一致：string 被静默丢弃/改写"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "类型错误输入（int 字段传 string）以 HTTP 200 接受，无 4xx 拒绝、无错误披露；客户端提交 '250' 实际生效 0 —— 静默 type-confusion（Type2 判据）"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_schema_typeCoercion"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "POST /schema 参数 dynamicEfMin: type=int, required=false, default_value=100（contract 类型声明）",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:POST /schema dynamicEfMin type=int default 100", "doc:openapi fallback（go-struct 类型声明）", "script:semantic_schema_typeCoercion.py POST dynamicEfMin='250'", "log:Status 200 + POST 响应 dynamicEfMin=0 + GET 读回 None"],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["OptionalIntFromMap", "dynamicEfMin", "json.Number"],
+      "files_examined": ["entities/vectorindex/common/config.go", "entities/vectorindex/hnsw/config.go", "entities/vectorindex/hnsw/config_test.go"],
+      "source_excerpt": "entities/vectorindex/common/config.go:45-70 OptionalIntFromMap: `switch typed := value.(type) { case json.Number: asInt64, err = typed.Int64(); case float64: asInt64 = int64(typed) }` —— string 不匹配任何 case，asInt64 保持 0，err 为 nil，随后 setFn(int(asInt64)) 静默写入 0；hnsw/config.go:189-190 dynamicEfMin 走此函数；string 值静默落 0 且无错误返回",
+      "call_chain_traced": "POST /v1/schema → ParseAndValidateConfig → SetDefaults 先设 dynamicEfMin=100 → OptionalIntFromMap 见 map 中 dynamicEfMin=\"250\"（string）→ switch 无 string case → asInt64=0 → setFn(0) 覆盖默认 100 → 200 返回，持久化 dynamicEfMin=0（string 被静默改写为 0 而非报类型错误）",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "请求参数笔误（string 是有意注入的类型探针）"],
+      "surviving": null
+    }
+  }
+}

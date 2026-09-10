@@ -1,0 +1,138 @@
+[ATTACK] collection_membership (match_any OR) on count endpoint
+        Finding-feedback from cardinality_oracle (round 1)
+======================================================================
+
+[TEST] Collection size: 50
+--------------------------------------------------
+
+  [Single Match] category='A':
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [OR 2 Values] A or B:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [OR 5 Values] A or B or C or D or E:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+[TEST] Collection size: 200
+--------------------------------------------------
+
+  [Single Match] category='A':
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [OR 2 Values] A or B:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [OR 5 Values] A or B or C or D or E:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+[TEST] Collection size: 500
+--------------------------------------------------
+
+  [Single Match] category='A':
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [OR 2 Values] A or B:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+  [OR 5 Values] A or B or C or D or E:
+    exact=true:  0
+    exact=false: 0
+    error: 0.0%
+
+======================================================================
+[ANALYSIS] Match-any (OR) cardinality estimation
+----------------------------------------------------------------------
+[PASS] OR conditions estimated correctly
+
+======================================================================
+{
+  "strategy": "vein_match_any",
+  "endpoint": "POST /collections/{collection}/points/count",
+  "condition_type": "collection_membership",
+  "test_sizes": [
+    50,
+    200,
+    500
+  ],
+  "results": {
+    "size_50": {
+      "single_match": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "or_2_values": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "or_5_values": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      }
+    },
+    "size_200": {
+      "single_match": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "or_2_values": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "or_5_values": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      }
+    },
+    "size_500": {
+      "single_match": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "or_2_values": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      },
+      "or_5_values": {
+        "exact_true": 0,
+        "exact_false": 0,
+        "error_pct": 0
+      }
+    }
+  },
+  "verdict": "PASS",
+  "threat_model_reference": "BS-09 (Filter Index Assumption)",
+  "finding_feedback_source": "cardinality_oracle (round 1)"
+}
+======================================================================
+
+VERDICT: NO_DEFECT
+
+[CLEANUP] Deleting test collections...
+  - DELETE vein_match_any_50: 200
+  - DELETE vein_match_any_200: 200
+  - DELETE vein_match_any_500: 200

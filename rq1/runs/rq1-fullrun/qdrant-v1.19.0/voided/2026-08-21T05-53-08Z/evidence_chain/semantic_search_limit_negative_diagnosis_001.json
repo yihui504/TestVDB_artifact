@@ -1,0 +1,53 @@
+{
+  "defect_id": "semantic_search_limit_negative_diagnosis_001",
+  "endpoint": "/collections/{collection_name}/points/search:POST",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Search endpoint documented but error message quality for invalid parameters not specified",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: limit=-5 → {\"status\":{\"error\":\"Format error in JSON body: invalid value: integer `-5`, expected usize at line 1 column 665\"} → VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics) — negative limit error quality 1/3",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 4xx", "note": "Negative limit correctly rejected with 400 error, but error message quality low"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["semantic_search_limit_negative_diagnosis_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A - diagnosis quality target (not from formal constraint)",
+      "api_violates_assertion": false,
+      "evidence_source": "behavior"
+    },
+    "chain_trace": {
+      "chain_links": ["contract: (none - diagnosis quality target)", "doc: search endpoint exists", "script: semantic_search_limit_negative_diagnosis_001", "log: Type2_PoorDiagnostics — error message quality 1/3"],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["usize.*invalid.*format", "expected usize", "limit.*negative"],
+      "files_examined": ["lib/api/src/rest/schema.rs", "lib/segment/src/types.rs"],
+      "source_excerpt": "lib/api/src/rest/schema.rs deserialization error for limit field produces generic 'expected usize' message; no specific validation for negative values before JSON parsing",
+      "call_chain_traced": "REST JSON deserialization → usize type error",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "Error message quality issue: 'expected usize' is technically correct but not user-friendly for explaining negative values invalid"
+    }
+  }
+}

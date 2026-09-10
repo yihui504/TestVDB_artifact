@@ -1,0 +1,21 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['payload_clear']
+[A never-created] status=404 raw={"status":{"error":"Not found: Collection `spc5_1788454202_39708_never_created` doesn't exist!"},"time":6.923e-6}
+[A] OK: 404 (missing collection branch)
+[B upsert 2] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.004037394}
+[C live clear pt1] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.003116019}
+[C readback pt1 get_point] status=200 raw={"result":{"id":1,"payload":{},"vector":[0.2581989,0.2581989,0.5163978,0.77459663]},"status":"ok","time":0.000263046}
+[C readback pt2 get_point] status=200 raw={"result":{"id":2,"payload":{"keep":2},"vector":[0.47140455,0.23570228,0.47140455,0.7071068]},"status":"ok","time":0.000141907}
+[C] OK: 200 + point 1 payload actually empty
+[C] OK: sibling point 2 payload intact
+[D drop] status=200 raw={"result":true,"status":"ok","time":0.009379082}
+[D post-delete] status=404 raw={"status":{"error":"Not found: Collection `spc5_1788454202_39708_col` doesn't exist!"},"time":8.033e-6}
+[D] OK: 404 after confirmed delete
+[E recreate] status=200 raw={"result":true,"status":"ok","time":0.248414926}
+[E clear on empty recreation] MEASURED status=404 raw={"status":{"error":"Not found: No point with id 1 found"},"time":0.004462305} — SKIPPED: by-design per threat_model (idempotent-update family over an absent point target, cf. idempotent DELETE on absent point) — not adjudicated
+[F upsert fresh] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.00548559}
+[F clear fresh] status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.004739047}
+[F readback get_point] status=200 raw={"result":{"id":1,"payload":{},"vector":[0.2581989,0.2581989,0.5163978,0.77459663]},"status":"ok","time":0.000227873}
+[F] OK: clean-slate — payload exactly empty, no zombie keys
+VERDICT: NO_DEFECT

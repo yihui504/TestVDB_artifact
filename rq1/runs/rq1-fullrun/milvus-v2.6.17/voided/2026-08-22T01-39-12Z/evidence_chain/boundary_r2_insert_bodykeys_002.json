@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_r2_insert_bodykeys_002",
+  "endpoint": "entities+insert",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Contract (local clone source_url handler_v2.go, v2.6.17) explicitly documents nprobe/searchParams/filter extra keys on insert as by-design pass-through -> code 0 (assertions 18/23, api_endpoints entities+insert param descriptions). The R2 claim extends to a 10-key family (limit/offset/consistencyLevel/outputFields/groupSize/orderBy/exprParams) which contract does NOT pre-document; the count-consistency part of the claim rests on state_invariant milvus_inv_count_consistency_001 (insert N code:0 => row_count/query reflects N subject to flush/visibility).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "final rowCount=0, strong-query count=30 (expected 120)",
+      "secondary_observations": [
+        "insert extra key limit=3 -> code=0 insertCount=10",
+        "insert extra key filter='id < 5' -> code=0 insertCount=10",
+        "insert extra key searchParams={'nprobe': -5} -> code=0 insertCount=10",
+        "insert extra key consistencyLevel='Strong' -> code=0 insertCount=10",
+        "(all 10 misplaced keys: code=0, insertCount=10 each; control insert 20 rows code=0)",
+        "FINDING: strong-query count=30 != 120: some misplaced key altered ingestion"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "no request-side client error claimed; all inserts 2xx+code:0; the anomaly is post-hoc readout (30/120 visible) not an error response"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_insert_bodykeys_002.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_inv_count_consistency_001 (+ assertions milvus_behavioral_entities_insert_003 / _filter_001 for the swallowed-key family)",
+      "assertion_text_quoted": "insert N rows (code 0) => collections/get_stats row_count increases by N (subject to flush/visibility semantics)",
+      "api_violates_assertion": true,
+      "note": "violates=True 判定基于 count invariant：120 行 code:0 插入后 Strong query 仅 30、flush 后 rowCount=0，不满足 'row_count reflects N'（flush 已做，非可见性窗口可全解释）。错位键本身被吞（code:0）符合 contract by-design 记载，单独不构成违反。",
+      "evidence_source": "doc+behavior"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_inv_count_consistency_001 insert N code:0 => count reflects N",
+        "doc: api_endpoints entities+insert documents filter/nprobe/searchParams as accepted-and-ignored (by-design)",
+        "script: 10 misplaced keys each inserted 10 rows, all code:0 insertCount=10",
+        "log: final rowCount=0, strong-query count=30 (expected 120) after flush+3s"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "链完整：契约->文档->raw 请求->log 读数自洽。未断链，但 count-异常仅单脚本单次观测，无逐 key 隔离（无法定位哪个键引发数据丢失）。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["CollectionDataReq", "FieldPartialUpdateOpReq", "binding:\"required\""],
+      "files_examined": ["internal/distributed/proxy/httpserver/request_v2.go", "internal/distributed/proxy/httpserver/handler_v2.go"],
+      "source_excerpt": "request_v2.go:328-335:\ntype CollectionDataReq struct {\n\tDbName         string                    `json:\"dbName\"`\n\tCollectionName string                    `json:\"collectionName\" binding:\"required\"`\n\tPartitionName  string                    `json:\"partitionName\"`\n\tData           []map[string]interface{}  `json:\"data\" binding:\"required\"`\n\tPartialUpdate  bool                      `json:\"partialUpdate\"`\n\tFieldOps       []FieldPartialUpdateOpReq `json:\"fieldOps\"`\n}\n-- insert path request struct declares ONLY dbName/collectionName/partitionName/data/partialUpdate/fieldOps. limit/offset/consistencyLevel/outputFields/groupSize/orderBy/exprParams/filter/nprobe/searchParams are NOT declared fields; gin ShouldBind with default (non-disallow-unknown) unmarshalling silently drops them -> code:0. No unknown-key rejection exists at this layer.",
+      "call_chain_traced": "router -> wrapperPost(&CollectionDataReq{}) -> gin json unmarshal (unknown keys dropped) -> handler_v2.go insert (uses only declared fields) -> proxy Insert task. 校验面: 仅 required binding + 后续 schema/dim 校验; 无 unknown-body-key 拒绝.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error(log 无 TypeError/SCRIPT_ERROR)", "request typo(payload 均构造正确, control 20 行 code:0)"],
+      "surviving": "数据丢失(30/120, rowCount=0)未做逐 key 隔离与二次复跑——flush 时机/growing segment 计数延迟或 delete-by-filter 误生效不能完全排除；错位键静默吞部分已被源码+契约证实为 by-design。"
+    }
+  },
+  "evidence_weight": {
+    "A_contract": "count invariant 显式存在 + 键族部分契约预载(by-design)",
+    "B_log": "主观测逐字在 log; 但仅单脚本单轮",
+    "C_control": "control insert 20 行 code:0 + 强一致 query 作读出基准(在)",
+    "D_source": "struct 字段面 6 键实锤; 但数据丢失机制(30/120)源码未定位",
+    "overall": "错位键静默吞=源码级 by-design(非缺陷)；数据丢失=单脚本 C 级观测, 未隔离未复跑"
+  }
+}

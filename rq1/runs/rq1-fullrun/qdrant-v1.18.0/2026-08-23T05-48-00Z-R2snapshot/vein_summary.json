@@ -1,0 +1,167 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "session_dir": "results/qdrant/v1.18.0/2026-08-23T05-48-00Z",
+  "top_endpoints": [
+    "POST points+count",
+    "POST facet",
+    "POST points+query+groups"
+  ],
+  "richness_scores": {
+    "POST points+recommend+groups": 15.0,
+    "POST points+query": 14.5,
+    "POST points+query+groups": 14.5,
+    "POST facet": 13.5,
+    "POST points+count": 11.5,
+    "_note": "all 77 contract endpoints scored; count force-included via bug-shape cardinality_oracle known_instance #10096; round 3 expanded into query-family params, strict_mode_config (1.18-new), service endpoints"
+  },
+  "candidates_count": 13,
+  "skipped_count": 1,
+  "candidates": [
+    {
+      "id": "vein_range_filter_points_count_1",
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "lt50+lte100: exact=96 approx=192; gt60+gte70: exact=80 approx=58",
+      "by_design_match": false,
+      "inspired_by": null,
+      "script_path": "vein_scripts/vein_range_filter_points_count_1.py"
+    },
+    {
+      "id": "vein_type_mismatch_points_count_2",
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "num match '50' str / true bool: exact=0 approx=100; cat match 5 int: exact=0 approx=100; control num match 50: 4/4",
+      "by_design_match": false,
+      "inspired_by": "cardinality_oracle bug-shape (match-value-type vs schema-type estimator surface)",
+      "script_path": "vein_scripts/vein_type_mismatch_points_count_2.py"
+    },
+    {
+      "id": "vein_null_check_points_count_3",
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "null_check",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "is_empty tags truth=1 approx=0; is_empty nonexistent truth=201 approx=100; is_null control 15/15",
+      "by_design_match": false,
+      "inspired_by": "type_mismatch finding",
+      "script_path": "vein_scripts/vein_null_check_points_count_3.py"
+    },
+    {
+      "id": "vein_compound_or_points_count_4",
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "compound_or",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "or(a,b,c): exact=200 approx=144 scroll=200 (-28%); or(a,b) 140->117; control match(a) 75/75",
+      "by_design_match": false,
+      "inspired_by": "range_filter finding",
+      "script_path": "vein_scripts/vein_compound_or_points_count_4.py"
+    },
+    {
+      "id": "vein_geo_filter_points_count_5",
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "geo_filter",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "bbox antimeridian truth=13 approx=56 (+331%); radius earth truth=35 approx=200 (+471%)",
+      "by_design_match": false,
+      "inspired_by": "type_mismatch finding",
+      "script_path": "vein_scripts/vein_geo_filter_points_count_5.py"
+    },
+    {
+      "id": "vein_geo_filter_scroll_order_6",
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "geo_filter",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "bbox top lat=90.0: count=0; control 89.9999: count=10; polygon pole vertex 90.0: 0 vs 40",
+      "by_design_match": false,
+      "inspired_by": "round-1 geo_filter",
+      "script_path": "vein_scripts/vein_geo_filter_scroll_order_6.py"
+    },
+    {
+      "id": "vein_pagination_cursor_scroll_order_7",
+      "endpoint": "POST /collections/{collection_name}/points/scroll",
+      "condition_type": "pagination_cursor",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "order_by walk total=70/200 (next_page_offset always null); plain walk 200/200",
+      "by_design_match": false,
+      "inspired_by": null,
+      "script_path": "vein_scripts/vein_pagination_cursor_scroll_order_7.py"
+    },
+    {
+      "id": "vein_type_mismatch_datetime_range_8",
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "indexed ts int(epoch-us): 193 == string 193; unindexed raw same int: 0 (never matches); string baseline both 193",
+      "by_design_match": false,
+      "inspired_by": "round-1 type_mismatch",
+      "script_path": "vein_scripts/vein_type_mismatch_datetime_range_8.py"
+    },
+    {
+      "id": "vein_threshold_equality_search_9",
+      "endpoint": "POST /collections/{collection_name}/points/search (+query, query/groups, recommend)",
+      "condition_type": "numeric_boundary",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "server-reported top score S fed back as score_threshold: n=0 on search/query/recommend/groups; th=S-0.01: n=1",
+      "by_design_match": false,
+      "inspired_by": "round-3 param sweep on query-family shared params",
+      "script_path": "vein_scripts/vein_threshold_equality_search_9.py"
+    },
+    {
+      "id": "vein_guardrail_capacity_points_count_10",
+      "endpoint": "PUT /collections/{collection_name} (strict_mode_config) + PUT points",
+      "condition_type": "state",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "max_points_count=10 final count=41; vector/payload byte caps 100 exceeded 6.5x/60x; control upsert_max_batchsize=50 rejects 60-batch",
+      "by_design_match": false,
+      "inspired_by": "bug_shapes resource_limit on 1.18-new strict_mode_config",
+      "script_path": "vein_scripts/vein_guardrail_capacity_points_count_10.py"
+    },
+    {
+      "id": "vein_guardrail_oversampling_query_11",
+      "endpoint": "POST /collections/{collection_name}/points/query (+search, prefetch)",
+      "condition_type": "state",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "search_max_oversampling=1.0 with scalar quantization: oversampling 1.5/2.0/100.0 all 200 (query/search/prefetch); control hnsw_ef=64 vs max 16 -> 400",
+      "by_design_match": false,
+      "inspired_by": "guardrail enforcement matrix — sole mismatch in enforced family",
+      "script_path": "vein_scripts/vein_guardrail_oversampling_query_11.py"
+    },
+    {
+      "id": "vein_missing_endpoint_quotas_locks_12",
+      "endpoint": "GET/PUT /quotas + GET/POST /locks",
+      "condition_type": "missing_endpoint",
+      "finding": "DEFECT_FOUND",
+      "http_status": 404,
+      "response_excerpt": "all four documented service routes 404 empty body; controls GET / and GET /healthz 200",
+      "by_design_match": false,
+      "inspired_by": "contract 77-endpoint enumeration — service section untested in rounds 1-2",
+      "script_path": "vein_scripts/vein_missing_endpoint_quotas_locks_12.py"
+    },
+    {
+      "id": "vein_f32_overflow_vector_13",
+      "endpoint": "PUT /collections/{collection_name}/points + POST points/query",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "1e300 components accepted; read-back vector [null x4]; normal query ranks corrupted point first with score null; boundary exactly f32::MAX",
+      "by_design_match": false,
+      "inspired_by": "bug_shapes type_confusion + numeric_boundary — f64 JSON parse vs f32 storage seam",
+      "script_path": "vein_scripts/vein_f32_overflow_vector_13.py"
+    }
+  ],
+  "notes": "Rounds 1-2: 8 candidates (count exact:false estimator family x5, geo pole boundary, scroll order_by pagination truncation, datetime int typing). Round 3 (GT-informed 续挖 after 0/2): broadened from filter-condition space to parameter/config/state space per hint (端点/参数/边界/并发/状态). New families: (a) score_threshold strict-> equality drop, systemic across search/query/recommend/groups; (b) strict_mode_config (1.18-new) enforcement matrix — capacity trio and oversampling silently unenforced while 8 sibling guardrails reject correctly (controls in-script); (c) documented service endpoints /quotas + /locks absent (404) with mounted-route controls; (d) f64->f32 vector overflow: write accepted, read-back null components, null scores ranked above exact matches, boundary pinned at f32::MAX. All 5 round-3 scripts self-executed green with DEFECT_FOUND verdicts and cleanup; scratch collections deleted. Negative results recorded in vein_state.json round3_negative_results (limit boundary battery clean, filter semantics battery clean, mutation-window race not reproducible, groups group_size default by-design). by_design_excluded cumulative: compound_and (estimator tolerance), groups group_size default 3, bbox lon+-180 exclusivity, unnamed-vector naming, unknown-field serde leniency.",
+  "round": 3
+}

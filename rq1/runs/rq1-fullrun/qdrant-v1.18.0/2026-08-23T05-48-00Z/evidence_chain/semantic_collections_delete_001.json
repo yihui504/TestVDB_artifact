@@ -1,0 +1,88 @@
+{
+  "defect_id": "semantic_collections_delete_001",
+  "endpoint": "DELETE /collections/{collection_name}",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "可达性 PASS：WebFetch 被域安全验证阻挡，改用 web_reader 成功取回 https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection 完整页面及 .md 渲染版（PASS，非 domain_blocked）；版本 PASS：URL 路径 v-1-18-x + 页面版本选择器 v1.18.x，与 target 1.18.0 宽松匹配；内容一致性 PARTIAL/半 FAIL：文档 Response 段仅文档化 200（'successful operation'，字段 usage/time/status/result(boolean, optional)），无任何 404 响应条目、无 'DELETE missing => 404' 原文——assertion 的 'DELETE existing => 200' 半边与文档一致，'DELETE missing => 404' 半边无文档原文支持（契约 description 自带 '(runtime verified)' 标记，说明该半边来自运行时探测；raw_knowledge.md:131 'deleting non-existent collection -> 404' 是契约构建时的推断固化而非文档原话）；端点精确性 PASS：DELETE /collections/{collection_name} 与脚本请求及 endpoint_registry 'collections+delete' 完全一致。文档为 REST API reference 页（非 SDK 文档），无 SDK/REST 混淆。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "delete#2 (missing): 200 {\"result\":false,\"status\":\"ok\",\"time\":0.000118267}  [output_semantic_collections_delete_001.log:9 — 对已删除的 collection sem_del_lc_1787505157 二次 DELETE，HTTP 200 + result:false]",
+      "secondary_observations": [
+        "create: 200 {\"result\":true,\"status\":\"ok\",\"time\":0.228893581}  [log:3 — 前置：collection 创建成功]",
+        "delete#1 (existing): 200 {\"result\":true,\"status\":\"ok\",\"time\":0.00776774}  [log:5 — 对照组：存在时删除返回 result:true]",
+        "describe after delete: 404 {\"status\":{\"error\":\"Not found: Collection `sem_del_lc_1787505157` doesn't exist!\"},\"time\":8.123e-6}  [log:6 — 确认删除已生效且 collection 确实不存在；同端点族 GET missing 是 404，与 DELETE missing 返回 200 形成不对称]",
+        "get_point after delete: 404 {\"status\":{\"error\":\"Not found: Collection `sem_del_lc_1787505157` doesn't exist!\"}}  [log:8]",
+        "VERDICT: DEFECT_FOUND (Type4_StateLogicViolation)  [log:10 — 脚本自判，与主观测一致；脚本自注 'contract asserts DELETE missing collection => 404, got 200 (collection-level contract; points-level idempotency is a separate by-design)']"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "请求侧可判定的'目标对象不存在'情形以 HTTP 200 + 响应体 result:false 返回（result 为布尔标志而非错误码字段，无任何 error 提示）；对照 GET /collections/{name} 同一不存在对象返回 404。auditor 第五类判据输入。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["semantic_collections_delete_001"],
+      "detail_repro": "同端点同模式在 6 个独立脚本触发（各 log 原始行）：semantic_collections_delete_001.log:9（delete#2 missing → 200 result:false）、semantic_collections_delete_002.log:3（never-existing → 200 result:false）、boundary_collections_delete_01.log:6（DELETE missing: status=200 raw={\"result\":false}）、boundary_collections_delete_02.log:6（second DELETE → 200）、boundary_collections_delete_05.log:9（unicode 名不存在 → 200 result:false 等 4 变体）、state_collections_delete_001.log:12（just deleted → 200 result:false）。注：兄弟候选同现象多判 Type1_IllegalSuccess，本候选脚本自判 Type4_StateLogicViolation——判型差异留 auditor 裁定。",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_collections_delete_001",
+      "constraint_id_dispatched_empty": true,
+      "assertion_text_quoted": "DELETE existing => 200; DELETE missing => 404  [description: 'deleting non-existent collection returns 404; deleting existing collection returns 200 (runtime verified)'; evidence_tier: explicit; source_url: https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection]",
+      "api_violates_assertion": true,
+      "note": "派发条目 constraint_id 为空（semantic 系未机械绑定）；观测现象精确命中契约中 qdrant_state_collections_delete_001 的约束域（兄弟候选 boundary_collections_delete_01/02/05/12、state_collections_delete_001 均挂此约束），故按语义匹配挂靠。violates=true 判定理由：观测的 DELETE 目标（missing collection 名）确在该断言 'DELETE missing => 404' 的约束域内，且行为（200+result:false）与断言字面冲突——此为'行为 vs 断言字面'层面的事实。但断言 404 半边缺文档原文锚定（见 doc_verification）且源码证据支持 by-design（见 source_grounding），构成 auditor 裁定时的抗辩素材，不改变 violates 字面事实。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_collections_delete_001 存在于 structured_contract.json state_constraints，assertion 'DELETE existing => 200; DELETE missing => 404'，evidence_tier=explicit（但 description 自注 runtime verified——tier 标注与实际证据源存在张力）",
+        "doc: source_url 可达（web_reader 核证），v1.18.x 版本匹配；但页面 Response 段仅有 200（'successful operation'，含 result:boolean 字段），无 404 响应条目——assertion 的 404 半边在文档原文中缺席",
+        "script: semantic_collections_delete_001 完整生命周期 raw 请求——create→insert→delete#1(existing)→describe(404 确认不存在)→delete#2(missing)，请求与约束端点完全对应",
+        "log: 主观测 'delete#2 (missing): 200 {\"result\":false}' 与 VERDICT 行一致；raw 响应确认为 HTTP 200（非 4xx），log 环自洽无漂移"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "断链位于 doc 环（半断）：契约引用的 source_url 可达且版本正确，但 assertion 的关键半边 'DELETE missing => 404' 在 v1.18.x 文档页面无原文（页面仅声明 200 响应；OpenAPI spec 生成源亦只有 200——tmp_gen/qdrant118/spec.json 中 /collections/{collection_name} DELETE responses 仅 '200: successful operation'）。该断言半边的实际来源是契约构建期的运行时探测（description 自注 '(runtime verified)'），即'契约断言先于并超出文档'——契约环与文档环不一致。contract 环本身不断（约束存在）；script/log 环齐全一致。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "async fn delete_collection (glob *.rs, 全 clone) — 3 命中：src/actix/api/collections_api.rs:161、lib/storage/src/content_manager/toc/collection_meta_ops.rs:211、src/actix/api/snapshot_api.rs:357",
+        "CollectionMetaOperations::DeleteCollection — 命中 collection_meta_ops.rs:78（perform_meta_op 分发）",
+        "fn process_response — 命中 src/actix/helpers.rs:52/80（Ok 映射）",
+        "DeleteCollection — 命中 lib/api/src/grpc/proto/collections.proto:536（proto 定义，REST 文档生成源）",
+        "validate_collection_exists — 命中 collection_meta_ops.rs:316（update_aliases 对照，证明 404 机制在库中存在但 delete 未用）"
+      ],
+      "files_examined": [
+        "src/actix/api/collections_api.rs (L130-199, delete_collection handler)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (L180-344, delete_collection 全函数 + perform_meta_op 分发 + update_aliases 对照)",
+        "src/actix/helpers.rs (L37-96, process_response Ok/Err 映射)",
+        "lib/api/src/grpc/proto/collections.proto (L526-546, DeleteCollection message + CollectionOperationResponse)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/toc/collection_meta_ops.rs:227-295 (v1.18.0, tag v1.18.0):\n```rust\nlet removed_opt = self.collections.write().await.remove(collection_name);\nif let Some(removed) = removed_opt {\n    // ...真删除路径（stop optimizers/abort resharding/safe_delete_in_tmp）...\n    result = true;\n} else {\n    // we hold the collection_create lock to make sure no one is creating this collection\n    // otherwise we would delete its content now\n    if collection_path.exists() {\n        log::warn!(\n            \"Collection {collection_name} is not loaded, but its directory still exists. Deleting it.\"\n        );\n        to_delete = Some(safe_delete_in_tmp(&collection_path, &safe_delete_path)?);\n    } else {\n        to_delete = None;\n    }\n    result = false;   // <-- missing collection: 显式设计为正常返回 false，非 StorageError::NotFound\n}\n...\nOk(result)           // <-- L295: Ok(false) 返回，无错误\n```\n配套环1 proto（lib/api/src/grpc/proto/collections.proto:544-546）:\n```protobuf\nmessage CollectionOperationResponse {\n  // if operation made changes\n  bool result = 1;   // <-- result 字段设计语义即'是否产生了变更'，false=没删任何东西，属一等正常响应\n```\n配套环2 HTTP 映射（src/actix/helpers.rs:61-64）:\n```rust\nmatch response {\n    Ok(res) => HttpResponse::Ok().json(ApiResponse { ... })  // <-- 任何 Ok（含 Ok(false)）一律 HTTP 200\n```",
+      "call_chain_traced": "DELETE /collections/{name} → actix collections_api.rs:161 delete_collection（无存在性预检，直接构造 DeleteCollectionOperation 提交 dispatcher.submit_collection_meta_op）→ toc/collection_meta_ops.rs:78 perform_meta_op（DeleteCollection 分支直通 self.delete_collection，无校验）→ :227 collections map.remove(name) 得 None → :272-285 else 分支（显式设计注释：持 create lock 防并发创建 + 处理'未加载但目录残留'恢复子场景）→ :284 result=false → :295 Ok(false) → helpers.rs:62 Ok → HTTP 200 + result:false。对照：同文件 :316 update_aliases 的 CreateAlias 分支调用 validate_collection_exists（会映射 404），证明'缺失即 404'机制在代码库中存在且被别名操作使用，delete_collection 有意不采用。git 历史不可追（clone 为 depth=1 浅克隆，仅 v1.18.0 单提交），如实记录。",
+      "verification_outcome": "by_design_in_source",
+      "outcome_detail": "相对契约 404 断言而言校验确实缺失（missing 时无任何 NotFound 错误路径），但源码给出显式 by-design 三重证据：(1) missing 分支带设计注释说明并发与残留目录考量；(2) proto CollectionOperationResponse.result 注释 'if operation made changes'——'没产生变更'是文档化的一等正常响应（且 proto 是 api.qdrant.tech 文档生成源）；(3) OpenAPI 生成源只为该端点声明 200。删除幂等（result 表达是否变更）与 GET 严格（missing 404）的不对称是代码库一贯有意设计。是否据此判 NOT_DEFECT 属 auditor 职责，此处仅记录源码事实。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env（describe after delete 返回 404 确认 collection 真实不存在，非环境异常）",
+        "concurrency（脚本顺序执行，delete#1 与 delete#2 间隔 describe/get_point 两次 404 确认，无竞态窗口）",
+        "cache_staleness（delete#2 响应 time=0.000118s 且 result:false 与后续无变化一致，非缓存延迟）",
+        "request_typo（delete#1 与 delete#2 使用同一字面 collection 名 sem_del_lc_1787505157，见 log:5 与 log:9）"
+      ],
+      "surviving": "by_design_idempotent_delete：源码注释 + proto 'if operation made changes' 语义 + 文档生成源仅声明 200，三重证据支持删除端点按幂等设计（缺失不报错、以 result:false 表达无变更）；同时契约 404 断言缺文档锚定。该抗辩无法由 builder 排除，留 auditor 终裁。"
+    }
+  }
+}

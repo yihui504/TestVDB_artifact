@@ -1,0 +1,76 @@
+{
+  "defect_id": "vein_insert_type_coercion_2",
+  "endpoint": "entities+insert",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "vein 自生契约 vein_insert_type_coercion（不在官方 24 constraints）；相邻官方约束 milvus_type_entities_insert_001 声明行须匹配 schema 类型（'wrong dim -> ErrInvalidInsertData'），未显式约束标量字符串强转——一致性 PARTIAL。endpoint registry 含 entities+insert。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "PASS int64_string_accepted {'code': 0, 'cost': 0, 'data': {'insertCount': 1, 'insertIds': [3]}} — Int64 列传 \"5\" (string)",
+      "secondary_observations": [
+        "PASS coerced_readback {'id': 3, 'score': 1, 'val': 5, ...} — 读回 val 已变 int 5，静默强转落库",
+        "PASS control_float_bool_rejected {'code': 1804, 'unable to cast \"true\" of type string to float32'}",
+        "PASS int64_bool_rejected_control {'code': 1804, 'strconv.ParseInt: parsing \"true\": invalid syntax'}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "字符串数字 200+code:0 静默成功（无任何错误通道）；非数字字符串 200+1804——同一列同一输入类别（string）行为分裂。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_insert_type_coercion_2.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_insert_type_coercion",
+      "assertion_text_quoted": "insert 标量字段值必须符合 schema 声明类型；字符串 \"5\" 传入 Int64 列应报类型错误（对照 bool 字符串 1804 被拒），不得静默强转",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates=True 理由：观测 Int64 列字符串 \"5\" 200+code:0 落库读回 int；引文含'不得静默强转'约束——同族 bool/float 输入被拒证明校验能力存在，唯独数字字符串被强转，属断言域内直接违反。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: vein_insert_type_coercion + 官方 milvus_type_entities_insert_001 (schema 类型匹配)",
+        "doc: 官方约束 source_url handler_v2.go 可达",
+        "script: vein_insert_type_coercion_2.py 四路对照（合法/str-int/str-bool/float-bool）",
+        "log: int64_string code:0 vs int64_bool 1804 并列"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "appendInsertFieldData 全树（零命中：函数名不存在于本版本）",
+        "cast.ToInt64E / json.Number.Int64 in httpserver/utils.go",
+        "checkAndSetData utils.go:287"
+      ],
+      "files_examined": [
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go:287-630 (checkAndSetData 标量类型分派)",
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go:438-443 (Int64 分支 json.Number(dataString).Int64())",
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go:417-421 (Bool 分支 cast.ToBoolE)",
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go:565-575 (Float 分支 cast.ToFloat32E)"
+      ],
+      "source_excerpt": "// internal/distributed/proxy/httpserver/utils.go:417-443 (checkAndSetData 内)\ncase schemapb.DataType_Bool:\n\tresult, err := cast.ToBoolE(dataString)\n\tif err != nil { return merr.WrapErrParameterInvalid(...) }\n\treallyData[fieldName] = result\n...\ncase schemapb.DataType_Int64:\n\tresult, err := json.Number(dataString).Int64()\n\tif err != nil { return merr.WrapErrParameterInvalid(schemapb.DataType_name[int32(fieldType)], dataString, err.Error()), ... }\n\treallyData[fieldName] = result",
+      "call_chain_traced": "handler_v2 insert → utils.go checkAndSetData:287 按字段 DataType 分派标量转换 → Int64 分支 json.Number.Int64() 对数字字符串解析成功（\"5\"→5）非数字报 1804；Bool/Float 分支走 spf13/cast，cast.ToBoolE(\"true\") 对 Float 列/ParseInt 对 bool 列报 1804。不对称根因=三分支转换器不同（json.Number vs cast.*），数字字符串恰在 Int64 分支可解析。",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "request_typo"],
+      "surviving": "宽松解析（lenient string→int）是显式代码，但跨类型行为不一致（同 string 输入 bool/float 拒、int 收）无注释说明设计意图，surviving 为不对称性本身"
+    }
+  }
+}

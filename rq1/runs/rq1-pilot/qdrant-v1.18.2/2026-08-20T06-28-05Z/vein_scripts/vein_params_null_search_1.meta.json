@@ -1,0 +1,84 @@
+{
+  "defect_id": "vein_params_null_search_1",
+  "endpoint": "points+search",
+  "condition_type": "null_check",
+  "defect_type": "Type1_IllegalSuccess",
+  "severity": "P1_High",
+  "strategy": "vein_null_check",
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "session_id": "qdrant-v1.18.2-2026-08-20T06-28-05Z",
+  "round": 4,
+  "test_summary": {
+    "test_case": "params object accepts null value without validation in POST /collections/{collection}/points/search",
+    "expected_behavior": "Should return 400 Bad Request - params is an object type, not nullable",
+    "actual_behavior": "Returns 200 OK with search results, silently treating null as 'no params'",
+    "parameter_path": "params",
+    "parameter_type": "object",
+    "invalid_value_tested": null,
+    "http_status": 200,
+    "response_excerpt": "{\"result\":[{\"id\":1,\"version\":1,\"score\":1.0},...],\"status\":\"ok\"}"
+  },
+  "control_group": {
+    "valid_value_tested_1": "{}",
+    "valid_value_result_1": "200 OK with results",
+    "valid_value_tested_2": "{\"hnsw_ef\": 128}",
+    "valid_value_result_2": "200 OK with results",
+    "control_outcome": "PASS"
+  },
+  "threat_model_reference": {
+    "blindspot": "BS-01",
+    "blindspot_name": "Parameter Type Coercion Trust",
+    "description": "REST API framework/serde assumes validation but null objects slip through",
+    "historical_defect_count": 88,
+    "reference_issues": [
+      9418,
+      9419,
+      9420,
+      9373
+    ],
+    "attack_strategy": "type_confusion"
+  },
+  "bug_shape": {
+    "shape_id": "qdrant-type-coercion-type-confusion",
+    "shape_type": "type_confusion",
+    "root_cause_category": "type_coercion",
+    "affected_layer": "request_parsing"
+  },
+  "evidence": {
+    "defect_found": true,
+    "novelty": "LIKELY_NOVEL_INSTANCE",
+    "cross_db_applicable": true,
+    "related_to_known_issues": "Similar to #9418-9420 (null filter validation), same BS-01 pattern",
+    "validation": {
+      "contract_specification": "Contract states params is an object type (optional)",
+      "api_documentation": "Qdrant API docs specify params as optional object for search parameters",
+      "expected_http_code": 400,
+      "actual_http_code": 200
+    }
+  },
+  "defect_details": {
+    "parameter_name": "params",
+    "parameter_location": "request body",
+    "parameter_schema": {
+      "type": "object",
+      "required": false,
+      "description": "Search parameters (hnsw_ef)"
+    },
+    "invalid_value": null,
+    "should_reject_because": "null is not a valid object value - type coercion/validation gap",
+    "why_accepted": "null treated as 'params not provided' instead of invalid type",
+    "impact": "API contract violation - invalid null type silently accepted"
+  },
+  "submission_readiness": {
+    "has_clear_violation": true,
+    "has_control_group": true,
+    "has_contract_reference": true,
+    "has_reproducible_steps": true,
+    "estimated_success_probability": 0.85,
+    "justification": "BS-01 pattern - nested object null validation gap, similar to historical filter null issues"
+  },
+  "generated_at": "2026-08-20T18:32:00Z",
+  "generated_by": "attack-vein v2.5.2 (Round 4)",
+  "param": "params"
+}

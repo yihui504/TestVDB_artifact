@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_collections_get_003",
+ "endpoint": "collections+get",
+ "param": "collection_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "strategy1_lifecycle_flip",
+ "oracle": {
+  "statement": "PUT-create b3cget_lf_* then GET describe = 200 with result dict (control); after an acknowledged 200 DELETE of that same collection, immediate GET describe and a second GET after 2s settle must both be 404; post-delete 200 = Type4_StateLogicViolation with Type1 character (stale config for a destroyed collection), 5xx = Type3_RuntimeFailure, non-404 4xx = Type4_StateLogicViolation",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

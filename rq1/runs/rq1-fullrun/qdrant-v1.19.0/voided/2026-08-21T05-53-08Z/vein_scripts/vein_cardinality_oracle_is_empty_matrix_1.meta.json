@@ -1,0 +1,29 @@
+{
+  "defect_id": "vein_cardinality_oracle_is_empty_matrix_1",
+  "endpoint": "POST /collections/{collection_name}/points/count",
+  "param": "exact",
+  "expected_defect_type": "Type2_PoorDiagnostics",
+  "strategy": "vein_cardinality_oracle_is_empty",
+  "VERDICT": "DEFECT_FOUND",
+  "condition_class": "is_empty",
+  "finding_summary": "is_empty estimator on exact=false systematically under-counts by ~35% across all collection sizes (10/50/100/200). exact=true correctly counts MISSING+NULL fields, but exact=false appears to count only MISSING fields (or uses incorrect formula). Consistent ratio across sizes indicates systematic estimator bug, not random approximation noise.",
+  "defect_details": {
+    "systematic_bias_pattern": "exact=false returns ~65% of exact=true count consistently",
+    "size_variants_tested": [10, 50, 100, 200],
+    "bias_ratios": {
+      "10": "4/7 = 57%",
+      "50": "22/34 = 65%",
+      "100": "44/34 = 66%",
+      "200": "88/134 = 66%"
+    },
+    "root_cause_hypothesis": "is_empty estimator counts only MISSING fields but ignores NULL values, or applies incorrect divisor in estimation formula",
+    "baseline_correct": true,
+    "estimator_incorrect": true
+  },
+  "test_methodology": {
+    "data_distribution": "33% MISSING field, 33% NULL value, 34% with value",
+    "control_validation": "scroll ground truth matches exact=true (MISSING+NULL count)",
+    "index_configuration": "keyword index on 'city' field to trigger approximate path",
+    "significance_threshold": ">20% deviation across all sizes = systematic bug"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "defect_id": "boundary_locks_get_003",
+  "endpoint": "locks+get",
+  "param": "query string / body on GET /locks (adversarial material: junk typed params write=banana, boundary junk limit=-1/offset=1e20, %zz percent-encoding, truncated-JSON body, NUL-led binary body, 10k overlong value)",
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "malformed_input",
+  "constraint_ids": [
+    "qdrant_behavioral_locks_get_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/get-locks",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "live /locks: each of the 6 malformed-input probes (junk typed params, boundary junk, %zz encoding, truncated-JSON body, NUL binary body, 10k overlong value) must answer either 200 with a grid-conformant LocksOption (result.write boolean, result.error_message string|null — junk ignored) or a clean 4xx; any 5xx or transport failure with /healthz alive = Type3_RuntimeFailure (parser/handler crash on the read face); if GET+POST /locks both answer concrete non-2xx (404 expected on OSS v1.18.0), NO_DEFECT with endpoint-absence evidence (face not actuable)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

@@ -1,0 +1,17 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: bcc11c1bca8
+[constraint quote] wal_config (create, WalConfigDiff schema): wal_capacity_mb minimum 1; wal_segments_ahead minimum 0; wal_retain_closed minimum 0
+[wal_config.wal_capacity_mb=0 (min-1, both grids)] status=422 raw={"status":{"error":"Validation error in JSON body: [wal_config.wal_capacity_mb: value 0 invalid, must be 1 or larger]"},"time":0.0}
+[conform] 'wal_config.wal_capacity_mb=0 (min-1, both grids)' rejected with 422
+[wal_config.wal_segments_ahead=-1 (min-1, both grids)] status=400 raw={"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 86"},"time":0.0}
+[conform] 'wal_config.wal_segments_ahead=-1 (min-1, both grids)' rejected with 400
+[wal_config.wal_retain_closed=-1 (illegal under diff min 0 AND resolved min 1)] status=400 raw={"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 85"},"time":0.0}
+[conform] 'wal_config.wal_retain_closed=-1 (illegal under diff min 0 AND resolved min 1)' rejected with 400
+[positive minima combo {"wal_capacity_mb": 1, "wal_segments_ahead": 0}] status=200 raw={"result":true,"status":"ok","time":0.344849842}
+[readback] config.wal_config={"wal_capacity_mb": 1, "wal_segments_ahead": 0, "wal_retain_closed": 1}
+[conform] wal_config.wal_capacity_mb=1 persisted (closure)
+[conform] wal_config.wal_segments_ahead=0 persisted (closure)
+[measured-only:wal_retain_closed=0 (diff min 0 vs resolved min 1)] status=500 raw={"status":{"error":"Service internal error: Tokio task join error: task 16212 panicked with message \"called `Option::unwrap()` on a `None` value\""},"time":1.243433819}
+[healthz attempt 1] status=200 raw=healthz check passed
+VERDICT: DEFECT_FOUND (Type3_RuntimeFailure: 'wal_retain_closed=0 conflict leg' got 500 with /healthz alive; body: {"status":{"error":"Service internal error: Tokio task join error: task 16212 panicked with message \"called `Option::unwrap()` on a `None` value\""},"time":1.243433819})

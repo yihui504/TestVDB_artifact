@@ -1,0 +1,79 @@
+{
+  "defect_id": "boundary_schema_dynamicEfMinOnly",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Assertion inferred (Min<=Max); github blocked (PARTIAL). Local clone exact v1.37.4. DefaultValue dynamicEfMax=500 (from go-struct) drives the Min>Max inversion when only Min is raised - source does not reconcile Min vs default Max.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: only dynamicEfMin=900 set, dynamicEfMax stays default 500 -> http=200, body persists dynamicEfMin=900 dynamicEfMax=500 (status 200, VERDICT: DEFECT_FOUND)",
+      "secondary_observations": [
+        "inversion arises from default interaction: Min=900 > default Max=500; silently accepted, no 4xx"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200; a Min>default-Max pairing silently persists as success rather than returning a client error on the inconsistent pair"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_dynamicEfMinOnly",
+        "boundary_schema_dynamicEf_inverted",
+        "boundary_schema_dynamicEfMax_negative",
+        "boundary_schema_dynamicEfMin_negative"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_inferred_hnsw_ef_pairing_001",
+      "assertion_text_quoted": "dynamicEfMin and dynamicEfMax represent paired EF parameters where Min <= Max",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "assertion_id": "weaviate_inferred_hnsw_ef_pairing_001"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:weaviate_inferred_hnsw_ef_pairing_001 -> doc:assertion inferred, source=config.go (SetDefaults dynamicEfMax=500) -> script:boundary_schema_dynamicEfMinOnly POST /v1/schema with dynamicEfMin=900 only -> log:http=200, body persists Min=900 Max=500"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "Chain complete. Because default Max=500 is retained when only Min=900 is set, final pair is Min(900) > Max(500), violating Min<=Max. No validation reconciles Min against the retained default Max.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "DefaultDynamicEFMax value",
+        "SetDefaults DynamicEFMax",
+        "dynamicEfMin only parse",
+        "pairwise reconcile"
+      ],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go",
+        "entities/vectorindex/dynamic/config.go"
+      ],
+      "source_excerpt": "config.go:31 DefaultDynamicEFMax=500; config.go:92-93 SetDefaults sets DynamicEFMax=500, DynamicEFMin=100; config.go:189-193 OptionalIntFromMap(\"dynamicEfMin\") overwrites DynamicEFMin only when provided, leaving Max=500; no code re-validates Min<=Max after the override; validate() never compares the pair. Net: MinOnly=900 -> inverted pair 900>500 persisted.",
+      "call_chain_traced": "POST /schema -> SetDefaults (Min=100,Max=500) -> OptionalIntFromMap dynamicEfMin=900 overrides Min only -> validate() (no pairwise check) -> persisted Min=900 Max=500.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "by-design"
+      ],
+      "surviving": "Default-interaction inversion is deterministic and reproducible; source has no code to reconcile a raised Min against the retained default Max. Real pairing-validation gap triggered solely by upstream defaults.",
+      "note": "Min(900)>defaultMax(500) violates the Min<=Max pairing assertion - api_violates_assertion=true."
+    }
+  }
+}

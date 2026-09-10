@@ -1,0 +1,75 @@
+{
+  "defect_id": "state_points_query_batch_alignment_002",
+  "endpoint": "points+query+batch (POST /collections/{collection_name}/points/query/batch)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: domain_blocked — live WebFetch of https://api.qdrant.tech/v-1-18-x/api-reference/query/batch-query failed twice (network restriction) and the web-reader fallback also failed (network error); no doc_preflight.json sidecar exists anywhere under results/qdrant/v1.18.0 (find -iname '*preflight*' zero hits); the contract's own build-time field records source_status 'reachable', so PARTIAL not FAIL. Version: PASS — the source_url embeds the versioned archive segment v-1-18-x matching target v1.18.0 (version read from URL, no fetch needed). Content consistency: PARTIAL — cannot re-verify the page prose live; no contradiction found either (the contract's own description field 'executes multiple queries in one call; returns 200 with a list of per-query results; 404 for a missing collection' matches the endpoint_registry description 'Execute multiple universal queries in one call.' at structured_contract.json line 2147). Endpoint precision: PASS — endpoint_registry entry at structured_contract.json lines 2144-2150 registers path 'points+query+batch', method POST, parameter 'searches' array[QueryRequest], source_url identical to the assertion's; the script registered and called exactly POST /collections/{collection_name}/points/query/batch with body {\"searches\": [...]}.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "DEFECT: (order) result[0] (by-id search of id 1) does not contain id 1 — same-order alignment broken — Type4_StateLogicViolation",
+      "secondary_observations": [
+        "DEFECT: (order) result[3] (by-id search of id 6) does not contain id 6 — same-order alignment broken — Type4_StateLogicViolation",
+        "DEFECT: (order) result[0] contains id 6 — entries appear swapped — Type4_StateLogicViolation",
+        "DEFECT: (order) result[3] contains id 1 — entries appear swapped — Type4_StateLogicViolation",
+        "POSITIVE CONTROL (passed, no defect line emitted): [4-search batch] status=200 raw={\"result\":[{...id5/id2/id6...},{...id4/id5/id2...},{...id4/id2/id6...},{...id2/id1/id5...}]} — 4 entries for 4 searches (one-result-per-search held); all ids within seeded {1..6}; no fabricated ids",
+        "FACE COMPARISON rest/batch vs rest/single (passed, no '(face)' defect line emitted): [single-face by-id 1] status=200 raw={\"result\":{\"points\":[{\"id\":5,\"version\":1,\"score\":1.0},{\"id\":2,\"version\":1,\"score\":0.0},{\"id\":6,\"version\":1,\"score\":0.0}]}} — id set {5,2,6} EQUALS batch result[0] id set; [single-face by-id 6] status=200 raw={\"result\":{\"points\":[{\"id\":2,\"version\":1,\"score\":1.0},{\"id\":1,\"version\":1,\"score\":0.0},{\"id\":5,\"version\":1,\"score\":0.0}]}} — id set {2,1,5} EQUALS batch result[3] id set — this refutes the 'entries appear swapped' reading within the same log",
+        "READ-ONLY INVARIANCE (passed): [before count] status=200 raw={\"result\":{\"count\":6},...} and [after count] status=200 raw={\"result\":{\"count\":6},...} — read face did not mutate state",
+        "CROSS-SCRIPT SAME-PHENOMENON (rest/single face, sibling log output_semantic_points_query_byid_lookup_001.log line 7): VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — L1: by-id lookup of 301 must rank by 301's stored vector ([301, 302, 303, 304, 305] by graded distance), got [302, 303, 304, 305]: {\"result\":{\"points\":[{\"id\":302,...\"score\":1.0},...]}...} — the queried id 301 is absent from its own by-id result on the single-query face too (face-independent behavior)",
+        "SEED-DESIGN FACT (from script source lines 184-198): vec(i) sets v[i % 4] = 1.0 over ids 1..6, so v1==v5 (e2) and v6==v2 (e3) — duplicate vectors explain the 1.0 scores of non-self ids (5 in result[0], 2 in result[3]) despite the comment claiming 'distinct, well-separated directions'",
+        "grpc face unavailable in this sandbox (no gRPC probes exist in any run log) — face_unavailable for the gRPC comparison leg"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "all legs were valid requests answered 200; no client-decidable error was returned as 2xx in this log"},
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["state_points_query_batch_alignment_002", "state_points_query_batch_point_delete_003", "state_points_query_batch_upsert_idem_004", "state_points_query_batch_lifecycle_006"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_batch_001",
+      "assertion_text_quoted": "HTTP 200 with one result per search in the same order; missing collection returns 404",
+      "api_violates_assertion": false,
+      "note": "violates=False because the observed batch is genuinely compliant with the quoted clause: 200 with 4 result entries for 4 searches in request order, each entry id-set-equal to the equivalent single-face query; the primary observation (by-id entries lack the queried id) is OUTSIDE the quoted clause's constraint domain — the assertion constrains result cardinality and order per search, not by-id membership — and the underlying self-absence is by-design exclusion of referenced ids in source (see source_grounding).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_query_batch_001 present at structured_contract.json line 7333 (expected_behavior 'HTTP 200 with one result per search in the same order; missing collection returns 404', source_status reachable); note the candidates.jsonl dispatch row carries constraint_id \"\" (empty) — the binding is established by the dispatch prompt and the script header line 6 'constraint_ids: qdrant_behavioral_points_query_batch_001'",
+        "doc: source_url https://api.qdrant.tech/v-1-18-x/api-reference/query/batch-query — versioned v-1-18-x matches target; live re-verification domain_blocked (both fetch channels), contract build-time record says reachable; no content contradiction found",
+        "script: state_points_query_batch_alignment_002.py sent POST /collections/{name}/points/query/batch body {\"searches\":[{query:1,limit:3},{query:[1,0,0,0],limit:3},{query:[0,1,0,0],limit:5,filter grp==\"b\"},{query:6,limit:3}]} — matches the contract endpoint and exercises the 200 face of the assertion",
+        "log: VERDICT: DEFECT_FOUND with four '(order)' Type4 lines; raw REQ/RESP review shows the asserted behavior actually held (4/4 entries in order, batch-vs-single id-set equality, count 6->6); the defect lines rest on the oracle premise 'a by-id search must contain the queried id', which is not in the contract text and is refuted by source (by-design referenced-id exclusion)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "The log's verdict pattern ('same-order alignment broken', 'entries appear swapped') is contradicted by the log's own raw evidence: batch result[0] id set == single-face by-id 1 id set and batch result[3] id set == single-face by-id 6 id set, so no swap occurred and order alignment held; the true content of the primary observation is by-id self-absence, which is (a) outside the contract's same-order clause and (b) explicit by-design behavior in source (collection_query.rs excludes referenced point ids via must_not HasId). The contract->doc->script links are intact; the break is between the log's Type4 order-violation label and the raw observation's actual semantics.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["query_batch", "excluded / exclude", "get_referenced_point_ids", "points/query/batch", "VectorInputInternal::Id", "searches (QueryRequestBatch)"],
+      "files_examined": [
+        "lib/collection/src/operations/universal_query/collection_query.rs (lines 520-570, 680-740)",
+        "lib/collection/src/collection/query.rs (whole file, 748 lines)",
+        "src/actix/api/query_api.rs (lines 60-189)",
+        "structured_contract.json endpoint_registry lines 2144-2150 (registry cross-check)"
+      ],
+      "source_excerpt": "lib/collection/src/operations/universal_query/collection_query.rs lines 525-535:\n/// Exclude the referenced ids by editing the filter.\nfn exclude_referenced_ids(ids: Vec<ExtendedPointId>, filter: Option<Filter>) -> Option<Filter> {\n    let ids: AHashSet<_> = ids.into_iter().collect();\n    if ids.is_empty() { return filter; }\n    let id_filter = Filter::new_must_not(Condition::HasId(HasIdCondition::from(ids)));\n    Some(id_filter.merge_owned(filter.unwrap_or_default()))\n}\n\nsame file lines 558-563 (inside get_referenced_point_ids_on_collection):\n    if !lookup_other_collection && let Some(Query::Vector(vector_query)) = &self.query {\n        if let VectorQuery::Nearest(VectorInputInternal::Id(id)) = vector_query {\n            refs.push(*id);\n        }\n        refs.extend(vector_query.get_referenced_ids())\n    };\n\nsame file lines 704-708 (inside try_into_shard_request):\n    // Edit filter to exclude all referenced point ids (root and nested) on the searched collection\n    // We do not want to exclude vector ids from different collection via lookup_from.\n    let referenced_point_ids = self.get_referenced_point_ids_on_collection(collection_name);\n    let filter = exclude_referenced_ids(referenced_point_ids, self.filter);",
+      "call_chain_traced": "REST src/actix/api/query_api.rs query_points_batch (line 110 route POST /collections/{collection_name}/points/query/batch) -> for request_item in searches { batch.push((request, shard_selection)) } (lines 136-155, order-preserving) -> dispatcher.toc().query_batch -> lib/collection/src/collection/query.rs query_batch (line 445): resolve_referenced_vectors_batch resolves by-id queries' ids to vectors -> try_into_shard_request per request applies exclude_referenced_ids (must_not HasId of referenced ids, INCLUDING the by-id query's own id) -> do_query_batch_impl returns results via transposed_iter(all_shards_results).zip(requests_batch.iter()) (line 315-317) and try_join_all preserves group order (line 519-523) -> query_api.rs maps responses 1:1 in order (lines 167-185). Mechanism found: a {\"query\": <id>} request resolves the id's vector AND excludes that id from candidates — so by-id results never contain the queried point, on both single and batch faces. Order of batch results is structurally preserved end-to-end (no swap mechanism exists).",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (all legs 200, no transport failures, no healthz abort)", "concurrency (single sequential client, no interleaved writers)", "request-parameter typo (paths registered verbatim from raw_knowledge; bodies well-formed)"],
+      "surviving": "by-design by-id referenced-id exclusion (explicit source comment at collection_query.rs:704-705 + exclude_referenced_ids must_not HasId) fully explains the primary observation; contributing script-side factors: the oracle premise 'by-id search must contain the queried id' contradicts Qdrant semantics, and the seed function vec(i)=basis[i%4] over ids 1..6 creates duplicate vectors (v1==v5, v6==v2) explaining the 1.0-scored non-self top-1 hits"
+    }
+  }
+}

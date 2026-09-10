@@ -1,0 +1,12 @@
+{
+ "defect_id": "semantic_aliases_update_004",
+ "endpoint": "aliases+update",
+ "param": "actions",
+ "strategy": "diagnosis_quality",
+ "expected_defect_type": "Type2_PoorDiagnostics",
+ "oracle": {
+  "statement": "for each documented error case the status lands in its documented set - (1) create_alias -> missing collection: exactly HTTP 404; (2) delete_alias of an unknown alias: 404 or 500; (3) rename_alias with unknown old_alias_name: 404 or 500 - and the rejection text scores >=1/3 on the rubric (parameter_named 1pt + format_hint 1pt + actionable 1pt); score 0/3 (names neither the offending parameter nor any format/action hint, e.g. a bare 'internal error') => Type2_PoorDiagnostics; a 2xx on any case => Type1_IllegalSuccess; create_alias-missing returning a NON-404 4xx => Type4 doc-drift (the assertion pins 404)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

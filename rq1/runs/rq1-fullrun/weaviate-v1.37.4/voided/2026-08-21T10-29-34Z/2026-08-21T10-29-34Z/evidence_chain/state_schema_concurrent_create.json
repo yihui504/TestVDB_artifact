@@ -1,0 +1,60 @@
+{
+  "defect_id": "state_schema_concurrent_create",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint_id=contract（structured_contract.json v1.37.4 state_invariants=[] 空数组——脚本注释自认 'state_invariants absent, inferred from OpenAPI Create collection'）；POST /schema 在 endpoint_registry 存在（v1.37.4, doc_quote 'Create collection', source_url=openapi fallback）；WebFetch weaviate.io 被网络策略拦截（domain_blocked）→ 文档原文不可达，内容一致性仅 PARTIAL",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "D",
+      "log_pattern": "c1: thread 5: status=200 raw={\"class\":\"StateSchemaConcurrentCreate\",...完整类定义...}（唯一成功）；c2: thread 16: status=422 raw={\"error\":[{\"message\":\"class name StateSchemaConcurrentCreate already exists\"}]}；c3: thread 0: status=422 raw={\"error\":[{\"message\":\"updating schema: TYPE_ADD_CLASS: class already exists\"}]}（c2/c3 合计 19×422）；c4: Final describe Status: 200 / Final describe Raw: {\"class\":\"StateSchemaConcurrentCreate\",\"invertedIndexConfig\":{...},\"vectorIndexConfig\":{\"dynamicEfMin\":100,\"dynamicEfMax\":300,...},\"vectorIndexType\":\"hnsw\"...}（完整类定义）；c5: DEFECT signal — class definition missing after concurrent creates → VERDICT: DEFECT_FOUND。c5 与同 log 内 c4 矛盾：describe 200 返回完整类定义，类未被丢失；信号由脚本 cfg 提取形状不匹配触发（:93-108 期望类对象嵌套于 'class'/'Class'/'objectClass' 键或 classes 数组下，而 GET /v1/schema/{name} 顶层即类对象且 'class' 为字符串字段）",
+      "secondary_observations": [
+        "c2 路径（manager.go PreApplyFilter 'class name X already exists'）：thread 16/17/18/19 共 4 条",
+        "c3 路径（addClass ErrClassExists → 'updating schema: TYPE_ADD_CLASS: class already exists'）：thread 0,1,2,3,4,6,7,8,9,10,11,12,13,14,15 共 15 条",
+        "全程无 500 / connection reset——服务端并发收敛为 1 winner + 19 conflict，无半创建类泄漏",
+        "重跑复现（2026-08-21 手工 rerun，TESTVDB_DB_URL=http://localhost:8080）：1×200（thread 0）+ 19×422 + Final describe 200 完整类定义 + 同一 c5 DEFECT signal 行，逐条一致；winner 线程不同（首跑 thread 5 / 重跑 thread 0）但收敛结果相同",
+        "c4 describe body 含 vectorIndexConfig dynamicEfMin=100/dynamicEfMax=300 等攻击载荷字段，类定义完整未损坏"
+      ],
+      "claim_alignment": "drifted",
+      "http_semantics": {"client_error_returned_as": "HTTP 4xx/5xx", "note": "19/20 并发重复创建被 422 正确拒绝（class already exists），1×200 创建成功，describe 200 完整返回——无客户端错误以 2xx 业务码返回；服务端按 by-design 语义收敛"},
+      "reproducibility": "单脚本（重跑逐条复现：两次运行均为 1×200+19×422+describe 200 完整类定义，服务端行为确定性收敛；DEFECT 信号两次一致触发但为脚本解析假象）",
+      "script_error": false,
+      "triggering_scripts": ["state_schema_concurrent_create"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "contract",
+      "assertion_text_quoted": "（structured_contract.json state_invariants=[] 无约束条目；脚本自设推断：'schema single-writer consistency invariant (state_invariants absent, inferred from OpenAPI \"Create collection\")'——并发同名创建后必须恰好存在一个完整未损坏的类定义）",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:POST /schema（state_invariants 空，无正式断言）", "doc:openapi fallback 'Create collection' v1.37.4", "script:state_schema_concurrent_create.py 20 线程 POST 相同 class + :93-108 cfg 提取", "log:1×200 + 19×422 + Final describe 200 完整类定义 + c5 DEFECT signal"],
+      "chain_broken_at": "log",
+      "break_detail": "log 层判定模式（c5 'class definition missing'）与同 log 原始响应（c4 describe 200 完整类定义）直接矛盾：类定义完整存在，无丢失/损坏/500。c5 是脚本 :93-108 cfg 提取逻辑对 Weaviate 顶层类响应形状（'class' 为字符串字段）的解析失配产物，非服务端可观测现象。服务端行为（1 winner + 19×422 + 收敛完整）与 claim 的并发一致性断言相符；DEFECT_FOUND 由脚本侧误判触发",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["ErrClassExists", "already exists", "mu.Lock", "TYPE_ADD_CLASS"],
+      "files_examined": ["cluster/schema/schema.go", "cluster/schema/manager.go", "cluster/schema/schema_thread_safety_test.go"],
+      "source_excerpt": "schema.go:35 ErrClassExists = errors.New(\"class already exists\")；schema.go:339-359 addClass: `s.mu.Lock(); defer s.mu.Unlock(); _, exists := s.classes[cls.Class]; if exists { return ErrClassExists }; s.classes[cls.Class] = &metaClass{...}`；manager.go:129-141 PreApplyFilter (TYPE_ADD_CLASS): `other, isAlias := s.schema.ClassEqual(req.Class); if other == req.Class { return fmt.Errorf(\"%s name %s already exists\", item, req.Class) }`；schema_thread_safety_test.go:90-131 并发 addClass 测试：`if err != nil && !errors.Is(err, ErrClassExists) { t.Errorf(...) }`——ErrClassExists 被显式视为并发重复创建的预期结果",
+      "call_chain_traced": "POST /v1/schema → handler → raft apply AddClass → SchemaManager.PreApplyFilter（manager.go:129-141 同名拒绝 'class name X already exists' → 对应 log c2）→ schema.addClass（schema.go:340-346 互斥锁 + exists 检查 → ErrClassExists → 对应 log c3）→ 422；唯一 200 走 addClass 成功分支；GET /v1/schema/{name} 返回顶层类对象（对应 log c4）",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（DB 存活，两轮运行确定性一致）", "concurrency（服务端并发语义确定性收敛：1×200+19×422，两轮 winner 不同但结果相同，无 race 迹象）"],
+      "surviving": "脚本 :93-108 cfg 提取形状失配（期望嵌套 dict/classes 数组，实际顶层类对象）→ 类存在却误报 'class definition missing'；服务端无可观测缺陷现象"
+    }
+  }
+}

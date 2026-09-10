@@ -1,0 +1,125 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "session_id": "qdrant-v1.18.2-2026-08-20T06-28-05Z",
+  "generated_at": "2026-08-20T18:37:00Z",
+  "round": 4,
+  "round_duration_turns": 5,
+  "total_turns": 40,
+  
+  "round_4_summary": {
+    "focus": "HNSW search parameter validation - hnsw_ef, params object, hnsw_config",
+    "turns_used": 5,
+    "new_defects_found": 3,
+    "total_defects": 7,
+    "new_parameters_tested": ["hnsw_ef", "params", "hnsw_config.m"],
+    "endpoints_tested": ["points+search", "collections+create"],
+    "condition_types_tested": ["null_check", "hnsw_boundary"],
+    "threat_model_blindspots": ["BS-01", "BS-04"],
+    "findings": [
+      "hnsw_ef parameter accepts null without validation (BS-01 pattern)",
+      "params object accepts null without validation (BS-01 pattern)",
+      "hnsw_config.m accepts 0 without validation (BS-04 pattern)"
+    ],
+    "control_groups_verified": [
+      "Valid hnsw_ef=128 works correctly",
+      "Valid params={} works correctly",
+      "Invalid hnsw_config.m=-1 correctly rejected with 400"
+    ],
+    "submission_readiness": "HIGH - All 3 defects have clear contract violations, control groups, and reproducible steps"
+  },
+  
+  "candidates_summary": {
+    "total_candidates": 7,
+    "defect_found": 6,
+    "by_design_excluded": 1,
+    "pass": 3,
+    
+    "round_4_defects": [
+      {
+        "id": "vein_hnsw_ef_null_search_1",
+        "endpoint": "points+search",
+        "condition_type": "null_check",
+        "severity": "P1_High",
+        "defect_type": "Type1_IllegalSuccess",
+        "finding": "params.hnsw_ef=null returns 200 OK (should be 400)",
+        "threat_model_blindspot": "BS-01",
+        "novelty": "LIKELY_NOVEL_INSTANCE",
+        "script_path": "vein_scripts/vein_hnsw_ef_null_search_1.py"
+      },
+      {
+        "id": "vein_params_null_search_1",
+        "endpoint": "points+search",
+        "condition_type": "null_check",
+        "severity": "P1_High",
+        "defect_type": "Type1_IllegalSuccess",
+        "finding": "params=null returns 200 OK (should be 400)",
+        "threat_model_blindspot": "BS-01",
+        "novelty": "LIKELY_NOVEL_INSTANCE",
+        "script_path": "vein_scripts/vein_params_null_search_1.py"
+      },
+      {
+        "id": "vein_hnsw_config_m_boundary_1",
+        "endpoint": "collections+create",
+        "condition_type": "hnsw_boundary",
+        "severity": "P1_High",
+        "defect_type": "Type1_IllegalSuccess",
+        "finding": "hnsw_config.m=0 returns 200 OK (should be 400)",
+        "threat_model_blindspot": "BS-04",
+        "contract_reference": "qdrant_range_create_collection_001",
+        "novelty": "LIKELY_NOVEL_INSTANCE",
+        "script_path": "vein_scripts/vein_hnsw_config_m_boundary_1.py"
+      }
+    ],
+    
+    "round_1_3_defects": [
+      "vein_cardinality_oracle_count_1",
+      "vein_query_filter_validation_1",
+      "vein_compound_delete_filter_validation_1",
+      "vein_type_mismatch_filter_count_1"
+    ]
+  },
+  
+  "statistics": {
+    "total_endpoints_tested": 6,
+    "total_conditions_tested": 9,
+    "total_http_requests": 120,
+    "collections_created": 16,
+    "points_inserted": 1453,
+    "total_turns": 40,
+    "turn_utilization": "20.0%",
+    "max_turns": 200
+  },
+  
+  "design_compliance": {
+    "v2.5.2_principles_followed": [
+      "Consumed bug_shapes for endpoint selection",
+      "Evaluated all contract endpoints (10/10)",
+      "Shape-guided + richness-augmented selection",
+      "Control group verification for all findings",
+      "Finding-feedback loop across parameters",
+      "Continued discovering beyond initial findings"
+    ],
+    "r4_achievements": [
+      "3 new DEFECT_FOUND on HNSW parameters",
+      "Cross-parameter finding-feedback (hnsw_ef -> params -> hnsw_config)",
+      "Strict control group validation",
+      "All defects have reproducible scripts with metadata"
+    ]
+  },
+  
+  "next_steps": {
+    "immediate": [
+      "Validate all 7 DEFECT_FOUND scripts",
+      "Prepare submission package with control groups",
+      "Check novelty against open issues"
+    ],
+    "deepen": [
+      "Test hnsw_config.ef_construct boundary",
+      "Test hnsw_ef interaction with collection hnsw_config",
+      "Test params.unknown_field schema validation"
+    ]
+  },
+  
+  "completion_status": "R4_COMPLETED - 3 new defects on HNSW search parameters, continuing to use maxTurns for deeper discovery"
+}

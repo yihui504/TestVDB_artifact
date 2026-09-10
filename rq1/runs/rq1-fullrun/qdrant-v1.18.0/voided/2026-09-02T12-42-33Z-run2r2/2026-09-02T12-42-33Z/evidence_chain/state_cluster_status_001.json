@@ -1,0 +1,99 @@
+{
+  "defect_id": "state_cluster_status_001",
+  "endpoint": "cluster+status (GET /cluster)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_prefetch.json sidecar exists in the contract dir; primary WebFetch was blocked at the domain-verification layer (recorded as an attempt-level domain_blocked), but the page was fetched live on 2026-09-03 via the MCP web reader (title 'Check cluster status | Qdrant | API Reference', canonical URL matching) and the contract's endpoint_registry independently recorded source_status reachable with verified_at 2026-09-02T12:34:08Z -> PASS. Version: page and URL self-label v1.18.x, target v1.18.0, major.minor exact -> PASS. Endpoint precision: registry entry {path: cluster+status, method: GET, source_url identical to live page GET /cluster, operationId cluster_status} -> PASS. Content consistency: FAIL — the live v1.18.x schema for the 200 'result' is a oneOf union: ClusterStatus0 = {status (enum, REQUIRED, allowed: 'disabled') as its ONLY field} and ClusterStatus1 = {status: 'enabled', peer_id (uint64, required), peers (map, required), raft_info {term, commit, pending_operations, is_voter, leader, role} (required), consensus_thread_status (required), message_send_failures (required)}; top-level 'raft_state' and 'commit_index' do not exist anywhere in the v1.18.x schema (they live as raft_info.role / raft_info.commit), and the page's own 200 example response is exactly {\"result\": {\"status\": \"disabled\"}} — i.e. the documentation does NOT contain the unconditional four-field shape the contract asserts; the contract's grid matches a pre-raft_info flat ClusterStatus generation. Note: the endpoint_registry doc_quote 'valid on single-node deployments too' also does not appear verbatim on the live page (current prose is only 'Returns information about the cluster's current state and composition.').",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "DEFECT: (P0) documented ClusterStatus fields missing: ['peer_id', 'raft_state', 'commit_index', 'peers'] — Type4_StateLogicViolation  [underlying raw, log line 3: [P0 control probe: documented no-body GET] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.11e-6}]",
+      "secondary_observations": [
+        "[P0 fingerprint] keys=['status'] mode='disabled'  (log line 4 — baseline result object contains only 'status')",
+        "[P5 final type-check] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":3.328e-6}  (log line 17 — same shape after full lifecycle)",
+        "[P2 count control] exact=8 expected=8 / [P4 count control] exact=4 expected=4  (log lines 7,12 — all data-plane mutations verifiably landed)",
+        "[P5 quiescence] describe(scst1_1788381680_23724_col) -> 404? True  (log line 15 — drop observable)",
+        "NO drift defect fired across P1-P5: the script's named attack face (state-transition consistency — key-set stability and cluster-mode stability across create/upsert/index/delete/drop) PASSED; the DEFECT lines fired purely on the response-shape type face, identically at P0 and P5 (log lines 18-19)",
+        "sibling boundary_cluster_status_001 (same constraint qdrant_type_cluster_status_001, same face): 'measured result={\"status\": \"disabled\"}' with 'peer_id MISSING; raft_state MISSING; commit_index MISSING; peers MISSING; extra undocumented fields=[status]' — note the 'extra undocumented status' claim is refuted by the live v1.18.x doc, where status IS the documented discriminator",
+        "sibling semantic_cluster_status_002 (same constraint): 'observed result keys=[status]' — its adjudication note claims 'no such [disabled] variant exists in any spec source available to this round'; the live v1.18.x doc (ClusterStatus0 + example) shows the variant IS documented",
+        "comparative-forensics: face_unavailable — cluster status has a single public interface face in v1.18.0 (REST GET /cluster; the public gRPC proto exposes only HealthCheck, ClusterStatusTelemetry is internal telemetry), so no other-face disposition comparison exists; cross-script REST-face reproduction below stands instead",
+        "raw response {\"result\":{\"status\":\"disabled\"},\"status\":\"ok\"} reproduced byte-identically (modulo time) in 40 output_*.log files in this session"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "Not an error-disguise case: the disputed observation is a 200 success whose result-object shape lacks the contract-asserted fields; there is no request-side client error being re-coded."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_cluster_status_001",
+        "boundary_cluster_status_001 (same constraint qdrant_type_cluster_status_001, same missing-fields pattern, DEFECT_FOUND Type4)",
+        "semantic_cluster_status_002 (same constraint, same pattern, DEFECT_FOUND Type4)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_cluster_status_001 (dispatch constraint_id field was EMPTY; operative constraint recovered from script header 'constraint_ids: qdrant_type_cluster_status_001, qdrant_behavioral_cluster_status_001' and the DEFECT text, which tests only the type face — the behavioral 200-on-single-node face held)",
+      "assertion_text_quoted": "response fields: peer_id uint64; raft_state IN {Leader, Follower, Candidate, PreCandidate, Terminated}; commit_index uint64; peers map",
+      "api_violates_assertion": true,
+      "note": "The observed 200 result {\"status\":\"disabled\"} contains none of the four asserted fields, so the response is squarely inside the assertion's domain and literally violates it (true as a factual record). However, the live v1.18.x documentation the contract itself cites defines the 200 result as a status-discriminated union whose disabled variant is exactly the observed payload, and two of the four asserted field names (raft_state, commit_index) do not exist in the v1.18.x schema at all — the assertion text is a stale flat-schema generation, so the 'violation' is against the contract text, not against the cited documentation (see doc_verification and chain_trace).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_cluster_status_001 (structured_contract.json line 6118) asserts an unconditional four-field 200 response; co-anchor qdrant_behavioral_cluster_status_001 (line 7608) 'HTTP 200 with ClusterStatus even on a single-node deployment'; dispatch constraint_id field was empty and was recovered from the script header + DEFECT text",
+        "doc: live https://api.qdrant.tech/v-1-18-x/api-reference/distributed/cluster-status defines 200 result = oneOf ClusterStatus0 {status:'disabled' only} | ClusterStatus1 {status:'enabled', peer_id, peers, raft_info{term,commit,role,...}, consensus_thread_status, message_send_failures}; the page's own example 200 body IS the disabled payload; the contract's asserted shape (flat peer_id/raft_state/commit_index/peers) is absent from this page",
+        "script: debate_logs/state_cluster_status_001.py — runtime path_key 'cluster_status' (GET /cluster) probed at P0 baseline, then after each verifiably-landed mutation (P1 create, P2 upsert count=8, P3 index, P4 delete count=4, P5 drop+quiescence) plus a final type re-check; oracle lines 90-91 fix REQUIRED_FIELDS = (peer_id, raft_state, commit_index, peers) and type_defects() flags their absence as Type4",
+        "log: output_state_cluster_status_001.log line 3 P0 200 raw={\"result\":{\"status\":\"disabled\"}}, line 4 fingerprint keys=['status'], lines 18-19 DEFECT missing four fields (P0 and P5), line 20 VERDICT: DEFECT_FOUND; exit code 1"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Break at the doc link: the contract's type assertion is not grounded in the documentation it cites — the live v1.18.x page publishes a status-discriminated union (disabled variant = only 'status', exactly the observed and example payload) and contains no top-level 'raft_state'/'commit_index' fields, so the four-field unconditional grid the script enforced is a stale schema generation. The remaining three links (script -> log -> observation) are internally consistent: the script faithfully tested its contract grid and the server faithfully returned the documented disabled variant on a standalone deployment (docker container testvdb-qdrant-standalone, qdrant/qdrant:v1.18.0). Secondary dispatch-level gap recorded: candidates.jsonl constraint_id for this defect was an empty string.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "struct ClusterStatus|ClusterStatus0|ClusterStatus1",
+        "cluster_status (glob *.rs under lib/)",
+        "cluster_status|get_cluster (glob *.rs under src/)",
+        "pub struct ClusterStatus|impl ClusterStatus|ClusterStatus::|pub fn cluster_status (glob *.rs under lib/)",
+        "enum ClusterStatus",
+        "message ClusterStatus / rpc ClusterStatus (lib/api/src/grpc/proto/*.proto)",
+        "standalone (src/ and lib/storage/src/dispatcher.rs)"
+      ],
+      "files_examined": [
+        "lib/storage/src/types.rs (lines 215-261: MessageSendErrors, ClusterInfo, ClusterStatus, ConsensusThreadStatus)",
+        "lib/storage/src/dispatcher.rs (lines 250-289: Dispatcher::cluster_status)",
+        "lib/storage/src/content_manager/consensus_manager.rs (lines 230-294, imports lines 30-42: ConsensusManager::cluster_status)",
+        "src/actix/api/cluster_api.rs (lines 35-74: actix GET /cluster handler, recover handler with 'standalone mode' error)",
+        "openapi/openapi-cluster.ytt.yaml (lines 4-16: /cluster get -> response(reference(\"ClusterStatus\")))",
+        "lib/api/src/grpc/proto/qdrant.proto (service Qdrant exposes only HealthCheck — no public cluster-status RPC)",
+        "lib/api/src/grpc/proto/telemetry_internal.proto (lines 199-208: internal ClusterStatusTelemetry only)"
+      ],
+      "source_excerpt": "lib/storage/src/types.rs:224-250 —\n/// Description of enabled cluster\n#[derive(Debug, Serialize, JsonSchema, Clone, Anonymize)]\npub struct ClusterInfo {\n    /// ID of this peer\n    #[anonymize(false)]\n    pub peer_id: PeerId,\n    /// Peers composition of the cluster with main information\n    #[anonymize(with = anonymize_collection_values)]\n    pub peers: HashMap<PeerId, PeerInfo>,\n    /// Status of the Raft consensus\n    pub raft_info: RaftInfo,\n    /// Status of the thread that executes raft consensus\n    pub consensus_thread_status: ConsensusThreadStatus,\n    /// Consequent failures of message send operations in consensus by peer address.\n    /// On the first success to send to that peer - entry is removed from this hashmap.\n    #[anonymize(false)]\n    pub message_send_failures: HashMap<String, MessageSendErrors>,\n}\n\n/// Information about current cluster status and structure\n#[derive(Debug, Serialize, JsonSchema, Anonymize, Clone)]\n#[serde(tag = \"status\")]\n#[serde(rename_all = \"snake_case\")]\npub enum ClusterStatus {\n    Disabled,\n    Enabled(ClusterInfo),\n}\n\nlib/storage/src/dispatcher.rs:264-269 —\n    pub fn cluster_status(&self) -> ClusterStatus {\n        match self.consensus_state.as_ref() {\n            Some(state) => state.cluster_status(),\n            None => ClusterStatus::Disabled,\n        }\n    }\n\nsrc/actix/api/cluster_api.rs:49-58 —\n#[get(\"/cluster\")]\nfn cluster_status(\n    dispatcher: web::Data<Dispatcher>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Future<Output = HttpResponse> {\n    helpers::time(async move {\n        auth.check_global_access(AccessRequirements::new(), \"cluster_status\")?;\n        Ok(dispatcher.cluster_status())\n    })\n}\n\nlib/storage/src/content_manager/consensus_manager.rs:249,266-283 (Enabled branch) —\n    pub fn cluster_status(&self) -> ClusterStatus { ... let role = soft_state.as_ref().map(|state| state.raft_state.into()); ... ClusterStatus::Enabled(ClusterInfo { peer_id, peers, raft_info: RaftInfo { term: hard_state.term, commit: hard_state.commit, pending_operations, leader, role, is_voter }, consensus_thread_status: ..., message_send_failures: ... }) }",
+      "call_chain_traced": "actix GET /cluster (src/actix/api/cluster_api.rs:49-58) returns dispatcher.cluster_status() verbatim -> Dispatcher::cluster_status (lib/storage/src/dispatcher.rs:264-269): consensus_state None (standalone deployment, no distributed cluster configured) => ClusterStatus::Disabled; Some(state) => ConsensusManager::cluster_status (lib/storage/src/content_manager/consensus_manager.rs:249-284) builds Enabled(ClusterInfo{peer_id, peers, raft_info{term, commit, role, ...}, consensus_thread_status, message_send_failures}). ClusterStatus is a serde internally-tagged enum (#[serde(tag=\"status\")]) with a schemars JsonSchema derive, so Disabled serializes to exactly {\"status\":\"disabled\"} and the enum is the mechanical origin of the published OpenAPI union (openapi/openapi-cluster.ytt.yaml:11 references schema 'ClusterStatus'; the doc site's ClusterStatus0/ClusterStatus1 variants map 1:1 to the enum variants). Field-name mapping for the claim's four fields: peer_id and peers exist only inside the Enabled variant's ClusterInfo (types.rs:228-232); 'raft_state' exists in source only as the internal raft soft-state input that consensus_manager.rs:267 converts into raft_info.role; 'commit_index' never appears as a response field name — hard_state.commit becomes raft_info.commit (consensus_manager.rs:275). I.e. the flat four-field shape the contract asserts belongs to an older schema generation restructured into the tagged union before v1.18.0. No public gRPC cluster-status face exists in v1.18.0 (qdrant.proto service Qdrant = HealthCheck only), so the REST face is the only public interface for this operation.",
+      "verification_outcome": "by_design_in_source",
+      "by_design_justification": "The fieldless disabled payload is the declared API surface, not a missing validation: (a) the response type itself derives JsonSchema and is the schema-generation source for the official documentation the contract cites — the doc's ClusterStatus0 variant enumerates 'status' as its only required field with allowed value 'disabled'; (b) the documentation's own 200 example response is byte-for-byte the observed payload; (c) the dispatcher routes standalone deployments (consensus_state None) to the Disabled variant by structure. Honesty caveat per the v3.4 tightened rule: no prose '// intentionally' comment exists at the dispatcher site — the by_design marking rests on the schema-generating type declaration plus the maintainer-published doc example (the declaration lives in the doc layer that this enum mechanically generates), not on a code comment; if the auditor applies a strict comment-only bar, the equivalent factual reading is that the contract-required four-field shape is structurally unimplementable in standalone mode and the behavior conforms to the actual v1.18.x documentation.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service alive — /healthz used by siblings returned 200; shape identical in 40 logs from cold baseline through teardown; count controls 8 and 4 held, so mutations landed)",
+        "concurrency (sequential phase matrix with per-phase count controls; race-window siblings state_cluster_status_002/003 returned NO_DEFECT — no drift exists to race on)",
+        "cache (shape observed at P0 before any mutation and unchanged through P5 post-drop; nothing to serve stale)",
+        "request-typo (runtime path_key cluster_status resolves to GET /cluster per endpoint_registry and raw_knowledge; 200 + result envelope confirms correct endpoint)"
+      ],
+      "surviving": "by_design — the standalone 'disabled' variant is the documented, schema-generated shape (doc union ClusterStatus0 + source enum ClusterStatus::Disabled); it could not be excluded, and the evidence affirmatively supports it. The residual non-mundane finding for the auditor: the contract's assertion text (stale flat ClusterStatus generation with raft_state/commit_index) diverges from the v1.18.x documentation the contract cites, i.e. the defect candidate traces to contract-doc divergence rather than to an implementation deviating from its own documentation."
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "defect_id": "semantic_graphql_diag_03",
+  "endpoint": "POST /v1/graphql (where filter on text[] property)",
+  "defect_type": "Type2",
+  "evidence_weight": "medium",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "domain_blocked",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "脚本头引用 'Contract: weaviate_behavioral_graphql_query_001'——structured_contract.json 无此 ID（仅有 collection_lifecycle/objects_post/graphql 泛化 assertions），contract 引用悬空。docs.weaviate.io 网络受限；历史 Weaviate 文档规定数组属性过滤须用 ContainsAny/ContainsAll/ContainsNone + valueText[]——若该规定成立则 Equal+valueString 属非法组合应报错。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "[array prop with non-array operator] status=200 score=-1/3 errs={\"data\":{\"Get\":{\"SemGqlDiag03\":[]}}} → WEAK: ('array prop with non-array operator', 'no error raised', '{\"data\":{\"Get\":{\"SemGqlDiag03\":[]}}\\n')",
+      "secondary_observations": [
+        "[nonexistent property] status=200 score=3/3 errs=[...'no such prop with name 'ghost' found in class...']",
+        "[bad operator] status=200 score=2/3 errs=[...'Argument \"where\" has invalid value...']",
+        "[type confusion text vs number] status=200 score=3/3 errs=[...'data type filter cannot use \"valueText\" on type \"number\", use \"valueNumber\" instead'...]",
+        "[wrong value type on text prop] status=200 score=3/3 errs=[...'cannot use \"valueNumber\" on type \"text\", use \"valueText\" instead'...]",
+        "[malformed syntax] status=200 score=2/3 errs=[...'Syntax Error GraphQL request (1:75)...']"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "GraphQL over HTTP：所有错误均 200+errors[]；主违规是 200+空 data+无 errors——text[] 上 Equal+valueString 静默通过并返回空结果集。7/8 对照案例诊断质量良好（score>=2/3），唯 array-prop 案 score=-1（未报错）。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_graphql_diag_03.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_behavioral_graphql_query_001",
+      "assertion_text_quoted": "该 ID 在 structured_contract.json 中不存在（assertions 仅 4 条泛化条目：GET /schema / POST /schema / POST /objects / POST /graphql 'should execute GraphQL query'）。",
+      "api_violates_assertion": true,
+      "note": "violates=true 限于 Type2 语义：源码 filters_validator.go L162-168 对数组属性存在显式类型检查（valueString 非数组基类型应触发 'data type filter cannot use ... use ... instead'），但该检查只验 value 类型、不验 operator 数组性——Equal 在 text[] 上漏网返回空集，与同文件其余分支的严格性不一致。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 引用的 weaviate_behavioral_graphql_query_001 不存在——断链",
+        "doc: 数组过滤操作符规定无法在线核对（domain_blocked）",
+        "script: semantic_graphql_diag_03.py L72-73 where: {path:[\"tags\"], operator: Equal, valueString: \"x\"}",
+        "log: 200 {\"data\":{\"Get\":{\"SemGqlDiag03\":[]}}} 无 errors"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "脚本声明的 contract_id 悬空是首断点；行为链自洽（8 个对照中 7 个正确报错，1 个静默）。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["valueString", "valueText", "ContainsAny", "isType", "data type filter cannot use"],
+      "files_examined": [
+        "entities/filters/filters_validator.go"
+      ],
+      "source_excerpt": "entities/filters/filters_validator.go L162-174:\n\t} else if baseType, ok := schema.IsArrayType(schema.DataType(prop.DataType[0])); ok {\n\t\tif !cw.isType(baseType) {\n\t\t\treturn errors.Errorf(\"data type filter cannot use %q on type %q, use %q instead\",\n\t\t\t\tcw.getValueNameFromType(),\n\t\t\t\tschema.DataType(prop.DataType[0]),\n\t\t\t\tvalueNameFromDataType(baseType))\n\t\t}\n\t} else if !cw.isType(schema.DataType(prop.DataType[0])) { ... }\n关键：valueString（string 基类型）对 text[] 的 IsArrayType(baseType=text) 检查——text 别名机制（L28-31 deprecatedDataTypeAliases: string→text）使 valueString 可能被 isType(text) 判为通过；operator 维度完全未校验（无 Equal vs ContainsAny 检查），对照 L119-125 仅 IsNull 有 operator/value 匹配校验。",
+      "call_chain_traced": "GraphQL Get → ValidateFilters → validateClause → 数组基类型检查（通过，string 是 text 别名）→ 无 operator-数组性检查 → 下游搜索对 text[] 用 Equal 语义匹配单值 → 空 results 无 error",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request_typo"],
+      "surviving": "operator-数组性交叉校验缺失（value 类型校验存在、operator 校验缺失的对照内嵌于同函数）"
+    }
+  }
+}

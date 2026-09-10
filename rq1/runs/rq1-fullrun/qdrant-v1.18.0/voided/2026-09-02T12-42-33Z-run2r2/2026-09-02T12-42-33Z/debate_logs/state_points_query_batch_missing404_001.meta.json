@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_points_query_batch_missing404_001",
+  "endpoint": "points+query+batch",
+  "param": "searches",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "delete_consistency",
+  "oracle": {
+    "statement": "never-created collection -> batch query 404 exactly (non-404 = Type4); created -> 200 with len(result)==2 and per-entry points lists; after DELETE -> 404 again on the identical body; 5xx legs require /healthz liveness before verdict",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

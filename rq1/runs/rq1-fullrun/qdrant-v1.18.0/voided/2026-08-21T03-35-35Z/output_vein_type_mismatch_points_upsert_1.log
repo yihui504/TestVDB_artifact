@@ -1,0 +1,25 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+=== Vein Test: Type Mismatch - Dimension Mismatch Silent Discard ===
+
+1. Creating collection with 4D vectors...
+   Status: 200, Response: {'result': True, 'status': 'ok', 'time': 0.271010453}
+
+2. Upserting point with dimension-3 vector (expecting 4)...
+   Status: 200, Response: {'result': {'operation_id': 1, 'status': 'acknowledged'}, 'status': 'ok', 'time': 0.000708671}
+
+3. Upserting point with correct dimension-4 vector...
+   Status: 200, Response: {'result': {'operation_id': 2, 'status': 'acknowledged'}, 'status': 'ok', 'time': 0.000397684}
+
+4. Scrolling to verify stored points...
+   Status: 200
+   Points found: [10]
+   Total count: 1
+
+   [DEFECT_FOUND] Dimension-mismatched vector (id=1) was silently discarded
+   Expected: 400 Bad Request or error about dimension mismatch
+   Actual: 200 OK with silent discard
+
+5. Cleaning up collection...
+
+=== VERDICT: DEFECT_FOUND ===

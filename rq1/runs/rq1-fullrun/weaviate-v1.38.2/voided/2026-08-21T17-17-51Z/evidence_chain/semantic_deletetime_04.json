@@ -1,0 +1,70 @@
+{
+  "defect_id": "semantic_deletetime_04",
+  "endpoint": "DELETE /v1/batch/objects",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "响应模型源码注释（= OpenAPI 描述）明示 'Timestamp of deletion in milliseconds since epoch UTC'（entities/models/batch_delete_response.go L35）—— 契约即源模型；-62135596800000 对应 0001-01-01 非真实 epoch 毫秒时间戳",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "deletionTimeUnixMilli=-62135596800000  plausible window=[1787333685070, 1787333685119]",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "非错误通道；删除本身成功（200），字段语义失真"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/semantic_deletetime_04.py", "vein_scripts/vein_batchdelete_stopword_500_02.py (control non-stopword 200 同端点)", "debate_logs/state_batch_delete_08.log 同端点"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "search_correctness",
+      "assertion_text_quoted": "响应字段语义正确：deletionTimeUnixMilli 应为删除时刻的 epoch UTC 毫秒时间戳（模型注释原文）",
+      "api_violates_assertion": true,
+      "note": "-62135596800000 = Go time.Time{} 零值（0001-01-01T00:00:00Z）的 UnixMilli，非任何真实删除时刻，violates=True",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:响应模型注释 'Timestamp of deletion in milliseconds since epoch UTC'",
+        "doc:entities/models/batch_delete_response.go L35（模型=OpenAPI 来源）",
+        "script:semantic_deletetime_04.py 未传 deletionTimeUnixMilli 的常规 batch delete",
+        "log:响应 deletionTimeUnixMilli=-62135596800000"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["DeletionTimeUnixMilli", "DeletionTime: deletionTime", "var deletionTime time.Time", "UnixMilli"],
+      "files_examined": [
+        "usecases/objects/batch_delete.go (L94-96, L107-118)",
+        "adapters/repos/db/batch.go (L179, L234-239)",
+        "adapters/handlers/rest/handlers_batch_objects.go (L236-244)",
+        "entities/models/batch_delete_response.go (L34-36)"
+      ],
+      "source_excerpt": "usecases/objects/batch_delete.go L94-96:\n\tvar deletionTime time.Time            // ← 未传时保持零值 0001-01-01\n\tif deletionTimeUnixMilli != nil {\n\t\tdeletionTime = time.UnixMilli(*deletionTimeUnixMilli)\n\t}\nadapters/repos/db/batch.go L234-239: result.DeletionTime = deletionTime（零值原样返回）。\nadapters/handlers/rest/handlers_batch_objects.go L236-244:\n\tdeletionTimeUnixMilli := input.DeletionTime.UnixMilli()   // 零值 → -62135596800000\n\tresponse := &models.BatchDeleteResponse{... DeletionTimeUnixMilli: &deletionTimeUnixMilli ...}",
+      "call_chain_traced": "调用方未传可选参数 deletionTimeUnixMilli → time.Time 零值贯穿 repo（仅用于实际删除时间戳语义）→ 响应构造处无条件 UnixMilli() 序列化零值 → 公开 API 输出 -62135596800000。字段语义为'删除时间戳'但值是内部哨兵",
+      "verification_outcome": "by_design_in_source",
+      "note": "代码路径完全显式（可选参数默认零值 + 无条件序列化），非异常状态；缺陷性质是公开 API 字段语义误导（哨兵值泄漏到契约字段），归 by_design_in_source 但语义缺陷成立。auditor 视角：字符串哨兵或省略字段（omitempty 在 *int64 非 nil 时无效）是常规修复",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "字段语义由调用方可选参数控制属设计——但响应中'删除时间'与实际删除时刻脱钩的误导性仍在"
+    }
+  }
+}

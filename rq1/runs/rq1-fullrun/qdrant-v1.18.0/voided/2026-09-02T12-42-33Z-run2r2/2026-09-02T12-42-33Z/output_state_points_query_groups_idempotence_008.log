@@ -1,0 +1,15 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['count', 'create_index', 'drop_collection', 'healthz', 'query_groups', 'upsert_points']
+[seed] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.003857845}
+[seed count] 12 (expected 12)
+[baseline] status=200 raw={"result":{"groups":[{"hits":[{"id":23,"version":1,"score":0.97332853},{"id":21,"version":1,"score":0.94868326},{"id":22,"version":1,"score":0.9428091}],"id":"g2"},{"hits":[{"id":43,"version":1,"score":0.94491124},{"id":42,"version":1,"score":0.8660253},{"id":
+[identical-reupsert] status=200 raw={"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.003642342}
+[after-identical-reupsert count] 12 (expected 12)
+[after-reupsert] status=200 raw={"result":{"groups":[{"hits":[{"id":23,"version":4,"score":0.97332853},{"id":21,"version":4,"score":0.94868326},{"id":22,"version":4,"score":0.9428091}],"id":"g2"},{"hits":[{"id":43,"version":4,"score":0.94491124},{"id":42,"version":4,"score":0.8660253},{"id":
+[idempotence] OK: partition and count stable after identical re-upsert
+[move-g1-to-g2] status=200 raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.00283277}
+[after-move count] 12 (expected 12)
+[after-move] status=200 raw={"result":{"groups":[{"hits":[{"id":23,"version":4,"score":0.97332853},{"id":21,"version":4,"score":0.94868326},{"id":22,"version":4,"score":0.9428091},{"id":11,"version":5,"score":0.9258201},{"id":13,"version":5,"score":0.8778087},{"id":12,"version":5,"score"
+[mutation] OK: g1 gone, g2 == 6 merged ids, partition tracks payload mutation
+VERDICT: NO_DEFECT

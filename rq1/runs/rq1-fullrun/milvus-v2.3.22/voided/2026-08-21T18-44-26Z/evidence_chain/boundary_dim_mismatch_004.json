@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_dim_mismatch_004",
+  "endpoint": "v1/vector/search (POST /v1/vector/search)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "high",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint milvus_range_search_001 只覆盖 collectionName/vector 必填（1802）；dim 匹配要求在契约中无 v1 search 显式断言，其校验语义来自 insert 侧 1804 与 v2 search 1801——契约未显式覆盖该漏洞面，采 v2 search 同义校验做对照锚",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[search dim=4] http=200 body={\"code\":200,\"data\":[]}",
+      "secondary_observations": [
+        "[search dim=9] http=200 body={\"code\":200,\"data\":[]}",
+        "[insert dim=4] http=200 body={\"code\":1804,\"message\":\"fail to deal the insert data, error: []float32 size 4 doesn't equal to vector dimension 8 of FloatVector\"}",
+        "[insert dim=9] http=200 code=1804 (size 9 != dimension 8)",
+        "[insert dim=0] http=200 code=1804 (size 0 != dimension 8)",
+        "[v2 search dim=4] http=200 body={\"code\":1801,\"message\":\"can only accept json format request, error: dimension: 8, but length of []float: 4: invalid parameter[expected=FloatVector][actual=[0.1, 0.1, 0.1, 0.1]]\"}",
+        "[v2 search empty vector] http=200 code=1801 \"dimension: 8, but length of []float: 0\"",
+        "[insert dim=8 control] http=200 / [search dim=8 control] http=200"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "对照组拒绝均以 HTTP 200 + code 1804/1801 呈现；主观测违规以 HTTP 200 + code 200 空结果静默接受"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_dim_mismatch_004.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_range_search_001",
+      "assertion_text_quoted": "collectionName and vector required; else code 1802",
+      "api_violates_assertion": false,
+      "note": "violates=False 仅针对 milvus_range_search_001 本身（必填项确实校验）；主观测的 dim 匹配约束不在该 assertion 域内——它是契约缺口（v1 search 无 dim 断言），对照组 insert 1804 / v2 search 1801 证明 Milvus 其他入口均执行该语义，v1 search 唯一静默。auditor 需以'一致性缺口'而非'违反已断言约束'归类",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_range_search_001 覆盖必填；dim 校验契约无 v1 search 断言（缺口记录）",
+        "doc: source_url handler_v1.go reachable (source_verified=true)",
+        "script: boundary_dim_mismatch_004.py 发送 dim=4/9 search 到 dim=8 集合",
+        "log: search dim=4 → http=200 code=200 data=[]（静默）"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "契约无 v1 search dim-mismatch 显式断言，链在 contract 环为部分接地（以 insert 1804/v2 1801 同义校验锚定）",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["func (h *HandlersV1) search", "vectors2PlaceholderGroupBytes", "serializeFloatVectors", "dimension.*length"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v1.go:830-905",
+        "internal/distributed/proxy/httpserver/utils.go:963-984",
+        "internal/distributed/proxy/httpserver/utils.go:907-923",
+        "internal/distributed/proxy/httpserver/request.go:66-75"
+      ],
+      "source_excerpt": "handler_v1.go:830-850 只校验 CollectionName==\"\" || Vector==nil（1802）；:883 PlaceholderGroup: vectors2PlaceholderGroupBytes([][]float32{httpReq.Vector}) —— utils.go:963 vectors2PlaceholderGroupBytes 对每个 vector 直接 serialize(vector)，注释 \"// todo: support [][]byte for BinaryVector\"，全程无 dimension 长度检查；对比 v2 路径 utils.go:907-918 serializeFloatVectors 有显式 `if int64(len(vectorArray)) != dimension { return nil, merr.WrapErrParameterInvalid(... \"dimension: %d, but length of []float: %d\") }`",
+      "call_chain_traced": "v1 search → SearchReq.Vector []float32 (request.go:73) → vectors2PlaceholderGroupBytes (handler_v1.go:883) → serialize (utils.go:974) → proto.Marshal：无 dim 校验。对照组：insert → checkAndSetData utils.go:275-279 json.Unmarshal 仅类型转换 + 下游 proxy 层返回 1804；v2 search → generatePlaceholderGroup (handler_v2.go:884) → convertVectors2Placeholder (utils.go:940) → serializeFloatVectors (utils.go:907) 显式 dimension check → 1801",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

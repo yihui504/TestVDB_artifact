@@ -1,0 +1,63 @@
+{
+  "defect_id": "boundary_tenants_activitystatus_invalid_013",
+  "endpoint": "POST /schema/{className}/tenants",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "ActivityStatus parameter documented with 10-value enum. Invalid value 'INVALID_TEST_VALUE' correctly rejected.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: POST /schema/{className}/tenants with activityStatus='INVALID_TEST_VALUE' → HTTP 422, error: 'activityStatus in body should be one of [ACTIVE INACTIVE OFFLOADED OFFLOADING ONLOADING HOT COLD FROZEN FREEZING UNFREEZING]'",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx + error message",
+        "note": "Correct rejection with enum list, but Type2 diagnosis: lacks explicit 'enum' keyword"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_tenants_activitystatus_invalid_013"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "activityStatus",
+      "assertion_text_quoted": "activityStatus enum: [ACTIVE, INACTIVE, OFFLOADED, OFFLOADING, ONLOADING, HOT, COLD, FROZEN, FREEZING, UNFREEZING]",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: activityStatus enum (10 values)",
+        "doc: OpenAPI spec v1.38.0 explicitly lists 10 enum values",
+        "script: POST /tenants with activityStatus='INVALID_TEST_VALUE'",
+        "log: HTTP 422 with enum list (correct rejection, Type2 diagnosis)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["validateActivityStatusEnum", "validateActivityStatus"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1380\\entities\\models\\tenant.go"
+      ],
+      "source_excerpt": "Line 102-107 in tenant.go:\nfunc (m *Tenant) validateActivityStatusEnum(path, location string, value string) error {\n\tif err := validate.EnumCase(path, location, value, tenantTypeActivityStatusPropEnum, true); err != nil {\n\t\treturn err\n\t}\n\treturn nil\n}\n\nNon-empty invalid values correctly trigger enum validation and rejection.",
+      "call_chain_traced": "Tenant.Validate() → validateActivityStatus() → validateActivityStatusEnum() → EnumCase() → rejection",
+      "verification_outcome": "validation_present",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": null
+    }
+  }
+}

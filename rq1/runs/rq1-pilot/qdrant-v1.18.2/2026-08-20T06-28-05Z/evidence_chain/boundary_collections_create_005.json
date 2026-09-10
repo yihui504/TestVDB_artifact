@@ -1,0 +1,77 @@
+{
+  "defect_id": "boundary_collections_create_005",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "API documentation domain (api.qdrant.tech) unreachable due to network restrictions - marked as PARTIAL. Contract assertion from structured_contract.json explicitly states hnsw_config.m ∈ [2, 100]. Version 1.19.x documentation referenced for target v1.18.2 is acceptable match (minor version drift). Content consistency: constraint assertion explicitly present in contract. Endpoint precision: collections+create endpoint verified in endpoint_registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "boundary_collections_create_005.py:71-91 → PUT /collections/boundary_test_m_1 with hnsw_config.m=1 → HTTP 200 OK (Body: {\"result\":true,\"status\":\"ok\",\"time\":0.384307624})",
+      "secondary_observations": [
+        "boundary_collections_create_006.py:71-91 → PUT /collections/boundary_test_m_101 with hnsw_config.m=101 → HTTP 200 OK (Body: {\"result\":true,\"status\":\"ok\",\"time\":0.355496474})",
+        "boundary_collections_create_001.log: Status: 400, Body: Format error in JSON body (vectors config variant mismatch - unrelated to hnsw_config.m)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Client provided invalid parameter (m=1 below minimum 2) but API returned HTTP 200 with success status. Per HTTP semantics, parameter validation errors should return 4xx (400/422). API returned HTTP 2xx + code:0 (success), silently accepting invalid value."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_create_005", "boundary_collections_create_006"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_001",
+      "assertion_text_quoted": "hnsw_config.m (max connections per node) ∈ [2, 100]",
+      "api_violates_assertion": true,
+      "note": "Contract explicitly states m must be in [2, 100]. Observation shows m=1 accepted with HTTP 200, violating lower bound constraint.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_001 (assertion: hnsw_config.m ∈ [2, 100])",
+        "doc:https://api.qdrant.tech/api-reference/collections/create-collection (domain_blocked, verified via contract)",
+        "script:boundary_collections_create_005.py line 71-91 (PUT /collections/boundary_test_m_1 with m=1)",
+        "log:output_boundary_collections_create_005.log line 3-5 (HTTP 200 OK, success returned)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Chain断裂于log层：contract/script明确断言应拒绝m=1，但log显示API返回HTTP 200成功接受。contract要求m∈[2,100]，script测试边界值1，log观测到200 OK而非预期的400/422，形成明确证据链断裂。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "hnsw_config",
+        "m >= 2",
+        "m <= 100",
+        "validation",
+        "params"
+      ],
+      "files_examined": [],
+      "source_excerpt": "",
+      "call_chain_traced": "not_found_in_source - source code clone unavailable in environment",
+      "verification_outcome": "webfetch_shallow",
+      "note": "TESTVDB_SRC_DIR not available in session environment. Attempted source code verification blocked by missing clone. Unable to perform deep source inspection (Grep+Read workflow) as required by ADR-0008 step2. Classification as webfetch_shallow due to domain restrictions preventing alternative verification paths.",
+      "sufficiency_check": "clone_unavailable",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency"
+      ],
+      "surviving": null,
+      "note": "No mundane explanations apply. Observation shows deterministic acceptance of invalid parameter across multiple script runs (m=1 and m=101 both return 200 OK). Not environmental - consistent behavior across independent test executions. Not concurrency issue - single sequential request. Not caching/stale state - fresh collection creation. Not parameter typo - explicit m=1 value in request payload clearly violates contract lower bound."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+ "defect_id": "semantic_aliases_update_001",
+ "endpoint": "aliases+update",
+ "param": null,
+ "strategy": "behavioral_contract",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "oracle": {
+  "statement": "the one-request switch [delete_alias live + create_alias live->CB] returns HTTP 200 with result=true (aliases+update response_shape declares result:boolean), and afterwards (a) count through 'live' = 5, (b) scroll through 'live' returns exactly ids {101..105} (CB's fixture), (c) direct scroll of CA still returns exactly {1..5} (the switch moves the alias, not the data), (d) the scoped alias map advertises exactly (live -> CB); a rejected legal switch is Type1_IllegalRejection, a wrong routing/readback is Type4_StateLogicViolation",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

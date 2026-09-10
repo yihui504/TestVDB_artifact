@@ -1,0 +1,15 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] remove_peer = /cluster/peer/{peer_id} (raw_knowledge api_endpoints[cluster+peer+delete].url)
+[pre-probe] /healthz status=200
+[well-formed ghost u64] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled."},"time":4.972e-6}
+  rubric: score=0/3 (param_named=False, format_hint=False, actionable=False) on message='Bad request: Distributed mode disabled.'
+[alpha string in u64 path slot] status=404 raw=can not parse "not_a_number" to a u64
+  rubric: score=1/3 (param_named=False, format_hint=True, actionable=False) on message='can not parse "not_a_number" to a u64'
+[float in u64 path slot] status=404 raw=can not parse "1.5" to a u64
+  rubric: score=1/3 (param_named=False, format_hint=True, actionable=False) on message='can not parse "1.5" to a u64'
+[u64+1 overflow value] status=404 raw=can not parse "18446744073709551616" to a u64
+  rubric: score=1/3 (param_named=False, format_hint=True, actionable=False) on message='can not parse "18446744073709551616" to a u64'
+[rubric table] best score in battery = 1/3 over 4 scored rejections
+VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics)
+all invalid-peer-id rejections on DELETE /cluster/peer/{peer_id} score <= 1/3 on the diagnosis rubric (best=1/3): no rejection names the parameter subject 'peer' together with a format or actionable hint, so a caller cannot distinguish a bad peer id from any other refusal cause; assertion qdrant_behavioral_cluster_peer_delete_001 documents '4xx on an invalid peer id' - the 4xx is delivered but undiagnosable

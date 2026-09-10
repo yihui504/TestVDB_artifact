@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_points_recommend_lookupfrom_004",
+  "endpoint": "points+recommend",
+  "param": "lookup_from.collection",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "delete_consistency",
+  "oracle": {
+    "statement": "recommend(A, positive=[1], lookup_from={collection:B}) returns 200 while B is live and 404 after B is dropped — 200 after the drop = IllegalSuccess on phantom cross-collection state; lookup_from to a never-created collection returns the same 404 disposition (200 = phantom); plain recommend on A stays 200 non-empty after B's drop; 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

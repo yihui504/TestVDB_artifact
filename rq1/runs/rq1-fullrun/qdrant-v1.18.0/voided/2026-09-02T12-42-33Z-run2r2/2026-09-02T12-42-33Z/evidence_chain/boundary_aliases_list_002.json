@@ -1,0 +1,95 @@
+{
+  "defect_id": "boundary_aliases_list_002",
+  "endpoint": "aliases+list (GET /aliases)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS: page fetched live at https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collections-aliases (title 'List all aliases | Qdrant | API Reference', canonical URL matches; no doc_preflight.json sidecar existed in the contract dir so a fresh fetch was used). Version PASS: URL segment v-1-18-x and on-page selector 'v1.18.x' match target 1.18.0. Content PASS: page documents GET /aliases returning 200 'Retrieved' with result.aliases[] of {alias_name, collection_name} — consistent with the assertion's success shape; the page declares NO request parameters besides the api-key auth header (no collection_name query parameter) and renders no 4xx/error section at all. Endpoint precision PASS: registry entry aliases+list/GET matches operationId get_collections_aliases and source_url exactly; however the registry's 'collection_name' query-param entry (marked \"openapi (mechanical backfill)\") is contradicted by both the live doc page and Qdrant's own docs/redoc/v1.18.x/openapi.json (the /aliases get operation declares no parameters key) — the attack's parameter premise originates solely from this backfill artifact.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "probe[overlong-100k] value='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...' -> status=400 (next line '  raw: ' is empty — zero-length response body)",
+      "secondary_observations": [
+        "OK: baseline lists bal20c579ff4a1 -> bal20c579ff4c1  [same log line 5 — documented parameterless GET /aliases complies with the 200+array promise]",
+        "probe[empty-string] value='' -> status=200  /  probe[nul-byte] value='a\\x00b' -> status=200  [same log lines 6,33 — rest/query face: unknown query param silently ignored, envelope intact]",
+        "COMPARATIVE rest/query face, short values, sibling script 003 line 30: probe[url-nul-percent00] url=/aliases?collection_name=a%00b -> status=200",
+        "COMPARATIVE rest/body face, larger payload, sibling script 003 line 24: probe[overlong-1mb-string] len=1000009 -> status=200  [1MB sent via data= body — body face has no length rejection; proves the 400 in the claim correlates with the ~100KB request LINE (query string), not payload size]",
+        "COMPARATIVE rest/path face, same-family parameter, script boundary_aliases_collection_list_003 lines 3-4: GET /collections/<256-char-name>/aliases -> status=422 / raw: {\"status\":{\"error\":\"Validation error in path parameters: [collection_name: value \\\"cccc...\\\" invalid, must be from 1 to 255 characters]\"},\"time\":0.0}  [path face rejects overlong collection_name at 422 WITH rich diagnostic]",
+        "COMPARATIVE rest/update face, script boundary_aliases_list_004 line 8: create[alias-equals-collection-name] name='bal4737c8e77c2' -> status=409 raw={\"status\":{\"error\":\"Wrong input: Collection `bal4737c8e77c2` already exists!\"},\"time\":0.000080989}  [application-level client errors carry JSON diagnostics]",
+        "grpc/sdk face: face_unavailable — no grpc/sdk script exercised aliases in this session"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The client-decidable error (100KB query string) was returned as a proper class-level HTTP 400 — but with a bare empty body (content-length 0), unlike every application-level rejection observed in this session (422 validation and 409 wrong-input both carry a JSON error envelope). The empty body is consistent with framework-layer (pre-router) rejection rather than an application diagnostic path."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["boundary_aliases_list_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_aliases_list_001",
+      "assertion_text_quoted": "HTTP 200 with an array of alias/collection-name pairs",
+      "api_violates_assertion": false,
+      "note": "Violates-declaration self-check applied: the claim's phenomenon (400 rejection with empty diagnostics for an overlong collection_name query parameter) is NOT covered by the quoted assertion, which constrains only the success-path response shape and contains no clause about query-parameter validation, error status, or diagnostics quality. Two facts force this recording: (1) the probed GET /aliases endpoint declares no collection_name parameter anywhere — not in the live doc, not in Qdrant's own v1.18.x OpenAPI — so the observed input is outside the quote's constraint domain (the parameter premise exists only in the contract registry's 'openapi (mechanical backfill)' entry); (2) on the documented parameterless request the API complies with the assertion exactly (baseline: 200 with the alias array). The observed 400/empty body therefore does not contradict the quoted assertion. Note for the auditor: a possible independent textual hook exists in the vendor OpenAPI spec (GET /aliases declares '4XX' responses carrying the ErrorResponse schema, docs/redoc/v1.18.x/openapi.json lines 2391-2400) — but that promise is in the spec JSON, not in this constraint's assertion text; citing it would require changing the constraint citation, which is the auditor's call.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_aliases_list_001 (aliases+list, GET /aliases) exists in structured_contract.json; its assertion is success-shape only ('HTTP 200 with an array of alias/collection-name pairs'); no query-param or diagnostics clause; the attack's 'contract-listed query parameter collection_name' premise comes from endpoint_registry's backfill entry {\"name\": \"collection_name\", \"type\": \"string\", \"source\": \"openapi (mechanical backfill)\"} (structured_contract.json lines 3834-3837)",
+        "doc: source_url live page (v1.18.x) documents GET /aliases as parameterless (only api-key auth header) returning result.aliases[] {alias_name, collection_name}; vendor's own docs/redoc/v1.18.x/openapi.json '/aliases'.get has no parameters key — both contradict the backfilled query param; page renders no 4xx section",
+        "script: boundary_aliases_list_002 sends GET /aliases?collection_name=<value> via params= for 15 probes; oracle: 'empty-body 4xx = Type2_PoorDiagnostics'; script stopped at probe 11 (overlong-100k), so sql-injection/json-injection/other-existing/nonexistent probes never ran",
+        "log: output_boundary_aliases_list_002.log line 36-38 records status=400 with raw empty for overlong-100k and VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics); all 10 prior probes returned 200 with envelope intact; raw response faithfully reported (no log-side misreport)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "Break is at the contract→claim grounding link, not at doc/script/log. The constraint's assertion text does not ground the claimed phenomenon: (a) it makes no promise about error diagnostics or query-parameter handling, and (b) the probed parameter is undocumented for this endpoint (registry backfill artifact contradicted by the vendor's own v1.18.x OpenAPI and the live doc). The doc link is consistent for what the assertion actually says; the script faithfully executed its (mis-premised) oracle; the log faithfully reflects the raw HTTP behavior. The 400/empty-body itself is real behavior but originates in the HTTP framework layer, not in any qdrant handler (see source_grounding).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "get_collections_aliases|/aliases (type=rust)",
+        "max_buffer_size|client_request_timeout|HttpServer::new (type=rust)",
+        "must be from 1 to 255|validation_error_handler|struct CollectionPath (src/)",
+        "fn validate_collection_name_legacy (type=rust)",
+        "async fn do_list_aliases (type=rust)",
+        "\"/aliases\" (docs/, glob *.yaml/*.yml/*.json)",
+        "^name = \"actix-web\"|^name = \"actix-http\"|^name = \"actix-web-validator\" (Cargo.lock)"
+      ],
+      "files_examined": [
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/actix/api/collections_api.rs (lines 48-57, 94-109, 323-339)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/actix/api/mod.rs (lines 27-53)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/actix/mod.rs (lines 100-196, 227-254)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/lib/common/common/src/validation.rs (lines 129-149)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/common/collections.rs (lines 190-196)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/docs/redoc/v1.18.x/openapi.json (lines 2372-2439, 7152-7174)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/Cargo.lock (lines 61-62, 230-231, 298-299)"
+      ],
+      "source_excerpt": "src/actix/api/collections_api.rs:48-57 — the probed endpoint's handler; NO Query extractor, so the collection_name query parameter is never read by any qdrant code:\n    #[get(\"/aliases\")]\n    async fn get_aliases(\n        dispatcher: web::Data<Dispatcher>,\n        ActixAuth(auth): ActixAuth,\n    ) -> HttpResponse {\n        // No request to verify\n        let pass = new_unchecked_verification_pass();\n\n        helpers::time(do_list_aliases(dispatcher.toc(&auth, &pass), &auth)).await\n    }\n\nsrc/actix/api/collections_api.rs:94-100 — sibling endpoint with the documented collection_name parameter (path face):\n    #[get(\"/collections/{collection_name}/aliases\")]\n    async fn get_collection_aliases(\n        dispatcher: web::Data<Dispatcher>,\n        collection: Path<CollectionPath>,\n        ActixAuth(auth): ActixAuth,\n    ) -> HttpResponse {\n\nsrc/actix/api/mod.rs:41-53 — path-face validation actually present in source (length 1..=255 + charset):\n    /// A collection path with basic validation\n    ///\n    /// Validation for collection paths has been made more strict over time.\n    /// To prevent breaking changes on existing collections, this is only enforced for newly created\n    /// collections. Basic validation is enforced everywhere else.\n    #[derive(Deserialize, Validate)]\n    struct CollectionPath {\n        #[validate(\n            length(min = 1, max = 255),\n            custom(function = \"validate_collection_name_legacy\")\n        )]\n        collection_name: String,\n    }\n\nsrc/actix/mod.rs:105-111 — application-level rejections are wired to a rich error renderer (this is what produced the sibling 422 diagnostic body):\n        let validate_path_config = actix_web_validator::PathConfig::default()\n            .error_handler(|err, rec| validation_error_handler(\"path parameters\", err, rec));\n        let validate_query_config = actix_web_validator::QueryConfig::default()\n            .error_handler(|err, rec| validation_error_handler(\"query parameters\", err, rec));\n        let validate_json_config = actix_web_validator::JsonConfig::default()\n            .limit(settings.service.max_request_size_mb * 1024 * 1024)\n            .error_handler(|err, rec| validation_error_handler(\"JSON body\", err, rec));\n\nlib/common/common/src/validation.rs:134-137 — legacy charset validator disallows only '/' and NUL; no length check here (length comes from the attribute above):\n    /// This does not check the length of the name.\n    pub fn validate_collection_name_legacy(value: &str) -> Result<(), ValidationError> {\n        /// Disallowed characters on both Linux/Windows ...\n        const INVALID_CHARS: [char; 2] = ['/', '\\0'];\n\ndocs/redoc/v1.18.x/openapi.json:2372-2380 — vendor's own spec for GET /aliases: NO 'parameters' key (the get operation goes straight from operationId to responses), i.e. collection_name is not a declared query param of this endpoint:\n    \"/aliases\": {\n      \"get\": {\n        \"tags\": [ \"Aliases\" ],\n        \"summary\": \"List collections aliases\",\n        \"description\": \"Get list of all existing collections aliases\",\n        \"operationId\": \"get_collections_aliases\",\n        \"responses\": { ... }\n\nCargo.lock:61-62,230-231,298-299 — framework pins: actix-http 3.12.0, actix-web 4.13.0, actix-web-validator 7.0.0. src/actix/mod.rs HttpServer config (lines 180-189) sets only keep-alive/request/disconnect timeouts — no h1 buffer-size override.",
+      "call_chain_traced": "GET /aliases → actix router → get_aliases(dispatcher, auth) → do_list_aliases(toc, auth) (src/common/collections.rs:190-196) → toc.list_aliases → CollectionsAliasesResponse{aliases}. No Query extractor anywhere on this path, so the collection_name query parameter never reaches any validator or handler; actix-web's extractor model silently ignores unknown query keys on handlers without Query<T> — this explains all ten 200 probes. The observed bare 400/empty body cannot originate from qdrant code: no application path reads the parameter, and every application-level rejection in this deployment carries a JSON diagnostic (validator error handler at src/actix/mod.rs:227-254 renders 'Validation error in path parameters: [...]'; StorageError responses render as {\"status\":{\"error\":...}} — both observed live in the 422 and 409 comparison lines). The 400 is emitted pre-router by the HTTP/1.1 protocol layer when the ~100KB request line (query string) overflows the actix-http h1 decode buffer, responding with a bare 400 and content-length 0. Supporting correlation: 1MB via body face → 200; short query values (incl. %00, lone-surrogate) → 200; only request-line-length overload → 400. actix-http sources are not locally available (cargo registry cache contains no actix crates), so the exact internal constant could not be quoted from source — the framework-origin conclusion rests on the qdrant-side structural evidence above. Verification outcome reasoning: for the probed face (query param of GET /aliases) the source contains no validation and no handling at all (validation_absent — because the parameter is not part of the endpoint); for the documented faces, validation IS present (CollectionPath 1..=255 + charset at the path face, JsonConfig limit at the body face). No by_design_in_source marking: no comment/docstring/maintainer citation in the tree declares intent about empty-body 400s or about ignoring unknown query params — the silent-ignore behavior is unannotated framework default, which per the rules cannot be marked by_design.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service alive throughout: baseline and all 10 prior probes returned 200; exit code 0; script ran to verdict)",
+        "concurrency (single sequential probe request, no parallel writers)",
+        "cache_delay (stateless GET; the 400 is deterministic per request-line size)",
+        "request_typo (request was exactly as intended: params={'collection_name': 'a'*100000} per script line 182/190-191)"
+      ],
+      "surviving": [
+        "framework_origin: the empty-body 400 is an actix-http 3.12.0 protocol-layer rejection of the oversized request line (~100KB query string), emitted before routing — no qdrant handler or validator ever sees the request, so no qdrant diagnostic can exist; the sibling faces (path 422 with full diagnostic, update 409 with full diagnostic) show qdrant-level rejections do carry diagnostics",
+        "undocumented_parameter_premise: the probed collection_name query parameter is not a declared parameter of GET /aliases in either the live doc or the vendor's own v1.18.x OpenAPI — it exists only as the contract registry's 'openapi (mechanical backfill)' entry, so the Type2 claim tests a face the documented API does not offer"
+      ]
+    }
+  }
+}

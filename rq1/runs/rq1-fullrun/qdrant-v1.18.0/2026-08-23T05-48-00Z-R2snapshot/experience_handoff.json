@@ -1,0 +1,32 @@
+{
+  "round": 2,
+  "rejection_patterns": [
+    {
+      "endpoint": "PUT /collections (create)",
+      "reason": "Option<T>+serde(default) 族 null=unset 合法（sharding_method/encoding/max_resident_memory_percent 等）——null 探针方向整体低产"
+    },
+    {
+      "endpoint": "scroll+order_by",
+      "reason": "by_design：源码硬编码 next_page_offset=None 且给官方替代方案"
+    },
+    {
+      "endpoint": "PUT /collections bnd_crt_rl_11/12",
+      "reason": "WAL FileTooLarge 500 被机械A判约束域不匹配 NOT_DEFECT（2TB 合法配置预分配），且资源极限类会打崩容器"
+    }
+  ],
+  "key_learnings": [
+    "DEFECT 突破口=类型恒真类：datatype=int4（机械A直接CONFIRMED）、datetime range integer 界限、match 跨类型值——文档声称类型域 vs 静默接受越型值",
+    "geo lat=90 假阴性经 3 轮补证（unindexed 对照）翻案 DEFECT——极点边界类需 scroll/unindexed 双对照锚定",
+    "count(exact:false) estimator 族已在 R1+R2 双轮系统性排除（approximate_by_design 定案），勿再投入"
+  ],
+  "high_value_endpoints": [
+    "POST /collections/{collection_name}/points/count (exact:false)",
+    "PUT /collections (datatype/vector 配置类)"
+  ],
+  "exhausted_directions": [
+    "count approximate estimator divergence",
+    "create 端点 null/Option 探针",
+    "scroll+order_by 分页"
+  ],
+  "last_round_summary": "R2 攻 chunk_collections+create-1of2：29 脚本→16 链终判 DEFECT=4（geo_6/datetime_8/type2/cc03）/ NOT_DEFECT=12。类型恒真类 3 条 + geo 极点 1 条。OOM 两次（资源极限脚本），容器杀手已排除。"
+}

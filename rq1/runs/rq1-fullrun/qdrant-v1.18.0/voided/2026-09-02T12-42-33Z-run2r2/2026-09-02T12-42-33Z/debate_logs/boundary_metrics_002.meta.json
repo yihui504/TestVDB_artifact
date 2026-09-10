@@ -1,0 +1,17 @@
+{
+ "defect_id": "boundary_metrics_002",
+ "endpoint": "metrics",
+ "param": null,
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "behavioral",
+ "constraint_ids": [
+  "qdrant_behavioral_metrics_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/metrics",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "baseline runtime GET /metrics answers 200 Prometheus text, and all 4 header legs (bare, Accept: application/json, Accept: text/html, Accept: */*) answer HTTP 200 with Content-Type starting \"text/plain\" (parameters/charset allowed) AND a body parsing as Prometheus text (>=1 HELP/TYPE and >=1 sample) and NOT parsing as a JSON object/array — any 200 leg with a non-text/plain Content-Type = DEFECT Type4_StateLogicViolation (content-type promise broken, actual header printed), any 200 leg with JSON/shapeless body = DEFECT Type4 (format promise), non-2xx leg on the live face = DEFECT Type4 (200 promise), 5xx/transport with /healthz alive = DEFECT Type3_RuntimeFailure, 401/403 = SCRIPT_ERROR, baseline 404 + healthz 200 = NO_DEFECT endpoint-absence evidence",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

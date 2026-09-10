@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_collections_create_04",
+  "endpoint": "collections+create (PUT /collections/{collection_name})",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url (api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection) 域名被网络策略拦截（domain_blocked，非 FAIL）；版本一致性经本地版 v1.18.0 openapi.json（.sourcedeps/qdrant/v1.18.0/openapi.json，与该文档页同源生成）核对：ShardingMethod enum 为 [auto, custom]（无 hash_slot）——与 constraint 011 的 assertion 'sharding_method IN {auto, custom, hash_slot}' 矛盾（contract 自带文档不存在的 hash_slot）。且 openapi 的 CreateCollectionShardingMethod 是 oneOf[ShardingMethod, Any type]（允许 null），VectorsConfig1 map key 无非空约束，与观测的 null/空名接受行为一致。endpoint PUT /collections/{name} 在 openapi paths 精确命中 operationId=create-collection。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "CASE sharding_method=null: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.239277673}",
+      "secondary_observations": [
+        "CASE sharding_method=round_robin invalid: status=400 body={\"status\":{\"error\":\"Format error in JSON body: unknown variant `round_robin`, expected `auto` or `custom` at line 1 column 79\"}} (NOTE Type2 — error lacks 'sharding')",
+        "CASE sharding_method=123: status=400 body={\"status\":{\"error\":\"Format error in JSON body: expected value at line 1 column 67\"}} (NOTE Type2 — error lacks 'sharding')",
+        "CASE sharding_method='' empty: status=400 body={\"status\":{\"error\":\"Format error in JSON body: unknown variant ``, expected `auto` or `custom` at line 1 column 68\"}} (NOTE Type2 — error lacks 'sharding')",
+        "CASE vectors map with '' empty name: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.231170854} (VERDICT: DEFECT_FOUND Type1)",
+        "CASE vectors map value=null for name a: status=400 body={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 24\"}}"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "主观测（sharding_method=null 200）非'非法值以 2xx 返回'——null 是否属非法值取决于契约解释：Rust Option<ShardingMethod> + serde(default) 下 null 合法反序列化为 None（见 source_grounding）；次要 Type2 观测（3 例错误消息不含 'sharding' 字样）为诊断质量问题。"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_create_04 (debate_logs/boundary_collections_create_04.py)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_collections_create_011 (主) / qdrant_type_collections_create_010 (次)",
+      "assertion_text_quoted": "011: \"sharding_method enum auto|custom|hash_slot (default auto)\" / assertion: \"sharding_method IN {auto, custom, hash_slot}\"; 010: \"all vectors within one collection must share the same dimensionality per vector name\" / assertion: \"vectors in collection have consistent size per vector name\"",
+      "api_violates_assertion": false,
+      "note": "violates=false 理由：(a) 011 的 quote（本地 openapi v1.18.0 ShardingMethod enum=[auto,custom]）不含 hash_slot——contract assertion 与文档/源码不一致，是 contract 侧文本失真而非 API 违约；null 不在 quote 约束域 {auto,custom,hash_slot} 内，其被接受由源码 Option<ShardingMethod>+serde(default) 明确允许（见 source_grounding）。(b) 010 约束域是 per-name size 一致性，脚本从未发送同名不同 size 配置，'' 空名 case 与 010 语义不同域。脚本主 VERDICT（DEFECT_FOUND Type1 on null）与两条约束实际语义均不匹配——claim_alignment=partial 的根因，供 auditor 终判。次要 Type2 系脚本判据而非 contract assertion。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_collections_create_011 assertion 'sharding_method IN {auto, custom, hash_slot}' — 但源文档枚举仅 [auto, custom]，contract 引入文档不存在的 hash_slot（contract 侧文本失真）",
+        "doc: source_url 被网络拦截；以同源 v1.18.0 openapi.json 代核：ShardingMethod enum=[auto,custom]，CreateCollectionShardingMethod=oneOf[ShardingMethod, Any]（允许 null），VectorsConfig1 map key 无非空约束",
+        "script: debate_logs/boundary_collections_create_04.py — PUT /collections/{cname}，6 个 case：sharding_method ∈ {round_robin, null, 123, ''} + vectors {'': params} + {'a': null}",
+        "log: output_boundary_collections_create_04.log — sharding_method=null → 200 ok；vectors '' 空名 → 200 ok；其余 4 case 400（serde 格式错误）"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "011 assertion 枚举集 {auto,custom,hash_slot} 与源文档（openapi v1.18.0，enum=[auto,custom]）及源码 enum ShardingMethod{Auto,Custom} 不一致——contract 断言在 doc 环失真（多出 hash_slot）；且观测主观测（null 被接受）落在文档 oneOf[Any] 与源码 serde(default) 的合法域内，script→log 环自洽，但 claim 的'违约'到 contract 环不成立。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["sharding_method", "ShardingMethod", "hash_slot", "VectorNameBuf", "validate_not_empty", "pub struct VectorParams", "pub enum VectorsConfig"],
+      "files_examined": [
+        "lib/collection/src/config.rs (L78-105: enum ShardingMethod + CollectionParams.sharding_method)",
+        "lib/storage/src/content_manager/collection_meta_ops.rs (L113-140: CreateCollection struct)",
+        "lib/collection/src/operations/types.rs (L1332-1360: VectorParams; L1468-1471: VectorsConfig untagged enum)",
+        "lib/segment/src/types.rs (L66-68: VectorNameBuf = String 纯别名，无非空/格式校验)",
+        "lib/common/common/src/validation.rs (L68-72: validate_not_empty 存在但未被 vector-name 路径调用)",
+        "lib/api/src/grpc/qdrant.rs (L1214: Option<i32>，仅 grpc 域)"
+      ],
+      "source_excerpt": "// lib/collection/src/config.rs:78-84\n#[derive(\n    Debug, Deserialize, Serialize, JsonSchema, Anonymize, PartialEq, Eq, Hash, Clone, Copy, Default,\n)]\n#[serde(rename_all = \"snake_case\")]\npub enum ShardingMethod {\n    #[default]\n    Auto,\n    Custom,\n}\n\n// lib/collection/src/config.rs:98-102 (CollectionParams)\n    /// Sharding method\n    /// Default is Auto - points are distributed across all available shards\n    /// Custom - points are distributed across shards according to shard key\n    #[serde(default)]\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub sharding_method: Option<ShardingMethod>,\n\n// lib/collection/src/operations/types.rs:1468-1471\n#[serde(rename_all = \"snake_case\", untagged)]\npub enum VectorsConfig {\n    Single(VectorParams),\n    Multi(BTreeMap<VectorNameBuf, VectorParams>),\n}\n\n// lib/segment/src/types.rs:66-68\npub type VectorName = str;\n/// Name of a vector (owned variant)\npub type VectorNameBuf = String;",
+      "call_chain_traced": "REST PUT /collections → actix schema CreateCollection (collection_meta_ops.rs: vectors #[validate(nested)] + sharding_method: Option<ShardingMethod> 无 validate) → serde 反序列化：sharding_method=null → Option 反序列化为 None + #[serde(default)] → unwrap_or_default()=Auto（config.rs:160）→ 建集合成功。VectorsConfig::Multi(BTreeMap<String, VectorParams>)：map key 为纯 String 别名 VectorNameBuf，无 validate_not_empty/格式校验（该函数存在于 common/validation.rs 但未被该路径调用）→ '' 空名 key 被接受。VectorParams.size 有 custom range 校验（min 1 max 65536）但 key 名无校验。全树 grep 'hash_slot|HashSlot' 零命中（v1.18.0 代码中不存在该枚举值）。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（4 个 case 正常 400，DB 行为确定）", "concurrency（单线程顺序请求）", "script_error（exit 0，无 SCRIPT_ERROR 输出）", "request_typo（payload 构造与 claim 一致）"],
+      "surviving": "by-design：sharding_method=null 的 200 接受与 vectors '' 空名的 200 接受均有明确源码依据（Option+serde(default)；BTreeMap<String> 无 key 校验），属 by-design 宽松而非校验缺失；残余仅是'文档未明示空名允许'的规格模糊与 3 例错误消息不含字段名的 Type2 诊断质量问题。"
+    }
+  }
+}

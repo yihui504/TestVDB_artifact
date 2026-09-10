@@ -1,0 +1,99 @@
+{
+  "defect_id": "state_collections_delete_001",
+  "endpoint": "DELETE /collections/{collection_name}",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Page live at https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection (fetched HTML + .md full text via alternate reader; built-in WebFetch was network-restricted but page itself reachable). Version v1.18.x matches target v1.18.0. Endpoint exact. CONTENT FAIL: the page documents ONLY a 200 'successful operation' response (result:boolean) — there is NO 404 response row anywhere on the page or in its .md form. The repo's own OpenAPI source (openapi-collections.ytt.yaml delete: responses #@ response(type(\"boolean\")); openapi.lib.yml response() helper declares only \"200\" + generic default/4XX ErrorResponse envelope) likewise declares no specific 404 for delete_collection. The assertion half 'DELETE missing => 404' therefore has no doc-text grounding; the constraint description's '(runtime verified)' parenthetical in raw_knowledge.md line 131 applies only to '200 on real delete', not to the 404 half, which is an inference. The doc half 'DELETE existing => 200' IS consistent (documented 200, observed 200 result:true).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "delete missing (just deleted): 200 {\"result\":false,\"status\":\"ok\",\"time\":0.000074856}  [output_state_collections_delete_001.log line 12, preceded by four independent non-existence probes: 'get deleted: 404 ... doesn't exist!' (l6), 'exists deleted: 200 {\"exists\":false}' (l7), 'probe count: 404' (l8), 'probe scroll: 404' (l9), 'probe point_get: 404' (l10), 'probe query: 404' (l11)]",
+      "secondary_observations": [
+        "create: 200 {\"result\":true,\"status\":\"ok\",\"time\":0.234334489} (l3, setup)",
+        "upsert: 200 {\"result\":{\"operation_id\":1,\"status\":\"completed\"},\"status\":\"ok\"} (l4, setup)",
+        "delete existing: 200 {\"result\":true,\"status\":\"ok\",\"time\":0.007731392} (l5 — existing-collection half of contract behaves as documented: 200 result:true)",
+        "get deleted: 404 {\"status\":{\"error\":\"Not found: Collection `st_cdel_basic_1787505185` doesn't exist!\"}} (l6 — read path DOES 404 on same name, asymmetry confirmed within one log)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "DELETE of a verified-non-existent resource (a client-side-determinable precondition error per the constraint text) is returned as HTTP 200 ok with business signal result:false rather than 4xx. Not an error code per se — the business channel carries result:false; status stays 'ok'."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_collections_delete_001 (l12: delete missing after just-deleted → 200 result:false)",
+        "boundary_collections_delete_01 (l6: DELETE missing: status=200 result:false, after GET 404)",
+        "boundary_collections_delete_02 (l5: DELETE #2 → 200 result:false, second delete of already-deleted)",
+        "boundary_collections_delete_05 (l9-l12: unicode-missing/trailing-space/plus-name/aliases never-existing names all → 200 result:false)",
+        "boundary_collections_delete_12 (l4,6,8,10,12: lower/upper/trailing-space/leading-space/prefix lookalike never-existing names all → 200 result:false)",
+        "semantic_collections_delete_001 (signature {\"result\":false,\"status\":\"ok\"} present)",
+        "semantic_collections_delete_002 (l3: DELETE missing collection: 200 {\"result\":false,...})",
+        "semantic_collections_delete_006 (signature {\"result\":false,\"status\":\"ok\"} present)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_collections_delete_001 (content-matched by builder; dispatch entry had constraint_id=\"\" — mechanical extraction gap, sibling candidates boundary_collections_delete_01/02/05/12 were dispatched with exactly this constraint_id for the same phenomenon)",
+      "assertion_text_quoted": "DELETE existing => 200; DELETE missing => 404 [description: 'deleting non-existent collection returns 404; deleting existing collection returns 200 (runtime verified)'; evidence_tier: explicit; source_url: https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection]",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "Behavior factually contradicts the assertion's 'DELETE missing => 404' half (observed 200 result:false on a name verified non-existent by 4 probes). No ambiguity under the violates self-check: the value (missing collection) is squarely inside the assertion's constraint domain (missing collections). However the assertion's 404 half is itself ungrounded in the cited doc (see doc_verification) — whether the constraint is authoritative is the auditor's call, not mine."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_collections_delete_001 'DELETE existing => 200; DELETE missing => 404' — link metadata ABSENT at dispatch (constraint_id=\"\" in candidates.jsonl line 17); repaired by builder content-match, exact-text match to claim",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection — page reachable, v1.18.x, BUT page (HTML + .md) contains only '200 successful operation'; NO 404 text for delete-collection; repo OpenAPI spec (openapi-collections.ytt.yaml + openapi.lib.yml response()) likewise declares no 404; raw_knowledge.md l131 parenthetical runtime-verifies only the 200-on-existing half",
+        "script: state_collections_delete_001 — create → upsert → delete existing → 4 probes (get/exists/count+scroll+point_get+query) → delete missing; raw requests in log lines 3-12",
+        "log: l12 'delete missing (just deleted): 200 {\"result\":false,\"status\":\"ok\"}' + l13 VERDICT DEFECT_FOUND Type1_IllegalSuccess — matches claim verbatim"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The doc link fails content grounding: the cited API-reference page does not contain the 'DELETE missing => 404' behavior the constraint asserts (only 200 is documented, confirmed against both rendered page, .md export, and the OpenAPI YAML the docs are generated from). Secondary metadata gap (non-breaking after repair): dispatch constraint_id was empty; constraint recovered by content-match. Chain is otherwise self-consistent: script and log links are intact and the observed behavior does contradict the constraint text as written.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "delete_collection (src/actix + lib/storage)",
+        "deleteCollection|/collections/\\{collection_name\\}: (openapi/)",
+        "fn process_response (src/actix/helpers.rs)",
+        "fn delete_collection (lib/storage/src/content_manager)",
+        "doesn't exist|does not exist (lib/storage/src/content_manager)",
+        "validate_collection_exists\\( (lib/storage/src)",
+        "delete_collection.*false|not.*exist.*delete|idempotent (toc + tests)"
+      ],
+      "files_examined": [
+        "src/actix/api/collections_api.rs (l160-178 delete_collection handler; l322-338 route config)",
+        "src/actix/helpers.rs (l52-89 process_response: Ok→HttpResponse::Ok() 200; Err→error-mapped status)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (l78-81 dispatch; l211-296 delete_collection body)",
+        "lib/storage/src/content_manager/collections_ops.rs (l25-32 validate_collection_exists → StorageError::not_found)",
+        "lib/storage/src/content_manager/toc/mod.rs (l405-420 resolve_name read-path caller)",
+        "openapi/openapi-collections.ytt.yaml (l89-110 delete: responses response(type(\"boolean\")))",
+        "openapi/openapi.lib.yml (l1-35 response() = default/4XX error envelope + \"200\" only)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/toc/collection_meta_ops.rs:211-296 (v1.18.0, git db3fca3):\n\n211  pub(super) async fn delete_collection(\n212      &self,\n213      collection_name: &str,\n214  ) -> Result<bool, StorageError> {\n215      let _collection_create_guard = self.collection_create_lock.lock().await;\n...\n227      let removed_opt = self.collections.write().await.remove(collection_name);\n228      if let Some(removed) = removed_opt {\n...          // existing collection: stop, cleanup, publish CollectionDeletedEvent\n271          result = true;\n272      } else {\n273          // we hold the collection_create lock to make sure no one is creating this collection\n274          // otherwise we would delete its content now\n275          if collection_path.exists() {\n276              log::warn!(\"Collection {collection_name} is not loaded, but its directory still exists. Deleting it.\");\n279              to_delete = Some(safe_delete_in_tmp(&collection_path, &safe_delete_path)?);\n280          } else {\n281              to_delete = None;\n282          }\n284          result = false;         // <-- missing collection: Ok(false), no NotFound error\n285      }\n...\n295      Ok(result)                // <-- propagates as HTTP 200 via process_response\n296  }\n\nContrast, read path — lib/storage/src/content_manager/collections_ops.rs:25-32:\n25  fn validate_collection_exists(&self, collection_name: &str) -> Result<(), StorageError> {\n26      if !self.collection_exists(collection_name) {\n27          return Err(StorageError::not_found(format!(\n28              \"Collection `{collection_name}` doesn't exist!\")));   // <-- the 404 the log probes hit\n...\nCaller: toc/mod.rs:418 resolve_name() → collections.validate_collection_exists(&resolved_name)?; — used by read ops, NOT by delete_collection.",
+      "call_chain_traced": "actix delete_collection [src/actix/api/collections_api.rs:160-178] → dispatcher.submit_collection_meta_op(CollectionMetaOperations::DeleteCollection) [lib/storage/src/dispatcher.rs] → TableOfContents perform_meta_op → self.delete_collection [toc/collection_meta_ops.rs:78-81 → 211-296] → collections.remove(name) returns None for missing → result=false → Ok(result) [l295] → process_response Ok(_) → HttpResponse::Ok() 200 result:false [src/actix/helpers.rs:62-70]. Read-path asymmetry: get/exists/count/scroll resolve via resolve_name → validate_collection_exists → StorageError::not_found → HttpError 404. The existence check that produces 404 is deliberately applied on reads and deliberately absent on delete.",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "Not validation_absent: the source intentionally implements idempotent delete — missing collection yields Ok(false)→200, with an explicit concurrency comment (collection_create_lock rationale, l273-274) and a disk-cleanup fallback for unloaded collections. No dedicated unit test asserting delete-missing semantics was found (grep in lib/storage/tests and tests/ returned zero hits), and the clone is single-commit (shallow at tag v1.18.0), so design intent rests on in-code comments plus the structural read/delete asymmetry, not on history archaeology."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (server healthy: create/upsert/delete-existing all clean 200; probes answered coherently)",
+        "concurrency race (delete path holds collection_create_lock; probes were sequential; 7.5e-5s response consistent with absent-branch)",
+        "cache delay / eventual consistency (in-memory BTreeMap checked synchronously; GET 404 confirms removal committed before second DELETE)",
+        "request typo (identical name string used across probes and delete — 404 probe echoes the exact name)"
+      ],
+      "surviving": "by_design_idempotent_delete — source deliberately returns Ok(false)→200 for missing collections (RFC-style idempotent DELETE semantics), directly contradicting the constraint's '404' half; plus constraint_ungrounded — that '404' half is absent from the cited doc page and from the OpenAPI spec the docs are generated from, and raw_knowledge runtime-verified only the 200-on-existing half. Both survive for the auditor's DEFECT/NOT_DEFECT call."
+    }
+  }
+}

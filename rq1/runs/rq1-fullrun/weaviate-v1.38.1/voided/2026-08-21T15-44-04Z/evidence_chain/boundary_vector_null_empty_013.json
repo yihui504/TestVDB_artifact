@@ -1,0 +1,66 @@
+{
+  "defect_id": "boundary_vector_null_empty_013",
+  "endpoint": "POST /objects (vector)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "constraint_id='boundary' 泛标签；契约 data_types.Object.vector type=array required=false（可空合法）。vector 类型约束（float32 array）在源码 vector_validation.go:30 与 C11yVector []float32 中定义，契约未显式引用。int 向量应被拒绝的依据是 C11yVector 类型语义，属源码级约束而非文档级。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[intvec] -> 200 (accepted); [intvec readback] vector=null",
+      "secondary_observations": [
+        "[null] -> 200 (accepted)",
+        "[empty] -> 200 (accepted)",
+        "[strvec] -> 400 {\"code\":400,\"message\":\"parsing body body from \\\"\\\" failed, because json: cannot unmarshal string into Go struc...\""
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "int 向量 [1,2] 以 200 接受但读回 vector=null——静默数据丢失通道；string 向量对照组在 JSON 解码层 400 拒绝，说明类型检查存在但不覆盖 int"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_vector_null_empty_013.py"],
+      "note_rerun": "主进程注记：曾容器 DOWN 时段假 SCRIPT_ERROR，重跑后为 DEFECT_FOUND；本链以 output log 终态为准。",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "boundary (泛标签；实际引用 data_types.Object.vector array + 源码 C11yVector []float32 语义)",
+      "assertion_text_quoted": "structured_contract.json data_types.Object: {\"name\": \"vector\", \"type\": \"array\", \"required\": false}",
+      "api_violates_assertion": true,
+      "note": "违反的不是'array 可空'本身（null/[] 200 属 required=false 合规），而是 array 元素类型约束：[1,2] 整型向量被接受后读回 vector=null，即'接受输入却丢失数据'——violates 基于接受与读回的语义分裂，非 null/[] 本身。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: data_types.Object.vector array required=false；元素类型约束在 entities/models/c11y_vector.go C11yVector []float32",
+        "doc: openapi Object.vector 定义（clone 内 openapi-specs）",
+        "script: boundary_vector_null_empty_013.py 发送 null/[]/[1,2]/['a'] 四种 vector",
+        "log: intvec 200 accepted + readback vector=null；strvec 400"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["C11yVector", "vector_validation", "cannot unmarshal string into Go struct"],
+      "files_examined": ["usecases/objects/validation/vector_validation.go", "entities/models/object.go", "entities/models/c11y_vector.go"],
+      "source_excerpt": "entities/models/c11y_vector.go:28: type C11yVector []float32 —— Go json 解码中 JSON number 1 可无损进 float32，故 [1,2] 解码成功（int 在 JSON 层不区分）；string 才触发 cannot unmarshal。usecases/objects/validation/vector_validation.go:27-50 vector(): 仅校验 named-vector 配置存在性与 float32 断言（defaultVec 路径），无'整型数值是否语义合规'或'非空向量读回一致性'校验。intvec 读回 vector=null 的直接机制未在本次 Read 中定位到（可能在 vectorizer=none + legacy vector 存储路径静默丢弃非规范化向量），如实记录。",
+      "call_chain_traced": "POST /objects → model Object decode (C11yVector []float32 接受 int JSON numbers) → validation.vector (类型断言仅限 named vector 通道) → 落盘；读回 vector=null 的丢弃点未完全追到",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "类型层（[]float32 接受 int JSON number）与校验层（无 int-vec 拒绝）都确认无守卫；但'读回 null'的确切丢弃代码未定位——链完整性的已知缺口，如实记录。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "medium（行为证实强：200+读回null；源码丢弃点定位不全）"
+}

@@ -1,0 +1,68 @@
+{
+  "defect_id": "boundary_bd_hnsw_pair_04",
+  "endpoint": "POST /schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint weaviate_range_create_collection_001 (evidence_tier=inferred, source_verified=false——本链源码核验即补足)，source_url 'go-struct: entities/vectorindex/hnsw/config.go' 本地 clone 可达；api_endpoints POST /schema 含 dynamicEfMin/dynamicEfMax int（default 100/500）；endpoint_registry 含 POST /schema v1.38.2。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "ATTACK efMin=500 > efMax=100: 200 / read-back efMin=500 efMax=100（主观测：倒置对被 200 接受并原样持久化）",
+      "secondary_observations": [
+        "read-back confirms inverted pair persisted verbatim — GET /schema/{class} 原样返回倒置值，非临时接受"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "违反成对约束的配置以 200 返回且无任何错误/警告体——请求侧可判定错误被 2xx 静默接受"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_bd_hnsw_pair_04"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_range_create_collection_001",
+      "assertion_text_quoted": "dynamicEfMin <= dynamicEfMax（description: inferred: dynamicEfMin <= dynamicEfMax (paired constraint from go source)）",
+      "api_violates_assertion": true,
+      "note": "观测 efMin=500 > efMax=100 被接受并读回，直接违反 <= 断言；观测值在约束数值域内。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_range_create_collection_001 — dynamicEfMin <= dynamicEfMax",
+        "doc: api_endpoints POST /schema dynamicEfMin(int, default 100)/dynamicEfMax(int, default 500), source go-struct hnsw/config.go",
+        "script: boundary_bd_hnsw_pair_04.py POST /schema vectorIndexConfig{dynamicEfMin:500, dynamicEfMax:100} + GET 读回",
+        "log: 'ATTACK efMin=500 > efMax=100: 200' + 'read-back efMin=500 efMax=100'"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["DynamicEFMin", "DynamicEFMax", "func (u *UserConfig) validate()", "dynamicEfMin"],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go (L30-93, L150-215, L255-300)",
+        "entities/vectorindex/common/config.go (L43-76)"
+      ],
+      "source_excerpt": "entities/vectorindex/hnsw/config.go L30-L31:\n  DefaultDynamicEFMin = 100\n  DefaultDynamicEFMax = 500\nL54-L55: DynamicEFMin/MaxEFMax int 字段\nL183-L192 (ParseAndValidateConfig): OptionalIntFromMap(asMap, \"dynamicEfMax\", ...) / \"dynamicEfMin\" 分别独立赋值，无交叉比较\nL260-L289 (UserConfig.validate): 仅校验 maxConnections(上下界)/efConstruction(下界)/filterStrategy——无任何 DynamicEFMin<=DynamicEFMax 检查\nL258: return uc, uc.validate()",
+      "call_chain_traced": "POST /schema → ParseAndValidateConfig → 逐字段 OptionalIntFromMap 独立解析 → uc.validate()：只查 maxConnections/efConstruction/filterStrategy，成对约束 min<=max 完全缺失 → 倒置对原样入库（read-back verbatim 证实）。（sufficiency_check: grep_hit_pursued——DynamicEF 命中的 config.go 已分段 Read 并核验 validate 全文）",
+      "verification_outcome": "validation_absent",
+      "note": "constraint 要求的成对校验在源码中不存在，真缺陷信号成立。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": null
+    }
+  }
+}

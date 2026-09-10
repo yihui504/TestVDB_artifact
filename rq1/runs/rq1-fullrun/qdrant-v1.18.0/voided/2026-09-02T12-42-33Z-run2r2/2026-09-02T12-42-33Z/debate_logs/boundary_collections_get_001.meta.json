@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_collections_get_001",
+ "endpoint": "collections+get",
+ "param": "collection_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "strategy1_behavioral_positive",
+ "oracle": {
+  "statement": "after PUT-create of a b1cget_* collection with vectors size=4/Cosine, on_disk_payload=false, hnsw m=32/ef_construct=256, optimizer indexing_threshold=50000, wal 64MB/2-ahead, GET describe returns HTTP 200 where result is a dict, result.status in green|yellow|red, points_count/indexed_vectors_count are int-or-None, segments_count is int, config.params/.hnsw_config/.optimizer_config/.wal_config are dicts, quantization_config key present, and each explicitly-set value echoed exactly; 404 = Type1_IllegalRejection, other non-200 4xx = Type4_StateLogicViolation, 5xx = Type3_RuntimeFailure, shape/fidelity violation = Type4_StateLogicViolation",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

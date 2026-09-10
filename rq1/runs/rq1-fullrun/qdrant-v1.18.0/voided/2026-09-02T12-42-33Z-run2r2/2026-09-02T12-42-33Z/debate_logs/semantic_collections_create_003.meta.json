@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_collections_create_003",
+  "endpoint": "collections+create",
+  "param": "sparse_vectors",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "type_coercion",
+  "oracle": {
+    "statement": "sparse_vectors {\"text\": {}} creates 200 result=true with params.sparse_vectors holding the \"text\" key; the distance-smuggling case {\"text\": {\"distance\": \"Cosine\"}} is refused 400/422 or its describe readback shows no non-Dot distance (persisted non-Dot distance = Type1_IllegalSuccess); list/string/non-object map values are refused 400/422 (2xx = Type1_IllegalSuccess; 5xx with /healthz alive = Type3_RuntimeFailure) - constraint qdrant_type_collections_create_002",
+    "source": "docstring"
+  }
+}

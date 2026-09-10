@@ -1,0 +1,74 @@
+{
+  "defect_id": "state_schema_mutate_data_consistency",
+  "endpoint": "POST /v1/schema + POST /v1/batch/objects + POST /v1/graphql（claim 的 add_property POST /v1/schema/{className}/properties 从未执行）",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "FAIL",
+      "version_match": "FAIL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PARTIAL",
+      "sdk_rest_confusion": false,
+      "detail": "candidates.jsonl 的 constraint_id='contract' 在 structured_contract.json 中不存在（constraints.type/range/state 三列表全空）→ 无 source_url → 可达性/版本/内容三 FAIL；端点层面脚本的 POST /v1/schema、POST /v1/batch/objects、POST /v1/schema/{name}/properties 与 OpenAPI 路径一致但无 contract 记录 → PARTIAL。脚本 docstring 引用的 OpenAPI 'Adds a new property definition to an existing collection definition' 无 contract 载体。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "D",
+      "log_pattern": "c3: Count before add_property: None → DEFECT signal — expected count=3 before mutation, got None → VERDICT: DEFECT_FOUND（count=None 来自脚本 _class_count() 的客户端 GraphQL body 构造错误：查询以 JSON 字符串体发送 → target 400 → None；同批 delete_recreate/query_visibility log 直接显示该 400 原文）",
+      "secondary_observations": [
+        "c1: Create Status: 200 raw={\"class\":\"StateSchemaMutateData\",...}",
+        "c2: Batch insert Status: 200 raw=[{\"class\":\"StateSchemaMutateData\",...\"id\":\"365c2c01-...\",\"properties\":{\"idx\":0},...\"result\":{...}}]（3 对象写入 200）",
+        "add_property POST（/v1/schema/StateSchemaMutateData/properties）从未发送：脚本在 c3 处 count is None → exit(1)，claim 的核心动作（add_property 后数据一致性）完全未被检验",
+        "同因佐证: output_state_schema_delete_recreate.log 与 output_state_schema_query_visibility.log 均含 'parsing body body from \"\" failed, because json: cannot unmarshal string into Go value of type models.GraphQLQuery'"
+      ],
+      "claim_alignment": "drifted",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "count=None 源自 target 对畸形 GraphQL body 的 400 拒绝（客户端把查询字符串整体当 body 发送，runtime json=<str> 落带引号字符串，target models.GraphQLQuery 解码失败）；DEFECT verdict 是客户端请求构造错误的产物，claim 的 mutation 数据一致性行为未被检验"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": true,
+      "triggering_scripts": ["state_schema_delete_recreate", "state_schema_query_visibility", "state_schema_mutate_data_consistency"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "contract",
+      "assertion_text_quoted": "（structured_contract.json 无此 constraint，无断言原文；脚本 docstring 引 OpenAPI: POST /schema/{className}/properties 'Adds a new property definition to an existing collection definition'）",
+      "api_violates_assertion": false,
+      "note": "claim 引用的 OpenAPI 语义在 structured_contract.json 中无对应 constraint 记录（constraint_id 'contract' 为占位）；且 add_property 请求从未发出，无服务端行为可判定违反",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: constraint_id 'contract' 占位（structured_contract.json 中不存在，constraints 全空）",
+        "doc: 无 source_url（OpenAPI 引文仅在脚本 docstring，无 contract 载体）",
+        "script: state_schema_mutate_data_consistency.py（create/batch 200；count 校验用 rt.request('POST','graphql', q=JSON字符串) —— body 构造错误，add_property 因提前退出从未执行）",
+        "log: 判 DEFECT_FOUND 但 count=None 为客户端 400 产物（同批 log 可见 400 原文）"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "log 判 DEFECT_FOUND 但 count=None 来自客户端 GraphQL 请求构造错误——同批 delete_recreate/query_visibility log 直接显示 400 'cannot unmarshal string into Go value of type models.GraphQLQuery'（脚本把查询以 JSON 字符串体发送）；脚本在 count 检查处提前退出，add_property POST 从未执行，claim 的 add_property 数据一致性行为未被检验。另 constraint_id 'contract' 在 structured_contract.json 不存在 → contract 环同样断裂",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["parsing body", "GraphQLQuery", "graphql_post_parameters", "cannot unmarshal", "add_property"],
+      "files_examined": [
+        "adapters/handlers/rest/operations/graphql/graphql_post_parameters.go",
+        "adapters/handlers/rest/handlers_graphql.go",
+        "debate_logs/runtime.py",
+        "debate_logs/state_schema_mutate_data_consistency.py",
+        "debate_logs/state_schema_delete_recreate.py"
+      ],
+      "source_excerpt": "adapters/handlers/rest/operations/graphql/graphql_post_parameters.go:66-87：'var body models.GraphQLQuery; if err := route.Consumer.Consume(r.Body, &body); err != nil { ... errors.NewParseError(\"body\", \"body\", \"\", err) }' —— target 的 /v1/graphql 期望 JSON 对象体，string 体解码失败即 400。客户端侧 debate_logs/runtime.py:47 'requests.request(..., json=body or {}, ...)' 在 body 为字符串时把 JSON 编码字符串整体当体发送（wire 上为带引号字符串），与 target 期望的 object 体不匹配。",
+      "call_chain_traced": "客户端: script _class_count()（与 state_schema_delete_recreate.py 完全相同的 helper）→ rt.request('POST','graphql', q=JSON字符串) → runtime json=<str> → wire body 为带引号 JSON 字符串 → target: graphql.post BindRequest → Consumer.Consume 把 string 解码进 models.GraphQLQuery 失败 → 400 → 脚本返回 None → 判 DEFECT。target 侧 body 类型校验按预期工作（validation present）；claim 的 add_property 数据一致性在服务端源码层面无证据可查（请求未发出）",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "script_graphql_body_construction_error（客户端把 GraphQL 查询以 JSON 字符串体发送，target 400 拒绝；count=None 为该客户端错误的产物，claim 的 mutation 行为未被执行）"
+    }
+  }
+}

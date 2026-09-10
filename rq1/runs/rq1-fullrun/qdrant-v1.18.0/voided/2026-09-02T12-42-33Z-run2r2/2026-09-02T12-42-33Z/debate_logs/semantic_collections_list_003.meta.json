@@ -1,0 +1,15 @@
+{
+ "defect_id": "semantic_collections_list_003",
+ "endpoint": "collections+list",
+ "param": null,
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "metamorphic",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_list_001"
+ ],
+ "oracle": {
+  "statement": "for a 4-member legal-name family (case-distinct pair alpha/Alpha, dash/underscore/digit name, short digit-suffix name) the listing echoes every name byte-identically, lists the case-distinct pair as two distinct rows (case-folding/collision = Type4_StateLogicViolation), carries no duplicate rows, and three consecutive reads plus one read interleaved with an unrelated describe return the identical prefix-scoped multiset (row flicker or read-induced mutation = Type4); non-200 on a legal GET = Type1_IllegalRejection; 5xx with /healthz alive = Type3; transport failure with healthy /healthz or create setup failure = SCRIPT_ERROR",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

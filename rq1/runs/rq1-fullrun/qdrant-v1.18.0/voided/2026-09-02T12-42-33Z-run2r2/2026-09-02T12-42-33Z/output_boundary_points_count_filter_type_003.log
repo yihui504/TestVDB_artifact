@@ -1,0 +1,22 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+F1 filter=null (null vs omitted consistency) -> status=200
+raw: {"result":{"count":12},"status":"ok","time":0.000268523}
+F1 filter=null (null vs omitted consistency): 200 with count == 12 == N_SEED (consistent)
+
+F2 filter={} (legal empty Filter) -> status=200
+raw: {"result":{"count":12},"status":"ok","time":0.000296402}
+F2 filter={} (legal empty Filter): 200 with count == 12 == N_SEED (consistent)
+
+F3 filter="berlin" (string for object) -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"berlin\", expected struct Filter at line 1 column 20"},"time":0.0}
+F3 filter="berlin" (string for object): rejected with 400 (clean)
+
+F4 filter=[{...}] (array for object) -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid length 1, expected struct Filter with 4 elements at line 1 column 59"},"time":0.0}
+F4 filter=[{...}] (array for object): rejected with 400 (clean)
+
+F5 filter={"must": {...}} (object for conditions array) -> status=200
+raw: {"result":{"count":8},"status":"ok","time":0.000412256}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — F5 filter={"must": {...}} (object for conditions array): filter type violation silently accepted with 200; the count then derives from an undefined filter shape: {"result":{"count":8},"status":"ok","time":0.000412256}

@@ -1,0 +1,18 @@
+{
+ "defect_id": "state_collections_delete_004",
+ "endpoint": "collections+delete",
+ "param": null,
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "lifecycle_concurrency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_delete_001",
+  "qdrant_bc_delete_invisibility_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "during delete/recreate race count only returns 200 or 404 (>=2 x 500 with /healthz alive = Type3); after race describe status == count status",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

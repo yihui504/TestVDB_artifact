@@ -1,0 +1,15 @@
+ids search: {"code":0,"cost":0,"data":[{"distance":0,"pk":1},{"distance":1.1999999,"pk":2},{"distance":0,"pk":2},{"distance":1.1999999,"pk":1}],"topks":[2,2]}
+
+data q1: {"code":0,"cost":0,"data":[{"distance":0,"pk":1},{"distance":1.1999999,"pk":2}],"topks":[2]}
+
+data q2: {"code":0,"cost":0,"data":[{"distance":0,"pk":2},{"distance":1.1999999,"pk":1}],"topks":[2]}
+
+create varchar: {"code":0,"data":{}}
+varchar pk numeric id 42: {"code":0,"cost":0,"data":[{"distance":0,"pk":"42"}],"topks":[1]}
+
+varchar pk string id '42': {"code":0,"cost":0,"data":[{"distance":0,"pk":"42"}],"topks":[1]}
+
+DEFECT: ids-search distance mismatch pk=2 ids=0 data=1.1999999
+DEFECT: ids-search distance mismatch pk=1 ids=1.1999999 data=0
+DEFECT: VarChar PK: numeric id 42 silently coerced to '42' and matched (type confusion, ids:[42] vs pk '42')
+VERDICT: DEFECT_FOUND

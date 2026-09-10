@@ -1,0 +1,19 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+Test: filter.should=null on POST /collections/{collection}/points/query
+================================================================================
+Request: POST /collections/test_collection/points/query
+Payload: {'filter': {'should': None}}
+
+Response Status: 200
+Response Body: {'result': {'points': [{'id': 1, 'version': 0, 'score': 1.0}, {'id': 2, 'version': 0, 'score': 1.0}]}, 'status': 'ok', 'time': 0.009549352}
+
+================================================================================
+ANALYSIS:
+================================================================================
+*** DEFECT FOUND: API returned 200 OK without rejecting null filter.should ***
+Expected: 400 Bad Request with validation error
+Actual: 200 OK - null value accepted
+Result: {'result': {'points': [{'id': 1, 'version': 0, 'score': 1.0}, {'id': 2, 'version': 0, 'score': 1.0}]}, 'status': 'ok', 'time': 0.009549352}
+
+VERDICT: DEFECT_FOUND

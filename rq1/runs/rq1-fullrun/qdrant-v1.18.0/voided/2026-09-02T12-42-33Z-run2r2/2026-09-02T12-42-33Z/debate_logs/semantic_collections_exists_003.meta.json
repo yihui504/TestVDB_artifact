@@ -1,0 +1,15 @@
+{
+  "defect_id": "semantic_collections_exists_003",
+  "endpoint": "collections+exists",
+  "param": "collection_name",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "metamorphic",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_exists_001"
+  ],
+  "oracle": {
+    "statement": "relation R holds for every probe (live created / never-created unique prefix / just-deleted): exists(n)==true <=> describe(n)==200 <=> n in collections list, and exists(n)==false <=> describe 404 <=> not listed; any cross-face disagreement, a non-200 from exists (never-404 clause), or a non-boolean result.exists = Type4_StateLogicViolation; describe/list transport failures with healthy /healthz or create/delete setup failures = SCRIPT_ERROR; 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

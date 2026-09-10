@@ -1,0 +1,136 @@
+{
+  "defect_id": "vein_null_check_points_count_3",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "session_dir": "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.3.0/results/qdrant/v1.18.0/2026-08-23T05-48-00Z",
+  "candidate": {
+    "script": "vein_null_check_points_count_3",
+    "log_path": "output_vein_null_check_points_count_3.log",
+    "constraint_id": "",
+    "attack": "",
+    "claim_hint": "VERDICT: DEFECT_FOUND - is_empty approximate cardinality is a coarse fraction of total, violating documented empty-or-missing semantics; exact path and scroll agree on ground truth"
+  },
+  "note_on_missing_constraint_id": "candidates.jsonl 中 constraint_id 为空（vein 系候选由 attack-vein agent 自主发现，非契约派发）。builder 按语义回溯到最相关契约 qdrant_type_filter_002 做文档验证；chain 追溯从 doc 层起，contract 环记 semantic_match 而非 exact id。",
+  "doc_verification": {
+    "constraint_referenced": {
+      "constraint_id": "qdrant_type_filter_002 (semantic match, not exact dispatch)",
+      "description": "is_empty matches field missing OR null OR []; is_null matches field exists with null value",
+      "source_url": "https://qdrant.tech/documentation/concepts/filtering/"
+    },
+    "reachability": "domain_blocked (WebFetch to qdrant.tech blocked by network policy; verified against local doc mirror tmp_gen/qdrant118/concepts_filtering.txt instead - mirror is the v1.18.0 qdrant.tech snapshot used for contract generation)",
+    "version_match": "unverifiable_directly - local mirror is the v1.18.0 doc snapshot used for contract generation",
+    "content_consistency": "mirror 原文 (concepts_filtering.txt:2645): 'This condition will match all records where the field reports either does not exist, or has null or [] value.' - 确认文档语义为 missing/null/[] 三态匹配。另 concepts_points.txt:2581: 'By default, the count is approximate for performance reasons. To get an exact count, set \"exact\": true in the request.' - 文档明确 count 默认近似、exact=true 才精确，即近似计数允许偏差是 documented。",
+    "endpoint_precision": "POST /collections/{collection_name}/points/count 在 contract endpoint_registry 中（vein_state.json 亦记录该端点），meta.json endpoint 字段一致",
+    "sdk_rest_confusion": false,
+    "verdict": "PARTIAL (reachability domain_blocked；内容一致性与端点精确性基于本地镜像 PASS)"
+  },
+  "execution_evidence": {
+    "log_read": "full (log 全文仅 5 行，全部结论行已读)",
+    "primary_observation": [
+      "is_empty tags (truth=1): exact=1 approx=0",
+      "is_empty nonexistent (truth=201): exact=201 approx=100"
+    ],
+    "secondary_observations": [],
+    "claim_alignment": "aligned - claim 指向的正是上述两行主观测（indexed 字段 truth=1 时 approx=0；nonexistent 字段 truth=201 时 approx=100=total/2）",
+    "log_pattern": "非 FAILED/VIOLATION 标记型，脚本自带 verdict 行: 'VERDICT: DEFECT_FOUND - is_empty approximate cardinality is a coarse fraction of total...'。原始观测: is_empty tags (truth=1): exact=1 approx=0; is_empty nonexistent (truth=201): exact=201 approx=100",
+    "observed_pattern_type": "Type2 (PoorDiagnostics/semantic divergence; script meta expected_defect_type=Type2 一致)",
+    "reproducibility": "单脚本 (仅 output_vein_null_check_points_count_3.log 触及 is_empty+count(exact:false) 组合)",
+    "grade": "C (单脚本；无明确 Type1/Type3)",
+    "http_semantics": {
+      "client_error_returned_as": "N/A",
+      "note": "无非法参数；所有请求均为 200 合法响应，分歧仅在返回的 count 数值"
+    },
+    "controls_in_script": "is_null 对照（脚本注释声明 both paths consistent）；truth 由 exact path 与 scroll 交叉确认（脚本注释）",
+    "tolerance_note": "脚本容差 tol = max(2, 20%*exact)：indexed 场景 approx=0 vs truth=1 在 tol(2) 内其实通过；触发 verdict 的是 nonexistent 场景 approx=100 vs truth=201（|100-201|=101 > 40.2）"
+  },
+  "chain_trace": {
+    "contract": "semantic_match (constraint_id 空；回溯 qdrant_type_filter_002，其 assertion 与文档原文一致)",
+    "doc": "PASS via local mirror (live fetch domain_blocked)",
+    "script": "PASS - 脚本 raw 请求 (POST .../points/count, filter.must=[{is_empty:{key}}], exact true/false) 与 claim 一致",
+    "log": "PASS - verdict 行与数值观测自洽，exit_code=0，无 SCRIPT_ERROR",
+    "chain_broken_at": null,
+    "notes": "四环语义一致；唯一弱点是 live 文档可达性为 domain_blocked（用本地镜像替代）"
+  },
+  "source_grounding": {
+    "src_dir": "<HOME>/.claude/plugins/cache/testvdb/testvdb/2.3.0/.qdrant-src-1190 (git describe: v1.18.0, commit db3fca3)",
+    "version_match": "exact (v1.18.0)",
+    "keywords_searched": [
+      "IsEmpty",
+      "estimate_cardinality",
+      "unknown",
+      "estimate_field_condition",
+      "check_is_empty_condition",
+      "condition_cardinality",
+      "exp: TOTAL / 2"
+    ],
+    "files_read": [
+      "lib/segment/src/index/struct_payload_index.rs",
+      "lib/segment/src/index/query_estimator.rs",
+      "lib/segment/src/index/field_index/map_index/mod.rs",
+      "lib/segment/src/index/field_index/mod.rs",
+      "lib/segment/src/payload_storage/query_checker.rs",
+      "lib/segment/src/index/query_optimization/condition_converter.rs"
+    ],
+    "sufficiency_check": "grep_hit_pursued (全部 IsEmpty/estimate_cardinality 命中已读；rework 补 query_estimator.rs mock 同约定逐字摘录；map_index 摘录由转述替换为逐字并修正行号 789-849)",
+    "source_excerpt": [
+      {
+        "file": "lib/segment/src/index/struct_payload_index.rs:400-414",
+        "lines": "Condition::IsEmpty(IsEmptyCondition { is_empty: field }) => {\n    let available_points = self.available_point_count();\n    let condition = FieldCondition::new_is_empty(field.key.clone(), true);\n    self.estimate_field_condition(&condition, nested_path, hw_counter)?\n        .unwrap_or_else(|| CardinalityEstimation::unknown(available_points))\n}"
+      },
+      {
+        "file": "lib/segment/src/index/field_index/mod.rs:84-91",
+        "lines": "pub const fn unknown(total: usize) -> Self {\n    CardinalityEstimation {\n        primary_clauses: vec![],\n        min: 0,\n        exp: total / 2,\n        max: total,\n    }\n}"
+      },
+      {
+        "file": "lib/segment/src/index/struct_payload_index.rs:78-96",
+        "lines": "pub fn estimate_field_condition(...) {\n    let full_path = JsonPath::extend_or_new(nested_path, &condition.key);\n    let Some(indexes) = self.field_indexes.get(&full_path) else {\n        return Ok(None);\n    };\n    ... index.estimate_cardinality(&full_path_condition, hw_counter)\n}"
+      },
+      {
+        "file": "lib/segment/src/index/field_index/map_index/mod.rs:789-849",
+        "lines": "fn estimate_cardinality(&self, condition: &FieldCondition, hw_counter: &HardwareCounterCell) -> OperationResult<Option<CardinalityEstimation>> {\n    Ok(match &condition.r#match {\n        Some(Match::Value(MatchValue { value })) => match value {\n            ValueVariants::String(keyword) => { /* ...match_cardinality... Some(estimation) */ }\n            ValueVariants::Integer(_) => None,\n            ValueVariants::Bool(_) => None,\n        },\n        Some(Match::Any(MatchAny { any: any_variant })) => match any_variant { /* ... */ },\n        Some(Match::Except(MatchExcept { except })) => match except { /* ... */ },\n        _ => None,\n    })\n}",
+        "note": "逐字核对 v1.18.0 (db3fca3) 后修正：estimate_cardinality 从 :789 起，match 的兜底分支 `_ => None` 在 :848。is_empty 转成的 FieldCondition 无 r#match 字段 -> 落入 `_ => None` -> 上层 unknown(total) fallback。省略号处为省略的 Value/Any/Except 内部分支，关键路径（r#match 分派与 _ => None 兜底）逐字保留。前版摘录此条为注释性转述，本版替换为逐字源码。"
+      },
+      {
+        "file": "lib/segment/src/index/query_estimator.rs:356,415-424",
+        "lines": "const TOTAL: usize = 1000;\n...\nCondition::IsEmpty(condition) => CardinalityEstimation {\n    primary_clauses: vec![PrimaryCondition::Condition(Box::new(\n        FieldCondition::new_is_empty(condition.is_empty.key.clone(), true),\n    ))],\n    min: 0,\n    exp: TOTAL / 2,\n    max: TOTAL,\n},\nCondition::IsNull(condition) => CardinalityEstimation {\n    primary_clauses: vec![PrimaryCondition::Condition(Box::new(\n        FieldCondition::new_is_null(condition.is_null.key.clone(), true),\n    ))],\n    ...",
+        "note": "by_design 补证（rework 针对性摘录）：测试用 mock estimator (query_estimator.rs) 对 IsEmpty/IsNull 同样硬编码 exp=TOTAL/2、min=0、max=TOTAL —— 与生产路径 CardinalityEstimation::unknown() 同一约定，且被单元测试固化为预期行为。这是'approx=total/2 属 by_design'的最直接源码证据：维护者自己的测试断言该行为。"
+      }
+    ],
+    "causal_chain_summary": "count(exact:false) 走 cardinality 估计路径: condition_cardinality (struct_payload_index.rs:400) 把 IsEmpty 转成 FieldCondition{is_empty:Some(true)} 后调 estimate_field_condition；(a) 字段无索引（nonexistent_zzz）-> field_indexes.get 返回 None -> Ok(None) -> unknown(available_points) -> exp=total/2 (=100, 与观测精确吻合)；(b) 字段有 keyword 索引（tags）-> map_index 的 estimate_cardinality 只 match condition.r#match（Value/Any），is_empty 条件无 r#match -> 返回 None -> 同样 fallback unknown -> exp=total/2。仅 null_index 系有 is_empty 专用 checker（condition_converter.rs:58-90），但那是 filter 执行路径（exact/real filtering），不在 cardinality estimation 路径上。",
+    "verification_outcome": "by_design_in_source",
+    "by_design_evidence": [
+      "lib/segment/src/index/field_index/mod.rs:84-91 - CardinalityEstimation::unknown() 显式无信息先验 (min=0, exp=total/2, max=total)，对无法估计的 condition 统一返回 total/2",
+      "lib/segment/src/index/query_estimator.rs:356,415-424 - 测试 mock estimator 对 IsEmpty 硬编码 exp=TOTAL/2 并被单测固化为预期，维护者明示接受该行为",
+      "lib/segment/src/index/struct_payload_index.rs:400-410 - IsEmpty 分支显式 unwrap_or_else(unknown(available_points))，fallback 是编码意图而非遗漏",
+      "tmp_gen/qdrant118/concepts_points.txt:2581 - 文档明确 'By default, the count is approximate for performance reasons. To get an exact count, set exact: true'，近似偏差 documented",
+      "对照观测: nonexistent 场景 approx=100 = available_points/2 精确吻合 unknown fallback，非随机错误"
+    ],
+    "trivial_explanations": [
+      {
+        "hypothesis": "近似估计器对 is_empty 无信息，by-design 返回 total/2",
+        "status": "确认 (源码+文档双重支撑)"
+      },
+      {
+        "hypothesis": "缓存/延迟/并发 race",
+        "status": "排除 (脚本 sleep(8)+wait=true，且 approx 值稳定等于 total/2)"
+      }
+    ],
+    "surviving": [
+      "弱点存疑: indexed 场景 approx=0 vs truth=1 - 若同样走 unknown(total) 应为 ~100 而非 0，说明 indexed 场景实际走了另一条执行路径（可能 count 的 approx 路径在 primary clause 缺失时选择了不同计划）。此细节源码链解释不完全，留给 auditor。",
+      "语义差距: 文档对 is_empty 的描述是匹配语义（filter 层，exact path 正确实现，exact=1/201 与 truth 一致）；对 approximate count 只笼统说 approximate for performance，未承诺误差界。是否构成 documented semantics violation 取决于 auditor 对 approximate 容差的解释。"
+    ]
+  },
+  "contract_grounding": {
+    "api_violates_assertion": false,
+    "note": "qdrant_type_filter_002 的断言域是 is_empty 的匹配语义（missing/null/[]），该语义在 filter/exact 路径被正确实现（query_checker.rs:179 check_is_empty_condition + 观测 exact=1/exact=201 与 truth 一致）。claim 的现象（approx count 偏离）不在该断言域内；文档对 approximate count 的承诺仅为默认近似、exact:true 得精确值，未承诺近似值的语义正确性或误差界。violates=False 理由：被声称违反的约束（is_empty 匹配语义）未被违反 - 被观测的是近似估计器的 documented 粗糙性。"
+  },
+  "builder_disclaimer": "本文件仅写实证据，不产出 DEFECT/NOT_DEFECT 判定。by_design_in_source 是源码搜证的技术性 outcome，终判归 chain-auditor。",
+  "rework_history": [
+    {
+      "rework_id": 1,
+      "order": "{type:EVIDENCE_GAP, drift_point:'source_excerpt 为空(4字符)且 outcome=by_design_in_source 非预期', targeted_instruction:'针对性补 by_design 源码摘录与文件行号'}",
+      "action": "逐字复核全部 5 处摘录（src v1.18.0/db3fca3 均属实）；新增 query_estimator.rs:415-424 by_design 专属逐字摘录（mock estimator 硬编码 exp=TOTAL/2，测试固化该预期）；map_index 摘录替换为逐字源码并修正行号至 :789-849（含 `_ => None` 兜底分支）；by_design_evidence 逐条挂文件行号。",
+      "discrepancy_note": "复核发现旧版 source_excerpt 实际非空（4 条，各 173-344 字符），与工单'source_excerpt 为空(4字符)'描述不符——推测 auditor 解析的是 4 条 excerpt 数组长度而非内容，或读到早版文件。本 rework 不论起因，按 targeted_instruction 补强 by_design 逐字摘录与行号后回写。"
+    }
+  ]
+}

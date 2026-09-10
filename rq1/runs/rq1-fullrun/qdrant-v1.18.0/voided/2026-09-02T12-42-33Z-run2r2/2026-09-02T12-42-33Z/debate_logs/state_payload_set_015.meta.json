@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_payload_set_015",
+  "endpoint": "payload+set",
+  "param": "points",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "delete_consistency",
+  "oracle": {
+    "statement": "V1 valid set {\"ok\":1} on [1] -> HTTP 200 and point 1 = {\"a\":1,\"ok\":1}; V2a {\"payload\":{\"x\":1}} with neither points nor filter -> 4xx (2xx = Type1_IllegalSuccess) and afterwards NO point carries x; V2b explicit points:null+filter:null -> 4xx likewise; V3 set against a never-created collection -> 404 (2xx = Type1_IllegalSuccess); V4 payload=[1,2] invalid input -> 4xx and point 1 unchanged; V5 both-present measured-only; final: ids {1,2,3}, vectors equal baseline readback, count 3, zero partial application from any rejected face",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

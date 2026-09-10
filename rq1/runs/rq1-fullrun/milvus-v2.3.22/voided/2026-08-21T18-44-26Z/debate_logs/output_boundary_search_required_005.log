@@ -1,0 +1,16 @@
+[missing vector] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, vector]"}
+[missing collectionName] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, vector]"}
+[vector=flat array of str] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field SearchReq.vector of type float32"}
+[vector=string] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field SearchReq.vector of type []float32"}
+[vector=null] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, vector]"}
+[vector=empty []] http=200 body={"code":200,"data":[]}
+[vector=nested [[..]]] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal array into Go struct field SearchReq.vector of type float32"}
+[vector=number] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number into Go struct field SearchReq.vector of type []float32"}
+[vector with NaN str] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field SearchReq.vector of type float32"}
+[setup insert] {"code":200,"data":{"insertCount":1,"insertIds":[468539281520724797]}}
+[default ids] {"code":200,"data":[{"distance":0,"id":468539281520724797}]}
+[int64 hdr ids] {"code":200,"data":[{"distance":0,"id":468539281520724797}]}
+[id types] default=468539281520724797(int) header=468539281520724797(int)
+DEFECT: vector=empty []: Type1_IllegalSuccess
+DEFECT: Accept-Type-Allow-Int64: default id should be string, got int
+VERDICT: DEFECT_FOUND

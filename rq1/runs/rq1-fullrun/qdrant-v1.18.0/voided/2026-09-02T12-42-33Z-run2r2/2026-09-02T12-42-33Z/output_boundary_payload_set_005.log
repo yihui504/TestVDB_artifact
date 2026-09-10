@@ -1,0 +1,45 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+baseline: both payloads visible via scroll
+
+face [payload omitted (required)] -> status=400
+raw: {"status":{"error":"Format error in JSON body: missing field `payload` at line 1 column 15"},"time":0.0}
+face [payload omitted (required)] cleanly rejected with 400 (mentions: ['payload'] — NOTE only, R29)
+
+face [payload=[] (array)] -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: sequence, expected a map at line 1 column 27"},"time":0.0}
+face [payload=[] (array)] cleanly rejected with 400 (mentions: ['type', 'id'] — NOTE only, R29)
+
+face [payload='city' (string)] -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"city\", expected a map at line 1 column 33"},"time":0.0}
+face [payload='city' (string)] cleanly rejected with 400 (mentions: ['type', 'id'] — NOTE only, R29)
+
+face [payload=42 (number)] -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: integer `42`, expected a map at line 1 column 29"},"time":0.0}
+face [payload=42 (number)] cleanly rejected with 400 (mentions: ['type', 'id'] — NOTE only, R29)
+
+face [payload=null] -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: null, expected a map at line 1 column 31"},"time":0.0}
+face [payload=null] cleanly rejected with 400 (mentions: ['type', 'id'] — NOTE only, R29)
+
+face [points='1' (string)] -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"1\", expected a sequence at line 1 column 14"},"time":0.0}
+face [points='1' (string)] cleanly rejected with 400 (mentions: ['type', 'id'] — NOTE only, R29)
+
+face [points=[-1] (negative PointId)] -> status=400
+raw: {"status":{"error":"Format error in JSON body: value -1 is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 15"},"time":0.0}
+face [points=[-1] (negative PointId)] cleanly rejected with 400 (mentions: ['point', 'id'] — NOTE only, R29)
+
+face [points=[1.5] (float PointId)] -> status=400
+raw: {"status":{"error":"Format error in JSON body: value 1.5 is not a valid point ID, valid values are either an unsigned integer or a UUID at line 1 column 16"},"time":0.0}
+face [points=[1.5] (float PointId)] cleanly rejected with 400 (mentions: ['point', 'id'] — NOTE only, R29)
+
+face [filter='city=ams' (string)] -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"city=ams\", expected struct Filter at line 1 column 21"},"time":0.0}
+face [filter='city=ams' (string)] cleanly rejected with 400 (mentions: ['filter', 'type', 'id'] — NOTE only, R29)
+
+face [filter={'must':'x'} (string condition)] -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"x\", expected null, array or map at line 1 column 23"},"time":0.0}
+face [filter={'must':'x'} (string condition)] cleanly rejected with 400 (mentions: ['type', 'id'] — NOTE only, R29)
+final sweep: payloads deep-equal baseline (all 10 type-confused faces rejected)
+VERDICT: NO_DEFECT

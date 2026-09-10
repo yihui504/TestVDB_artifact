@@ -1,0 +1,17 @@
+{
+ "defect_id": "boundary_metrics_003",
+ "endpoint": "metrics",
+ "param": "anonymize, per_collection, timeout, api-key (query-param type confusion: boolean params x notaboolean/TRUE/1/yes/2/0/maybe/null; integer param x abc/1.5/true; api-key position confusion as query param)",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "type",
+ "constraint_ids": [
+  "qdrant_behavioral_metrics_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/metrics",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "positive controls (bare, anonymize=true, per_collection=false) all answer 200 with >=1 HELP/TYPE and >=1 Prometheus sample line; each of the 8 boolean-confusion legs (anonymize=notaboolean|TRUE|1|yes; per_collection=2|0|maybe|null) answers 400/422 = clean reject (NO_DEFECT leg) — a 200 on any of them = DEFECT Type1_IllegalSuccess (documented boolean type unenforced, flagged for judge by-design adjudication), 5xx/transport with /healthz alive = DEFECT Type3_RuntimeFailure; each timeout-type leg (abc/1.5/true) answering 200 prints a doc-consistency NOTE (mechanical-backfill provenance, not claimed) while 400/422 = clean and 5xx/transport+alive = Type3; api-key-as-query leg is non-claimable evidence (non-5xx legal); positive controls failing non-2xx on the live face = DEFECT Type4 (200 promise broken, 401/403 = SCRIPT_ERROR, 404+healthz200 = NO_DEFECT absence evidence)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

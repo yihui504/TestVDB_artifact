@@ -1,0 +1,13 @@
+## Analyzed Documents — boundary
+- https://api.qdrant.tech/v-1-18-x/api-reference/
+- https://api.qdrant.tech/v-1-18-x/openapi/api-reference.json (shard 1)
+- https://api.qdrant.tech/v-1-18-x/openapi/api-reference-2.json ... api-reference-12.json (shards 2-12)
+- https://qdrant.tech/documentation/concepts/collections/
+- https://qdrant.tech/documentation/concepts/vectors/
+- https://qdrant.tech/documentation/concepts/indexing/
+- https://qdrant.tech/documentation/manage-data/points/ (was concepts/points, redirect)
+- https://qdrant.tech/documentation/search/search/ (was concepts/search, redirect)
+- https://qdrant.tech/documentation/manage-data/collections/ (was documentation/collections, redirect)
+- https://qdrant.tech/documentation/concepts/filtering/
+- https://qdrant.tech/documentation/concepts/hybrid-queries/
+- https://qdrant.tech/documentation/manage-data/payload/ (was concepts/payload, redirect)

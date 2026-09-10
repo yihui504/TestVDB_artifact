@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_collections_create_023",
+  "endpoint": "collections+create",
+  "param": "collection_name",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract",
+  "oracle": {
+    "statement": "after a 200 create, with zero intervening sleep, the collections list contains the name, describe returns 200 with result.status present, and exists returns 200 with result.exists==true - any miss on the three positive faces = Type4_StateLogicViolation; for the never-created control name, exists must not report true and describe/list must not show it (false positive = Type4_StateLogicViolation) - constraint qdrant_bc_create_visibility_001",
+    "source": "docstring"
+  }
+}

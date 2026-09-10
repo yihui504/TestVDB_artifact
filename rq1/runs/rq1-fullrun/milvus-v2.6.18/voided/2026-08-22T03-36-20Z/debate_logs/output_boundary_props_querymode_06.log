@@ -1,0 +1,8 @@
+create with params.query_mode: 0 props: {'timezone': 'UTC'}
+alter bogus: {"code":65535,"message":"invalid query_mode value \"bogus\", valid values: [large_topk]"}
+alter large_topk: {"code":0,"data":{}} readback: large_topk
+large_topk limit=1000000: {"code":0,"cost":0,"data":[]}
+large_topk limit=1000001: {"code":65535,"message":"topk [1000001] is invalid, it should be in range [1, 1000000], but got 1000001"}
+alter same value after index: {"code":0,"data":{}}
+OBSERVE: same-value alter after index got code 0 (contract implies 702)
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — alter query_mode with vector index present got code 0, expected 702

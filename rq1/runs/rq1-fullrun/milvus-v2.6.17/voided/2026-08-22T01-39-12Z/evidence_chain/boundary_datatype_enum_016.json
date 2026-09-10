@@ -1,0 +1,67 @@
+{
+  "defect_id": "boundary_datatype_enum_016",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "契约 create_003 断言 NOT(dimension AND schema) else 1100，与派发 claim 一致；limitations.md 可达（同会话）。dataType 枚举对照组（1100 正确拒绝）在 log 完整",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "quick+full conflict -> code=0 raw={\"code\":0,\"data\":{}}（body 同时携带 dimension:8 与 schema.fields=[id,vec]）",
+      "secondary_observations": [
+        "dataType 'FloatVector32'/''/'int64'/null/missing -> 全部 1100 'data type X is invalid(case sensitive)'（正确）",
+        "fieldName missing -> 1701 'field name should not be empty'（正确）",
+        "Array without elementDataType -> 1100（正确）",
+        "BinaryVector dim 12 -> 65535 'should be multiple of 8'（正确）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "主观测为互斥模式冲突被 2xx+code:0 接受"},
+      "reproducibility": "单脚本（派发标注 #9/#11 跨版本三现）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_datatype_enum_016.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_collections_create_003",
+      "assertion_text_quoted": "NOT(dimension set AND schema set) else code==1100 (quick mode and full schema mode conflict -> code 1100 invalid parameter)",
+      "api_violates_assertion": true,
+      "note": "dimension+schema 同传观测 code:0，互斥断言被直接违反——无空值语义引申，违反判定干净",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_collections_create_003",
+        "doc: 契约 source_url=handler_v2.go（源码 tier）+limitations.md 可达",
+        "script: boundary_datatype_enum_016.py quick/full 冲突用例",
+        "log: quick+full conflict -> code=0"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["dimension is required for quickly create", "len(httpReq.Schema.Fields) == 0", "Dimension == 0", "collSchema.Fields"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go (L1796-1998 createCollection)"
+      ],
+      "source_excerpt": "handler_v2.go createCollection：`if len(httpReq.Schema.Fields) == 0 { ... if httpReq.Dimension == 0 { ... 'dimension is required for quickly create collection' ... } ... quick-mode 分支 } else { ... full-schema 分支（遍历 fields 组 collSchema，全程不读 httpReq.Dimension）... }` —— 模式选择唯一依据是 schema.fields 是否为空；quick 分支只检查 Dimension==0（缺失），full 分支完全不检查 Dimension 是否同时存在。两个分支均无 'dimension AND schema 同传 => 1100' 的互斥校验。",
+      "call_chain_traced": "REST create -> if len(Schema.Fields)==0 ? quick : full —— full 分支忽略 Dimension 键 -> 无互斥拒绝 -> 建表成功",
+      "verification_outcome": "validation_absent",
+      "note": "互斥校验在整个 createCollection 函数中不存在（grep 命中并已通读该函数），跨版本三现与'从未实现'一致",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "request-typo（dimension 与 schema 均为契约域内合法形态，仅组合非法）"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "strong（契约互斥断言 + behavior code:0 + 源码双分支均无互斥校验，三环闭合，最干净的 Type1）"
+}

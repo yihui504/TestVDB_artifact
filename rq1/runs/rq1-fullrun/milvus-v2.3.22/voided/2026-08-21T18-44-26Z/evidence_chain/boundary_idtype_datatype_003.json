@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_idtype_datatype_003",
+  "endpoint": "v2/vectordb/collections/create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "high",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint milvus_type_v2_create_collection_001 断言 idType in [Int64, VarChar]，源码本地核对一致（handler_v2.go:951-963）；同文件 handler_v2_test.go:512 官方测试同样只期望 unknown 被拒",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[idType='int64'] http=200 body={\"code\":200,\"data\":{}}",
+      "secondary_observations": [
+        "[idType='varchar'] http=200 body={\"code\":1100,\"message\":\"idType can only be [Int64, VarChar], default: Int64: invalid parameter[expected=Int64, Varchar][actual=varchar]\"}",
+        "[idType='INT64'] http=200 code=1100 actual=INT64",
+        "[idType='Int32'] http=200 code=1100 actual=Int32",
+        "[idType=''] http=200 body={\"code\":200,\"data\":{}}",
+        "[idType=None] http=200 body={\"code\":200,\"data\":{}}",
+        "[idType=123] http=200 code=1801 json unmarshal number→string",
+        "[dataType='int64'] http=200 code=1100 \"data type int64 is invalid(case sensitive)\"（dataType 侧大小写严格，与 idType 侧不一致）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "拒绝均 HTTP 200 + 1100/1801；违规接受为 HTTP 200 + code 200"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_idtype_datatype_003.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_v2_create_collection_001",
+      "assertion_text_quoted": "idType in [Int64, VarChar]",
+      "api_violates_assertion": true,
+      "note": "'int64' 不在枚举 [Int64, VarChar] 内且观测为 200+code 200 静默接受，属违反该 assertion；''/None 为默认值语义（见 source_grounding）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_v2_create_collection_001 idType in [Int64, VarChar]",
+        "doc: handler_v2.go:951-963 case \"\", \"Int64\", \"int64\" 归一化为 Int64（by-design 容错）",
+        "script: boundary_idtype_datatype_003.py 提交 idType='int64'/'varchar'/'INT64'/''/None",
+        "log: idType='int64' → 200 code 200（主观测）"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["idType can only be", "case \"int64\"", "IDType string"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go:949-970",
+        "internal/distributed/proxy/httpserver/handler_v2_test.go:505-515",
+        "internal/distributed/proxy/httpserver/request_v2.go:257-269"
+      ],
+      "source_excerpt": "handler_v2.go:951-963:\n\tswitch httpReq.IDType {\n\tcase \"VarChar\", \"Varchar\":\n\t\tidDataType = schemapb.DataType_VarChar\n\t\t...\n\tcase \"\", \"Int64\", \"int64\":\n\t\thttpReq.IDType = \"Int64\"\n\tdefault:\n\t\terr := merr.WrapErrParameterInvalid(\"Int64, Varchar\", httpReq.IDType,\n\t\t\t\"idType can only be [Int64, VarChar], default: Int64\")",
+      "call_chain_traced": "CollectionReq.IDType (request_v2.go:261, 无 binding 枚举校验) → createCollection switch (handler_v2.go:951)：'VarChar'/'Varchar' 与 'int64' 被显式归一化，'INT64'/'varchar'/'Int32' 走 default 1100 —— 大小写容错面内部不一致（VarChar 有两拼写、Int64 有两拼写、INT64 不容）；''/None 落 case \"\" 即默认 Int64，属 default 语义而非绕过。handler_v2_test.go:512 官方测试断言仅覆盖 unknown 值，未断言 'int64' 被拒",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "by_design 容错与契约枚举不一致：源码显式归一化 'int64'（设计意图），但契约 assertion 'idType in [Int64, VarChar]' 与错误消息自身宣称的枚举都不含 'int64'——属文档/契约与实现的枚举漂移，交 auditor 判 by_design 抗辩是否成立"
+    }
+  }
+}

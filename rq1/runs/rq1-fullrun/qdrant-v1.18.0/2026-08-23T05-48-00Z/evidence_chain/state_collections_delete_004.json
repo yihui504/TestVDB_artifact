@@ -1,0 +1,92 @@
+{
+  "defect_id": "state_collections_delete_004",
+  "endpoint": "collections+delete (lifecycle driver); failing calls on points+query (15/16) and points+upsert (1/16)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Dispatch carried empty constraint_id (no source_url of its own), so doc layers were checked against the script-embedded citation https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection: my WebFetch was blocked by network policy (domain_blocked, recorded as PARTIAL not FAIL); version layer PARTIAL because the URL is correctly version-pinned (v-1-18-x) but page content could not be independently fetched; content_consistency PARTIAL because no contract assertion exists covering concurrent query/upsert behavior during a delete/recreate race, so there is no assertion text to check against the page; endpoint_precision PASS — all four involved endpoints (collections+delete, points+query, points+upsert, points+count) are present in structured_contract.json endpoint_registry with verified_at 2026-08-23T05:20:00Z and doc_version 1.18.x (versioned).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "ERROR_CENSUS: 16 events (threshold for DEFECT: 2) — first event: error_event: ('query[t3]', 500, '{\"status\":{\"error\":\"Service internal error: Expected at least one response for one query\"},\"time\":0.016453361}'); 15 of 16 events are query[t0..t9] -> HTTP 500 'Service internal error: Expected at least one response for one query'",
+      "secondary_observations": [
+        "error_event: ('upsert[t8]', 500, '{\"status\":{\"error\":\"Service internal error: Failed to apply operation to at least one `Active` replica. Consistency of this update is not guaranteed. Please ret') — 1 of 16 events, distinct replica-set failure mode",
+        "post-race recreate: 200 / post-race upsert: 200 / post-race count: 200 {\"result\":{\"count\":25}} — server healthy after the race; no zombie state, post-race deterministic check passed (Type4 branch of the script not taken)",
+        "initial create: 200 + seed upsert: 200 — setup clean, failures only inside the race window",
+        "Sibling lifecycle-race scripts in the same run: output_state_collections_delete_005.log and output_state_collections_delete_010.log both 'ERROR_CENSUS: 0 events' -> VERDICT: NO_DEFECT",
+        "output_boundary_collections_create_07.log also contains 'Service internal error' but with a different message ('Can't init WAL: ... FileTooLarge') followed by container crash (SCRIPT_ERROR) — a different phenomenon, not counted as reproduction"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "All 16 failures are server-side HTTP 500 with 'Service internal error' bodies during the lifecycle race; no client-detectable error was masked by a 2xx. Script-side expectation was 200 or 404 per access call (404 while collection absent); observed 500 instead — a server error-semantics deviation, not a 2xx-masking case, so auditor fifth-category input is N/A."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_collections_delete_004"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "(dispatch constraint_id is EMPTY — no assertion was dispatched. Closest examined constraints, neither covering the observed phenomenon: qdrant_state_collections_delete_001 'DELETE existing => 200; DELETE missing => 404' [endpoint collections+delete — governs DELETE status codes only]; qdrant_state_collections_get_001 'GET unknown collection => HTTP 404' [endpoint collections+get]; qdrant_inv_collection_gone_after_delete_001 'delete => 200 THEN collections+get => 404'. The script header self-cites delete_001 + gone_after_delete_001 but its defect signal (5xx on points/query and points/upsert mid-race) is not asserted by any of them.)",
+      "api_violates_assertion": false,
+      "note": "api_violates_assertion=false because the 16 observed 500s occurred on points+query and points+upsert, which are outside the constraint domain of every constraint in structured_contract.json (no constraint asserts query/upsert behavior during concurrent collection lifecycle). Per the violates-declaration self-check: the observation is not in the domain of any quotable constraint, and no correct constraint exists to swap to — the 'should be 200/404, never 5xx' expectation lives only in the script docstring, not in the contract. Whether an undocumented 500-during-race window is nonetheless a defect is left to chain-auditor.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: MISSING — dispatch constraint_id is empty string; no constraint in structured_contract.json (22 state_constraints, 6 state_invariants, 5 behavioral_contracts examined) asserts anything about concurrent access during collection delete/recreate; script-embedded citations (qdrant_state_collections_delete_001, qdrant_inv_collection_gone_after_delete_001) do not cover the observed query/upsert 5xx",
+        "doc: script header cites versioned URL https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection; direct fetch domain_blocked; endpoint_registry carries pipeline-time verification (verified_at 2026-08-23T05:20:00Z, doc_version 1.18.x) for all four involved endpoints",
+        "script: debate_logs/state_collections_delete_004.py — lifecycle thread cycles DELETE->PUT recreate 8 times while 10 access threads (t0..t9) run 40 iterations of query/count/conditional-upsert; defect census records any access call with status>=500 or transport 0; threshold >=2 events => Type3 verdict (line 144-146)",
+        "log: output_state_collections_delete_004.log — census 16 == 16 printed error_event lines (15 query 500 'Expected at least one response for one query' + 1 upsert 500 'Failed to apply operation to at least one `Active` replica'); post-race deterministic checks all pass (recreate 200, upsert 200, exact count 25); VERDICT: DEFECT_FOUND (Type3_RuntimeFailure); exit_code file = 1 — internally consistent with script code paths"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "The first link is absent: the dispatch (candidates.jsonl line for state_collections_delete_004) carries constraint_id=\"\" and attack=\"\", and no constraint in the structured contract covers the claimed behavior (5xx on query/upsert during a delete/recreate lifecycle race). The doc/script/log links are present and mutually consistent, so the execution phenomenon itself is well-evidenced — but it is grounded only in a script-embedded expectation, not in any contract assertion. Judgment of DEFECT vs NOT_DEFECT on uncontracted behavior belongs to chain-auditor.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Expected at least one response for one query",
+        "Failed to apply operation to at least one",
+        "fn toc|fn get_collection",
+        "async fn query_batch",
+        "fn transposed_iter",
+        "async fn batch_query_shards_concurrently",
+        "fn service_error",
+        "Not found: Collection"
+      ],
+      "files_examined": [
+        "src/actix/api/query_api.rs (lines 45-130)",
+        "lib/collection/src/collection/query.rs (lines 146-199, 202-250, 293-340, 343-440, 440-526)",
+        "lib/storage/src/content_manager/toc/point_ops.rs (lines 340-388)",
+        "lib/collection/src/shards/replica_set/update.rs (lines 565-630)",
+        "lib/storage/src/content_manager/errors.rs (lines 20-63, 130-222)",
+        "lib/storage/src/content_manager/toc/mod.rs (lines 378-417)",
+        "lib/collection/src/common/transpose_iterator.rs (lines 41-51)"
+      ],
+      "source_excerpt": "src/actix/api/query_api.rs:78-95 (single-query REST handler):\n        let points = dispatcher\n            .toc(&auth, &pass)\n            .query_batch(\n                &collection.collection_name,\n                vec![(request, shard_selection)],\n                params.consistency,\n                auth,\n                params.timeout(),\n                hw_measurement_acc,\n            )\n            .await?\n            .pop()\n            .ok_or_else(|| {\n                StorageError::service_error(\"Expected at least one response for one query\")\n            })?\n            .into_iter()\n            .map(api::rest::ScoredPoint::from)\n            .collect_vec();\n\nlib/collection/src/shards/replica_set/update.rs:608-617 (upsert path):\n        // Successes must have applied to at least one active replica\n        if !successes\n            .iter()\n            .any(|&(peer_id, _)| self.peer_can_be_source_of_truth(peer_id))\n        {\n            return Err(CollectionError::service_error(format!(\n                \"Failed to apply operation to at least one `Active` replica. \\\n                 Consistency of this update is not guaranteed. Please retry. {failure_error}\",\n            )));\n        }\n\nlib/storage/src/content_manager/toc/point_ops.rs:366-388 (TableOfContent::query_batch — the only 404 gate):\n        let collection = self.get_collection(&collection_pass).await?;   // StorageError::NotFound (404) fires only if the name is absent from the collections map at this instant\n        collection\n            .query_batch(\n                requests,\n                |name| self.get_collection_opt(name),\n                read_consistency,\n                timeout,\n                hw_measurement_acc,\n            )\n            .await\n            .map_err(|err| err.into())\n\nlib/collection/src/collection/query.rs:212-215 (a submitted request can legitimately receive zero result entries):\n        // shortcuts batch if all requests with limit=0\n        if requests_batch.iter().all(|s| s.limit == 0) {\n            return Ok(vec![]);\n        }",
+      "call_chain_traced": "REST POST /collections/{name}/points/query (query_api.rs:78) -> toc().query_batch (point_ops.rs:358) -> get_collection resolves the name (toc/mod.rs:383; the ONLY 404 gate — mid-lifecycle the TOC entry can still resolve while shards are being torn down/rebuilt) -> Collection::query_batch (query.rs:445) -> do_query_batch/batch_query_shards_concurrently (query.rs:146-199; shards_holder.select_shards can yield no usable shard responses during the delete/recreate window) -> response list for the request comes back empty -> query_api.rs:90-92 .pop() returns None -> StorageError::service_error('Expected at least one response for one query') -> errors.rs:58-63 ServiceError -> HTTP 500. Upsert path: replica_set/update.rs:608-617 — when no Active/can_be_source_of_truth replica applied the op (mid-delete shard states), returns service_error('Failed to apply operation to at least one `Active` replica ... Please retry') -> 500. No code path maps the mid-lifecycle absence to 404 once the name has resolved; the 500 fallback is explicit, and the upsert message itself invites client retry.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note_on_outcome": "by_design_in_source in the narrow sense that both observed 500 messages are explicitly coded fallbacks (not crashes): query_api.rs:91 anticipates 'no response for one query' and chooses a generic 500; update.rs:613-616 labels the condition transient ('Please retry'). This is NOT validation_absent (no input validation is implicated) and NOT not_found_in_source (both exact strings located and call chains read). Whether an explicitly-coded 500-during-lifecycle-race (instead of 404 or graceful degradation) constitutes a defect against an absent contract assertion is left to chain-auditor.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env/container crash — post-race recreate/upsert/count all 200 with exact count 25 and microsecond-level latencies; contrast output_boundary_collections_create_07.log where a real crash (RemoteDisconnected + SCRIPT_ERROR) occurred",
+        "request parameter malformation — identical payloads succeeded (200) immediately before and after the race window (seed upsert, post-race upsert)",
+        "script_error — exit code 1 matches the script's deliberate DEFECT_FOUND branch; no TypeError/SCRIPT_ERROR markers in log",
+        "auth/network config — all non-race calls in the same script succeeded"
+      ],
+      "surviving": "concurrency-race window is inherent to the coded design: source surfaces mid-lifecycle query/upsert failures as explicit 500 service errors (with 'Please retry' wording) rather than mapping them to 404, and sibling race scripts (state_collections_delete_005, _010) triggered 0 events — the window is timing-dependent. This is a potential by-design/transient explanation the auditor must weigh against the script's 200/404 expectation (which lacks contract backing)."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+truncate nx: 200 {"code":100,"message":"collection not found[database=default][collection=vn_trunc_008_nx]"}
+create: 200 {"code":0,"data":{}}
+load: 200 {"code":0,"data":{}}
+insert 5: 200 {"code":0,"cost":0,"data":{"insertCount":5,"insertIds":[1,2,3,4,5]}}
+query-visible pre-truncate: 5
+truncate: 200 {"code":0,"data":{}}
+query-visible post-truncate: 0 {"code":0,"cost":0,"data":[]}
+
+load state after truncate: {"code":0,"data":{"loadProgress":100,"loadState":"LoadStateLoaded"},"message":""}
+rename: 200 {"code":0,"data":{}}
+has old/new: False True
+insert after truncate+rename: 200 {"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[9]}}
+VERDICT: NO_DEFECT

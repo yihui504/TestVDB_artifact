@@ -1,0 +1,69 @@
+{
+  "defect_id": "vein_replication_async_silent_flip_3",
+  "endpoint": "POST/GET /v1/schema (replicationConfig.asyncEnabled)",
+  "defect_type": "Type2",
+  "evidence_weight": "strong",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "domain_blocked",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "sdk_rest_confusion": false,
+      "detail": "structured_contract.json 无 replicationConfig 约束。raw_knowledge.md 无 asyncEnabled/async replication 条目（grep 零命中）。docs.weaviate.io 网络受限；官方历史文档（replication 配置页）将 asyncEnabled 描述为集合级可设布尔——无法在线核实 v1.38 文档口径。契约/文档环弱，但源码根因已精确定位。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "FINDING: POST 200 with asyncEnabled=true but GET readback asyncEnabled=false (replicationConfig={'deletionStrategy': 'TimeBasedResolution', 'factor': 1, 'asyncEnabled': False}) — silent input rewrite",
+      "secondary_observations": [
+        "FINDING: control context: factor=1 (single-node legal), readback={'deletionStrategy': 'TimeBasedResolution', 'factor': 1, 'asyncEnabled': False}",
+        "FINDING: control: asyncEnabled=false readback false (consistent) => flip is input-dependent, not a serialization default"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "输入被静默改写：200 接受 + 读回值与请求值不一致，无任何错误/警告——语义级静默 flip，非状态码问题。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_replication_async_silent_flip_3.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "none_matching",
+      "assertion_text_quoted": "无契约断言。请求/读回一致性由 state_invariants 'Collection exists in GET /schema response after POST /schema' 的精神覆盖（POST 成功后 GET 应如实反映所建配置）。",
+      "api_violates_assertion": true,
+      "note": "violates=true：POST 200 接受 asyncEnabled=true 但 GET 读回 false，输入被服务端单方面改写且未拒绝——无论文档口径如何，'接受后静默丢弃用户输入'违反读回一致性；control（显式 false 读回 false）证明 flip 是输入依赖而非序列化默认。",
+      "evidence_source": "behavior"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 无专属 constraint——弱环",
+        "doc: raw_knowledge 零命中，在线文档 domain_blocked——弱环",
+        "script: vein_replication_async_silent_flip_3.py L35-37 POST replicationConfig {factor:1, asyncEnabled:true} → L38 GET readback",
+        "log: POST 200 ... GET readback asyncEnabled=false — silent input rewrite"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "doc/contract 双弱，但 behavior+source 两环构成强替代锚：wrappers.go L40 的派生公式与观测逐字吻合。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["AsyncEnabled", "asyncReplicationGloballyDisabled", "wrapReplicationConfig"],
+      "files_examined": [
+        "adapters/handlers/rest/restcompat/wrappers.go",
+        "adapters/handlers/rest/restcompat/flag.go"
+      ],
+      "source_excerpt": "adapters/handlers/rest/restcompat/wrappers.go L34-42:\nfunc wrapReplicationConfig(rc *models.ReplicationConfig) *replicationConfigOut {\n\tif rc == nil { return nil }\n\treturn &replicationConfigOut{\n\t\tReplicationConfig: rc,\n\t\tAsyncEnabled:      rc.Factor > 1 && !asyncReplicationGloballyDisabled.Load(),\n\t}\n}\nflag.go L19-26: asyncReplicationGloballyDisabled mirrors ASYNC_REPLICATION_DISABLED 环境变量。\n关键：AsyncEnabled 输出字段完全由 factor>1 AND 全局开关派生，models.ReplicationConfig 本身无 AsyncEnabled 持久字段（grep 全库 AsyncEnabled 仅此两处+输出）——用户 POST 的 asyncEnabled:true 在 body 解析层即被丢弃。",
+      "call_chain_traced": "POST /schema body.asyncEnabled → models.ReplicationConfig 无此字段（丢弃）→ 200 → GET /schema → wrapReplicationConfig 派生 AsyncEnabled = factor(1)>1 && !disabled = false → 读回 false。根因：请求模型与响应包装器不对称——输入侧无该字段、输出侧为派生值。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "readback_artifact（control 排除序列化默认）", "caching_delay"],
+      "surviving": "by-design 抗辩与 Type2 主张并存：源码是显式派生公式（async 复制在 factor=1 时物理上无意义，静默改写有工程理由），但'接受输入却丢弃且不告知'的 API 形态仍构成语义漂移——归 auditor 裁量"
+    }
+  }
+}

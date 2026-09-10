@@ -1,0 +1,54 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "R38 (incremental: 1 new chain; R1-R37 in chain_verdicts{,_r2.._r37}.json untouched)",
+  "verdicts": [
+    {
+      "defect_id": "boundary_points_get_type_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "none"
+        },
+        "behavioral": {
+          "verdict_C": "WEAK_REFUTED"
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "mechanized layer: check_chain_grounding.py -> verdict_A=REFUTED (reason=id+quote_ok, api_violates_assertion=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT; gray-zone B/C/D branch not reached (B/C/D recorded for completeness: B=NEUTRAL belongs to no objective class — the illegal string form was cleanly rejected 400, nothing accepted; same-family rule5 inapplicable since both error families are 400-rejected, only message naming differs; HTTP-semantics tautology fails both prongs, measurement is a proper 400. C=WEAK_REFUTED — custom #[serde(expecting)] text is deliberate diagnostics investment but no comment/developer_quote declares the parameter-name omission intentional. D=NO_SIGNAL — no phenomenon-level anchor; 'Performance optimization over diagnostic completeness' is a what_developers_prioritize don't-care hit, confidence annotation only, never decides alone)"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": "mundane_api_semantics",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Cited contract unit qdrant_behavioral_points_get_001 is category=behavioral (default-false opt-in return semantics); none of type/range/state/resource_bound/doc_consistency expresses a behavioral contract.",
+      "candidate_class": "rejected",
+      "exploratory": {
+        "form": null,
+        "signal": null,
+        "rationale": null
+      },
+      "rationale": "Mechanical A=REFUTED accepted: constraint qdrant_behavioral_points_get_001 exists with verbatim quote match, and the observed 400 rejection of with_payload='true' preserves the default-false opt-in assertion (api_violates_assertion=false); the re-citation arm was verified — grep for diagnostics-quality assertions over the whole structured_contract.json returns 0 hits, so the Type2 '4xx must name the parameter' rubric originates solely from the script's self-declared oracle with no contract or doc anchor (doc page says nothing about error-message content). Source grounding shows the omission is serde custom-deserializer error propagation (untagged enum with #[serde(expecting)] naming the type domain; no serde_path_to_error in the clone; derive-level errors on the same struct do name fields, e.g. 'missing field `ids`') — a framework-level mundane API semantic, and no explicit by-design marker exists, so C=WEAK_REFUTED rather than REFUTED. Correspondence check passes (claim wp='true'(string)->4xx-not-naming matches log_pattern same leg/param/endpoint); completeness passes (all five sections substantive); chain_broken_at=contract transcribed — a semantic anchor gap for the claimed phenomenon, not an evidence contradiction, and not reworkable (no diagnostics constraint exists to re-anchor to). Fifth instance of the error-naming family, consistent with R28 bpd006 / R29 bpow006 / R34 ftype003-adjacent NOT precedents; candidate_class=rejected because a mechanical REFUTED ruling fails below_strict condition (iii).",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "defect": 0,
+    "not_defect": 1,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 1, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {"mundane_api_semantics": 1},
+    "constraint_category_distribution": {"other": 1},
+    "candidate_class_distribution": {"strict_defect": 0, "exploratory_candidate": 0, "rejected": 1}
+  }
+}

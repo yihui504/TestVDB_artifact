@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_peer_delete_002",
+  "endpoint": "cluster+peer+delete",
+  "param": "force",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "delete_consistency",
+  "oracle": {
+    "statement": "DELETE /cluster/peer/<self peer_id from GET /cluster> without force -> HTTP status in 400..499 (200/201/204 = Type1_IllegalSuccess: the documented force-flag safety-check bypass happened without the flag; 500..599 = Type3_RuntimeFailure only after /healthz returns 200); afterwards GET /cluster -> HTTP 200 with result.peer_id equal to the pre-attempt value and result.peers key set identical, str(self peer_id) still a key of result.peers (self vanished while the node answers, peers key drift, or result.peer_id change = Type4_StateLogicViolation); DELETE /cluster/peer/<nonexistent id> with force=true -> HTTP status in 400..499 (200/201/204 = Type1_IllegalSuccess: force bypasses consensus safety, not peer-existence validation; 500..599 = Type3 after /healthz returns 200)",
+    "source": "docstring"
+  }
+}

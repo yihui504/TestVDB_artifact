@@ -1,0 +1,138 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "r9",
+  "verdicts": [
+    {
+      "defect_id": "boundary_cluster_telemetry_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "mechanized: verdict_A=CONFIRMED (id+quote_ok, qdrant_behavioral_cluster_telemetry_001) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": "contract (dispatch constraint_id empty; builder re-grounded to qdrant_behavioral_cluster_telemetry_001 with verbatim description quote — mechanically admitted by check_chain_grounding.py as id+quote_ok)",
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "violated unit is a behavioral assertion (documented 200 promise) unmet by an unconditional deployment-gated 500 — not expressible as type/range/state/resource_bound/doc_consistency",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED: constraint qdrant_behavioral_cluster_telemetry_001 exists, quote is the description field verbatim, api_violates_assertion=true; the chain's primary observation (timeout omitted, default-60 form -> HTTP 500 'Could not get telemetry from cluster' with /healthz 200) directly contradicts the documented-only 200 face. Source tracing shows the handler has no standalone guard while same-file siblings (cluster_api.rs:125/146, toc/mod.rs:563/778) name the mode explicitly, and the range face was enforced correctly (422 on timeout=0), isolating the failure to the telemetry path. B=NEUTRAL (no violating value accepted; runtime 500 outside all objective classes), C=CONFIRMED (not elegant, no intent evidence — by_design explicitly rejected by builder), D=NO_SIGNAL with confidence note: cognition lists 'Cluster communication over single-node correctness' as a deprioritized dimension, which degrades confidence but cannot decide alone.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_cluster_telemetry_002",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "mechanized: verdict_A=REFUTED (id+quote_ok, qdrant_range_cluster_telemetry_001, api_violates_assertion=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT, fp=doc"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "contract_misread",
+      "constraint_category": "range",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=REFUTED: the cited unit qdrant_range_cluster_telemetry_001 (assertion 'timeout default 60, minimum 1' quoted verbatim) was honestly declared violated=false — '+1' deserializes to integer 1, in-domain, and the range face is enforced live (422 naming timeout on 0, 400 on -1/-100, default 60 confirmed in source). The observed 500 on timeout='+1' is real but belongs to the sibling behavioral 200-promise face (same phenomenon adjudicated DEFECT in bct_001/003/004/005/sem_001); against the unit this chain cites, no violation exists. B=NEUTRAL (all seven type-invalid tokens properly 400'd; no violating value accepted), C=CONFIRMED at LOW weight cannot overturn a mechanical A ruling.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_cluster_telemetry_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "rework round 2: EVIDENCE_GAP repair (constraint_id rewritten to bare id) -> check_chain_grounding.py now returns verdict_A=CONFIRMED (id+quote_ok, qdrant_behavioral_cluster_telemetry_001) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": "contract (dispatch constraint_id empty — historical dispatch gap; round-2 repair set contract_grounding.constraint_id to the bare id, mechanical grounding now admits id+quote_ok)",
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "violated unit is a behavioral assertion (documented 200 promise) unmet by an unconditional deployment-gated 500 — not expressible as type/range/state/resource_bound/doc_consistency",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "Round-2 mechanical ruling: A=CONFIRMED — repaired constraint_id binds qdrant_behavioral_cluster_telemetry_001 with the expected_behavior quote verbatim and api_violates_assertion=true. The chain's primary leg (timeout=1000000, a spec-legal value with no documented maximum -> deterministic 500 'Could not get telemetry from cluster' with /healthz 200) contradicts the documented-only 200 face, and the chain correctly dismantles the script's 'crash marker' framing (ordinary ServiceError envelope, errors.rs:21) and value-causality (identical 500 on omitted/default/min timeout per sibling log 001). B=NEUTRAL (in-domain value; overflow/malformed legs cleanly 400'd — no violating-value acceptance), C=CONFIRMED (misattributed 500 on valid request, by_design rejected in source), D=NO_SIGNAL ('Cluster communication over single-node correctness' priorities note = confidence degradation only).",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_cluster_telemetry_004",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "mechanized: verdict_A=CONFIRMED (id+quote_ok, qdrant_behavioral_cluster_telemetry_001) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "violated unit is a behavioral assertion (documented 200 promise) unmet by an unconditional deployment-gated 500 — not expressible as type/range/state/resource_bound/doc_consistency",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED: qdrant_behavioral_cluster_telemetry_001 exists, expected_behavior quoted verbatim, api_violates_assertion=true; the chain's primary observation is the documented no-param call (params=None) returning 500 with /healthz 200 — no parameter value is involved, so no domain reading can rescue the 200 promise. The chain's doc PARTIAL (parenthetical field list borrowed from the service /telemetry schema) honestly scopes the claim to the doc-native 200-disposition promise, and the source trace (empty id_to_address in standalone -> newest_telemetry(&[]) = None -> service_error, helpers.rs:247 -> 500) shows no guard and no local-telemetry fallback while GET /cluster degrades gracefully (200 status:'disabled'). B=NEUTRAL (runtime failure, no violating-value acceptance), C=CONFIRMED, D=NO_SIGNAL ('Cluster communication over single-node correctness' priorities note = confidence degradation only).",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_cluster_telemetry_005",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "rework round 2: EVIDENCE_GAP repair (empty constraint_id filled) -> check_chain_grounding.py now returns verdict_A=CONFIRMED (id+quote_ok, qdrant_behavioral_cluster_telemetry_001) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": "contract (dispatch constraint_id empty — historical dispatch gap; round-2 repair filled contract_grounding.constraint_id with qdrant_behavioral_cluster_telemetry_001, mechanical grounding now admits id+quote_ok)",
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "violated unit is a behavioral assertion (documented 200 promise) unmet by an unconditional deployment-gated 500 — not expressible as type/range/state/resource_bound/doc_consistency",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "Round-2 mechanical ruling: A=CONFIRMED — repaired constraint_id binds qdrant_behavioral_cluster_telemetry_001 with the expected_behavior quote verbatim and api_violates_assertion=true. Primary observation: details_level=0/1/10/11 each -> the identical 500 'Could not get telemetry from cluster' with /healthz 200, and cross-script the same 500 on no-param and all timeout forms — the chain honestly demoted its own boundary framing to causally wrong but observationally covered, and the contract contains no details_level-domain constraint (the violated face is the 200 promise). B=NEUTRAL (in-domain values; malformed 'abc'/-1 cleanly 400'd; the grpc-vs-rest details_level<2 clamp/reject contrast is against the intra-cluster QdrantInternal face with no contract-bounded domain, so the interface-asymmetry class does not trigger), C=CONFIRMED (the TODO at cluster_api.rs:23-25 covers only the details_level clamp, not the 500), D=NO_SIGNAL.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_cluster_telemetry_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "mechanized: verdict_A=CONFIRMED (id+quote_ok, qdrant_behavioral_cluster_telemetry_001) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "violated unit is a behavioral assertion (documented 200 promise) unmet by an unconditional deployment-gated 500 — not expressible as type/range/state/resource_bound/doc_consistency",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A=CONFIRMED: the dispatch's own targeted assertion qdrant_behavioral_cluster_telemetry_001 exists, description quoted verbatim, api_violates_assertion=true; the chain's primary observation is the control no-param GET /cluster/telemetry returning a deterministic 500 with /healthz 200 on both sides — squarely inside the assertion's plain-200-read domain. Source grounding is the strongest of the family: same-file siblings guard standalone explicitly (cluster_api.rs:108-110 'Distributed mode disabled.', :125/:146 and toc/mod.rs:563/778 'Qdrant is running in standalone mode') while get_cluster_telemetry has no guard and no local-telemetry fallback, and by_design was considered and rejected (only comment nearby is the details_level TODO). B=NEUTRAL (runtime failure class), C=CONFIRMED, D=NO_SIGNAL ('Cluster communication over single-node correctness' priorities note = confidence degradation only).",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "defect": 5,
+    "not_defect": 1,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 1, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {"contract_misread": 1},
+    "constraint_category_distribution": {"other": 5, "range": 1},
+    "candidate_class_distribution": {"strict_defect": 5, "exploratory_candidate": 0, "rejected": 1}
+  }
+}

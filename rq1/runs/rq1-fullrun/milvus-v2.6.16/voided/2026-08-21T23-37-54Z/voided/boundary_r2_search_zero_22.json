@@ -1,0 +1,70 @@
+{
+  "defect_id": "boundary_r2_search_zero_22",
+  "endpoint": "entities+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "候选 constraint_id='boundary' 在 structured_contract.json 中不存在（gap）。最接近的契约 milvus_range_entities_search_001 只覆盖 limit/offset 窗口（log 第2-4行证明该约束被正确执行），对 nprobe/ef/groupSize 下界无任何断言；无 source_url 可达性可验（契约源均指本地 clone，已 Read）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[nprobe=0] 200 {\"code\":0,\"cost\":0,\"data\":[]} -> DEFECT_FOUND（同型：nprobe=-1 / ef=0 / ef=-1 / groupSize=0 全部 HTTP 200 + code:0）",
+      "secondary_observations": [
+        "[control limit=3] 200 {\"code\":0,\"cost\":0,\"data\":[]}",
+        "[limit=0] 200 {\"code\":65535,\"message\":\"topk [0] is invalid, it should be in range [1, 16384], but got 0\"} -> NO_DEFECT",
+        "[limit=-1] 200 {\"code\":65535,\"message\":\"topk [-1] is invalid, it should be in range [1, 16384], but got -1\"} -> NO_DEFECT",
+        "[offset=-1] 200 {\"code\":65535,\"message\":\"offset [-1] is invalid, it should be in range [1, 16384], but got -1\"} -> NO_DEFECT"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "非法零/负 nprobe/ef/groupSize 以 HTTP 200 + code:0 静默成功；同端点 limit/offset 越界则 HTTP 200 + code 65535"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_search_zero_22.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "boundary (contract 中无匹配约束 — GAP)",
+      "assertion_text_quoted": "(无。最接近：milvus_range_entities_search_001 'assertion': '1 <= limit + offset <= ... else code 65535'——该断言仅覆盖 limit/offset，不覆盖 searchParams.nprobe/ef/groupSize)",
+      "api_violates_assertion": false,
+      "note": "契约层无 nprobe/ef/groupSize 下界断言（gap，候选自身发现）；limit/offset 部分被契约覆盖且正确执行（NO_DEFECT），故 violates=false 指现有断言未被违反——缺口在契约与 REST 校验本身。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: constraint_id 'boundary' 不存在于 structured_contract.json（gap）",
+        "doc: 无对应文档断言可核（契约源为本地 clone 文件）",
+        "script: boundary_r2_search_zero_22.py 发出 searchParams{nprobe:0/-1, ef:0/-1} 与 groupSize:0",
+        "log: 上述请求全 http=200 + code:0（DEFECT_FOUND 行），对照 limit/offset 越界 65535"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "constraint_id 'boundary' 派发自脚本 strategy 字段而非契约约束；链在第一环即无契约锚点，行为环完整自洽。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["GroupSize", "searchParams|generateSearchParams", "nprobe"],
+      "files_examined": [
+        ".milvus-src-2616/internal/distributed/proxy/httpserver/utils.go",
+        ".milvus-src-2616/internal/distributed/proxy/httpserver/handler_v2.go",
+        ".milvus-src-2616/internal/distributed/proxy/httpserver/request_v2.go"
+      ],
+      "source_excerpt": "utils.go:2192-2204 generateSearchParams(): 仅校验 searchParams.params 必须是 dict（map[string]interface{}），nprobe/ef 等键值原样转 KeyValuePair 透传，无数值范围校验。handler_v2.go:1542-1544: `if httpReq.GroupByField != \"\" && httpReq.GroupSize > 0 { searchParams = append(..., ParamGroupSize, ...) }` —— GroupSize=0 被静默丢弃（不追加、不报错）。request_v2.go:352: `SearchParams map[string]interface{} json:\"searchParams\"` 无 binding 校验。",
+      "call_chain_traced": "HTTP body → SearchReqV2.SearchParams(无校验) → generateSearchParams(仅 dict 类型校验) → req.SearchParams → 下游 segcore；limit/offset 则走 handler_v2.go:1537-1538 追加 TopKKey/OffsetKey 后由 search_util validateLimit 拒绝——与 log 对照行行为一致",
+      "verification_outcome": "validation_absent",
+      "note": "REST 层对 nprobe/ef 数值与 groupSize 下界零校验（透传/静默丢弃）；上界通道（limit/offset）有完整 validateLimit。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（对照组 limit=3 正常返回）", "concurrency", "script_error（无 SCRIPT_ERROR 标记）"],
+      "surviving": "下游引擎可能将 nprobe<=0 视为'未设置'走默认值——是否算静默默认化由 auditor 结合 by-design 抗辩判定"
+    }
+  }
+}

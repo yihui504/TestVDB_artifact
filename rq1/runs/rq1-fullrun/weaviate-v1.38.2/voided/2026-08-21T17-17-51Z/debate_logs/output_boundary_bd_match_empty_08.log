@@ -1,0 +1,20 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+empty object: 500 {"error":[{"message":"validate: empty match clause"}]}
+
+  DEFECT-SIGNAL: 5xx on empty object
+match empty obj: 500 {"error":[{"message":"validate: empty match.class clause"}]}
+
+  DEFECT-SIGNAL: 5xx on match empty obj
+match null: 500 {"error":[{"message":"validate: empty match clause"}]}
+
+  DEFECT-SIGNAL: 5xx on match null
+match as string: 400 {"code":400,"message":"parsing body body from \"\" failed, because json: cannot unmarshal string into Go struct field BatchDelete.match of type models.BatchDeleteMatch"}
+match as array: 400 {"code":400,"message":"parsing body body from \"\" failed, because json: cannot unmarshal array into Go struct field BatchDelete.match of type models.BatchDeleteMatch"}
+where empty object: 422 {"error":[{"message":"validate: failed to parse where filter: unrecognized operator: "}]}
+
+where null: 500 {"error":[{"message":"validate: empty match.where clause"}]}
+
+  DEFECT-SIGNAL: 5xx on where null
+where bad operator: 422 {"code":606,"message":"match.match.where.operator in body should be one of [And Or Equal Like NotEqual GreaterThan GreaterThanEqual LessThan LessThanEqual WithinGeoRange IsNull ContainsAny ContainsAll
+VERDICT: DEFECT_FOUND — see signals above (Type3 5xx or Type1 illegal-200 on degenerate batch-delete body)

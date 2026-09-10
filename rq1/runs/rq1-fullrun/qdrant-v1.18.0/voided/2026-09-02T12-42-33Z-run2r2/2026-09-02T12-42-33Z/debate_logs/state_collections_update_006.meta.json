@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_update_006",
+ "endpoint": "collections+update",
+ "param": "collection_name / diff validity (200-on-existing, 404-on-missing, 400-on-invalid status matrix + no-partial-apply tails)",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "count_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_update_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "valid PATCH on an existing data-bearing collection -> 200 with describe m==8 / points_count==3 and search returning 3; PATCH on a never-created name -> 404 and describe on it also 404; invalid diff (m as string) -> 400 with describe unchanged — 2xx where 404/400 pinned = Type1_IllegalSuccess, 200-without-echo or partial-apply/residue = Type4_StateLogicViolation, 5xx = Type3 only with /healthz liveness",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

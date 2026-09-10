@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_recover_002",
+  "endpoint": "cluster+recover",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "upsert_idempotence",
+  "oracle": {
+    "statement": "three identical POST /cluster/recover calls -> all three statuses in ONE disposition family (all 2xx or all 400..499; any family flip = Type4_StateLogicViolation; any 500..599 = Type3_RuntimeFailure only after /healthz returns 200); after the sequence: /healthz 200 within the 20s grace window (never-200 = Type3), GET /collections/{c} -> 200 (404 = Type4), exact count == 6 (drift = Type4), GET /cluster -> 200 (5xx = Type3 only after liveness)",
+    "source": "docstring"
+  }
+}

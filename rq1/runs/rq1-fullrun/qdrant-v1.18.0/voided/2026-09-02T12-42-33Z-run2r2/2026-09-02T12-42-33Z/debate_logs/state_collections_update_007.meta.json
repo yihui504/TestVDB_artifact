@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_update_007",
+ "endpoint": "collections+update",
+ "param": null,
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "concurrent",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_update_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "with /healthz alive, zero 5xx/transport failures across all PATCH/upsert/search/describe calls during config churn; after the join, describe points_count == #200-upserts (Type4 on mismatch), hnsw_config.m in {8,24,48} and memmap_threshold in {256,512} with a final search returning exactly the expected count — 5xx with /healthz alive = Type3_RuntimeFailure; torn config or count mismatch = Type4_StateLogicViolation",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

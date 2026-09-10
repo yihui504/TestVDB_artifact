@@ -1,0 +1,14 @@
+{"defect_id": "milvus_001", "verdict": "FALSE_POSITIVE", "confidence": 0.1, "rationale": "无可用观察记录（raw 为空且 log 未捕获），证据不足以支持「违反契约」的判断，按保守规则裁 FALSE_POSITIVE。"}
+{"defect_id": "milvus_002", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "包内契约无任何 nprobe 取值约束条目，IVF nprobe=0 返回 200 不违反包内任何已载明断言。"}
+{"defect_id": "milvus_003", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "包内契约无 ef 参数约束条目，HNSW ef=0 被接受缺乏可违背的契约断言，证据不足。"}
+{"defect_id": "milvus_004", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "filter 'age in [10, 5]' 是合法布尔表达式，delete 返回 deleteCount=1（恰删 age=10 一条）符合契约语义而非应返回 400。"}
+{"defect_id": "milvus_005", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "包内契约无动态字段命名约束，插入成功而 query 解析 '123field' 失败属包外断言（field name 规则未在契约中载明），证据不足以判违约。"}
+{"defect_id": "milvus_006", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "text_field 为动态字段且 schema 未声明其类型，动态字段存整数并原样返回不违反 'data field types match collection schema'。"}
+{"defect_id": "milvus_007", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "空向量 [[]] 被服务器以 code=1801 'invalid parameter' 明确拒绝（附维度诊断），非法输入被拒符合契约语义。"}
+{"defect_id": "milvus_008", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "包内契约（doc-archaeology explicit）明载 COSINE identical 向量 distance==0 且 range [0,2]，观察 identical 检索返回 distance=1 且 11/100 次 distance>1.0，直接违背度量定义。"}
+{"defect_id": "milvus_009", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "包内契约仅有 limit/topk∈[1,16384] 约束且被正确执行（limit=0 被 'topk [0] is invalid' 拒绝），无 nprobe 约束条目可违背。"}
+{"defect_id": "milvus_010", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "同一 ttl 值 -100 被 alter_properties 以 'TTL is out of range, expect [-1, 3155760000]' 拒绝（两次复现），create 却静默接受 code=0，违反契约 create 的 ttlSeconds>=0 且属静默接受被拒值。"}
+{"defect_id": "milvus_011", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "探针自证 filter='' 为符合预期 control，filter=null/缺省与 '' 行为一致（全表返回），包内亦无 'filter 必填' 断言，证据不足。"}
+{"defect_id": "milvus_012", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "契约中无 endpoint=collections+list 的约束条目，dbName 空串回落默认库返回列表不违反任何包内断言。"}
+{"defect_id": "milvus_013", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "Request-Timeout 整数约束条目仅针对 entities+query（v2.3.x doc-archaeology），被测 endpoint=collections+list 无对应断言且三例响应无差异。"}
+{"defect_id": "milvus_014", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "dim=32768 被接受、dim=32769 以 'range 2 ~ 32768' 拒绝，与契约 dimension 1-32768 完全一致，观察行为符合契约。"}

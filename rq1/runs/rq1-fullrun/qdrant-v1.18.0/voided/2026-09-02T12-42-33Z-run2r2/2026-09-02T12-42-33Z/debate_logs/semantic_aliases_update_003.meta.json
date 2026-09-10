@@ -1,0 +1,12 @@
+{
+ "defect_id": "semantic_aliases_update_003",
+ "endpoint": "aliases+update",
+ "param": null,
+ "strategy": "search_correctness",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "oracle": {
+  "statement": "with 3 reader threads continuously scrolling through alias 'live' while the writer performs >=8 atomic switch batches (live -> CB -> CA -> ...), EVERY reader request returns HTTP 200 and each response's ids are homogeneous (all within {1..5} = CA fixture or all within {101..105} = CB fixture, never empty, never mixed); a single 404 means an intermediate state (alias resolving to nothing) leaked to readers => Type4_StateLogicViolation; a 5xx/transport failure while /healthz stays alive => Type3_RuntimeFailure; every switch batch must return 200 (a rejected legal switch => Type1_IllegalRejection)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

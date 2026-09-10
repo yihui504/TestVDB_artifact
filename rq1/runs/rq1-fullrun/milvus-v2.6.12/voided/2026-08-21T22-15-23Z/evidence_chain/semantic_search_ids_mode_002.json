@@ -1,0 +1,69 @@
+{
+  "defect_id": "semantic_search_ids_mode_002",
+  "endpoint": "entities+search",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "detail": "search_002（ids+data 互斥 1100）与 search_003（int64 小数 id 1100）在本地 clone source_url 验证一致（utils.go 可达），但两条均不覆盖 VarChar PK 数值 id 类型混用与 ids-search 距离语义——主观测面无契约断言。派发单 constraint_id='count_consistency' 实为 invariant milvus_inv_count_consistency_001（insert 行数一致性），与观测现象不同面。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "varchar pk numeric id 42: {\"code\":0,\"cost\":0,\"data\":[{\"distance\":0,\"pk\":\"42\"}],\"topks\":[1]}（主观测 B：VarChar PK 下 ids:[42]（数值形态）静默 %v 转字符串命中 pk \"42\"）",
+      "secondary_observations": [
+        "DEFECT: ids-search distance mismatch pk=2 ids=0 data=1.1999999（主观测 A：ids 模式距离与 data 模式对同一 pk 不一致）",
+        "DEFECT: ids-search distance mismatch pk=1 ids=1.1999999 data=0",
+        "ids search: {\"code\":0,...\"data\":[{\"distance\":0,\"pk\":1},{\"distance\":1.1999999,\"pk\":2},{\"distance\":0,\"pk\":2},{\"distance\":1.1999999,\"pk\":1}],\"topks\":[2,2]}（原始行：每 id 独立 topk 分组交叉排列）",
+        "data q1/q2 各返回 2 行有序结果（对照基线）",
+        "varchar pk string id '42': 同样命中 pk \"42\"（字符串形态合法路径）",
+        "create varchar: code:0（fixture 正常）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "无客户端错误形态——所有请求均 200+code:0，现象是语义层（类型混淆/距离不一致）"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/semantic_search_ids_mode_002.py", "vein_scripts/vein_ids_conversion_chain_002.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": null,
+      "assertion_text_quoted": "（无直接约束。参考面：milvus_type_entities_search_003 'int64 pk AND id has fractional part (e.g. 1.5) => code==1100'——该断言证明 ids 类型严格性在 Int64 侧被强制，VarChar 侧无对称断言）",
+      "api_violates_assertion": false,
+      "note": "搜索的集合 PK 为 VarChar 时传数值 id：契约无 'VarChar pk AND id 非字符串 => 错误' 断言，violates 无断言可违（false 语义为'无契约违反'而非'现象不存在'）。Int64 侧小数被 1100 拒（search_003）而 VarChar 侧数值被 %v 静默转换的不对称是核心证据。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:无 VarChar ids 类型断言（环缺失）；search_003 提供 Int64 侧对称性参照",
+        "doc:utils.go convertIDsToSchemapbIDs 定义",
+        "script:ids search 数值 42 对 VarChar pk 集合；ids/data 模式距离对照",
+        "log:code:0 命中 pk \"42\"；ids 模式距离分组不一致"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "主观测面（VarChar 数值 id、ids 模式距离语义）契约断言缺失；行为链完整（源码逐行溯源）",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["convertIDsToSchemapbIDs", "handleIfSearchByPK", "Sprintf.*%v"],
+      "files_examined": ["internal/distributed/proxy/httpserver/utils.go", "internal/proxy/impl.go"],
+      "source_excerpt": "internal/distributed/proxy/httpserver/utils.go:219-231（convertIDsToSchemapbIDs VarChar 分支）:\n\tcase schemapb.DataType_VarChar:\n\t\tstringIDs := make([]string, 0, len(ids))\n\t\tfor i, id := range ids {\n\t\t\tvar stringID string\n\t\t\tswitch v := id.(type) {\n\t\t\tcase string:\n\t\t\t\tstringID = v\n\t\t\tcase int64, int, float64:\n\t\t\t\t// Convert number to string\n\t\t\t\tstringID = fmt.Sprintf(\"%v\", v)\n\t\t\tdefault:\n\t\t\t\treturn nil, fmt.Errorf(\"invalid id type at index %d: expected string, got %T\", i, id)\n\t\t\t}\n\n（对照 Int64 分支 utils.go:191-197：float64 带小数即 'invalid int64 id ... has fractional part' 错误）\ninternal/proxy/impl.go:3446-3464 handleIfSearchByPK: ids 非空时进入 PK 查询路径（查重→schema→anns_field 推断→按 PK 构造查询）",
+      "call_chain_traced": "search(ids=...) → httpserver utils.go:179 convertIDsToSchemapbIDs → VarChar 分支 case int64,int,float64: fmt.Sprintf(\"%v\")（42→\"42\"，42.0→\"42\"，42.5→\"42.5\"）→ proxy impl.go:3012 handleIfSearchByPK → PK 过滤查询。距离分组现象：handleIfSearchByPK 将每个 id 转为独立查询向量组（topks:[2,2] 每 id 一组），与 data 模式单组 topk 语义不同——交叉排列 data 即由此产生。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay"],
+      "surviving": "数值→字符串 %v 转换是源码显式实现（带注释 'Convert number to string'），但 Int64/VarChar 两侧类型严格性不对称；ids 模式每 id 独立分组是 handleIfSearchByPK 设计——距离'不一致'是否为文档化语义待 auditor 核（未在 REST 文档找到说明）"
+    }
+  }
+}

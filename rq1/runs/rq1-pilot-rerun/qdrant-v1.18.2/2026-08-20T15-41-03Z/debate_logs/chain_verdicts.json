@@ -1,0 +1,532 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "verdicts": [
+    {
+      "defect_id": "boundary_collections_create_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false,
+          "note": "OpenAPI schema minimum:0 contradicts contract assertion m>=2. Constraint_id qdrant_range_create_collection_001 verified in contract but schema enforcement absent."
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界",
+          "note": "m=1 is objectively below [2,100] lower bound. Numerical boundary violation independent of documentation."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "No by_design logic found. HnswGraphConfig accepts usize without validation. test_validation.py shows validation expected for invalid hnsw_config params."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED (GREY_ZONE), B=CONFIRMED (数值下界 m=1<2) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API accepts m=1 violating [2,100] constraint. OpenAPI schema min=0 fails to enforce contract. No source validation adds m>=2 check. Type1: parameter validation absent."
+    },
+    {
+      "defect_id": "boundary_collections_create_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false,
+          "note": "OpenAPI schema minimum:4 contradicts contract assertion ef_construct>=10. Constraint_id qdrant_range_create_collection_002 verified but schema enforcement wrong threshold."
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界",
+          "note": "ef_construct=9 is objectively below [10,1000] lower bound. Numerical boundary violation."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "No by_design acceptance. test_validation.py expects validation errors for invalid hnsw_config. Schema minimum:4 provides partial validation but threshold incorrect."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED (GREY_ZONE), B=CONFIRMED (数值下界 9<10) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API accepts ef_construct=9 violating [10,1000] constraint. Schema min=4 provides partial validation (catches 0-3) but threshold wrong. No layer enforces >=10."
+    },
+    {
+      "defect_id": "semantic_collections_create_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false,
+          "note": "Same constraint as boundary_001. OpenAPI schema min=0, API accepts m=1. Contract assertion m>=2 violated."
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界",
+          "note": "m=1 < 2, numerical lower bound violation."
+        },
+        "behavioral": {
+          "verdict_C": "WEAK_REFUTED",
+          "note": "Type2 focus (diagnostic quality). Chain emphasizes no error message generated, but underlying violation (m=1 accepted) is primary defect. Less strong evidence than boundary cases."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED (GREY_ZONE), B=CONFIRMED (数值下界 1<2) → final=DEFECT (C=WEAK_REFUTED doesn't block B)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API accepts m=1 without validation error. Type2 diagnostic failure but underlying Type1 violation (accepting out-of-range value) takes priority per B=CONFIRMED."
+    },
+    {
+      "defect_id": "semantic_collections_create_004",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false,
+          "note": "Same constraint as boundary_002. OpenAPI schema min=4, API accepts ef_construct=5 violating >=10."
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界",
+          "note": "ef_construct=5 < 10, numerical lower bound violation."
+        },
+        "behavioral": {
+          "verdict_C": "WEAK_REFUTED",
+          "note": "Type2 focus (diagnostic quality). Chain emphasizes no error message, but underlying violation (ef_construct=5 accepted) is primary."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED (GREY_ZONE), B=CONFIRMED (数值下界 5<10) → final=DEFECT (C=WEAK_REFUTED doesn't block B)"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API accepts ef_construct=5 without validation error. Type2 diagnostic failure but underlying Type1 violation (accepting out-of-range value) takes priority per B=CONFIRMED."
+    },
+    {
+      "defect_id": "semantic_collections_create_013",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false,
+          "note": "Constraint_id qdrant_type_create_collection_001 verified. Contract asserts vectors.size > 0 and vectors is required. API accepts request without vectors parameter."
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "类型恒真",
+          "note": "Required parameter missing - type constraint violation. vectors parameter marked required=true in endpoint registry but validation absent."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "OpenAPI schema marks vectors as required. Endpoint registry confirms required=true. No validation layer enforces this. Not by-design."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED (GREY_ZONE), B=CONFIRMED (required parameter missing) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API accepts collection creation without required vectors parameter (200 OK). Schema says required=true but validation doesn't enforce. Type3 runtime failure."
+    },
+    {
+      "defect_id": "state_collections_create_03",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false,
+          "note": "Same constraint as boundary_001. Contract m∈[2,100], API accepts m=0 creating invalid persisted state."
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界",
+          "note": "m=0 < 2, numerical lower bound violation. Creates collection with invalid HNSW config."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "No by_design acceptance of m=0. HnswGraphConfig accepts usize without validation. Type4 state violation - invalid state persisted."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED (GREY_ZONE), B=CONFIRMED (数值下界 0<2) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API creates collection with m=0 violating [2,100] constraint. Invalid HNSW config persisted in storage. Type4 state violation."
+    },
+    {
+      "defect_id": "state_collections_create_04",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "REFUTED",
+          "agent_suspects_contract_wrong": false,
+          "note": "Same constraint as boundary_002. Contract ef_construct∈[10,1000], API accepts 9. Schema min=4 provides partial validation but wrong threshold."
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界",
+          "note": "ef_construct=9 < 10, lower bound violation. Schema validates [4,∞) but contract requires [10,1000]."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "Partial validation present (ef_construct=0 correctly rejected per schema min=4) but threshold wrong. test_validation.py shows strict validation expected."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=REFUTED (GREY_ZONE), B=CONFIRMED (数值下界 9<10) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API accepts ef_construct=9. Schema min=4 provides partial validation (rejects 0-3) but threshold doesn't match contract >=10. Contract-specified range not enforced."
+    },
+    {
+      "defect_id": "state_collections_create_07",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "note": "No constraint_id. Concurrent operations stress test, not contract violation."
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "note": "No numerical or type constraint violated. Issue is concurrent operation robustness, not parameter validity."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "Source shows race condition in collection lifecycle management. Concurrent GET requests race with deletion causing 500. Not by-design - design defect (concurrent lifecycle operations not fully isolated). Historical precedent: pipelinehost ruled DEFECT for similar concurrent 500 in R1."
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "concurrent worker safety",
+          "developer_quote": "Pattern: 'Concurrent worker safety' in blindspot_indicators. High-frequency shape 'concurrency_race' (count: 55). Developer prioritizes 'Production stability over edge case handling' but concurrent 500 is stability issue, not edge case."
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=CONFIRMED (race condition not by-design), D=SUPPORTS_DEFECT (concurrent safety is blindspot) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "Concurrent create/delete + access operations cause intermittent 500 errors. Source shows race condition: collection deletion not atomic with GET access. Not by-design trade-off - architectural defect. D confirms 'concurrent worker safety' is known blindspot. Type3_RuntimeFailure: API fails under concurrent load."
+    },
+    {
+      "defect_id": "vein_cluster_standalone_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "note": "No constraint_id. Issue is HTTP semantic violation, not contract constraint."
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "note": "No numerical or type constraint violated. Issue is HTTP status code semantics."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "Source shows `StorageError::service_error()` explicitly generates HTTP 500 for standalone mode. This is HTTP semantic violation: client-side misuse (calling cluster operation in standalone mode) should return 4xx, not 5xx. RFC 9110 Section 15: 5xx=server fault, 4xx=client error. Historical issue qdrant#9421 documents same phenomenon as bug."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=CONFIRMED (HTTP semantic violation: 500 for client misuse) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "POST /cluster/recover in standalone mode returns HTTP 500 'Service internal error: Qdrant is running in standalone mode'. Client misuse (calling cluster operation in standalone mode) should return 4xx per RFC 9110. Source shows explicit use of StorageError::service_error() generating 500. Type2_PoorDiagnostics: error code misclassification. Historical bug qdrant#9421 confirms this is defective behavior."
+    },
+    {
+      "defect_id": "vein_lookup_from_points_query_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "note": "No constraint_id. lookup_from validation not explicitly constrained in contract."
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "note": "No numerical or type constraint violated. Issue is validation absence."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "lookup_from accepts invalid values: non-existent collection returns 200 (should be 404), null accepted (should be 400), unknown fields ignored (should be 400). Source shows LookupLocation struct has collection: String (non-optional) but lookup_from wrapper allows None via Option<>. No collection existence validation found. Not by-design - validation gap."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=CONFIRMED (validation absent for lookup_from) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "lookup_from parameter accepts invalid values without 4xx rejection: non-existent collection (200 vs 404), null (200 vs 400), unknown fields (200 vs 400). Source shows no collection existence validation in REST schema or query executor. Type1_IllegalSuccess: invalid inputs accepted."
+    },
+    {
+      "defect_id": "vein_has_id_edge_cases_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "note": "No constraint_id. Filter behavior not explicitly constrained in contract."
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "note": "No numerical or type constraint violated. Issue is semantic correctness of filter evaluation."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "has_id=[] (empty list) returns 1 point instead of 0. has_id=[all non-existent IDs] returns 1 instead of 0. Source shows HasId condition converter creates empty HashSet for non-existent IDs, which should yield predicate returning false for all points (0 matches). Implementation returns 1, violating filter semantics. No by-design rationale for accepting empty has_id as 'match all'."
+        },
+        "cognition": {
+          "verdict_D": "SUPPORTS_DEFECT",
+          "matched_pattern": "Filter condition validation gaps",
+          "developer_quote": "Blindspot: 'Parameter validation on filter/condition APIs (min_should, value_count)'. High-frequency shape 'parameter_validation' (count: 51). Developer prioritizes 'API backward compatibility over strict validation' but filter semantic correctness is not backward compatibility concern."
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=CONFIRMED (filter semantic bug: returns 1 instead of 0), D=SUPPORTS_DEFECT (filter validation is blindspot) → final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "has_id=[] and has_id=[all non-existent IDs] return 1 point instead of 0 per filter semantics. Source shows HasId converter creates empty HashSet (predicate false for all), but result counting returns 1. Type1_IllegalSuccess: semantic violation of boolean filter logic. D confirms filter validation is known blindspot."
+    },
+    {
+      "defect_id": "vein_null_check_points_query_1",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "note": "No constraint_id. Test validates general input validation but no specific constraint violated."
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "note": "null is not a numerical/type boundary violation. Schema permits nullable values."
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED",
+          "note": "Source: by_design_in_source. OpenAPI schema explicitly permits nullable via anyOf with nullable:true. API follows schema design. May be intentional for flexible query construction."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=REFUTED (schema permits nullable, by_design) → final=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "filter.should=null accepted. OpenAPI schema permits nullable filter fields via anyOf with nullable:true. API implements per schema. Schema-compliant behavior, not validation defect."
+    },
+    {
+      "defect_id": "vein_null_check_points_query_2",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "note": "No constraint_id. Test validates general input validation but no specific constraint violated."
+        },
+        "physical": {
+          "verdict_B": "NEUTRAL",
+          "objective_constraint_class": "无",
+          "note": "null is not a numerical/type boundary violation. Schema permits nullable query field."
+        },
+        "behavioral": {
+          "verdict_C": "REFUTED",
+          "note": "Source: by_design_in_source. OpenAPI QueryRequest schema explicitly allows nullable query via anyOf with nullable:true. Description says 'if missing' behavior is ordered-by-ID; null treated same as missing with fallback. Schema-compliant."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL, B=NEUTRAL, C=REFUTED (schema permits nullable query, by_design with fallback behavior) → final=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "rationale": "query=null accepted returning all points ordered-by-ID. OpenAPI schema permits nullable query. API implements fallback behavior per schema (null treated as missing). Schema-compliant, not validation defect."
+    },
+    {
+      "defect_id": "vein_params_hnsw_ef_zero_points_search_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "note": "No constraint_id - R3 vein mining candidate without contract grounding"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值下界",
+          "note": "hnsw_ef=0 is objectively invalid for HNSW exploration factor (should be >=1). API accepts 0 returning 200. Numerical lower bound violation independent of documentation."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "No by_design logic found. SearchParams.hnsw_ef defined as Option<usize> with only upper-bound validation (check_limit_opt). Lower bound validation (>=1) missing at API layer. Source confirms validation_absent."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (no constraint_id), B=CONFIRMED (数值下界 hnsw_ef=0<1) -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API accepts hnsw_ef=0 violating implicit >=1 constraint for HNSW exploration factor. Source shows only upper-bound validation; zero passes as valid usize. Type1: non-positive parameter accepted."
+    },
+    {
+      "defect_id": "vein_batch_ordering_invalid_points_batch_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "note": "No constraint_id - R3 vein mining candidate without contract grounding"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "枚举闭集",
+          "note": "WriteOrdering enum has only three variants (Weak/Medium/Strong). API accepts invalid_value. Closed enum constraint violated - only defined enum members should be accepted."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "No by_design acceptance of unknown enum values. WriteOrdering has #[serde(default)] on Weak variant; serde deserializes unknown values using default instead of rejecting. Source confirms validation_absent."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (no constraint_id), B=CONFIRMED (枚举闭集 invalid_value not in {Weak,Medium,Strong}) -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API accepts ordering=invalid_value which is outside WriteOrdering enum {Weak,Medium,Strong}. Serde defaults to Weak instead of rejecting unknown value. Type1: enum validation absent."
+    },
+    {
+      "defect_id": "vein_replication_gt_shards_collections_create_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "note": "No constraint_id - R3 vein mining candidate without contract grounding"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值约束/互斥参数",
+          "note": "replication_factor(2) > shard_number(1) violates distributed systems semantic constraint. Replicas exist per-shard; total replicas cannot logically exceed shard count. API accepts semantically invalid config."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "No by_design acceptance of replication > shards. Source shows only NonZeroU32 validation (rejects 0) but no cross-field validation enforcing replication_factor <= shard_number. validation_absent for semantic constraint."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (no constraint_id), B=CONFIRMED (数值约束 replication_factor(2) > shard_number(1) semantically invalid) -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API accepts replication_factor=2 when shard_number=1. Distributed systems semantic violation: replicas per-shard cannot exceed total shards. Source shows only non-zero validation, no cross-field check. Type1: cross-field validation absent."
+    },
+    {
+      "defect_id": "vein_write_consistency_gt_replication_collections_create_1",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {
+          "verdict_A": "NEUTRAL",
+          "agent_suspects_contract_wrong": false,
+          "note": "No constraint_id - R3 vein mining candidate without contract grounding"
+        },
+        "physical": {
+          "verdict_B": "CONFIRMED",
+          "objective_constraint_class": "数值约束/互斥参数",
+          "note": "write_consistency_factor(3) > replication_factor(2) violates distributed systems semantic constraint. Write consistency requires acknowledgements from available replicas; cannot require more acks than replicas exist."
+        },
+        "behavioral": {
+          "verdict_C": "CONFIRMED",
+          "note": "No by_design acceptance of consistency exceeding replication. Source shows only NonZeroU32 validation (rejects 0) but no cross-field validation enforcing write_consistency_factor <= replication_factor. validation_absent for semantic constraint."
+        },
+        "cognition": {
+          "verdict_D": "NO_SIGNAL",
+          "matched_pattern": null,
+          "developer_quote": null
+        },
+        "aggregation_applied": "A=NEUTRAL (no constraint_id), B=CONFIRMED (数值约束 write_consistency_factor(3) > replication_factor(2) semantically invalid) -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "rationale": "API accepts write_consistency_factor=3 when replication_factor=2. Distributed systems semantic violation: cannot require acknowledgements from non-existent replicas. Source shows only non-zero validation, no cross-field check. Type1: cross-field validation absent."
+    }
+  ],
+  "summary": {
+    "total": 17,
+    "defect": 15,
+    "not_defect": 2,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {
+      "source": 0,
+      "doc": 0,
+      "both": 2,
+      "behavior": 0
+    },
+    "root_cause_distribution": {
+      "approximate_by_design": 2
+    }
+  }
+}

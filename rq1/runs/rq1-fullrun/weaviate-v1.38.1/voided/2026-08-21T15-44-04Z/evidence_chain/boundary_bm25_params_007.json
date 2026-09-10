@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_bm25_params_007",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "medium",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "无专属 constraint_id；以 inverted config 校验函数（本地 clone adapters/repos/db/inverted/config.go）为锚。源码核对：cleanupIntervalSeconds 有 <0 校验但无上限校验——与 log 的 -1→422 / 10^12→200 不对称完全一致",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[cleanup_huge] iic={'cleanupIntervalSeconds': 1000000000000} -> create=200 persisted(cleanup=1000000000000,bm25={\"b\": 0.75, \"k1\": 1.2}) / DEFECT[cleanup_huge] Type1_IllegalSuccess: 10^12 seconds persisted verbatim (~31000 years, no sanity cap)",
+      "secondary_observations": [
+        "[ctrl] iic={'cleanupIntervalSeconds': 60, 'bm25': {'b': 0.75, 'k1': 1.2}} -> create=200 persisted(cleanup=60,...)",
+        "[b_neg] bm25 b=-0.5 -> create=422 err={\"allowed\":null,\"error\":[{\"message\":\"BM25.b must be >= 0 and <= 1\"}]}",
+        "[b_gt1] bm25 b=1.5 -> create=422 err=...BM25.b must be >= 0 and <= 1...",
+        "[k1_neg] bm25 k1=-1.2 -> create=422 err=...BM25.k1 must be >= 0...",
+        "[cleanup_zero] cleanupIntervalSeconds=0 -> create=200 persisted(cleanup=60,...)（0 被静默归一为默认 60，非报错）",
+        "[cleanup_neg] cleanupIntervalSeconds=-1 -> create=422 err={\"allowed\":null,\"error\":[{\"message\":\"cleanup interval seconds must be > 0\"}]}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "同一 ValidateConfig 函数内：负值 422、上限缺失 200——同函数校验不对称为主观测；0 走静默归一为默认 60"
+      },
+      "reproducibility": "单脚本（6 变体确定性）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_bm25_params_007.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "boundary (族级，无专属编号；源码锚 adapters/repos/db/inverted/config.go ValidateConfig)",
+      "assertion_text_quoted": "cleanup interval seconds must be > 0（源码错误文案，inferred 约束：正值/合理上限）",
+      "api_violates_assertion": true,
+      "note": "10^12 秒（>31000 年）在'合理 interval'语义外被 verbatim 接受；且同函数 b/k1 有界校验证明界该校验通道存在。violates=True",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 族级 boundary（invertedIndexConfig.cleanupIntervalSeconds）",
+        "doc: 源码锚 inverted/config.go ValidateConfig L27-29",
+        "script: boundary_bm25_params_007.py 7 组 iic 变体",
+        "log: cleanup_huge 200 verbatim 10^12；cleanup_neg 422；b/k1 越界 422"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "无专属 constraint_id（契约 4 条 type/range 约束均不含 cleanupIntervalSeconds），族级锚需 auditor 认定",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["cleanup interval seconds must be", "BM25\\.b must be|BM25\\.k1 must be"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\adapters\\repos\\db\\inverted\\config.go (L27-53, L118-126)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\adapters\\repos\\db\\inverted\\config_update.go (L21 同文案)"
+      ],
+      "source_excerpt": "adapters/repos/db/inverted/config.go L27-31:\nfunc ValidateConfig(conf *models.InvertedIndexConfig) error {\n\tif conf.CleanupIntervalSeconds < 0 {\n\t\treturn errors.Errorf(\"cleanup interval seconds must be > 0\")\n\t}\nL121-126: if u.K1 < 0 { return ... \"BM25.k1 must be >= 0\" }; if b > 1 || b < 0 { return ... \"BM25.b must be >= 0 and <= 1\" }\n— 仅下界检查（<0），无上界；10^12 通过",
+      "call_chain_traced": "POST /schema → inverted.ValidateConfig → CleanupIntervalSeconds<0 检查（无上限）→ 持久化 10^12。cleanup=0：模型 int64 缺省 0 未触发 <0，随后归一默认 60",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（对照与 422 组证明链路正常）"],
+      "surviving": "无上限校验可能被辩为'操作员责任范围'（超长 interval 不损正确性只延迟清理）；但 10^12 已超 int64 秒实用语义，且同函数 b/k1 均设界——不对称性 surviving"
+    }
+  }
+}

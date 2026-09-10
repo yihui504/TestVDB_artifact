@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_update_002",
+ "endpoint": "aliases+update",
+ "param": "actions",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "type",
+ "oracle": {
+  "statement": "positive control (one well-formed create_alias then delete_alias) returns 200 both times with envelope result:boolean and the alias appearing/disappearing in GET /aliases; every structurally invalid actions probe (missing/null/non-array/scalar-element/null-element/empty-object-element/unknown-action-key/double-key/scalar-payload) is rejected 4xx with a non-empty diagnostic body; 200 on any invalid shape = Type1_IllegalSuccess (plus state check), empty-array [] accepted 200 with ZERO state change or rejected 4xx both fine, 5xx = Type3_RuntimeFailure (healthz rechecked), 4xx with empty body = Type2_PoorDiagnostics (constraint qdrant_behavioral_aliases_update_001 + request_required_paths)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,94 @@
+{
+  "defect_id": "semantic_collections_create_014",
+  "endpoint": "collections+create (PUT /collections/{collection_name})",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "api.qdrant.tech WebFetch 被网络策略阻断 (domain_blocked)，回退到源码 clone 内渲染源 docs/redoc/v1.18.x/openapi.json (api.qdrant.tech/v-1-18-x 的仓库固化 spec，版本 PASS)。内容一致性 FAIL——但方向与脚本声称相反：v1.18.x OpenAPI 中 create-collection (PUT /collections/{name}, operationId=create_collection) 的 hnsw_config 引用 #/components/schemas/HnswConfigDiff，其 full_scan_threshold 为 {type: integer, format: uint, minimum: 10, nullable: true}；minimum: 0 属于 HnswConfig schema，而 HnswConfig 仅被响应/内部结构引用 (CollectionConfig.hnsw_config / CollectionConfigTelemetry.hnsw_config / Indexes.oneOf[1].options)，无任何请求体引用它。即文档实际声称 create 路径 minimum=10，与 API 行为(422 拒 0)完全一致；断言声称的 'create >= 0' 在文档中不存在。端点精确 PASS：脚本请求确打 create-collection。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "create full_scan_threshold=0 -> 422 {\"status\":{\"error\":\"Validation error in JSON body: [hnsw_config.full_scan_threshold: value 0 invalid, must be 10 or larger]\"},\"time\":0.0}",
+      "secondary_observations": [
+        "boundary_collections_create_05.log:16 (跨脚本同端点同模式): CASE hnsw.full_scan_threshold=0 (min, allowed): status=422 body={\"status\":{\"error\":\"Validation error in JSON body: [hnsw_config.full_scan_threshold: value 0 invalid, must be 10 or larger]\"},\"time\":0.0}",
+        "boundary_collections_create_11.log:4 (PATCH diff 路径边界吻合 min=10): CASE PATCH full_scan_threshold=9 (diff min-1): status=422 ... must be 10 or larger; :5 PATCH full_scan_threshold=10 (diff min): status=200; :9 CREATE full_scan_threshold=10: status=200",
+        "boundary_collections_create_05.log:14 (负值走反序列化分支而非 validator): CASE hnsw.full_scan_threshold=-1: status=400 Format error in JSON body: invalid value: integer `-1`, expected usize",
+        "log 第 1-2 行为 requests 库 RequestsDependencyWarning（环境噪音，不影响判定），log 全文仅 1 对主观测 REQ/RESP，无其他观测"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "按文档实际约束 (HnswConfigDiff minimum=10) 值 0 属请求侧非法输入，以 422 Unprocessable Entity + 结构化 error 明确返回，REST 语义正常；非 2xx+业务码掩盖型。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_collections_create_014 (主观测脚本)",
+        "boundary_collections_create_05 (同端点 create, full_scan_threshold=0 -> 422 同模式; 该脚本 NOTE 自记 'possible over-strict validation')",
+        "boundary_collections_create_11 (支撑: PATCH 9 拒/10 过, CREATE 10 过, 与 min=10 精确吻合)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_collections_create_003",
+      "constraint_retrieval_note": "candidates.jsonl 该条目 constraint_id 为空 (机械提取未携带)；builder 从 structured_contract.json /constraints/range_constraints[2] 按 full_scan_threshold 检索补全。原始断言与 source_url=https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection 如下。",
+      "assertion_text_quoted": "hnsw_config.full_scan_threshold >= 0 (create) / >= 10 (diff)",
+      "api_violates_assertion": false,
+      "note": "violates 自检结论：观测 (create full_scan_threshold=0 -> 422) 真实发生，但 '0 在 create 时合法' 的前提不成立——文档 create 请求体引用的 schema 是 HnswConfigDiff (minimum: 10)，0 不在该约束域内；'create >= 0' 源于契约把响应 schema HnswConfig (minimum: 0) 误映射为 create 请求 schema (raw_knowledge.md 第 76 行原文 'full_scan_threshold >= 0 (HnswConfig) / >= 10 (HnswConfigDiff)' 本身无误，误在其 schema->端点绑定；同文件第 65 行已正确记载 create-collection 的 hnsw_config 类型为 HnswConfigDiff)。故按文档实际约束 (create/diff 均 >= 10) API 未违反任何文档断言，violates=False；链断点在契约断言而非 API 行为。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_range_collections_create_003 (structured_contract.json range_constraints[2]) 断言 'full_scan_threshold >= 0 (create)' —— 该 'create>=0' 域在文档中不存在 (错误映射自响应 schema HnswConfig)",
+        "doc: docs/redoc/v1.18.x/openapi.json —— CreateCollection.hnsw_config = anyOf[$ref HnswConfigDiff, nullable]; HnswConfigDiff.full_scan_threshold minimum: 10; HnswConfig.full_scan_threshold minimum: 0 但仅被 CollectionConfig/CollectionConfigTelemetry/Indexes (响应侧) 引用",
+        "script: semantic_collections_create_014 向 create-collection 发送 hnsw_config.full_scan_threshold=0 (log 第 3 行 raw 请求)",
+        "log: 422 + 'Validation error in JSON body: [hnsw_config.full_scan_threshold: value 0 invalid, must be 10 or larger]' —— 与文档 (min 10) 及源码校验逐字一致，与契约断言 (min 0) 矛盾"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "断链位于 contract→doc 环：契约断言把 HnswConfig (minimum 0, 响应/内部 schema) 的约束域错误绑定到 create-collection 请求；文档实际约束 (HnswConfigDiff minimum 10) 与 API 执行行为 (422 拒 0, min-1=9 拒/10 过) 完全一致。脚本 DEFECT_FOUND (Type1_IllegalRejection) 的前提 '0 is legal on create (>=0)' 依赖的是这条错误契约断言。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "must be 10 or larger (0 直接命中; 错误串为运行时 format! 拼接)",
+        "or larger -> lib/collection/src/operations/validation.rs:57",
+        "full_scan_threshold -> lib/segment/src/*, lib/collection/src/operations/config_diff.rs, lib/api/src/grpc/*, docs/redoc/v1.18.x/openapi.json",
+        "pub struct HnswConfig -> 3 files (segment/types.rs, collection/config_diff.rs, api/grpc/qdrant.rs)",
+        "range\\(min = 10 -> config_diff.rs:57",
+        "struct CreateCollection -> lib/storage/src/content_manager/collection_meta_ops.rs:109",
+        "hnsw_config (REST schema) -> collection_meta_ops.rs:154-155",
+        "Validation error in -> src/actix/mod.rs:236-237"
+      ],
+      "files_examined": [
+        ".qdrant-src-1180/lib/collection/src/operations/config_diff.rs (Read L25-74)",
+        ".qdrant-src-1180/lib/storage/src/content_manager/collection_meta_ops.rs (Read grep 上下文 L99-190)",
+        ".qdrant-src-1180/lib/collection/src/operations/validation.rs (Read grep 上下文 L47-66)",
+        ".qdrant-src-1180/src/actix/mod.rs (Read grep 上下文 L233-241)",
+        ".qdrant-src-1180/docs/redoc/v1.18.x/openapi.json (python 提取: create-collection/create_collection 路径, CreateCollection/HnswConfigDiff/HnswConfig/UpdateCollection schemas, HnswConfig 精确 $ref 反查)",
+        ".qdrant-src-1180/lib/api/src/grpc/qdrant.rs (grep 上下文 L726-734: proto HnswConfig 无 validator)",
+        ".qdrant-src-1180/lib/segment/tests/integration/byte_storage_hnsw_test.rs (grep 上下文 L70: segment 内部层测试直接用 full_scan_threshold=0)"
+      ],
+      "source_excerpt": "// lib/collection/src/operations/config_diff.rs:34-58 (v1.18.0)\n#[derive(Debug, Default, Deserialize, Serialize, JsonSchema, Validate, Copy, Clone, PartialEq, Eq, Hash)]\n#[serde(rename_all = \"snake_case\")]\npub struct HnswConfigDiff {\n    pub m: Option<usize>,\n    #[validate(range(min = 4))]\n    pub ef_construct: Option<usize>,\n    /// Minimal size threshold (in KiloBytes) below which full-scan is preferred over HNSW search. ...\n    #[serde(alias = \"full_scan_threshold_kb\", default, skip_serializing_if = \"Option::is_none\")]\n    #[validate(range(min = 10))]\n    pub full_scan_threshold: Option<usize>,\n    ...\n}\n\n// lib/storage/src/content_manager/collection_meta_ops.rs:153-155\n/// Custom params for HNSW index. If none - values from service configuration file are used.\n#[validate(nested)]\npub hnsw_config: Option<HnswConfigDiff>,\n\n// src/actix/mod.rs:234-238\n// Nicely describe deserialization and validation errors\nlet msg = match &err {\n    actix_web_validator::Error::Validate(errs) => {\n        validation::label_errors(format!(\"Validation error in {name}\"), errs)\n    }\n\n// lib/collection/src/operations/validation.rs:55-66\n\"range\" => {\n    let msg = match (params.get(\"min\"), params.get(\"max\")) {\n        (Some(min), None) => format!(\"must be {min} or larger\"),\n        ...\n    };\n    match params.get(\"value\") {\n        Some(value) => format!(\"value {value} invalid, {msg}\"),\n        ...\n\n// docs/redoc/v1.18.x/openapi.json (create-collection 请求 schema)\n// CreateCollection.hnsw_config = {\"anyOf\":[{\"$ref\":\"#/components/schemas/HnswConfigDiff\"},{\"nullable\":true}]}\n// HnswConfigDiff.full_scan_threshold = {\"type\":\"integer\",\"format\":\"uint\",\"minimum\":10,\"nullable\":true}\n// HnswConfig.full_scan_threshold = {\"type\":\"integer\",\"format\":\"uint\",\"minimum\":0}  // 仅响应侧引用",
+      "call_chain_traced": "REST PUT /collections/{name} -> CreateCollection (collection_meta_ops.rs:109) -> hnsw_config: Option<HnswConfigDiff> + #[validate(nested)] (L154-155) -> HnswConfigDiff.full_scan_threshold #[validate(range(min = 10))] (config_diff.rs:57-58) -> actix-web-validator 拦截 -> src/actix/mod.rs:236-237 label_errors('Validation error in JSON body') -> validation.rs:57/63-64 渲染 'value 0 invalid, must be 10 or larger' -> HTTP 422。错误串与 log 主观测逐字吻合，校验在 API 边界生效且与 OpenAPI 文档 (minimum 10) 一致。旁证：segment 内部层 HnswConfig (无 validator) 在集成测试中接受 full_scan_threshold=0 (byte_storage_hnsw_test.rs:70)，证明 min=10 是 API 请求边界的有意校验而非内部类型限制。",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "契约隐含要求 'create 路径应接受 >= 0' 的校验缺失——不成立：源码显式存在 range(min=10) 校验且该 min 与 v1.18.x OpenAPI 文档一致，即 API 实现与文档一致、与契约断言不一致 (契约错绑 schema)。非 by_design_in_source 的松散默认，而是文档化的显式边界校验。"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (422 为确定性 validator 行为，错误串与源码渲染函数逐字对应)",
+        "concurrency (单请求顺序执行)",
+        "cache_delay (create 校验在请求边界，不涉缓存)",
+        "request_typo (boundary_collections_create_05 独立构造的同参数请求得到逐字相同的 422 响应)"
+      ],
+      "surviving": "唯一存活解释为契约生成侧的 schema->端点错误映射 (把响应 schema HnswConfig 的 minimum 0 绑定到 create 请求)——这构成链断点本身而非平凡环境解释；无平凡解释可豁免 API 行为，但 API 行为经三向核对 (doc openapi.json / source validator / 多脚本行为) 相互一致。"
+    }
+  }
+}

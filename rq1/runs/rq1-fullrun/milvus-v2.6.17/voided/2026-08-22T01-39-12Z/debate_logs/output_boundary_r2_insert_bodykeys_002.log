@@ -1,0 +1,15 @@
+setup create: 200 {"code":0,"data":{}}
+control insert: code=0 insertCount=20
+insert extra key limit=3 -> code=0 insertCount=10
+insert extra key offset=5 -> code=0 insertCount=10
+insert extra key consistencyLevel='Strong' -> code=0 insertCount=10
+insert extra key outputFields=['id'] -> code=0 insertCount=10
+insert extra key groupSize=2 -> code=0 insertCount=10
+insert extra key orderBy={'order': 'ASC', 'field': 'id'} -> code=0 insertCount=10
+insert extra key exprParams={'id': 1} -> code=0 insertCount=10
+insert extra key filter='id < 5' -> code=0 insertCount=10
+insert extra key nprobe=0 -> code=0 insertCount=10
+insert extra key searchParams={'nprobe': -5} -> code=0 insertCount=10
+final rowCount=0, strong-query count=30 (expected 120)
+FINDING: strong-query count=30 != 120: some misplaced key altered ingestion
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)

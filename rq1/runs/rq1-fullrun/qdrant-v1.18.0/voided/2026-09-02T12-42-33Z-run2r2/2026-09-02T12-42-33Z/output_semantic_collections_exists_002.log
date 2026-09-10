@@ -1,0 +1,24 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] collection_exists = /collections/{collection_name}/exists (raw_knowledge api_endpoints[collections+exists].url)
+ownership prefix: sce028a56e4
+[pre-probe] /healthz status=200 raw=healthz check passed
+[create sce028a56e4_real] status=200 raw={"result":true,"status":"ok","time":0.348657418}
+[leg 0 premise direct name] name='sce028a56e4_real' status=200 result.exists=True raw={"result":{"exists":true},"status":"ok","time":7.466e-6}
+[conform] leg 0 premise direct name: 200 with result.exists=True
+[leg 1 pre-alias phantom guard] name='sce028a56e4_al1' status=200 result.exists=False raw={"result":{"exists":false},"status":"ok","time":5.466e-6}
+[conform] leg 1 pre-alias phantom guard: 200 with result.exists=False
+[create_alias sce028a56e4_al1->sce028a56e4_real] status=200 raw={"result":true,"status":"ok","time":0.014783539}
+[leg 2 live alias resolution] name='sce028a56e4_al1' status=200 result.exists=True raw={"result":{"exists":true},"status":"ok","time":5.514e-6}
+[conform] leg 2 live alias resolution: 200 with result.exists=True
+[delete_alias sce028a56e4_al1] status=200 raw={"result":true,"status":"ok","time":0.016929343}
+[leg 3 unlinked alias] name='sce028a56e4_al1' status=200 result.exists=False raw={"result":{"exists":false},"status":"ok","time":5.507e-6}
+[conform] leg 3 unlinked alias: 200 with result.exists=False
+[create_alias sce028a56e4_al2->sce028a56e4_real] status=200 raw={"result":true,"status":"ok","time":0.014855916}
+[leg 4a alias2 live before drop] name='sce028a56e4_al2' status=200 result.exists=True raw={"result":{"exists":true},"status":"ok","time":6.352e-6}
+[conform] leg 4a alias2 live before drop: 200 with result.exists=True
+[drop sce028a56e4_real with live alias sce028a56e4_al2] status=200 raw={"result":true,"status":"ok","time":0.024243702}
+[leg 4b stale alias after target drop] name='sce028a56e4_al2' status=200 result.exists=False raw={"result":{"exists":false},"status":"ok","time":5.25e-6}
+[conform] leg 4b stale alias after target drop: 200 with result.exists=False
+OK: existence by alias is truthful on the read face - 200/true only while alias->live collection; 200/false before the alias exists, after delete_alias and across a stale alias (never 404)
+VERDICT: NO_DEFECT

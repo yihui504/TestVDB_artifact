@@ -1,0 +1,104 @@
+{
+  "defect_id": "semantic_cluster_status_002",
+  "endpoint": "cluster+status (GET /cluster)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability PASS: live page https://api.qdrant.tech/v-1-18-x/api-reference/distributed/cluster-status fully retrieved via alternate web reader (WebFetch tool itself domain-blocked for api.qdrant.tech; content still obtained; no doc_preflight.json sidecar exists anywhere in this install, so current-fetch fallback was used). version PASS: URL path v-1-18-x and page header 'v1.18.x' match target v1.18.0. content_consistency FAIL: the page documents the 200 `result` as a oneOf union — ClusterStatus0 = {status: enum allowed [\"disabled\"]} only, ClusterStatus1 = {status: \"enabled\", peer_id uint64, peers map, raft_info{term,commit,pending_operations,is_voter,leader,role}, consensus_thread_status, message_send_failures} — and the page's canonical 200 example is exactly {\"result\":{\"status\":\"disabled\"}}; the contract's asserted flat grid (top-level raft_state enum / commit_index uint64) appears nowhere on the page, and the endpoint_registry doc_quote wording 'valid on single-node deployments too' is likewise absent (grep of all in-repo OpenAPI snapshots v1.1.2 through v1.18.x: zero hits for that wording and zero hits for a flat ClusterStatus). endpoint_precision PASS: registry cluster+status = GET /cluster, raw_knowledge url=/cluster, runtime PATHS['cluster_status']='/cluster', source handler src/actix/api/cluster_api.rs #[get(\"/cluster\")] all agree. sdk_rest_confusion false in the SDK-vs-REST sense: the mismatch is legacy-docs-shape vs versioned-REST-reference conflation, not SDK material on a REST face (the page's own SDK snippets are untyped examples, not the schema source).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[control GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.962e-6}",
+      "secondary_observations": [
+        "rest | output_semantic_cluster_status_002.log:4 [pre-probe] /healthz status=200 raw=healthz check passed (service healthy while serving the disabled shape)",
+        "rest | output_semantic_cluster_status_002.log:6 [shape] asserted fields present in result: []; all result keys: ['status']",
+        "rest | output_semantic_cluster_status_001.log:5 [control GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.497e-6} (sibling script, same endpoint, same shape)",
+        "rest | output_boundary_cluster_status_001.log:5 [documented GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.433e-6} (independent script reaching the same Type4 verdict off the same constraint)",
+        "rest | output_state_cluster_status_001.log [P0 fingerprint] keys=['status'] mode='disabled' — shape invariant across P0->P5 (after create/upsert/index-create/delete/post-delete), i.e. a deterministic disposition, not state-dependent corruption",
+        "comparative-forensics obligation: gRPC face for cluster status was not probed by any script this session -> face_unavailable; source-side note: the repo's gRPC surface has no flat ClusterStatus message either (lib/api/src/grpc/qdrant.rs exposes ClusterStatusTelemetry with term/commit/role/is_voter), so no interface face anywhere carries the contract's asserted flat grid"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "documented no-body GET; no request-side decidable error involved, so the 2xx-with-business-code criterion does not apply"
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_cluster_status_002",
+        "semantic_cluster_status_001",
+        "boundary_cluster_status_001",
+        "boundary_cluster_status_002",
+        "boundary_cluster_status_003",
+        "state_cluster_status_001",
+        "state_cluster_status_002",
+        "state_cluster_status_003"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_cluster_status_001",
+      "assertion_text_quoted": "response fields: peer_id uint64; raft_state IN {Leader, Follower, Candidate, PreCandidate, Terminated}; commit_index uint64; peers map",
+      "api_violates_assertion": false,
+      "note": "violates=false under the self-check's second horn: the observed 200 payload {\"result\":{\"status\":\"disabled\"}} is genuinely compliant with the response type the cited v1.18.x documentation itself defines (ClusterStatus0, the union's disabled-only variant, is the page's canonical example), so the served shape is inside the documented domain; the assertion's flat grid is a mis-extraction (horn one: wrong constraint text relative to its own cited source — it matches no OpenAPI snapshot v1.1.2..v1.18.x and even an Enabled response could never satisfy it, since raft_state/commit_index exist only nested as raft_info.role/raft_info.commit). The literal observation 'zero of the four asserted fields present' is factually true; what fails is the assertion's doc grounding, not the API. Note: candidates.jsonl dispatched this defect with an empty constraint_id; qdrant_type_cluster_status_001 was resolved from the script header (# constraint_ids:) and the log text, and the constraint is present in structured_contract.json type_constraints with source_verified=false.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_cluster_status_001 present in structured_contract.json constraints.type_constraints (type_constraint, endpoint level, evidence_tier=explicit, source_status=reachable, source_verified=false); sibling assertion qdrant_behavioral_cluster_status_001 in assertions[] ('returns 200 with cluster info; valid on single-node deployments'); endpoint_registry doc_quote='Returns 200 with cluster info (peer_id, raft_state, commit_index, peers); valid on single-node deployments too.' verified_at=2026-09-02T12:34:08Z",
+        "doc: live v1.18.x page fetched: 200 result documented as oneOf {ClusterStatus0: status='disabled' only | ClusterStatus1: status='enabled' + peer_id/peers/raft_info/consensus_thread_status/message_send_failures}; canonical example = {\"result\":{\"status\":\"disabled\"}}; asserted flat grid absent from page; 'valid on single-node' wording absent from page and from every in-repo OpenAPI snapshot",
+        "script: debate_logs/semantic_cluster_status_002.py — documented no-body control GET via runtime PATHS['cluster_status']; oracle DOC_FIELDS=(peer_id, raft_state, commit_index, peers); zero-match leg fires defect('Type4_StateLogicViolation') when none of the four fields appear in result",
+        "log: output_semantic_cluster_status_002.log — [control GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.962e-6}; [shape] asserted fields present in result: []; VERDICT: DEFECT_FOUND (Type4_StateLogicViolation)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The break is at the doc link: the contract (and the registry doc_quote) asserts a response grid that its own cited v1.18.x source does not contain; that source instead documents exactly the shape the server served. Script and log links are internally consistent (the script faithfully encoded the constraint text and faithfully reported the raw body; its adjudication note explicitly anticipated 'an undocumented standalone disabled variant would be the by-design defense; no such variant exists in any spec source available to this round' — this forensics supplies the missing spec source: the variant IS documented, on the live page and in every OpenAPI snapshot v1.1.2..v1.18.x in the repo). Corroboration that the defect dissolves rather than being target misbehavior: (a) repo openapi/openapi-cluster.ytt.yaml:4-11 generates GET /cluster -> response reference('ClusterStatus'); (b) that ClusterStatus is generated from the Rust enum in lib/storage/src/types.rs:243-250 whose Disabled variant is the designed single-node disposition; (c) all 8 scripts share the same stale oracle, so the multi-script reproduction is of the observation, not of independent defect confirmation.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "ClusterStatus",
+        "enum ClusterStatus",
+        "ClusterStatus::Disabled",
+        "fn cluster_status",
+        "/cluster:",
+        "raft_state",
+        "commit_index",
+        "PreCandidate",
+        "valid on single-node"
+      ],
+      "files_examined": [
+        "lib/storage/src/types.rs (lines 185-261: StateRole, ClusterInfo, ClusterStatus, ConsensusThreadStatus)",
+        "lib/storage/src/dispatcher.rs (lines 264-269: Dispatcher::cluster_status)",
+        "src/actix/api/cluster_api.rs (lines 49-58: GET /cluster actix handler)",
+        "lib/storage/src/content_manager/consensus_manager.rs (lines 249-270: ConsensusManager::cluster_status constructing Enabled)",
+        "openapi/openapi-cluster.ytt.yaml (lines 4-11: /cluster get -> ClusterStatus response)",
+        "docs/redoc/v1.18.x/openapi.json (ClusterStatus oneOf + RaftInfo schemas)",
+        "docs/redoc/v1.1.2, v1.1.3, v1.2.x, v1.3.x, v1.4.x, v1.5.x, v1.6.x, v1.7.x, v1.8.x, v1.9.x /openapi.json (union shape invariant; flat grid and 'valid on single-node' wording in none)",
+        "lib/api/src/grpc/qdrant.rs (grep: gRPC surface has ClusterStatusTelemetry only, no flat ClusterStatus message)"
+      ],
+      "source_excerpt": "lib/storage/src/types.rs:243-250:\n/// Information about current cluster status and structure\n#[derive(Debug, Serialize, JsonSchema, Anonymize, Clone)]\n#[serde(tag = \"status\")]\n#[serde(rename_all = \"snake_case\")]\npub enum ClusterStatus {\n    Disabled,\n    Enabled(ClusterInfo),\n}\n\nlib/storage/src/dispatcher.rs:264-269:\n    pub fn cluster_status(&self) -> ClusterStatus {\n        match self.consensus_state.as_ref() {\n            Some(state) => state.cluster_status(),\n            None => ClusterStatus::Disabled,\n        }\n    }\n\nsrc/actix/api/cluster_api.rs:49-58:\n#[get(\"/cluster\")]\nfn cluster_status(\n    dispatcher: web::Data<Dispatcher>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Future<Output = HttpResponse> {\n    helpers::time(async move {\n        auth.check_global_access(AccessRequirements::new(), \"cluster_status\")?;\n        Ok(dispatcher.cluster_status())\n    })\n}\n\nlib/storage/src/content_manager/consensus_manager.rs:270 (enabled branch):\n        ClusterStatus::Enabled(ClusterInfo {\n            peer_id,\n(openapi/openapi-cluster.ytt.yaml:4-11: '/cluster: get: ... responses: #@ response(reference(\"ClusterStatus\"))')",
+      "call_chain_traced": "GET /cluster -> src/actix/api/cluster_api.rs:49-57 handler -> Dispatcher::cluster_status (lib/storage/src/dispatcher.rs:264-269) -> consensus_state None (single-node/standalone deployment, container testvdb-qdrant-standalone qdrant/qdrant:v1.18.0 per deployment_meta.json) -> ClusterStatus::Disabled -> serde tag=\"status\" serializes to {\"status\":\"disabled\"}; enabled branch would go ConsensusManager::cluster_status (consensus_manager.rs:249-270) -> ClusterStatus::Enabled(ClusterInfo{peer_id, peers, raft_info, consensus_thread_status, message_send_failures}) — note even the enabled shape has no top-level raft_state/commit_index (they are raft_info.role / raft_info.commit), so the asserted flat grid is unsatisfiable on any deployment or version >= v1.1.2",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "verification_note": "by_design_in_source meets the v3.4 explicit-intent bar: the intent evidence is the first-class #[serde(tag=\"status\")] enum variant Disabled in lib/storage/src/types.rs:243-250 (doc comment 'Information about current cluster status and structure' — identical to the OpenAPI ClusterStatus description), the dispatcher's explicit None => ClusterStatus::Disabled arm (dispatcher.rs:267), and the fact that the same enum drives OpenAPI generation (openapi-cluster.ytt.yaml response reference), i.e. source, generated spec, live documentation, and observed behavior all agree; the divergence lives only in the contract's extracted assertion text.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "cache_delay",
+        "request_typo"
+      ],
+      "surviving": "contract_stale_vs_cited_doc — the asserted flat grid (top-level raft_state/commit_index) exists in no OpenAPI snapshot in-repo (v1.1.2 through v1.18.x all document the oneOf union whose disabled variant is exactly what was served) nor on the live v1.18.x page, whose canonical 200 example is the observed body verbatim; the standalone deployment is not an environmental anomaly but precisely the deployment class the sibling behavioral assertion declares valid, and for that class the disabled shape is the designed, documented disposition"
+    }
+  }
+}

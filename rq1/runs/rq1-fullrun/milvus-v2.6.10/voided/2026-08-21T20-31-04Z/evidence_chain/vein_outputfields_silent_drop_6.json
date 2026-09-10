@@ -1,0 +1,79 @@
+{
+  "defect_id": "vein_outputfields_silent_drop_6",
+  "endpoint": "entities+query",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "官方契约对 outputFields 无专门约束（覆盖缺口）；vein 契约 vein_outputfields_silent_drop 主张三路（outputFields/filter）对未知字段应一致校验。filter 侧 1100 拒绝由 milvus_type_entities_delete_001 相邻语义佐证。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "PASS dyn_output_unknown_silent_code0 {'code': 0, 'cost': 0, 'data': [{'id': 1}]} — 动态集合 outputFields=['nope_field'] 静默丢弃字段，仅返回 id",
+      "secondary_observations": [
+        "PASS control_nodyn_output_errors {'code': 65535, 'message': 'field nope_field not exist'} — no-dyn 同名请求正确报错",
+        "FAIL control_filter_unknown_errors {'code': 0, 'cost': 0, 'data': []} — 原预期 filter 未知字段报 1100（脚本对照与 vein_unknown_field_silent_accept_1 矛盾：该脚本 dyn filter 得 code:0，本对照亦 code:0——对照假设不成立，如实记录 FAIL）",
+        "PASS unknown_field_missing_no_error {'id': 1} — 响应中完全没有请求的字段",
+        "PASS mixed_output_partial_silent {'id': 1, 'val': 1} — 混合合法/未知字段，未知者静默剔除无警告",
+        "PASS control_valid_output {'code': 0, 'data': [{'id': 1, 'val': 1}]} 基线"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "dyn 路径纯 200+code:0 无错误通道；no-dyn 对照 200+65535——校验按 schema 配置分裂。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_scripts/vein_outputfields_silent_drop_6.py",
+        "vein_scripts/vein_unknown_field_silent_accept_1.log 同动态回落根因另一表现"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_outputfields_silent_drop",
+      "assertion_text_quoted": "outputFields 中不存在的字段应与 filter 中未知字段同样报错（no-dyn 集合 65535 'field not exist'、filter 1100）；动态集合不得静默丢弃",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates=True 理由：dyn 集合未知 outputField code:0 且响应缺字段、混合字段部分静默剔除——'不得静默丢弃'被直接否定；no-dyn 对照证明校验能力存在。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: vein_outputfields_silent_drop（vein 自生）",
+        "doc: 官方契约 outputFields 无断言（缺口记）；filter 侧语义由 type_entities_delete_001 弱佐证",
+        "script: vein_outputfields_silent_drop_6.py 六断言三路对照",
+        "log: dyn silent_code0 vs no-dyn 65535；control_filter_unknown_errors FAIL（对照自身失效）"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "四环主链一致；注意 control_filter_unknown_errors 断言 FAIL（对照假设与实际 dyn filter 行为矛盾）——非主链断链，是脚本内对照失效，如实记录供 auditor 复核 claim 的'filter 1100'分支。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "translateOutputFields internal/proxy/util.go",
+        "GetFieldFromNameDefaultJSON (回落共用根因)",
+        "EnableDynamicField 分支 util.go:1636"
+      ],
+      "files_examined": [
+        ".milvus-src-2610/internal/proxy/util.go:1576-1690 (translateOutputFields 全函数)",
+        ".milvus-src-2610/pkg/util/typeutil/schema.go:468-496 (GetFieldFromNameDefaultJSON/getDefaultJSONField 回落)"
+      ],
+      "source_excerpt": "// internal/proxy/util.go:1635-1666 (translateOutputFields)\n\t\t\tif field, ok := allFieldNameMap[outputFieldName]; ok { ... }\n\t\t\telse {\n\t\t\t\tif schema.EnableDynamicField {\n\t\t\t\t\tdynamicNestedPath := outputFieldName\n\t\t\t\terr := planparserv2.ParseIdentifier(schema.schemaHelper, outputFieldName, func(...) error {...})\n\t\t\t\tif err != nil { return ..., fmt.Errorf(\"parse output field name failed: %s\", outputFieldName) }\n\t\t\t\tresultFieldNameMap[common.MetaFieldName] = true\n\t\t\t\tuserOutputFieldsMap[outputFieldName] = true\n\t\t\t\tuserDynamicFieldsMap[dynamicNestedPath] = true\n\t\t\t} else {\n\t\t\t\treturn ..., fmt.Errorf(\"field %s not exist\", outputFieldName)\n\t\t\t}\n\t\t\t}",
+      "call_chain_traced": "handler_v2 query → task_query.go:321 translateOutputFields → 未知名在 EnableDynamicField=true 分支经 ParseIdentifier 解析为动态字段嵌套路径（与 filter 同一回落）→ 查询 $meta 中该 key（不存在）→ 返回行但该列无值，构建响应时静默省略；EnableDynamicField=false 走 'field %s not exist' 错误。与 vein_unknown_field_silent_accept_1 共用 getDefaultJSONField 回落根因。",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "cache_delay", "request_typo"],
+      "surviving": "动态字段可存任意 key，未知名 outputField 按动态 key 查询是显式分支；但键不存在时无 'field/key missing on all rows' 类提示（与 filter 1100/no-dyn 65535 三路不对称）为 surviving"
+    }
+  }
+}

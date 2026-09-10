@@ -1,0 +1,10 @@
+import/list nonexistent coll: http=200 {"code":100,"message":"collection not found[database=default][collection=stt_imp_08_nope]"}
+get_progress jobID=0: http=200 code=2100 {"code":2100,"message":"import job does not exist, jobID=0: importing data failed"}
+get_progress jobID=999999999999: http=200 code=2100 {"code":2100,"message":"import job does not exist, jobID=999999999999: importing data failed"}
+get_progress jobID=not-a-job: http=200 code=2100 {"code":2100,"message":"parse job id failed, err=%wstrconv.ParseInt: parsing \"not-a-job\": invalid syntax: importing data failed"}
+get_progress jobID=-1: http=200 code=2100 {"code":2100,"message":"import job does not exist, jobID=-1: importing data failed"}
+describe jobID=0: http=200 code=2100 {"code":2100,"message":"import job does not exist, jobID=0: importing data failed"}
+describe jobID=not-a-job: http=200 code=2100 {"code":2100,"message":"parse job id failed, err=%wstrconv.ParseInt: parsing \"not-a-job\": invalid syntax: importing data failed"}
+create: {"code":0,"data":{}}
+import/create bogus file: http=200 code=1801 {"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field ImportReq.files of type []string"}
+VERDICT: NO_DEFECT

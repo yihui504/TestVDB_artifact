@@ -1,0 +1,69 @@
+{
+  "defect_id": "boundary_collections_delete_06",
+  "endpoint": "collections+delete",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation at https://api.qdrant.tech/api-reference/collections/delete-collection (v1.19.x, major.minor matched) describes DELETE /collections/{collection_name} returning 200 OK on successful deletion. However, documentation does not specify UTF-8/unicode validation requirements for collection_name parameter. The constraint qdrant_behavioral_delete_collection_001 only states 'returns 200 OK on successful deletion' but does not address invalid UTF-8 characters like lone surrogates (0xD800-0xDFFF range). Expected behavior for invalid UTF-8 in collection names is not documented.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Testing collection name with lone surrogate: test<0xD800>boundary → Status: 200, Raw: {\"result\":false,\"status\":\"ok\",\"time\":0.000057709}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Target returned HTTP 200 with result:false (business error code indicating collection not found), but did not return HTTP 4xx indicating invalid UTF-8/parameter format. The 200 response with result:false suggests the collection doesn't exist, not that the name format was rejected as invalid UTF-8."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_delete_06"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_delete_collection_001",
+      "assertion_text_quoted": "returns 200 OK on successful deletion",
+      "api_violates_assertion": false,
+      "note": "Constraint is partially aligned - API returned 200 OK as expected for existing collections. However, the constraint does not cover UTF-8 validation for collection names, which is the actual issue being tested (invalid UTF-8 lone surrogate accepted without 4xx error). The constraint is too narrow to cover this validation gap.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_behavioral_delete_collection_001 ('returns 200 OK on successful deletion')",
+        "doc:https://api.qdrant.tech/api-reference/collections/delete-collection (describes DELETE endpoint, no UTF-8 validation requirements mentioned)",
+        "script:boundary_collections_delete_06.py (tests lone surrogate 0xD800 in collection name)",
+        "log:HTTP 200, result:false, status:ok (no rejection of invalid UTF-8)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Chain broken at documentation layer: Documentation does not specify UTF-8/unicode validation requirements for collection_name parameter. The constraint qdrant_behavioral_delete_collection_001 only describes expected success behavior (200 OK) but does not define expected behavior for invalid input (lone surrogates). Without documented requirements, cannot determine if accepting lone surrogates is a violation or by-design behavior. Log shows HTTP 200 with result:false (not 4xx), suggesting invalid UTF-8 was not properly rejected.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["collection.*name.*validation", "UTF-8.*validation", "unicode.*surrogate", "lone.*surrogate", "invalid.*UTF-8", "0xD800", "0xDFFF", "collection_name.*validate", "str.*is.*valid.*utf.*8"],
+      "files_examined": [],
+      "source_excerpt": "Source clone not available (TESTVDB_SRC_DIR not set)",
+      "call_chain_traced": "not_available",
+      "verification_outcome": "webfetch_shallow",
+      "note": "Source directory clone not available (TESTVDB_SRC_DIR not configured). Analysis limited to documentation fetch. Without source access, cannot verify if UTF-8 validation is implemented in Qdrant's delete collection handler or if lone surrogate acceptance is by-design (e.g., passed through to storage layer without validation). WebFetch retrieved documentation but found no explicit UTF-8 validation requirements.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env"],
+      "surviving": [
+        "concurrency",
+        "utf8_bydesign",
+        "parameter_validation",
+        "rfc compliance"
+      ],
+      "note": "Multiple non-trivial explanations survive: (1) UTF-8 validation is by-design - Qdrant may accept any string and rely on storage layer/backend to handle encoding issues; (2) Parameter validation at API layer may be deferred to storage layer; (3) Lone surrogate handling may follow permissive RFC 4627 (JSON allows UTF-8 surrogates) rather than strict UTF-8 (RFC 3629); (4) HTTP 200 with result:false could indicate graceful handling where invalid collection name is treated as non-existent rather than invalid format. Cannot exclude without source verification of validation logic."
+    }
+  }
+}

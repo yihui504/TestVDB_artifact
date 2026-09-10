@@ -1,0 +1,65 @@
+{
+  "defect_id": "semantic_upsert_batch_size_001",
+  "endpoint": "/collections/{collection_name}/points:PUT",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url reachable, version mismatch, batch size constraint documented but error message quality poor for violations",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: empty batch (0 points) → error 'Bad request: Empty update request' (quality 0/3); c2: batch=1001 points → HTTP 200 acknowledged (quality 0/3)",
+      "secondary_observations": [
+        "batch=0: 'Bad request: Empty update request' (no parameter name, no format hint)",
+        "batch=1001: HTTP 200, acknowledged (silent acceptance, exceeds documented max 1000)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx (batch=0) + HTTP 2xx (batch=1001)",
+        "note": "Empty batch rejected with generic error, oversized batch silently accepted - both poor diagnostic quality"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_upsert_batch_size_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_upsert_points_001",
+      "assertion_text_quoted": "batch_size >= 1 and batch_size <= 1000",
+      "api_violates_assertion": true,
+      "note": "batch=1001 violates constraint but target accepts (Type1), batch=0 error message poor (Type2)",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_upsert_points_001 (batch_size range 1-1000)",
+        "doc:https://api.qdrant.tech/api-reference/points/upsert-points (constraint documented)",
+        "script:semantic_upsert_batch_size_001 (test batch=0,1001)",
+        "log:batch=0 → 'Empty update request' (poor error), batch=1001 → HTTP 200 (silent violation)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Both batch violations handled poorly: batch=0 error lacks parameter context, batch=1001 silently accepted contradicting constraint",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["batch.*size", "upsert.*validation", "empty.*batch", "1000.*points"],
+      "files_examined": ["not_available_local"],
+      "source_excerpt": "",
+      "call_chain_traced": "not_available_local - v1.18.0 source not cloned",
+      "verification_outcome": "not_available_local",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "type2_poor_diagnostics"
+    }
+  }
+}

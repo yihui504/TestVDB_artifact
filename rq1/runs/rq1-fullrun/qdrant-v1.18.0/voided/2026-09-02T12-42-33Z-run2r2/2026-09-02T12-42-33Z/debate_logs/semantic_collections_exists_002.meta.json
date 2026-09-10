@@ -1,0 +1,15 @@
+{
+  "defect_id": "semantic_collections_exists_002",
+  "endpoint": "collections+exists",
+  "param": "collection_name",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_exists_001"
+  ],
+  "oracle": {
+    "statement": "exists via alias name returns 200+result.exists=true only while alias->live collection (read face resolves aliases); 200+false before the alias exists (phantom guard), after delete_alias, and after the target's 200 delete (stale alias); any 404 on the exists face for an alias-routed name = Type4_StateLogicViolation (never-404 clause); exists=false on live alias->live collection = Type4 false negative; alias action premise failures = SCRIPT_ERROR; 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_r2b_rowfield_names_01",
+  "endpoint": "entities+insert / entities+get(output_fields)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "contract constraint milvus_type_collections_create_002 (fieldName != null AND dataType != null, source_url=local clone handler_v2.go) covers only schema-field null-ness, NOT row-level dynamic key naming; no constraint in the 24-constraint rollback contract asserts dynamic-field-name charset. Root doc (milvus.io 2.6.x) unreachable this run -> treated as domain_blocked-equivalent; grounding shifted to local clone source of truth.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "insert row key '1abc' -> http=200 ok=True raw={\"code\":0,\"cost\":0,\"data\":{\"insertCount\":1,\"insertIds\":[1]}} || readback '1abc' -> ok=False value=None raw={\"code\":65535,\"message\":\"parse output field name failed: 1abc\"}",
+      "secondary_observations": [
+        "insert row key 'my-key'/'a b'/'f$eld'/'中文字段' -> all http=200 code:0 (insertIds 2-5)",
+        "readback 'my-key' -> {\"code\":65535,\"message\":\"parse output field name failed: my-key\"}",
+        "readback 'a b' -> {\"code\":65535,\"message\":\"parse output field name failed: a b\"}",
+        "readback 'f$eld' -> {\"code\":65535,\"message\":\"parse output field name failed: f$eld\"}",
+        "readback '中文字段' -> {\"code\":65535,\"message\":\"parse output field name failed: 中文字段\"}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "write side returns HTTP 200 code:0 for keys the read side rejects with HTTP 200 code:65535 — non-asymmetric envelope, asymmetric semantics"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2b_rowfield_names_01.py", "debate_logs/semantic_r2b_dynfield_readback_03.py (同根因另一面)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "GAP (nearest: milvus_type_collections_create_002)",
+      "assertion_text_quoted": "nearest: \"fieldName != null AND dataType != null\" — 仅覆盖 schema 字段非空；数据行动态键命名字符集无任何 constraint（契约缺口，如实记录）",
+      "api_violates_assertion": true,
+      "note": "违反的是隐式读写对称性（写入接受即应可读）；契约内无显式断言覆盖该域，violates=True 基于 create_002 的字段名合法性语义外推 + 官方测试用例（tests/python_client/milvus_client/test_milvus_client_query.py:433 预期 code 65535 parse fail）确认读侧行为已知。写入侧接受与读侧拒绝的不对称即违反点。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_collections_create_002 仅断言 schema 字段非空（弱覆盖，gap 记录）",
+        "doc: 官方 python_client 测试 test_milvus_client_query.py:433 断言 query 非法 output field → {ct.err_code: 65535, 'parse output field name failed'}（读侧拒绝是已知预期行为）",
+        "script: boundary_r2b_rowfield_names_01.py 用动态键 1abc/my-key/a b/f$eld/中文字段 insert + output_fields 回读",
+        "log: insert 全 code:0；readback 全 code:65535 parse output field name failed"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "链自洽：写入接受/读取拒绝均在原始 log 逐字可见；唯 contract 环为弱覆盖（gap），非断链",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["parse output field name failed", "Identifier :/Nondigit (Plan.g4)", "MetaFieldName (httpserver/utils.go)"],
+      "files_examined": [
+        "internal/proxy/util.go (1600-1694)",
+        "internal/parser/planparserv2/Plan.g4 (139,152)",
+        "internal/distributed/proxy/httpserver/utils.go (570-614)",
+        "tests/python_client/milvus_client/test_milvus_client_query.py (433)",
+        "tests/go_client/testcases/query_test.go (243)"
+      ],
+      "source_excerpt": "internal/proxy/util.go:1637-1665 (getOutputBaseFuncs 路径)：\n            } else {\n                if schema.EnableDynamicField {\n                    dynamicNestedPath := outputFieldName\n                    err := planparserv2.ParseIdentifier(schema.schemaHelper, outputFieldName, func(expr *planpb.Expr) error { ... })\n                    if err != nil {\n                        log.Info(\"parse output field name failed\", zap.String(\"field name\", outputFieldName), zap.Error(err))\n                        return nil, nil, nil, false, fmt.Errorf(\"parse output field name failed: %s\", outputFieldName)\n                    }\n...\nPlan.g4:139/152: Identifier: Nondigit (Nondigit | Digit)*;  fragment Nondigit: [a-zA-Z_];\n写侧 internal/distributed/proxy/httpserver/utils.go:592-611: for mapKey, mapValue := range data.Map() { if !containsString(fieldNames, mapKey) { if collSchema.EnableDynamicField { ... reallyData[mapKey] = ... } } } —— 对动态 key 仅排除 $meta（common.MetaFieldName），无任何字符集/命名校验，任意 key（含 '1abc'、'中文字段'、点号）原样写入。",
+      "call_chain_traced": "写路径: httpserver/utils.go fillDynamicRow(any key passes) -> insertMsg；读路径: proxy/util.go getOutputBaseFuncs -> planparserv2.ParseIdentifier -> antlr grammar Plan.g4 Identifier=[a-zA-Z_][a-zA-Z0-9_]* -> 非 ASCII/含 -/$/空格/点号即 parse error -> 65535。根因：写侧无 identifier 语法校验，读侧强制 identifier 语法——非对称由两侧代码位置直接证明。",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (5/5 键一致复现)", "concurrency", "cache", "request typo (脚本逐字见 log)"],
+      "surviving": null
+    }
+  },
+  "cross_reference": "与 semantic_r2b_dynfield_readback_03 同根因（insert 侧/读侧两面）：本链 = 不合法命名字符集面；彼链 = 点号 meta.details 与 Unicode camélia 的 get(*) vs query 不一致面。两链独立脚本独立复现同一 internal/proxy/util.go:1640-1664 代码点。",
+  "evidence_weight": "A（多脚本交叉复现 + 源码双位置定位 + 官方测试用例佐证读侧已知行为；契约覆盖为 gap 是唯一弱点）"
+}

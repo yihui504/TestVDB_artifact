@@ -1,0 +1,319 @@
+{
+ "auditor": "chain-auditor",
+ "target": "qdrant",
+ "version": "v1.18.0",
+ "self_check": "PASS (#9255 无同型案例；机械 A/B 输出已采信；6/6 链均经三查+对应性核查)",
+ "verdicts": [
+  {
+   "defect_id": "boundary_collections_create_01",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "source",
+   "perspective_analysis": null,
+   "chain_broken_at": null,
+   "root_cause_if_fp": "mundane_api_semantics",
+   "rationale": "源码#[serde(default)]+Default=空Multi显式放行；认知盲区命中payload-only collection维护者明示支持，doc-required属doc落后于code",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_collections_create_02",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "source",
+   "perspective_analysis": null,
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "A机械判REFUTED(004引文一致未违反)；binary.encoding为Option+serde(default)，null=>OneBit默认，by_design_in_source",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_collections_create_04",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "source",
+   "perspective_analysis": null,
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": null,
+   "rationale": "sharding_method为Option+serde(default)，源码by_design；011枚举集{auto,custom,hash_slot}与openapi/源码{auto,custom}不一致属契约陈旧",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_collections_create_06",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "both",
+   "perspective_analysis": null,
+   "chain_broken_at": "claim_premise",
+   "root_cause_if_fp": null,
+   "rationale": "claim前提错误：契约/文档/源码三方一致null=Option::None合法(unset=not capped)，脚本自标should_reject无依据",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_collections_create_07",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "behavior",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "REFUTED",
+     "agent_suspects_contract_wrong": false
+    },
+    "aggregation_applied": "A=REFUTED(机械 create_002 id+quote_ok,violates=false)→implied NOT_DEFECT"
+   },
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": null,
+   "rationale": "A机械判REFUTED(002未违反)；2TB合法WAL配置致文件预分配FileTooLarge被捕获为500，服务未崩溃，非校验缺失型缺陷",
+   "rework_order": null
+  },
+  {
+   "defect_id": "semantic_aliases_update_003",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "behavior",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "A=NEUTRAL(quote_mismatch)→灰区; B=NEUTRAL(请求格式错误400非五类客观约束,类型字段名错误属反序列化正常拒绝); C=REFUTED(源码 untagged enum 对缺 alias_name 字段请求的正确拒绝=validation_present); D=NO_SIGNAL(宽松解析锚点不匹配本现象) → NOT_DEFECT"
+   },
+   "chain_broken_at": "log",
+   "root_cause_if_fp": "request_param_typo",
+   "rationale": "链断在log：脚本字段名alias vs 契约要求的alias_name，400系请求体反序列化正确拒绝，归因request_param_typo而非unicode",
+   "rework_order": null
+  },
+  {
+   "defect_id": "state_collections_create_002",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "behavior",
+   "perspective_analysis": null,
+   "chain_broken_at": "log",
+   "root_cause_if_fp": "env_noise",
+   "rationale": "grade D：连接从未建立(WinError 10061端口无监听)，无服务端行为可观测；并发重创建路径源码显式校验存在",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_compound_or_points_count_4",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "source",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "SUPPORTS_NOT_DEFECT",
+     "matched_pattern": "by_design: HNSW approximation duplicates in pagination — accepted limitation of approximate search (#9523)，现象级同构：approximate 路径精度损失为已接受限制",
+     "developer_quote": "Accepted limitation of approximate search"
+    },
+    "aggregation_applied": "A=NEUTRAL(constraint_absent, 候选 constraint_id 空且机械附加断言只覆盖 exact=true 分支)→灰区; B=NEUTRAL(approx 计数精度不属五类客观约束,请求合法返回 200 正常值); D=SUPPORTS_NOT_DEFECT → NOT_DEFECT"
+   },
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": "approximate_by_design",
+   "rationale": "容差判据系脚本自创非文档承诺；近似计数by_design，认知锚点'Accepted limitation of approximate search'(issue 9523)命中",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_geo_filter_points_count_5",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "both",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "SUPPORTS_NOT_DEFECT",
+     "matched_pattern": "by_design: accepted limitation of approximate search (#9523) — approximate 计数精度损失同类",
+     "developer_quote": "Accepted limitation of approximate search"
+    },
+    "aggregation_applied": "A=NEUTRAL(constraint_absent)→灰区; B=NEUTRAL(非请求侧可判定错误,200 正常返回); D=SUPPORTS_NOT_DEFECT → NOT_DEFECT"
+   },
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": "approximate_by_design",
+   "rationale": "indexing未排除(threshold=1仅sleep 8s未复测就绪态)；approx计数by_design，exact/scroll交叉一致仅证exact正确",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_geo_filter_scroll_order_6",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "implied_verdict=GREY_ZONE(A=NEUTRAL constraint_absent); B=NEUTRAL(NOT_TRIGGERED+兜底:lat=90合法值,假阴性系正确性缺陷非参数违规); D=NO_SIGNAL; C=CONFIRMED→保守分支 NEEDS_MORE_EVIDENCE"
+   },
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": null,
+   "rationale": "lat=90.0合法闭区间输入indexed路径count=0、unindexed同集合返回10、89.9999对照10；源码无by-design标注，根因geohash位折叠；认知盲区Filter condition validation gaps现象级命中",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_null_check_points_count_3",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "both",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "SUPPORTS_NOT_DEFECT",
+     "matched_pattern": "by_design: accepted limitation of approximate search (#9523)",
+     "developer_quote": "Accepted limitation of approximate search"
+    },
+    "aggregation_applied": "A=NEUTRAL(no_reference)→灰区; B=NEUTRAL(200 正常返回计数值,非参数校验类); D=SUPPORTS_NOT_DEFECT → NOT_DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": "approximate_by_design",
+   "rationale": "A=NEUTRAL(no_reference)→灰区；B=NEUTRAL；C=REFUTED（源码 CardinalityEstimation::unknown exp=total/2 + query_estimator.rs:415 单测固化 = by_design）；D=NO_SIGNAL；root_cause=approximate_by_design",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_pagination_cursor_scroll_order_7",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "source",
+   "perspective_analysis": null,
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": null,
+   "rationale": "源码point_ops.rs'|| order_by.is_some()'显式使next_page_offset恒None且错误消息给出官方替代方案，by_design_in_source",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_range_filter_points_count_1",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "source",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "SUPPORTS_NOT_DEFECT",
+     "matched_pattern": "by_design: accepted limitation of approximate search (#9523)",
+     "developer_quote": "Accepted limitation of approximate search"
+    },
+    "aggregation_applied": "A=NEUTRAL(no_reference, 链内 violates=true 系 builder 对 filter 语义层的裁量,机械脚本判 no_reference 且断言域在 exact=true)→灰区; B=NEUTRAL(数值精度偏差非五类客观约束); D=SUPPORTS_NOT_DEFECT → NOT_DEFECT"
+   },
+   "chain_broken_at": "contract",
+   "root_cause_if_fp": "approximate_by_design",
+   "rationale": "同向冗余界无文档容差承诺；approx近似计数by_design，认知锚点approximate accepted limitation命中，系统性偏差属估计器语义",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_type_mismatch_datetime_range_8",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": null,
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "类型恒真：文档声称RFC3339-only却静默接受integer界限，indexed=193/unindexed=0同请求分叉非任何设计意图可解释，validation_absent",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_type_mismatch_points_count_2",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "SUPPORTS_NOT_DEFECT",
+     "matched_pattern": "by_design: accepted limitation of approximate search (#9523)；另 lenient parsing 'This is fine and expected' 显示宽松跨类型输入为 by-design 方向",
+     "developer_quote": "Accepted limitation of approximate search"
+    },
+    "aggregation_applied": "A=NEUTRAL(quote_mismatch, 机械脚本以契约为准)→灰区; B=NEUTRAL(类型恒真指 API 拒绝/接受维度,本例 API 对合法 oneOf 标量返回 200 正常计数值,争议在估计值大小,不属五类); D=SUPPORTS_NOT_DEFECT → NOT_DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "类型恒真：integer字段接受字符串'50'匹配且approx返回100=truth 0的N/2，同类型对照组两路径一致排除环境因素，validation_absent",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_collections_create_03",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": null,
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "机械A=CONFIRMED(constraint qdrant_type_collections_create_007 引文原文一致，datatype='int4' 200 接受)→implied_verdict=DEFECT 定案；serde untagged 回退吞枚举错误、validation_absent",
+   "rework_order": null
+  }
+ ],
+ "summary": {
+  "total": 16,
+  "defect": 4,
+  "not_defect": 12,
+  "needs_more_evidence": 0,
+  "fp_evidence_source_distribution": {
+   "doc": 0,
+   "source": 5,
+   "both": 2,
+   "behavior": 3
+  },
+  "root_cause_distribution": {
+   "mundane_api_semantics": 4,
+   "approximate_by_design": 3,
+   "request_param_typo": 1,
+   "env_noise": 1
+  },
+  "notes": "R2 session 终态（audit-r2c 14链 + audit-r2d 2链）：DEFECT=4(cc03/cc07外另3条见分布) / NOT_DEFECT=12 / NME=0"
+ }
+}

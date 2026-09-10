@@ -1,0 +1,16 @@
+{
+  "defect_id": "boundary_collections_delete_005",
+  "endpoint": "collections+delete",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "boundary",
+  "constraint_ids": [
+    "qdrant_bc_delete_invisibility_001"
+  ],
+  "oracle": {
+    "statement": "after a 200 delete of a data-bearing collection (pre-verified visible on all faces): list result.collections[].name absent, describe exactly 404, exists 200 with result.exists=false; any ghost face = Type4_StateLogicViolation",
+    "source": "docstring",
+    "verify_faces": ["collections+list", "collections+get", "collections+exists"],
+    "preverify_version": "D3b-R4.0"
+  }
+}

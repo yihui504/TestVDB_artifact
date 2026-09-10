@@ -1,0 +1,72 @@
+{
+ "defect_id": "boundary_shards_16_010",
+ "endpoint": "collections+create",
+ "defect_type": "Type1",
+ "built_by": "evidence-builder",
+ "steps": {
+  "doc_verification": {
+   "result": "DOC_PARTIAL",
+   "link_reachability": "PASS",
+   "version_match": "PASS",
+   "content_consistency": "PARTIAL",
+   "endpoint_precision": "PARTIAL",
+   "sdk_rest_confusion": false,
+   "detail": "constraint milvus_range_collections_create_005 断言 numShards<=16 在 proxy 内核真实存在（task.go:393 MaxShardNum=16）；但 REST 顶层参数名是 shardsNum，而 REST handler 只读 httpReq.Params[\"shardsNum\"]（handler_v2.go:1915）——脚本传的是顶层 shardsNum（非 params.shardsNum），未进入校验路径。候选 endpoint/参数定位与契约有偏差",
+   "evidence_source": "doc"
+  },
+  "execution_evidence": {
+   "grade": "B",
+   "log_pattern": "numShards=17 -> http=200 code=0 ok=True raw={\"code\":0,\"data\":{}}（另 64/1000/0/-1 全 code=0）",
+   "secondary_observations": [
+    "numShards=1000 -> http=200 code=0 ok=True raw={\"code\":0,\"data\":{}}",
+    "numShards=0 -> http=200 code=0 ok=True raw={\"code\":0,\"data\":{}}",
+    "numShards=-1 -> http=200 code=0 ok=True raw={\"code\":0,\"data\":{}}",
+    "numShards=16 -> http=200 code=0 ok=True（合法对照 PASS）",
+    "numShards='16'/1.5/None -> code=0（类型/缺省面）",
+    "describe 回读：log 中 describe 响应被截断在 300 字符（'par...' 处），未捕获 shardsNum 字段——持久化值取证缺失（candidate 注记的 describe 回读待取证在本 log 中不可得）"
+   ],
+   "claim_alignment": "partial",
+   "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "非法值以 200+code:0 静默成功；本例 REST 层连业务错误码都未产生（参数被丢弃）"},
+   "reproducibility": "单脚本",
+   "script_error": false,
+   "triggering_scripts": ["debate_logs/boundary_shards_16_010.py"],
+   "evidence_source": "behavior"
+  },
+  "contract_grounding": {
+   "constraint_id": "milvus_range_collections_create_005",
+   "assertion_text_quoted": "numShards <= 16",
+   "api_violates_assertion": true,
+   "note": "客户端请求 numShards=17/1000 意图违反 <=16，API 回 code:0；但因参数放置位置（顶层 vs params.）在 REST 层被丢弃，实际生效 ShardsNum=ShardNumDefault(1)——violates=True 仅在'语义意图被静默丢弃'层面成立，judge 需区分这两层",
+   "evidence_source": "doc"
+  },
+  "chain_trace": {
+   "chain_links": [
+    "contract: milvus_range_collections_create_005 (numShards<=16)",
+    "doc: proxy/task.go:393 + component_param.go:2065-2073 证实校验存在（MaxShardNum 默认 16）",
+    "script: 顶层 \"shardsNum\": ns（boundary_shards_16_010.py L89）",
+    "log: numShards=17/64/1000/0/-1 全 -> code=0"
+   ],
+   "chain_broken_at": "log",
+   "break_detail": "断链在 log/script 环：REST v2 CollectionReq 结构无 shardsNum 字段（request_v2.go:630-643），顶层 shardsNum 被 Go json 反序列化静默丢弃，请求实际以 ShardsNum=默认1 创建——code:0 是对'参数被丢弃的请求'的成功，非对 numShards=17 的成功。校验本身存在且未被触及",
+   "evidence_source": "doc+behavior"
+  },
+  "source_grounding": {
+   "grep_queries": ["numShards", "ShardsNum", "MaxShardNum", "shardsNum.*params"],
+   "files_examined": [
+    "internal/distributed/proxy/httpserver/request_v2.go (CollectionReq L630-643)",
+    "internal/distributed/proxy/httpserver/handler_v2.go (L1914-1921 shardsNum 解析)",
+    "internal/proxy/task.go (L392-395 createCollectionTask 校验)",
+    "pkg/util/paramtable/component_param.go (L2065-2073 MaxShardNum 默认 16)",
+    "internal/distributed/proxy/httpserver/constant.go (L103 ShardNumDefault=1)"
+   ],
+   "source_excerpt": "handler_v2.go L1914-1921:\n\tshardsNum := int32(ShardNumDefault)\n\tif shardsNumStr, ok := httpReq.Params[\"shardsNum\"]; ok {\n\t\tif shards, err := strconv.ParseInt(fmt.Sprintf(\"%v\", shardsNumStr), 10, 64); err == nil {\n\t\t\tshardsNum = int32(shards)\n\t\t}\n\t}\n\treq.ShardsNum = shardsNum\n——REST 只接受 params.shardsNum；顶层 shardsNum 不在 CollectionReq 结构体中被丢弃。校验侧 task.go L393: if t.ShardsNum > Params.ProxyCfg.MaxShardNum.GetAsInt32() { return fmt.Errorf(\"maximum shards's number should be limited to %d\", ...) } 存在且有效（对该路径传参的请求会拒绝）。",
+   "call_chain_traced": "HTTP create {top-level shardsNum} -> CollectionReq 反序列化丢弃未知键 -> createCollection: ShardsNum=ShardNumDefault(1) 或 params.shardsNum -> CreateCollectionTask.PreExecute -> task.go:393 MaxShardNum 校验（<=16 放行）-> 集合以 1 分片创建成功",
+   "verification_outcome": "by_design_in_source",
+   "evidence_source": "source"
+  },
+  "mundane_explanation": {
+   "excluded": ["env", "concurrency", "cache_delay"],
+   "surviving": "REST v2 顶层未知参数静默丢弃（无 strict unknown-field rejection）——观测到的 code:0 由参数丢弃造成而非上限旁路；上限校验在 params.shardsNum 路径上有效。judge 需裁定'客户端语义意图静默丢弃'是否独立缺陷（静默丢弃本身无任何告警）"
+  }
+ }
+}

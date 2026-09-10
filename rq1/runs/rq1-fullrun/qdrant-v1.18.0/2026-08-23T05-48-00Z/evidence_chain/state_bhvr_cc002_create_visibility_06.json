@@ -1,0 +1,83 @@
+{
+  "defect_id": "state_bhvr_cc002_create_visibility_06",
+  "endpoint": "collections+create (with collections+get / collections+exists / collections+list visibility probes)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Both cited pages reachable via https://api.qdrant.tech/v-1-18-x/... (WebFetch was blocked by domain-verification policy; mcp web reader fallback succeeded, sites themselves reachable). Version selector shows v1.18.x, matching target 1.18.0. PIVOTAL: the get-collections page 200-response example is exactly \"result\": { \"collections\": [ { \"name\": \"string\" } ] } — an array of OBJECTS with a name field, not an array of strings. This matches contract assertion qdrant_behavioral_collections_list_001 ('list collections returns array of {name} descriptions') and directly CONTRADICTS the script's violated check (plain-string membership), i.e. the doc-verified shape makes the script's check structurally incapable of returning True. create-collection page documents vectors {size, distance} and timeout semantics consistent with the observed create 200.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "in list immediately: False  ->  DEFECT detail (Type4): collection absent from list immediately after create 200  ->  VERDICT: DEFECT_FOUND  (output_state_bhvr_cc002_create_visibility_06.log lines 7-9)",
+      "secondary_observations": [
+        "line 3: create: 200 {\"result\":true,\"status\":\"ok\",\"time\":0.229990384} — assertion qdrant_behavioral_collections_create_002 (200 {result, status ok, time}) PASSED",
+        "line 4: immediate get: 200 {...\"status\":\"green\"...\"vectors\":{\"size\":4,\"distance\":\"Cosine\"}...} — invariant qdrant_inv_collection_visible_after_create_001 (create=>200 THEN get=>200 status in enum) SATISFIED",
+        "line 6: immediate exists: 200 {\"result\":{\"exists\":true},\"status\":\"ok\",\"time\":9.049e-6} — exists check PASSED",
+        "script (debate_logs/state_bhvr_cc002_create_visibility_06.py line 111) computed listed = COLL in ((body.get(\"result\") or {}).get(\"collections\") or []) — COLL is a str, collections is documented+source-confirmed as [{\"name\":...}] objects, so this membership test is ALWAYS False regardless of server state",
+        "the raw HTTP status and body of the GET /collections call were NOT printed/logged (only the derived bool), so the log cannot evidence actual list contents either way",
+        "sibling output_state_bhvr_cc001_fail_no_zombie_05.log lines 6,10: 'in list: False' x2 — same membership-check style (cc001 .py line 75) but there False was the EXPECTED outcome (no-zombie check), so it carries no signal about list correctness"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No client error involved; no 2xx-wrapped business error. All four calls behaved 200 per the sibling observations; the list call's status itself was not logged."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_bhvr_cc002_create_visibility_06"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "candidates.jsonl constraint_id is EMPTY. Script header cites: (a) invariant qdrant_inv_collection_visible_after_create_001: \"create => 200 THEN collections+get => 200 with status in {green,yellow,red}\"; (b) assertion qdrant_behavioral_collections_create_002: \"200 CollectionOperationResponse {result, status ok, time} on success\"; (c) constraint_ids qdrant_type_collections_create_001 (\"vectors.distance IN {Cosine, Euclid, Dot, Manhattan}\" — irrelevant here, script used valid Cosine). Nearest list-side grounding is assertion qdrant_behavioral_collections_list_001: \"list collections returns array of {name} descriptions\" (category \"HTTP 200 {collections: [{name}]}\").",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "violates-self-check: the only visibility assertion in the chain (invariant ..._001, covering collections+get) was SATISFIED by observed behavior (immediate get 200 green, exists true, config echo size=4). The violated expectation (list must contain the name immediately) exists in NO contract object — it appears only in the script's own docstring — and the doc-verified list shape ([{name}] objects) is outside the script's string-membership check's domain. Hence api_violates_assertion=false: no contract assertion is contradicted by any observed server response."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: constraint_id EMPTY in candidates.jsonl; no constraint/assertion/invariant in structured_contract.json grounds 'new collection must appear in GET /collections immediately after create'; the only create-visibility invariant covers collections+get, which PASSED in the log",
+        "doc: get-collections v1.18.x verified — 200 response example \"result\":{\"collections\":[{\"name\":\"string\"}]} (objects, not strings); create-collection v1.18.x verified — create semantics match observed 200",
+        "script: state_bhvr_cc002_create_visibility_06.py line 111 — listed = COLL in (body['result']['collections']); string-vs-dict membership against the documented/source-confirmed [{name}] shape is always False; raw list response body not logged",
+        "log: line 7 'in list immediately: False' -> line 8 DEFECT detail (Type4) -> line 9 VERDICT: DEFECT_FOUND; every contract-grounded check in the same log (create shape / GET visibility / exists) passed"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "Two independent breaks. (1) CONTRACT link: the judged violation (list-membership immediacy) has no contract anchor — constraint_id empty, invariant covers only collections+get (satisfied). (2) SCRIPT link: the membership check is incompatible with the documented and source-confirmed response shape ([{\"name\":...}]), so 'in list: False' is the inevitable client-side result regardless of server state; moreover the raw list body was not captured, so the log contains zero evidence that the server omitted the collection. Source shows list/get/exists all read the same in-memory collections map that create populates before returning 200, so a genuine server-side invisibility is not possible on this code path.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["CollectionsResponse", "CollectionDescription", "fn all_collections", "async fn create_collection", "submit_collection_meta_op", "perform_collection_meta_op"],
+      "files_examined": [
+        "lib/api/src/rest/models.rs (CollectionDescription/CollectionsResponse structs)",
+        "src/common/collections.rs (do_list_collections)",
+        "lib/storage/src/content_manager/toc/mod.rs (all_collections_with_access_requirements)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (perform_collection_meta_op dispatch)",
+        "lib/storage/src/content_manager/toc/create_collection.rs (runtime create, map insert)",
+        "lib/storage/src/dispatcher.rs (submit_collection_meta_op consensus await)",
+        "src/actix/api/collections_api.rs (REST create_collection handler)"
+      ],
+      "source_excerpt": "// lib/api/src/rest/models.rs:134-136,160-162\npub struct CollectionDescription {\n    pub name: String,\n}\n...\npub struct CollectionsResponse {\n    pub collections: Vec<CollectionDescription>,\n}\n=> REST GET /collections returns {\"result\":{\"collections\":[{\"name\":\"...\"},...]}} — objects, never plain strings.\n\n// src/common/collections.rs:87-101 (list endpoint backend)\npub async fn do_list_collections(toc: &TableOfContent, auth: &Auth) -> Result<CollectionsResponse, StorageError> {\n    let collections = toc\n        .all_collections(auth.access(\"list_collections\"))\n        .await\n        .into_iter()\n        .map(|pass| CollectionDescription { name: pass.name().to_string() })\n        .collect_vec();\n    Ok(CollectionsResponse { collections })\n}\n\n// lib/storage/src/content_manager/toc/mod.rs:338-354 — all_collections reads self.collections.read().await.keys()\n\n// lib/storage/src/content_manager/toc/create_collection.rs:240-244 (runtime create applies into the SAME map)\nlet mut write_collections = self.collections.write().await;\nwrite_collections.validate_collection_not_exists(collection_name)?;\nlet existing_collection = write_collections.insert(collection_name.to_string(), Arc::new(collection));",
+      "call_chain_traced": "PUT /collections/{name} handler (src/actix/api/collections_api.rs:112-135) -> Dispatcher::submit_collection_meta_op (lib/storage/src/dispatcher.rs:72; for CreateCollection it registers awaiters and do_sync_nodes=true, code comment at :157-165: 'callers expect the updated collection config to be visible on every peer on return') -> Toc::perform_collection_meta_op (collection_meta_ops.rs:37-73) -> Toc::create_collection -> self.collections.write().await.insert(name, ...) (create_collection.rs:241-244). The list backend (do_list_collections, src/common/collections.rs:87) reads the exact same RwLock map via all_collections (toc/mod.rs:338-354). Therefore once create returns 200 the collection name is necessarily present in the list source; immediate GET green and exists=true in the same log read the same map and corroborate this.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source",
+      "note": "by_design_in_source: create-then-list visibility holds by construction (single shared map; handler awaits consensus apply + insert before responding 200). No code path exists for the claimed server-side 'absent from list immediately after create 200'."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (sibling calls create/get/exists all returned 200 in the same run against the same BASE_URL)",
+        "concurrency (single-script strictly sequential flow, no parallel writers)",
+        "server eventual-consistency delay (source: create handler returns only after the collection is inserted into the same map the list endpoint reads)"
+      ],
+      "surviving": "script-side parsing bug: the membership test 'str in [{\"name\":...},...]' is always False against the documented (v1.18.x API reference) and source-confirmed (CollectionsResponse) response shape — this alone fully explains the DEFECT verdict without any server misbehavior. Residual unknown: the raw GET /collections response was not logged, so actual list contents in that run are unobserved (though source makes omission impossible once create returned 200)."
+    }
+  }
+}

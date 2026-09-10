@@ -1,0 +1,12 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+strict echo: {"enabled": true, "search_max_hnsw_ef": 16, "search_max_oversampling": 1.0}
+query oversampling=0.5: 200
+query oversampling=1.0: 200
+query oversampling=1.5: 200
+query oversampling=2.0: 200
+query oversampling=100.0: 200
+search oversampling=2.0: 200
+prefetch inner oversampling=50: 200
+control hnsw_ef=64 (max 16): 400 (enforced)
+VERDICT: DEFECT_FOUND — strict-mode search_max_oversampling=1.0 is not enforced anywhere (query 1.5/2.0/100.0, search, prefetch inner params all 200) while sibling search_max_hnsw_ef rejects on the same collection

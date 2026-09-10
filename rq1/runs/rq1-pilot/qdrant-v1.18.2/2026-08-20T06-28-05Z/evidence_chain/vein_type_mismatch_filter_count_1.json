@@ -1,0 +1,81 @@
+{
+  "defect_id": "vein_type_mismatch_filter_count_1",
+  "endpoint": "POST /collections/{collection}/points/count",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PARTIAL",
+      "sdk_rest_confusion": false,
+      "detail": "Qdrant v1.18.2 docs at api.qdrant.tech confirm count endpoint exists with filter parameter, but documentation does not explicitly specify filter value type validation requirements. This is a behavioral gap rather than explicit documentation.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "TEST 2: String filter value 'twenty-five' on integer field 'age' → HTTP 200, count=0 (control TEST 1: integer filter value 25 on integer field 'age' → HTTP 200, count=1)",
+      "secondary_observations": [
+        "Control test (type-matched filter) works correctly: integer=integer → count=1",
+        "Type-mismatched filter silently returns count=0 instead of HTTP 400 validation error",
+        "HTTP 200 status with 'ok' status in response despite type mismatch"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 (N/A - no error returned, success response with count=0)",
+        "note": "Expected HTTP 400 Bad Request for type mismatch validation error, but got HTTP 200 OK with count=0 result"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_type_mismatch_filter_count_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No explicit constraint exists in structured_contract.json for filter value type validation on count endpoint",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: No explicit constraint for filter type validation",
+        "doc: API reference confirms endpoint exists but lacks type validation spec",
+        "script: vein_type_mismatch_filter_count_1.py sends filter {key: 'age', match: {value: 'twenty-five'}} to integer payload field",
+        "log: HTTP 200 + count=0 instead of expected HTTP 400 Bad Request"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Documentation does not explicitly specify that filter value types must match payload field types. However, strong API typing conventions (REST best practices) suggest that type mismatches should be rejected with 4xx errors, not silently accepted.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "FieldCondition",
+        "MatchValue",
+        "ValueVariants",
+        "validate_field_condition",
+        "CountRequestInternal"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs",
+        "lib/shard/src/count.rs",
+        "src/actix/api/count_api.rs",
+        "src/common/query.rs",
+        "lib/collection/src/operations/types.rs"
+      ],
+      "source_excerpt": "File: lib/segment/src/types.rs, lines 3076-3080\n\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone, PartialEq, Eq, Hash)]\n#[validate(schema(function = \"validate_field_condition\"))]\n#[serde(rename_all = \"snake_case\")]\npub struct FieldCondition {\n    pub key: PayloadKeyType,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub r#match: Option<Match>,\n    // ... other fields omitted\n}\n\nFile: lib/segment/src/types.rs, lines 3272-3280\n\npub fn validate_field_condition(field_condition: &FieldCondition) -> Result<(), ValidationError> {\n    if field_condition.all_fields_none() {\n        Err(ValidationError::new(\n            \"At least one field condition must be specified\",\n        ))\n    } else {\n        Ok(())\n    }\n}\n\nFile: lib/segment/src/types.rs, lines 2489-2495\n\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, PartialEq, Eq, Hash)]\n#[serde(untagged)]\npub enum ValueVariants {\n    String(String),\n    Integer(IntPayloadType),\n    Bool(bool),\n}\n\nFile: lib/segment/src/types.rs, lines 2548-2553\n\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, PartialEq, Eq, Hash)]\n#[serde(rename_all = \"snake_case\")]\npub struct MatchValue {\n    pub value: ValueVariants,\n}",
+      "call_chain_traced": "HTTP Request → count_api.rs (handler) → query.rs (do_count_points) → toc.count() → collection processes filter with FieldCondition containing MatchValue with ValueVariants::String('twenty-five') → Filter evaluation against integer payload field returns 0 matches (no type validation performed)",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "caching"
+      ],
+      "surviving": "Type coercion trust issue - Filter deserialization accepts any ValueVariants type (String/Integer/Bool) without validating against payload field schema. FieldCondition validation function (validate_field_condition) only checks that at least one condition field is present, not type compatibility. This is a genuine validation gap."
+    }
+  }
+}

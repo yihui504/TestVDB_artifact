@@ -1,0 +1,64 @@
+{
+ "defect_id": "boundary_quick_schema_conflict_003",
+ "endpoint": "collections+create",
+ "defect_type": "Type1",
+ "built_by": "evidence-builder",
+ "steps": {
+  "doc_verification": {
+   "result": "DOC_VERIFIED",
+   "link_reachability": "PASS",
+   "version_match": "PASS",
+   "content_consistency": "PASS",
+   "endpoint_precision": "PASS",
+   "sdk_rest_confusion": false,
+   "detail": "constraint milvus_type_collections_create_003 source_url 指向本地 clone handler_v2.go（v2.6.10 checkout，存在）；断言 NOT(dimension AND schema) else 1100 可与源码核对；endpoint collections+create 在 registry 中",
+   "evidence_source": "doc"
+  },
+  "execution_evidence": {
+   "grade": "B",
+   "log_pattern": "conflict payload -> http=200 raw={\"code\":0,\"data\":{}}（payload 同时含 \"dimension\": 8 与 \"schema\":{\"fields\":[id,vec]}，期望 code 1100）",
+   "secondary_observations": [
+    "describe: {\"code\":0,\"data\":{...\"collectionName\":\"bnd_mode_conflict_1787345663\"...\"fields\":[{\"name\":\"id\",\"type\":\"Int64\"}...]}} — 冲突创建后集合真实存在，schema 模式字段生效"
+   ],
+   "claim_alignment": "aligned",
+   "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "本例为非法成功（200+code:0）；同 endpoint 其他非法输入以 200+1100 返回"},
+   "reproducibility": "单脚本",
+   "script_error": false,
+   "triggering_scripts": ["debate_logs/boundary_quick_schema_conflict_003.py"],
+   "evidence_source": "behavior"
+  },
+  "contract_grounding": {
+   "constraint_id": "milvus_type_collections_create_003",
+   "assertion_text_quoted": "NOT(dimension set AND schema set) else code==1100",
+   "api_violates_assertion": true,
+   "note": "dimension 与 schema 同时传入而 code==0，直接违反互斥断言；无合规解释空间",
+   "evidence_source": "doc"
+  },
+  "chain_trace": {
+   "chain_links": [
+    "contract: milvus_type_collections_create_003 (NOT(dimension AND schema) else 1100)",
+    "doc: source_url .milvus-src-2610/.../handler_v2.go 存在且语义可核对",
+    "script: boundary_quick_schema_conflict_003.py L88-97 payload {dimension:8, schema:{fields:[...]}}",
+    "log: conflict payload -> http=200 {\"code\":0,\"data\":{}}"
+   ],
+   "chain_broken_at": "source",
+   "break_detail": "断链点在 target 实现：handler_v2.go createCollection 以 len(httpReq.Schema.Fields)==0 判定 quick 模式（L1720），有 schema 时走 else 分支完全忽略顶层 dimension，全文件无 dimension+schema 冲突校验——contract 声称的 1100 校验在源码中不存在（validation_absent）",
+   "evidence_source": "doc+behavior"
+  },
+  "source_grounding": {
+   "grep_queries": ["dimension.*schema conflict", "idType can only be", "both.*set", "WrapErrParameterInvalid(\"collectionName & dimension\""],
+   "files_examined": [
+    "internal/distributed/proxy/httpserver/handler_v2.go (createCollection L1708-1910)",
+    "internal/distributed/proxy/httpserver/request_v2.go (CollectionReq L630-643)"
+   ],
+   "source_excerpt": "handler_v2.go L1719-1741: if len(httpReq.Schema.Fields) == 0 { ... if httpReq.Dimension == 0 { err := merr.WrapErrParameterInvalid(\"collectionName & dimension\", \"collectionName\", \"dimension is required for quickly create collection...\") ... } ... } else { /* full schema mode: 顶层 httpReq.Dimension 从未被读取或比对 */ } —— 模式判定仅看 schema.fields 是否为空；两字段同传时 dimension 被静默忽略，无冲突拒绝路径。",
+   "call_chain_traced": "HTTP collections/create -> createCollection(handler_v2.go:1708) -> schema.fields==0 ? quick-mode(读 dimension) : full-schema-mode(忽略 dimension) -> proto.Marshal -> CreateCollection RPC；无 conflict check 函数存在",
+   "verification_outcome": "validation_absent",
+   "evidence_source": "source"
+  },
+  "mundane_explanation": {
+   "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+   "surviving": null
+  }
+ }
+}

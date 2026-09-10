@@ -1,0 +1,16 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[ids] cluster_status unparseable — fallback local=987655 ghost=987654
+[baseline] local_shard=0 ghost_shard=9000 shard_count=1
+[op move_shard:ghost_to_peer] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled"},"time":7.78e-6}
+[op move_shard:ghost_shard] status=422 raw={"status":{"error":"Validation error in JSON body: [move_shard.to_peer_id: cannot transfer shard to itself, \"to_peer_id\" must be different than 987655 in \"from_peer_id\"]"},"time":0.0}
+OBSERVATION (op move_shard:ghost_shard): rejected with 422 (documented code is 400) — clear rejection, not judged
+[op replicate_shard:ghost_peer] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled"},"time":5.767e-6}
+[op drop_replica:ghost_peer] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled"},"time":4.711e-6}
+[op abort_transfer:unknown] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled"},"time":6.777e-6}
+[op restart_transfer:unknown] status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations"},"time":0.0}
+[op start_resharding:ghost_peer] status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations"},"time":0.0}
+[op abort_resharding:ghost_shard] status=400 raw={"status":{"error":"Bad request: Distributed mode disabled"},"time":4.15e-6}
+[reconcile] status=200 raw={"result":{"peer_id":285485119185529,"shard_count":1,"local_shards":[{"shard_id":0,"points_count":0,"state":"Active"}],"remote_shards":[],"shard_transfers":[]},"status":"ok","time":0.000084313}
+DEFECT: (baseline) 200 but CollectionClusterInfo fields missing: ['resharding_operations'] — Type4_StateLogicViolation — raw={"result":{"peer_id":285485119185529,"shard_count":1,"local_shards":[{"shard_id":0,"points_count":0,"state":"Active"}],"remote_shards":[],"shard_transfers":[]},"status":"ok","time":0.000452379}
+VERDICT: DEFECT_FOUND

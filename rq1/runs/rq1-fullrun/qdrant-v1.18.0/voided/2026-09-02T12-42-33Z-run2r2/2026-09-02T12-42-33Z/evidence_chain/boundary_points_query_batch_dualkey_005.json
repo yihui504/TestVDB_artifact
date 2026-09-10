@@ -1,0 +1,93 @@
+{
+  "defect_id": "boundary_points_query_batch_dualkey_005",
+  "endpoint": "points+query+batch (POST /collections/{collection_name}/points/query/batch)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No doc_preflight.json sidecar exists in the contract directory; harness WebFetch was domain-blocked for api.qdrant.tech, so verification was done via direct curl. Reachability PARTIAL: the constraint's exact source_url https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points returns 404 (site restructured); the versioned section /v-1-18-x/api-reference returns 200 and the page relocated to /v-1-18-x/api-reference/search/query-points returns 200 (2.46MB, full Fern type graph); site root alive (307 -> /api-reference) — the link is stale, not dead. Version PASS: the relocated page lives inside the v-1-18-x versioned section matching target qdrant v1.18.0. Content PARTIAL: the page documents the QueryRequest.query field as 'Query to perform. If missing without prefetches, returns points ordered by their IDs.' with schema shape 'undiscriminatedUnion' (QueryInterface -> VectorInput | Query); the doc renders an anyOf-style undiscriminated union and nowhere states oneOf exactly-one semantics nor any disposition for multiple variant keys present simultaneously — the contract's 'oneOf' exclusivity wording is the contract's characterization of the variant domain (nearest and order_by are both documented variants per the registry parameter paths query.nearest/query.order_by and the version-exact source schema.rs), not the doc's literal words. Endpoint precision PASS: 'points+query+batch' exists in the endpoint_registry (path points+query+batch, POST, description 'Execute multiple universal queries in one call.', searches array[QueryRequest]) and the relocated batch page confirms POST /collections/{collection_name}/points/query/batch with the searches field.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "D1 nearest+order_by dual-key -> status=200\nraw: {\"result\":[{\"points\":[{\"id\":4,\"version\":1,\"score\":0.999992},{\"id\":5,\"version\":1,\"score\":0.9999875},{\"id\":6,\"version\":1,\"score\":0.999982}]}],\"status\":\"ok\",\"time\":0.000590276}",
+      "secondary_observations": [
+        "rest|batch-face /points/query/batch (sibling semantic_points_query_batch_dualkey_005, independent collection/ids): B batch-face dual-key entry -> status=200 ... B disposition = ('accept', 'nearest')",
+        "rest|single-face /points/query (sibling semantic_points_query_batch_dualkey_005): S single-face dual-key query -> status=200 ... S disposition = ('accept', 'nearest')",
+        "rest|control pure nearest (sibling script): BN pure nearest (single face) -> status=200 ... BN fingerprint FN = [871, 872, 873] — the dual-key result equals FN exactly, proving the executed query was nearest-only",
+        "rest|control pure order_by desc (sibling script): BO pure order_by desc (single face) -> status=200 ... BO fingerprint FO = [878, 877, 876] — the dual-key result does NOT match FO, proving the order_by key did not take effect",
+        "script-face note: the D2 leg (order_by+sample) never executed in this log — the script returns immediately after printing the D1 verdict (debate_logs/boundary_points_query_batch_dualkey_005.py returns at the D1 DEFECT_FOUND branch)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Actually a full success envelope: HTTP 200 with status:\"ok\" and result data — zero error signaling for a request-side-decidable ambiguity (two oneOf variant keys in one query object). The server silently executed one interpretation (nearest) and discarded the other key; the client has no way to know the order_by key was dropped. Categorized in the 2xx bucket because the request-decidable error surfaced as 2xx, but strictly it is 2xx-success, not even a business error code."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_points_query_batch_dualkey_005",
+        "semantic_points_query_batch_dualkey_005"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_points_query_001",
+      "assertion_text_quoted": "query variant domain: nearest | recommend | discover | context | order_by | fusion | sample | neartext | nearimage (oneOf; neartext/nearimage are inference variants)",
+      "api_violates_assertion": true,
+      "note": "Anchored constraint located by me (candidates.jsonl constraint_id was empty). Verbatim-substring check against structured_contract.json raw text: PASS (exact assertion field of qdrant_type_points_query_001, type_constraints section). The constraint is endpoint-scoped points+query, but the identical QueryRequest.query schema governs the batch wrapper per the endpoint_registry entry points+query+batch (searches: array[QueryRequest]); the script's own header cited qdrant_behavioral_points_query_batch_001, but under that assertion a 200 is compliant (api_violates_assertion would be false) — the violated constraint is the type-level oneOf variant domain. Violates-declaration self-check: the observed parameter (entry.query carrying BOTH nearest and order_by keys) is inside the quoted constraint's domain (query field variant typing) and supplies two variant keys simultaneously, contradicting the assertion's oneOf exactly-one reading, while the API accepted with 200 — so api_violates_assertion=true is not semantically conservative. Honest nuance for the auditor: the published v-1-18-x API reference formalizes the same union as undiscriminatedUnion (anyOf-style, at-least-one, no exclusivity promise), so the exclusivity violated here is the contract's oneOf characterization rather than a literal doc sentence; the source-side mechanism (serde untagged first-match, unknown fields ignored) fully explains the observation.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_points_query_001 (structured_contract.json, assertion verbatim at char 201311) defines the query variant domain as oneOf over nearest|recommend|discover|context|order_by|fusion|sample|neartext|nearimage — nearest and order_by are both enumerated variants; registry also lists parameter paths query.nearest and query.order_by",
+        "doc: v-1-18-x API reference documents QueryRequest.query as 'Query to perform...' with undiscriminatedUnion shape QueryInterface(VectorInput|Query) — reachable only at the relocated URL /v-1-18-x/api-reference/search/query-points (contract's exact URL 404); the doc documents the variant union but states no dual-key disposition and no literal oneOf-exclusivity wording",
+        "script: debate_logs/boundary_points_query_batch_dualkey_005.py lines 197-201 sent POST /collections/{coll}/points/query/batch with body {\"searches\": [{\"query\": {\"nearest\": [0.0, 1.0, 0.0, 0.0], \"order_by\": {\"key\": \"rank\", \"direction\": \"asc\"}}, \"limit\": 3}]} — two variant keys simultaneously in entry.query, seeded with disjoint deterministic fingerprints (order_by -> ids exactly [1,2,3]; nearest -> ids subset of blue {4..9})",
+        "log: output_boundary_points_query_batch_dualkey_005.log — D1 status=200, result[0].points ids [4,5,6] (all blue, scores ~0.99999) matching the nearest fingerprint and not the order_by fingerprint, i.e. the order_by key was silently discarded; sibling script reproduced identical disposition ('accept','nearest') on both the single and batch faces with control fingerprints FN/FO proving non-coincidence"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "enum QueryInterface",
+        "serde(untagged) (glob **/types.rs)",
+        "query/batch (rust)",
+        "fn convert_query_request_from_rest",
+        "QueryInterface::Nearest | QueryInterface::Query",
+        "deny_unknown_fields (in lib/api/src/rest/schema.rs)",
+        "struct BatchQueryRequest | struct QueryRequest"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs (lines 549-677: QueryRequestInternal, QueryRequest, QueryRequestBatch, QueryInterface, Query, NearestQuery)",
+        "lib/api/src/rest/validate.rs (lines 20-48: Validate for QueryInterface and Query)",
+        "lib/api/src/rest/conversions.rs (lines 129-139: From<QueryInterface> for Query)",
+        "src/actix/api/query_api.rs (lines 60-134: single + batch handlers)",
+        "src/common/inference/query_requests_rest.rs (lines 96-146: convert_query_request_from_rest)",
+        "openapi/openapi-main.ytt.yaml (lines 711-723: /collections/{collection_name}/points/query/batch -> QueryRequestBatch)"
+      ],
+      "source_excerpt": "lib/api/src/rest/schema.rs v1.18.0 lines 603-667:\n\n603  #[derive(Debug, Serialize, Deserialize, JsonSchema, Validate)]\n604  pub struct QueryRequestBatch {\n605      #[validate(nested)]\n606      pub searches: Vec<QueryRequest>,\n607  }\n...\n614  #[derive(Debug, Serialize, Deserialize, JsonSchema)]\n615  #[serde(untagged)]\n616  #[serde(expecting = \"Expected some form of vector, id, or a type of query\")]\n617  pub enum QueryInterface {\n618      Nearest(VectorInput),\n619      Query(Query),\n620  }\n621\n622  #[derive(Debug, Serialize, Deserialize, JsonSchema)]\n623  #[serde(untagged)]\n624  pub enum Query {\n625      /// Find the nearest neighbors to this vector.\n626      Nearest(NearestQuery),\n627\n628      /// Use multiple positive and negative vectors to find the results.\n629      Recommend(RecommendQuery),\n630\n631      /// Search for nearest points, but constrain the search space with context\n632      Discover(DiscoverQuery),\n633\n634      /// Return points that live in positive areas.\n635      Context(ContextQuery),\n636\n637      /// Order the points by a payload field.\n638      OrderBy(OrderByQuery),\n639\n640      /// Fuse the results of multiple prefetches.\n641      Fusion(FusionQuery),\n642\n643      /// Apply reciprocal rank fusion to multiple prefetches\n644      Rrf(RrfQuery),\n645\n646      /// Score boosting via an arbitrary formula\n647      Formula(FormulaQuery),\n648\n649      /// Sample points from the collection, non-deterministically.\n650      Sample(SampleQuery),\n651\n652      /// Use feedback from an oracle to improve the results\n653      RelevanceFeedback(RelevanceFeedbackQuery),\n654  }\n655\n656  #[derive(Debug, Serialize, Deserialize, JsonSchema, Validate)]\n657  #[serde(rename_all = \"snake_case\")]\n658  pub struct NearestQuery {\n659      /// The vector to search for nearest neighbors.\n660      #[validate(nested)]\n661      pub nearest: VectorInput,\n662\n663      /// Perform MMR (Maximal Marginal Relevance) reranking after search,\n664      /// using the same vector in this query to calculate relevance.\n665      #[validate(nested)]\n666      pub mmr: Option<Mmr>,\n667  }\n\nlib/api/src/rest/validate.rs lines 33-48 (post-deserialization Validate only checks the ALREADY-CHOSEN variant):\n\n 33  impl Validate for Query {\n 34      fn validate(&self) -> Result<(), validator::ValidationErrors> {\n 35          match self {\n 36              Query::Nearest(vector) => vector.validate(),\n 37              Query::Recommend(recommend) => recommend.validate(),\n...\n 43              Query::OrderBy(order_by) => order_by.validate(),\n 46          }\n 47      }\n 48  }",
+      "call_chain_traced": "actix route #[post(\"/collections/{collection_name}/points/query/batch\")] query_points_batch (src/actix/api/query_api.rs:110, takes Json<QueryRequestBatch> — serde deserialization happens in the JSON extractor) -> QueryRequestBatch.searches: Vec<QueryRequest> (schema.rs:604) -> QueryRequest.internal (flattened QueryRequestInternal, schema.rs:596) -> QueryRequestInternal.query: Option<QueryInterface> (schema.rs:559) -> QueryInterface #[serde(untagged)] Nearest(VectorInput)|Query(Query) (schema.rs:615) -> Query #[serde(untagged)] with Nearest declared FIRST, OrderBy fifth (schema.rs:624). Rust serde untagged deserialization tries variants in declaration order and takes the first that succeeds; the struct variants (NearestQuery{nearest, mmr}, etc.) carry NO #[serde(deny_unknown_fields)] (zero occurrences in schema.rs), so an object {\"nearest\": [...], \"order_by\": {...}} deserializes successfully as NearestQuery with the order_by key silently ignored — first-match-wins key discard. Downstream, From<QueryInterface> for Query (conversions.rs:129) and convert_query_request_from_rest (query_requests_rest.rs:96) operate on the already-resolved variant, and the Validate impl (validate.rs:33-48) validates only the chosen variant — no layer anywhere checks oneOf exclusivity or detects the discarded key.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "The contract-required oneOf-exclusivity validation (reject a query object matching more than one variant) is absent from the entire deserialization-to-execution path; the observed 200-with-nearest-fingerprint behavior is exactly what the untagged first-match + unknown-field-ignoring mechanism produces. NOT marked by_design_in_source: the source contains no explicit intent evidence for dual-key tolerance (the #[serde(expecting)] attribute at schema.rs:616 only shapes the error message when ALL variants fail; the variant doc-comments describe single-variant semantics only) — per the v3.4 tightened rule, unannotated silent behavior is forbidden from being marked by_design_in_source. The Fern API reference rendering the union as undiscriminatedUnion (anyOf-style, no exclusivity promise) is recorded for the auditor as doc-side context.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (two independent scripts on two independently created collections produced the identical disposition ('accept','nearest'); clean exit code 0; no 5xx or transport failures in the log)",
+        "concurrency (single sequential request per face; fingerprints are deterministic and disjoint — order_by would yield exactly [1,2,3], nearest yields blue ids only)",
+        "cache (stateless read path; no repeated-request staleness involved)",
+        "request-parameter typo (request body verbatim in the script: query carries both nearest=[0.0,1.0,0.0,0.0] and order_by={key:rank,direction:asc}; response ids [4,5,6] all in blue set with ~0.99999 nearest scores matches the pre-registered nearest fingerprint, and the sibling script's control fingerprints FN=[871,872,873]/FO=[878,877,876] rule out coincidence)"
+      ],
+      "surviving": "by-design (partially surviving, for the auditor): serde-untagged first-match-wins is standard Rust/serde behavior and the published v-1-18-x spec formalizes the union as anyOf-style undiscriminatedUnion which does not itself promise exclusivity rejection; however the v1.18.0 source contains NO explicit intent annotation for dual-key tolerance (no by-design comment, no deny_unknown_fields decision traceable to intent), so by-design cannot be confirmed in source — recorded honestly rather than adjudicated"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+create: 200 {"code":0,"data":{}}
+insert w/ dynamic keys: 200 {"code":0,"cost":0,"data":{"insertCount":2,"insertIds":[1,2]}}
+query outputFields=['*']: 200 {"code":0,"cost":0,"data":[{"dyn_note":"alpha","dyn_score":42,"id":1,"vector":[0.1,0.1,0.1,0.1]},{"dyn_note":"beta","dyn_score":7,"id":2,"vector":[0.2,0.2,0.2,0.2]}]}
+
+query outputFields=['id','dyn_score']: 200 {"code":0,"cost":0,"data":[{"dyn_score":42,"id":1},{"dyn_score":7,"id":2}]}
+
+query outputFields=['id','no_such_field_xyz']: 200 {"code":0,"cost":0,"data":[{"id":1},{"id":2}]}
+
+NOTE: invalid outputField silently dropped (code 0), no error, no echo — permissive but not data-loss
+VERDICT: NO_DEFECT

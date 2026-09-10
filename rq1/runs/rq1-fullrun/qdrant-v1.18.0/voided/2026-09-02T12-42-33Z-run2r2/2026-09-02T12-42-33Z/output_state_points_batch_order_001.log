@@ -1,0 +1,15 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['batch_update']
+[P1-upsert-then-delete batch 2 ops] status=200 raw={"result":[{"operation_id":1,"status":"completed"},{"operation_id":2,"status":"completed"}],"status":"ok","time":0.006065699}
+[get 501] status=404 raw={"status":{"error":"Not found: Point with id 501 does not exists!"},"time":0.00027059}
+[P1] OK: [upsert,delete] -> point absent
+[P1 count] status=200 raw={"result":{"count":0},"status":"ok","time":0.00010085}
+[P2-delete-then-upsert batch 2 ops] status=200 raw={"result":[{"operation_id":3,"status":"completed"},{"operation_id":4,"status":"completed"}],"status":"ok","time":0.009142533}
+[get 501] status=200 raw={"result":{"id":501,"payload":{"phase":"p2"},"vector":[0.82956135,0.20739034,0.3110855,0.41478068]},"status":"ok","time":0.000510785}
+[P2] OK: [delete,upsert] -> point present with p2 payload
+[P2 count] status=200 raw={"result":{"count":1},"status":"ok","time":0.000244015}
+[P3-delete-points-key batch 2 ops] status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum UpdateOperation at line 1 column 148"},"time":0.0}
+[get 502] status=404 raw={"status":{"error":"Not found: Point with id 502 does not exists!"},"time":0.000225538}
+DEFECT: (P3) 'delete_points'-key batch rejected with 400 yet earlier upsert of 502 not durable (GET 404) — rejected batch must not half-apply — Type4_StateLogicViolation
+VERDICT: DEFECT_FOUND

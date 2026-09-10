@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_r2_dbname_empty_26",
+  "endpoint": "collections+describe, entities+insert, collections+create, collections+list",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint_id='boundary' 不在契约（gap）。最接近契约 milvus_state_collections_create_002 断言'不存在 dbName → code 800'（涵盖不存在但不涵盖空串/null），其源（live probe + task_database.go）已核；契约未对 dbName 空串做任何断言。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[describe dbName=''] 200 code=0 {\"code\":0,\"data\":{...\"collectionName\":\"bnd_r2_db_26\"...}} -> DEFECT_FOUND（主观测：空 dbName 静默路由 default db 并成功 describe）",
+      "secondary_observations": [
+        "[control has-alias-list no dbName] 200 code=0",
+        "[control describe no dbName] 200 code=0",
+        "[control insert no dbName] 200 code=0",
+        "[insert dbName=''] 200 code=0 {\"code\":0,\"cost\":0,\"data\":{\"insertCount\":1,\"insertIds\":[468544219940659249]}} -> DEFECT_FOUND",
+        "[create dbName=''] 200 code=0 {\"code\":0,\"data\":{}} -> DEFECT_FOUND",
+        "[describe dbName=null] 200 code=0 {...} -> DEFECT_FOUND",
+        "对照网（boundary_r2_tristate_25.log）: [insert dbName=''] 200 code=0；19号对照：[collections/create name=''] → 1802 missing required parameters（名字类空串全端点一致拒）",
+        "对照（R1 probe, gt2616b）: dbName=no_such_db → code 800 'database not found'"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "空串/null dbName 以 HTTP 200+code:0 成功路由 default db；不存在的 dbName 才 800。分叉行为：空串≠不存在。"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_dbname_empty_26.py", "debate_logs/boundary_r2_tristate_25.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_state_collections_create_002 (最近邻；boundary 本身为 gap)",
+      "assertion_text_quoted": "NOT exists(dbName) AND collections/create => code 800 message 'database not found[database=<dbName>]'",
+      "api_violates_assertion": false,
+      "note": "该断言域是'不存在的 dbName'；空串观测不在其域内（空串被规范化为 default 后存在），故 violates=false 正确——真正的缺口是契约未断言空串必须拒绝，候选发现的是这个 gap。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 'boundary' 不存在（gap）；最近邻 milvus_state_collections_create_002 只覆盖不存在 dbName",
+        "doc: 契约源 live probe + task_database.go（本地已核 handler_v2.go dbName 归一化路径）",
+        "script: boundary_r2_dbname_empty_26.py 发出 dbName=''/null 到 describe/insert/create",
+        "log: 全部 http=200 + code:0（主观测行），对照不存在 dbName=800、name=''=1802"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "第一环无契约锚点（boundary gap）；行为环自洽且有多脚本复现。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["DbName == \"\"", "DefaultDbName", "DbName string `json:\"dbName\"`"],
+      "files_examined": [
+        ".milvus-src-2616/internal/distributed/proxy/httpserver/handler_v2.go",
+        ".milvus-src-2616/internal/distributed/proxy/httpserver/request_v2.go"
+      ],
+      "source_excerpt": "handler_v2.go:356-367: `dbName := \"\"; if req != nil { if getter, ok := req.(requestutil.DBNameGetter); ok { dbName = getter.GetDbName() }; if dbName == \"\" { dbName = gCtx.Request.Header.Get(HTTPHeaderDbName); if dbName == \"\" { dbName = DefaultDbName } } }` —— 空串 dbName 在 wrapperPost 层被无差别替换为 DefaultDbName（含 null 反序列化为 \"\"）。request_v2.go:63-68: CollectionNameReq.DbName `json:\"dbName\"` 无 binding tag（对照 CollectionReqRequiredName 的 dbName 有 binding:\"required\"）。",
+      "call_chain_traced": "HTTP body dbName=''/null → wrapperPost dbName==\"\" → header → DefaultDbName → ctx metadata + 各 handler 的 req.DbName —— 与 log 中'空串等价于不传'行为完全一致；'不存在 dbName' 在 proxy 校验 DB 存在性时走 800（不同代码路径，分叉成立）",
+      "verification_outcome": "by_design_in_source",
+      "note": "源码显式将空 dbName 归一化为 default（by-design defaulting 逻辑）；REST 未提供区分'空串'与'未传'的能力。是否构成跨 db 隔离弱点由 auditor 裁量。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（对照组正常）", "concurrency", "缓存"],
+      "surviving": "by-design defaulting 抗辩：空串语义上等同未指定 dbName；但与 name='' 全端点 1802 拒绝的对照构成同请求内不一致性"
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "defect_id": "semantic_filter_expr_05",
+  "endpoint": "v2/vectordb/entities/query (对照 entities/search)",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "FAIL",
+      "sdk_rest_confusion": false,
+      "detail": "断言 milvus_behavioral_query_001 的 endpoint 字段写的是 v1/vector/query，源码验证：该 1804 行为出自 handler_v1.go:469（merr.Code(err) 透传），而本候选实测打的是 v2/vectordb/entities/query（handler_v2.go:551 query()，同透传但错误码来自底层 expr 解析）；契约把 v1 观察到的错误码族错误外推到了 v2。断言宣称 invalid filter -> 1804-family，实测 v2 返回 65535",
+      "evidence_source": "doc+source"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "invalid_filter: 200 {\"code\":65535,\"message\":\"cannot parse expression: score >>> 5, error: line 1:8 extraneous input '>' expecting {'(', '[', EXISTS, '+', '-', '~', NOT, ...}\"}",
+      "secondary_observations": [
+        "eq15/range/in 三个合法 filter 均 200 返回正确行集（filter 语义本身正确）",
+        "bad_field: 200 {\"code\":65535,\"message\":\"cannot parse expression: nonexistent_field == 1, error: field nonexistent_field not exist\"}",
+        "search_filter: 200 正常返回（对照正常路径无异常）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "HTTP 200 + code 65535；错误确实被拒绝（非静默接受），争点仅在错误码归类：65535(UnexpectedError) vs 契约声称 1804-family；语义错误信息本身携带 parser 详情（ANTRL 诊断尚可）"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["semantic_filter_expr_05.py", "vein_typo_filter_003.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_behavioral_query_001",
+      "assertion_text_quoted": "invalid filter -> 1804-family error; limit+offset compose into topK (expected_behavior: code 1804 for invalid boolean expr)",
+      "api_violates_assertion": true,
+      "note": "语义二选一核对：观测的参数（无效 filter 表达式）确在断言约束域内（invalid boolean expr），响应为 65535 而非 1804——违反成立。但注意断言 endpoint 是 v1/query，实测打的是 v2/query，契约自身存在 v1/v2 归属含混（见 doc_verification）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_behavioral_query_001 'invalid filter -> 1804-family'",
+        "doc: source_url=handler_v1.go v2.3.22（存在且可达，1804 透传逻辑在 handler_v1.go:469 属实）",
+        "script: semantic_filter_expr_05.py 以 'score >>> 5' 与 nonexistent_field 打 v2/entities/query",
+        "log: 65535 而非 1804 —— 断言宣称的错误码族与实测不符"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "断链在 doc/契约层：断言将 v1 handler 的错误码观察泛化为跨 v1/v2 的行为承诺；v2 路径（handler_v2.go:568 wrapperProxy -> proxy.Query -> 底层 expr parser）返回的 merr 归类为 65535 UnexpectedError。契约内容一致性 FAIL（1804 声称不适用于 v2 端点），endpoint_precision FAIL（断言 endpoint v1 vs 实测 v2）",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["httpReq.Limit > 0 (v1/v2 handler)", "merr.Code(err) handler_v1 query", "CollectionFilterReq binding required", "65535|UnexpectedError errors.go"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v1.go (425-475 query)",
+        "internal/distributed/proxy/httpserver/handler_v2.go (546-590 query)",
+        "internal/distributed/proxy/httpserver/request_v2.go (92-97 CollectionFilterReq)"
+      ],
+      "source_excerpt": "handler_v2.go:568-573: resp, err := wrapperProxy(ctx, c, req, h.checkAuth, false, \"/milvus.proto.milvus.MilvusService/Query\", func(...) { resp, err := CheckLimiter(req, h.proxy); ...; return h.proxy.Query(reqCtx, req.(*milvuspb.QueryRequest)) }) —— v2 对底层返回的 expr 解析错误无本地映射，原样透传；错误码 65535 来自底层 merr（UnexpectedError 族），v2 handler 不做 1804 重编码",
+      "call_chain_traced": "v2 query -> wrapperProxy -> proxy.Query -> planparserv2 expr 解析失败 -> merr UnexpectedError(65535) -> handler 原样透传（无 1804 映射代码）。v1 路径 handler_v1.go:468-469 同样透传 merr.Code(err)，1804 仅在特定 merr 类型（ErrInvalidData:65535? 实为 data 处理类）下出现——契约的 1804-family 声称对两个 handler 均非源码保证",
+      "verification_outcome": "validation_present",
+      "note": "非法 filter 确实被拒绝（验证存在），缺陷主张是错误码归类/诊断质量（65535 vs 1804）而非静默接受——Type2 性质",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env(同 session 合法 filter 全对)", "script_error(log 为真实响应)", "参数笔误(filter 字符串即攻击载荷，逐字在 log)"],
+      "surviving": "契约错误码族声称过宽（v1 观察外推到 v2）——doc 层缺陷主张存活"
+    }
+  },
+  "evidence_weight": "B（raw HTTP 逐字 + 源码透传路径确证；断链点在契约层而非源码层，真实缺陷主张=契约漂移/错误码分类）"
+}

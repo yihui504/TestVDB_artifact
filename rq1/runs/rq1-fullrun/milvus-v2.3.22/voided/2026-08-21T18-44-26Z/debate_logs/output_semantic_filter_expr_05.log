@@ -1,0 +1,10 @@
+create: 200 {"code":200,"data":{}}
+insert: 200 {"code":200,"data":{"insertCount":3,"insertIds":[1,2,3]}}
+eq15: 200 {"code":200,"data":[{"id":2,"score":15}]}
+range: 200 {"code":200,"data":[{"id":2,"score":15},{"id":3,"score":25}]}
+in: 200 {"code":200,"data":[{"id":1,"score":5},{"id":3,"score":25}]}
+invalid_filter: 200 {"code":65535,"message":"cannot parse expression: score \u003e\u003e\u003e 5, error: line 1:8 extraneous input '\u003e' expecting {'(', '[', EXISTS, '+', '-', '~', NOT, JSONContains, JSONContainsAll, JSONContainsAny, ArrayContains, ArrayContainsAll, ArrayContainsAny, ArrayLength, BooleanConstant, IntegerConstant, FloatingConstant, Identifier, StringLiteral, JSONIdentifier}"}
+bad_field: 200 {"code":65535,"message":"cannot parse expression: nonexistent_field == 1, error: field nonexistent_field not exist"}
+search_filter: 200 {"code":200,"data":[{"distance":0.020000005,"id":2},{"distance":26,"id":3}]}
+VERDICT: DEFECT_FOUND
+- invalid filter expr -> code 65535 (unexpected), contract milvus_behavioral_query_001 says 1804-family (BS-05 Documentation Drift)

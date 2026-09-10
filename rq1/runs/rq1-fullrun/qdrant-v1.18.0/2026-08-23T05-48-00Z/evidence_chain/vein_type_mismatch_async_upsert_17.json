@@ -1,0 +1,102 @@
+{
+  "defect_id": "vein_type_mismatch_async_upsert_17",
+  "endpoint": "points+upsert (PUT /collections/{name}/points); corroborating: vectors+update (PUT /collections/{name}/points/vectors), points+batch (POST /collections/{name}/points/batch)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: qdrant.tech and api.qdrant.tech both domain_blocked at build time of this chain (WebFetch refused); contract carries source_status=reachable/source_verified=true from contract-construction phase and raw_knowledge.md (local doc cache, results/qdrant/v1.18.0/raw_knowledge.md:153-169) preserves the page text — treated as PARTIAL per domain_blocked rule, not FAIL. Version: doc_version '1.18.x (versioned)', URL prefix v-1-18-x vs target v1.18.0 → PASS. Content: cached Upsert Points section states 'behavioral: 200 ok; 400 invalid payload/vector dim mismatch; 404 collection missing; with wait=false client gets acknowledge-only response immediately [DOC points]' (raw_knowledge.md:168) and 'wait (boolean, query, optional): default false; if true, wait for changes to become searchable' (line 160) — the 400-on-invalid-vector claim is NOT qualified by wait, which is exactly the semantics the observation contradicts → PASS (via local cache, noted). Endpoints: points+upsert/vectors+update/points+batch all present in structured_contract.json endpoint_registry (points+upsert at JSON lines 323-368, wait param default false) → PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "empty vector []: wait=true -> 400 | wait=false -> 200 (acknowledged)  [log line 3; primary observation: invalid vector accepted 200 on async path, identical payload 400 on sync path]",
+      "secondary_observations": [
+        "wrong dim 3: wait=true -> 400 | wait=false -> 200 (acknowledged)  [log line 4]",
+        "wrong dim 5: wait=true -> 400 | wait=false -> 200 (acknowledged)  [log line 5]",
+        "named empty: wait=true -> 400 | wait=false -> 200 (acknowledged)  [log line 6]",
+        "update_vectors dim2: wait=true -> 400 | wait=false -> 200  [log line 7; PUT /points/vectors]",
+        "batch empty vector:  wait=true -> 400 | wait=false -> 200  [log line 8; POST /points/batch]",
+        "readback after 2s: landed ids=[99] (expect only [99])  [log line 9; every invalid-shape write permanently dropped, only the VALID async control (id=99) landed — excludes eventual-consistency delay]",
+        "point 1 vector after async bad update_vectors: [0.18257418, 0.36514837, 0.5477226, 0.73029673] (stored Cosine-normalized; expect 4 components, unchanged)  [log line 10; async update_vectors no-op on invalid input]"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "On wait=false the client-side error (empty/wrong-dimension vector) is returned as HTTP 200 pure success acknowledgement with NO business error code at all (script reads status field: 'acknowledged'); the identical payload with wait=true yields HTTP 400 'Vector dimension error: expected dim: 4, got 0/3/5' (script header comment quoting server message). Categorized under 2xx because the client error is swallowed inside a success envelope; the failure surfaces nowhere (no error code, no log feedback channel — see source_grounding)."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_type_mismatch_async_upsert_17"],
+      "reproducibility_note": "Grep across all output_*.log for 'wait=false|async|acknowledged': output_semantic_collections_delete_009.log also shows async batch 200 {\"operation_id\":N,\"status\":\"acknowledged\"} (lines 4-6) on the same POST /points/batch endpoint, but that script judges a different claim (delete-race resurrection) and returns NO_DEFECT — same response shape observed twice, DEFECT pattern triggered by this single script only.",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "Candidate dispatch carries NO constraint_id (vein-derived). Nearest semantic anchors supplied by builder from structured_contract.json: (1) behavioral qdrant_behavioral_points_upsert_001: 'with wait=false client receives acknowledge-only response immediately; eventual consistency before searchable' / category 'response status acknowledged; data may not be retrievable yet' (JSON lines 4597-4608). (2) doc behavior line (raw_knowledge.md:168, contract source https://api.qdrant.tech/v-1-18-x/api-reference/points/upsert-points): 'behavioral: 200 ok; 400 invalid payload/vector dim mismatch; 404 collection missing; with wait=false client gets acknowledge-only response immediately'. (3) secondary: qdrant_state_points_batch_001 'batch operations execute sequentially in submitted order' (JSON 4359-4368); qdrant_state_vectors_update_001 'update_vectors: unspecified named vectors remain unchanged' (JSON 4392-4401).",
+      "api_violates_assertion": true,
+      "note": "The documented behavior line claims '400 invalid payload/vector dim mismatch' with no wait-qualification; observation shows the same payload returning 200 on wait=false and being permanently dropped (not deferred: valid async control id=99 landed, readback after 2s, point-1 vector unchanged). 'Acknowledged' eventual-consistency semantics ('data may not be retrievable YET') do not cover 'never retrievable and client can never learn why'. Hence violates=true against the doc behavior line; the early-ack itself is by-design (see source_grounding), the defect claim is the validation-result feedback channel being absent.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: [BROKEN — dispatch constraint_id is empty; builder re-anchored to qdrant_behavioral_points_upsert_001 + raw_knowledge.md:168 behavior line '400 invalid payload/vector dim mismatch' (unqualified by wait)]",
+        "doc: raw_knowledge.md:153-169 'Upsert Points' (source https://api.qdrant.tech/v-1-18-x/api-reference/points/upsert-points, doc_version 1.18.x, source_verified=true at contract build; live refetch domain_blocked) — wait default false; 400 invalid payload/vector dim mismatch",
+        "script: vein_scripts/vein_type_mismatch_async_upsert_17.py — collection vein_c17 size=4 Cosine; 4 invalid upsert shapes (id=10 vector [], id=11 dim3, id=12 dim5, id=13 named {\"default\":[]}) each sent twice (wait=true then wait=false, lines 53-61); valid async control id=99 (line 64); update_vectors id=1 [1,2] both waits (lines 68-71); batch id=20/21 [] both waits (lines 73-76); readback POST /points ids=[10,11,12,13,20,21,99] with_vector after 2s (lines 80-87)",
+        "log: 6 paired lines 'wait=true -> 400 | wait=false -> 200 (acknowledged)' + 'readback after 2s: landed ids=[99]' + point-1 vector unchanged + 'VERDICT: DEFECT_FOUND' (lines 3-11)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "Dispatch entry has constraint_id=\"\" (vein-derived candidate, no mechanical constraint binding). Doc/script/log links are complete and mutually consistent: the raw request pairs (same JSON body, only wait flag differs) map one-to-one onto the log's 400-vs-200 split lines, and the readback line grounds the 'silently dropped' half of the claim. The contract link was re-anchored by the builder to qdrant_behavioral_points_upsert_001 and the doc behavior line — auditor should confirm this anchor matches the claim's semantics.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Vector dimension error",
+        "WrongVectorDimension {",
+        "fn check_named_vectors",
+        "fn upsert_point",
+        "fn submit_update",
+        "fn needs_callback",
+        "UpdateSignal::Operation",
+        "fn send_feedback"
+      ],
+      "files_examined": [
+        "lib/segment/src/common/operation_error.rs (WrongVectorDimension error definition, lines 19-34)",
+        "lib/segment/src/common/mod.rs (check_named_vectors 149-156, check_vector 42-54, check_vector_against_config 188-219)",
+        "lib/segment/src/segment/entry.rs (SegmentEntry::upsert_point 653-674 with check_named_vectors at 661; update_vectors 676-697 with check at 683)",
+        "lib/segment/src/segment_constructor/simple_segment_constructor.rs (test 141-160 proves segment upsert_point returns WrongVectorDimension for wrong-dim vector)",
+        "src/actix/api/update_api.rs (upsert_points 32-78, update_vectors 113-159, update_batch 327-372 — all funnel into common::update)",
+        "src/common/update.rs (update() 1201-1284, wait → WaitUntil::from(wait) at 1228-1229)",
+        "lib/collection/src/shards/shard_trait.rs (WaitUntil enum 19-55 with doc comment 'Wal ... Corresponds with wait=false, acknowledging immediately'; From<bool> 57-65; needs_callback 41-46)",
+        "lib/storage/src/content_manager/toc/point_ops.rs (toc update 490-589)",
+        "lib/collection/src/collection/point_ops.rs (update_from_client 144-284)",
+        "lib/collection/src/shards/replica_set/update.rs (update_local 41-140, update_with_consistency 145-204)",
+        "lib/collection/src/shards/local_shard/shard_ops.rs (submit_update 60-125, await_update_result 132-191)",
+        "lib/collection/src/update_workers/update_worker.rs (worker loop 69-155, send_feedback 27-37)"
+      ],
+      "source_excerpt": "lib/collection/src/shards/local_shard/shard_ops.rs:60-125 (condensed):\n```rust\npub async fn submit_update(\n    &mut operation: OperationWithClockTag,\n    wait: WaitUntil,\n    hw_measurement_acc: HwMeasurementAcc,\n) -> CollectionResult<SubmitOutcome> {\n    let (callback_sender, callback_receiver) = if wait.needs_callback() {\n        let (tx, rx) = oneshot::channel();\n        (Some(tx), Some(rx))\n    } else {\n        (None, None)                       // wait=false → NO callback channel ever created\n    };\n    ...\n    let (operation_id, _wal_lock) = match self.wal.lock_and_write(&mut operation).await { ... };  // WAL write — only durability check\n    ...\n    channel_permit.send(UpdateSignal::Operation(OperationData {\n        op_num: operation_id,\n        operation: operation_in_ram,\n        sender: callback_sender,          // None when wait=false\n        wait_for_deferred: wait.wait_for_deferred(),\n        hw_measurements: hw_measurement_acc,\n    }));\n    Ok(SubmitOutcome::Submitted { operation_id, receiver: callback_receiver, clock_tag })\n}\n```\nshard_ops.rs:184-189 (await_update_result):\n```rust\n    // Don't wait at all\n    (None, _) => Ok(UpdateResult {\n        operation_id: Some(operation_id),\n        status: UpdateStatus::Acknowledged,   // immediate 200 acknowledged, validation not yet run\n        clock_tag,\n    }),\n```\nlib/collection/src/shards/shard_trait.rs:23-27,41-45,57-64:\n```rust\npub enum WaitUntil {\n    /// Wait until the operation is written in WAL.\n    ///\n    /// Corresponds with wait=false, acknowledging immediately.\n    Wal,\n    ...\n    pub fn needs_callback(&self) -> bool {\n        match self { WaitUntil::Segment | WaitUntil::Visible => true, WaitUntil::Wal => false }\n    }\nimpl From<bool> for WaitUntil { fn from(wait: bool) -> Self { if wait { WaitUntil::Visible } else { WaitUntil::Wal } } }\n```\nlib/segment/src/segment/entry.rs:659-662 (validation DOES exist, but in background write path):\n```rust\n    ) -> OperationResult<bool> {\n        debug_assert!(self.is_appendable());\n        check_named_vectors(&vectors, &self.segment_config)?;   // → check_vector_against_config → WrongVectorDimension\n```\nlib/segment/src/common/operation_error.rs:22:\n```rust\n    #[error(\"Vector dimension error: expected dim: {expected_dim}, got {received_dim}\")]\n    WrongVectorDimension { expected_dim: usize, received_dim: usize },\n```\nlib/collection/src/update_workers/update_worker.rs:27-37 + 149-154 (where the async failure goes):\n```rust\nfn send_feedback(sender: Option<oneshot::Sender<CollectionResult<InternalUpdateResult>>>, result: ..., op_num: ...) {\n    if let Some(feedback) = sender {          // sender=None (wait=false) → error silently discarded, not even a log line\n        feedback.send(result).unwrap_or_else(|_| { log::debug!(\"Can't report operation {op_num} result. Assume already not required\"); });\n    }\n}\n...\n    let _res = match res {\n        Ok(res) => res,\n        Err(update_err) => { send_feedback(sender, Err(update_err), op_num); continue; }  // WrongVectorDimension lands here, vanishes when sender=None\n    };\n```",
+      "call_chain_traced": "actix update_api.rs upsert_points/update_vectors/update_batch (wait flag from query) → src/common/update.rs update() :1228 WaitUntil::from(wait=false)=WaitUntil::Wal → toc point_ops.rs update() :554 → collection point_ops.rs update_from_client() :144 → replica_set/update.rs update_with_consistency :145 → update_local :41 → local_shard shard_ops.rs submit_update :60 [NO vector validation on this path; needs_callback()=false → sender=None; WAL write + enqueue] → await_update_result :184 (None,_) → UpdateStatus::Acknowledged → HTTP 200. CONCURRENTLY: update_worker.rs consumes UpdateSignal::Operation → update_worker_internal → shard segments → segment/entry.rs upsert_point :661 check_named_vectors → common/mod.rs check_vector_against_config :196-200 WrongVectorDimension → worker :151 Err(update_err) → send_feedback(sender=None) :32 if-let misses → error dropped with no log. Net effect: validation exists and DOES run, but only after the HTTP 200 has been sent, and its failure has no delivery channel on the wait=false path — matching the observed 400(sync)/200-then-dropped(async) split exactly. update_vectors (entry.rs :683 same check) and batch (same UpdateSignal pipeline) share the identical structure.",
+      "verification_outcome": "by_design_in_source",
+      "verification_outcome_note": "The early-acknowledgement itself is explicit by-design (WaitUntil::Wal doc comment: 'Corresponds with wait=false, acknowledging immediately'). The validation is NOT absent — it exists at the segment write layer and runs in the background worker. What is NOT covered by any design comment: send_feedback silently discards the validation error when sender=None (no log, no feedback channel), so the doc behavior line '400 invalid payload/vector dim mismatch' (unqualified by wait) is only honored on the wait=true path. This is the documented-vs-implemented gap the candidate observed; classification by_design_in_source reflects the intentional async architecture, with the silent-drop detail recorded for the auditor.",
+      "sufficiency_check": "grep_hit_pursued",
+      "sufficiency_check_note": "Before settling the outcome, grepped the claim's exact error string 'Vector dimension error' across the clone: 5 files hit (lib/segment/src/common/operation_error.rs, common/mod.rs, data_types/vectors.rs, lib/collection/src/operations/types.rs, plus tests) — all implementation-side hits were read; the check chain was traced from error definition through check_named_vectors/check_vector_against_config to SegmentEntry::upsert_point/update_vectors, and the async dispatch side (submit_update/await_update_result/update_worker/send_feedback) was read to its end. No un-pursued hits remain.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env: valid async control (id=99) with wait=false landed and was readable — the async path itself is healthy",
+        "eventual-consistency delay / cache: readback after 2s shows invalid writes permanently absent and point-1 vector unchanged; 'acknowledged' semantics ('may not be retrievable yet') does not cover never-retrievable",
+        "concurrency race: single-client sequential script, no competing writers on collection vein_c17",
+        "request typo: byte-identical JSON body sent twice, only the wait flag differs; the wait=true twin gets a precise 400 'Vector dimension error: expected dim: 4, got N', proving the server recognizes the same payload as invalid",
+        "validation_absent: source shows check_named_vectors does run on the async path (background worker), so the defect is not a missing check but a missing error-feedback channel"
+      ],
+      "surviving": "by_design_wal_acknowledged (PARTIAL): source comments explicitly design wait=false as early WAL-ack (WaitUntil::Wal). The design intent covers the early 200, but NOT the observed consequence documented here: the background validation failure is discarded with no error surface at all (send_feedback sender=None drops it without logging), while the API doc behavior line promises 400 for invalid vector dim without wait-qualification. The doc-vs-implementation inconsistency survives the by-design defense."
+    }
+  }
+}

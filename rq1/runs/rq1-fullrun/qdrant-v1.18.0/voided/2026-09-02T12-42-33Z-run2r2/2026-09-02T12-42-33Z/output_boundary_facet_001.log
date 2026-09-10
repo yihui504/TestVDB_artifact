@@ -1,0 +1,16 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[probe limit=0 (min-1)] facet limit=0 -> status=422
+OK(reject): 'limit=0 (min-1)' -> 422: {"status":{"error":"Validation error in JSON body: [facet_request.limit: value 0 invalid, must be 1 or larger]"},"time":0.0}
+[probe limit=-1 (negative)] facet limit=-1 -> status=400
+OK(reject): 'limit=-1 (negative)' -> 400: {"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 29"},"time":0.0}
+[probe limit=-100 (deep negative)] facet limit=-100 -> status=400
+OK(reject): 'limit=-100 (deep negative)' -> 400: {"status":{"error":"Format error in JSON body: invalid value: integer `-100`, expected usize at line 1 column 31"},"time":0.0}
+[probe limit=1 (at-min)] -> status=200
+OK(200): 'limit=1 (at-min)' hits_key=facet_hits[False] len=1
+[probe limit=10 (mid/default)] -> status=200
+OK(200): 'limit=10 (mid/default)' hits_key=facet_hits[False] len=4
+[probe limit omitted (default)] -> status=200
+OK(200): 'limit omitted (default)' hits_key=facet_hits[False] len=4
+OK: limit=0/-1/-100 rejected (400/422), limit=1 and limit=10/omitted accepted with exact expected hit sets
+VERDICT: NO_DEFECT

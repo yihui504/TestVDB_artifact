@@ -1,0 +1,71 @@
+{
+  "defect_id": "semantic_points_search_001",
+  "endpoint": "points+search",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation verified: contract assertion qdrant_behavioral_search_points_001 states 'returns 200 OK with array of scored points' per structured_contract.json (line 598-607)",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Raw response: {\"result\":[{\"id\":3,\"version\":1,\"score\":1.0,\"payload\":{\"category\":\"A\"}},{\"id\":1,\"version\":1,\"score\":0.99999994,\"payload\":{\"category\":\"A\"}},{\"id\":2,\"version\":1,\"score\":0.99999994,\"payload\":{\"category\":\"B\"}}],\"status\":\"ok\",\"time\":0.000585542}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 200 + 业务错误码 N/A",
+        "note": "HTTP 200 returned, but response structure is dict with 'result' key instead of direct array"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_points_search_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_search_points_001",
+      "assertion_text_quoted": "returns 200 OK with array of scored points",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_search_points_001 - 'returns 200 OK with array of scored points'",
+        "doc: https://api.qdrant.tech/api-reference/points/search-points verified at 2026-08-20T06:14:40Z",
+        "script: semantic_points_search_001 calls points+search with vector=[0.1,0.2,...], limit=3",
+        "log: Raw response shows dict with 'result' key containing array, not direct array"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Response structure mismatch: API contract states 'returns array', but actual response is dict with 'result' field. The script expected type(list) but got type(dict).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "search.*points",
+        "SearchResponse",
+        "struct SearchResponse",
+        "result.*Vec.*ScoredPoint"
+      ],
+      "files_examined": [
+        "src/tonic/api/points_api.rs",
+        "src/tonic/api/query_common.rs",
+        "lib/api/src/grpc/qdrant.rs",
+        "lib/api/src/grpc/proto/points.proto"
+      ],
+      "source_excerpt": "File: lib/api/src/grpc/proto/points.proto, lines 1438-1443:\nmessage SearchResponse {\n  repeated ScoredPoint result = 1;\n  double time = 2;\n  optional Usage usage = 3;\n}\n\nFile: src/tonic/api/query_common.rs, lines 134-138:\nlet response = SearchResponse {\n    result: scored_points.into_iter().map(ScoredPoint::into).collect(),\n    time: timing.elapsed().as_secs_f64(),\n    usage: Usage::from_hardware_usage(hw_measurement_acc.to_grpc_api()).into_non_empty(),\n};",
+      "call_chain_traced": "search() in points_api.rs:382 -> search() in query_common.rs:63 -> creates SearchResponse with result field (line 134-138) -> returns Response::new(response)",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "Response structure design: API returns SearchResponse message object (protobuf) with 'result' field containing array, not direct array. Contract documentation is imprecise about exact wire format."
+    }
+  }
+}

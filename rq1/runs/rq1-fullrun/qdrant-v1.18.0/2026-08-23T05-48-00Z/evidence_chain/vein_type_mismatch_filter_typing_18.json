@@ -1,0 +1,93 @@
+{
+  "defect_id": "vein_type_mismatch_filter_typing_18",
+  "endpoint": "points+count, points+query",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "可达性: source_url https://qdrant.tech/documentation/concepts/filtering/ 301 重定向至 documentation/search/filtering/，全文经 web reader 获取成功(WebFetch 域拦截，非 domain_blocked，内容已取得)。版本: concepts 文档为 latest 未 pin 1.18(含 v1.19 特性标注 prefix/slice)，但本地 clone 内 docs/redoc/v1.18.x/openapi.json 提供精确版本化 schema 证据。内容: 文档确认 clause 结构 must/should/must_not 及递归嵌套，所有示例均为条件数组，无任何规范性'成员必须数组否则 400'声明，也未声明 null/单对象非法；候选前提 'Schema declares arrays' 与官方 v1.18.x OpenAPI 实际声明 anyOf[Condition, array<Condition>, nullable] 不符(该 anyOf 自 v1.10.x 起稳定存在)。端点: endpoint_registry 查表成功，points+count 与 points+query 均在册(doc_version 1.18.x versioned, verified_at 2026-08-23T05:20:00Z)。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "should:null alone: count=(200,10) query=(200,10)",
+      "secondary_observations": [
+        "must + should:null: count=(200,7) query=(200,7)",
+        "must + must_not:null: count=(200,7) query=(200,7)",
+        "all-null filter: count=(200,10) query=(200,10)",
+        "must_not:object: count=(200,3) query=(200,3)",
+        "must:object: count=(200,7) query=(200,7)",
+        "should:object: count=(200,7) query=(200,7)",
+        "controls: empty filter count=10 (expect 10), must[cat=a] count=7 (expect 7)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "count 与 query 两端点对 null 成员与单对象成员载荷均返回 HTTP 200 + 正常业务响应(无错误码)。按候选原判这是 'schema violation 以 2xx 成功返回'；但经源码与官方 OpenAPI 核实，null 与单对象属 schema anyOf 显式声明的合法输入形态，target 侧不构成客户端错误，故记 N/A。若采信候选前提，则该违规以 200 完全成功处理(非 4xx、非 2xx+错误码，而是 2xx+正常结果静默执行)。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_type_mismatch_filter_typing_18"],
+      "detail": "grade B: log 判定模式为明确 Type1_IllegalSuccess(VERDICT: DEFECT_FOUND 行)。单脚本触发(Grep 全部 output_*.log 无其他脚本出现 filter null/object 模式)，但脚本内 count+query 双端点、7 组载荷全部一致触发，控制组精确符合预期(empty filter=10, must[cat=a]=7)证明环境与数据基线正常。log 为 summary 式观测(11 行)而非逐 REQ/RESP 对，每行为原始观测行已全量审查。line 1-2 的 requests 库版本警告为环境警告非脚本错误。",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_filter_001",
+      "constraint_selection_note": "候选 constraint_id 为空；builder 补选最相关约束。核对全部 filter 相关约束: qdrant_type_filter_001(clause 结构+递归嵌套, 最相关)、qdrant_type_filter_002(is_empty/is_null 语义, 不相关)、qdrant_type_filter_003(nested 内禁 has_id/slice, 不相关)。contract 无任何一条断言声明 'clause 成员必须为数组且 null/单对象必须被拒绝'。",
+      "assertion_text_quoted": "qdrant_type_filter_001: description='Filter clause structure {should?, min_should?, must?, must_not?}, recursively nestable'; assertion='Filter clauses recursively nestable'; evidence_tier=explicit; source_url=https://qdrant.tech/documentation/concepts/filtering/。另 contract data_types Filter: should/must/must_not 均记为 'array[Condition]' required=false。",
+      "api_violates_assertion": false,
+      "note": "violates=False 判定理由: 观测载荷(null 成员/单对象成员)经 MaybeOneOrMany 反序列化后仍解析为合法 Filter 结构，递归嵌套语义完好，qdrant_type_filter_001 的断言(结构组成+可递归嵌套)未被违反；且 null 与单对象在官方 v1.18.x OpenAPI 的 anyOf[Condition, array<Condition>, nullable] 中为显式合法分支——观测的参数在官方 schema 声明域内，不属约束禁止域。观测行为(200 接受)真实无误，被违反的是候选自设的 'schema 只允许数组' 前提而非任何 contract 断言。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_filter_001 (Filter clause structure {should?,min_should?,must?,must_not?} recursively nestable) + data_types Filter.should=array[Condition] (builder 补选，候选未指定 constraint_id)",
+        "doc: qdrant.tech/documentation/concepts/filtering/ (301→search/filtering) 确认 clause 结构与递归嵌套，示例全为数组、无 null/单对象合法性声明；官方 v1.18.x OpenAPI (docs/redoc/v1.18.x/openapi.json) Filter.should 声明 anyOf[$ref Condition, array<Condition>, nullable:true]，该形态自 v1.10.x 起稳定",
+        "script: vein_type_mismatch_filter_typing_18 向 POST /collections/{name}/points/count 与 /points/query 发送 7 组载荷: should:null / must_not:null / all-null filter / must:object / must_not:object / should:object (+正常控制组)",
+        "log: 全部 200 — null 成员语义==字段缺失(should:null alone count=10=全集, 与 empty filter 控制组一致)；单对象成员语义==[object](must:object count=7 == must[cat=a] 控制组 7; must_not:object count=3=10-7)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "断链在 contract→doc 环的违规性前提: 候选(及 contract data_types)声称 'Schema declares arrays'，将 null 成员/单对象成员定性为 schema violation；但官方 v1.18.x OpenAPI 实际声明 anyOf[Condition, array<Condition>, nullable]——null 与单对象是 schema 明确允许的输入，非违规。观测事实链(script→log)完整真实(200 接受、null==absent、object==[object] 语义均如实)，断的是违规判定前提而非行为观测。contract data_types 的 array[Condition] 描述为文档示例归纳的简化，遗漏 anyOf 宽容分支。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "pub struct Filter \\{ (lib/**.rs) → 2 命中已读",
+        "min_should (lib/**.rs) → 17 命中，关键命中 lib/segment/src/types.rs 已读",
+        "mod MaybeOneOrMany|struct MaybeOneOrMany|MaybeOneOrMany; → lib/api/src/rest/schema.rs + lib/segment/src/common/utils.rs 已读",
+        "pub struct CountRequest → lib/collection/src/operations/types.rs + lib/shard/src/count.rs 已读",
+        "pub filter: Option<Filter> (lib/api/src/rest) → QueryRequestInternal 等多处已读"
+      ],
+      "files_examined": [
+        "lib/segment/src/types.rs (Filter struct, L3780-3859)",
+        "lib/segment/src/common/utils.rs (MaybeOneOrMany 实现+单元测试, L80-228)",
+        "lib/api/src/rest/schema.rs (REST 层类型复用, L1-60, L550-607)",
+        "lib/shard/src/count.rs (CountRequestInternal, L11-25)",
+        "lib/collection/src/operations/types.rs (CountRequest, L885-892)",
+        "docs/redoc/v1.18.x/openapi.json (官方 Filter schema)"
+      ],
+      "source_excerpt": "lib/segment/src/types.rs:3790-3826 — #[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone, PartialEq, Eq, Default, Hash)] #[serde(deny_unknown_fields, rename_all = \"snake_case\")] pub struct Filter { /// At least one of those conditions should match #[validate(nested)] #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")] #[schemars(with = \"MaybeOneOrMany<Condition>\")] pub should: Option<Vec<Condition>>, /// At least minimum amount of given conditions should match #[validate(nested)] #[serde(skip_serializing_if = \"Option::is_none\")] pub min_should: Option<MinShould>, /// All conditions must match #[validate(nested)] #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")] #[schemars(with = \"MaybeOneOrMany<Condition>\")] pub must: Option<Vec<Condition>>, /// All conditions must NOT match #[validate(nested)] #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")] #[schemars(with = \"MaybeOneOrMany<Condition>\")] pub must_not: Option<Vec<Condition>> }。lib/segment/src/common/utils.rs:80-107 — /// Deserializer helper for `Option<Vec<T>>` that allows deserializing both single and an array of values. /// Use via `#[serde(with = \"MaybeOneOrMany\")]` and `#[schemars(with=\"MaybeOneOrMany<T>\")]` field attributes pub struct MaybeOneOrMany<T>(pub Option<Vec<T>>); impl<'de, T: Deserialize<'de>> MaybeOneOrMany<T> { pub fn deserialize<D>(deserializer: D) -> Result<Option<Vec<T>>, D::Error> where D: serde::Deserializer<'de> { use serde_untagged::UntaggedEnumVisitor; UntaggedEnumVisitor::new() .unit(|| Ok(None)) .seq(|x| x.deserialize().map(Some)) .map(|x| x.deserialize().map(|x| vec![x]).map(Some)) .deserialize(deserializer) } }。单元测试 utils.rs:141-194 test_deserialize_one_or_many 显式固化三种输入: \"data\": null → res.data.is_none(); \"data\": {单对象} → vec len 1; 数组 → vec len 1。官方 v1.18.x OpenAPI: Filter.should = anyOf[{$ref Condition}, {type array items $ref Condition}, {nullable true}]，同构亦见于 v1.10.x/v1.14.x/v1.17.x(长期稳定声明)。",
+      "call_chain_traced": "REST POST /points/count → CountRequest(lib/collection/src/operations/types.rs:885, flatten) → CountRequestInternal.filter: Option<Filter>(lib/shard/src/count.rs:14) → segment::types::Filter(types.rs:3794)；REST POST /points/query → QueryRequest → QueryRequestInternal.filter: Option<Filter>(lib/api/src/rest/schema.rs:566) → 同一 segment::types::Filter。Filter.should/must/must_not 带 #[serde(with=\"MaybeOneOrMany\")] → MaybeOneOrMany::deserialize(utils.rs:94-107): JSON null(.unit)→None(即字段缺失语义, 解释 null==absent 与 count=10 全集)；JSON map(.map)→vec![x](即单对象包装为单元素数组, 解释 object==[object] 与 must:object count=7==must[cat=a] 控制组)；JSON seq→Some(vec)。schema 生成同源: JsonSchema for MaybeOneOrMany(utils.rs:109-132)产出 OneOrMany untagged anyOf[T, Vec<T>, null] → docs/redoc/v1.18.x OpenAPI 的 anyOf 三分支。REST 层 schema.rs 直接 use segment::types::{Condition, Filter,...} 复用同一类型。注意: clone 为 shallow(grafted at tag v1.18.0, 单 commit db3fca3)，MaybeOneOrMany 引入的 git 历史不可溯，以 v1.10.x+ OpenAPI anyOf 稳定存在佐证长期设计。",
+      "verification_outcome": "by_design_in_source",
+      "outcome_detail": "源码显式设计而非校验缺失: (1) MaybeOneOrMany 带文档注释 'allows deserializing both single and an array of values'； (2) 行为被单元测试 test_deserialize_one_or_many 固化(null→None, 单对象→vec![x])，schema 形态被 test_schema_one_or_many 固化(anyOf 3 分支)； (3) 官方 v1.18.x OpenAPI 公开声明 anyOf[Condition, array, nullable] 且自 v1.10.x 稳定； (4) deny_unknown_fields 仍在(未知字段会 400)，宽容仅限声明的 anyOf 形态。'filter clause schema 校验缺失(validation_absent)' 不成立。",
+      "sufficiency_check": "grep_hit_pursued",
+      "sufficiency_note": "claim 参数名(should/must/must_not/filter/CountRequest/MaybeOneOrMany)全部 grep 命中且命中文件均已 Read(types.rs/utils.rs/schema.rs/count.rs/operations types.rs)；结论所需校验代码(MaybeOneOrMany::deserialize 及其单元测试)已全部读取，无未追命中。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (控制组精确符合预期: empty filter count=10, must[cat=a] count=7，环境与数据基线正常)",
+        "concurrency (单脚本顺序请求，无并发)",
+        "request_typo (载荷即脚本设计载荷，观测为稳定可复现语义而非偶发)",
+        "cache_staleness (count 为即时查询)"
+      ],
+      "surviving": "by_design 宽容输入设计完全解释全部观测: null==absent 与 object==[object] 是 MaybeOneOrMany 反序列化器的显式设计行为(带注释、带单元测试、OpenAPI anyOf 公开声明，自 v1.10.x 稳定)。候选观察到的现象真实，但其 'schema violation' 定性前提(官方 schema 只允许数组)不成立。潜在残余讨论点(非本证据链判定范围): 宽容输入下 null should-clause 静默退化为 no-filter 是否构成易错性/诊断性(Type2 维度)问题，属 chain-auditor 裁量。"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "defect_id": "vein_range_filter_schema_sharding_zombie_1",
+  "script": "vein_range_filter_schema_sharding_zombie_1",
+  "target": "weaviate",
+  "version": "v1.37.4",
+  "endpoint": "POST /v1/schema",
+  "param": "shardingConfig.desiredCount",
+  "condition_type": "range_filter",
+  "expected_defect_type": "Type2",
+  "strategy": "vein_range_filter",
+  "summary": "POST /v1/schema with shardingConfig.desiredCount=-3 returns HTTP 200 with EMPTY body (no class echo, no error disclosure), yet the class is a phantom: GET /v1/schema/{class}->404, absent from schema list, POST properties->422 'class is nil: not found', GraphQL absent, until the first object write makes it visible. Control desiredCount=0->422 explicit rejection proves validation exists; negative values bypass it silently. Submit-persist consistency break (R2 deep-dive of R1 replicationConfig.factor silent-normalize chain: factor discloses normalization in response (echoes 1, GET=1) while desiredCount<0 discloses nothing and half-persists)."
+}

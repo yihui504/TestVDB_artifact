@@ -1,0 +1,83 @@
+{
+  "defect_id": "boundary_collections_create_07",
+  "endpoint": "PUT /collections/{collection_name} (contract path: collections+create)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url 可达（curl 200）且 URL 标注 v-1-18-x 与 target major.minor 匹配；页面确实含 wal_config.wal_capacity_mb 字段描述（'Size of a single WAL segment in MB'），schema 标注 integer/minimum:1，但未声明任何上限——claim 触发值 wal_capacity_mb=2147483647 超出文档已声明约束范围之外，属文档未约束域；候选携带的 constraint qdrant_type_collections_create_002（vectors.size IS uint64）与主观测参数（wal_capacity_mb）不匹配，contract 层存在约束引错",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "CASE bnd_crt_rl_11: status=500 body={\"status\":{\"error\":\"Service internal error: Can't init WAL: Os { code: 27, kind: FileTooLarge, message: \\\"File too large\\\" }\"},\"time\":0.193473532}",
+      "secondary_observations": [
+        "CASE bnd_crt_rl_1: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.252047263} — vectors.size=65536 被接受",
+        "CASE bnd_crt_rl_2: status=422 ... [vectors.size: value 100000 invalid, must be from 1 to 65536] — 正确拒绝",
+        "CASE bnd_crt_rl_5: status=422 ... value 18446744073709551615 invalid, must be from 1 to 65536 — 正确拒绝",
+        "CASE bnd_crt_rl_6..rl_10: status=200 — hnsw/optimizers INT_MAX 均被接受且无崩溃",
+        "REQUEST_ERROR: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')) — rl_12 期间的 SCRIPT_ERROR（发生于主观测之后，不否定 rl_11）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 | HTTP 4xx/5xx",
+        "note": "主观测为服务端 500（非客户端错误 2xx 返回形态）；同 log 中 rl_2..rl_5 的客户端输入错误（越界 vectors.size）以 HTTP 422 + Validation error 返回，语义正确"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_create_07"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_collections_create_002",
+      "assertion_text_quoted": "vectors.size IS uint64 integer",
+      "api_violates_assertion": false,
+      "note": "判定理由：主观测（rl_11, wal_capacity_mb=INT_MAX→500）的参数 wal_capacity_mb 不在 qdrant_type_collections_create_002 的约束域（vectors.size）内——该约束引错，非值合规。wal_capacity_mb 在 contract 中无显式约束条目（grep wal_capacity_mb 于 structured_contract.json 零命中），500 观测是 Type3 运行时故障证据而非该 constraint 的违反证据。violates=False 依据'观测参数不在被引约束域'这一分支，链断点记于 chain_trace",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_type_collections_create_002 'vectors.size IS uint64' — 但主观测参数是 wal_config.wal_capacity_mb，参数不在该约束域内（派发 constraint_id 由主进程机械补录时带空 attack/constraint 字段，脚本头注释引用同一约束）",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection 可达（curl 200），含 wal_capacity_mb 'Size of a single WAL segment in MB'，schema integer/minimum:1，无上限声明",
+        "script: debate_logs/boundary_collections_create_07.py line 90: (\"bnd_crt_rl_11\", {**BASE, \"wal_config\": {\"wal_capacity_mb\": INT_MAX}}) → PUT /collections/bnd_crt_rl_11",
+        "log: CASE bnd_crt_rl_11: status=500 'Service internal error: Can't init WAL: Os { code: 27, kind: FileTooLarge }'"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "候选无匹配约束：wal_capacity_mb 在 structured_contract.json 中不存在对应 constraint 条目（type/range/state 三类 grep 零命中），派发携带的 constraint_id（vectors.size 类型约束）与主观测参数不同域。doc→script→log 三环一致且完整（文档无上限 + 请求 wal_capacity_mb=2147483647 + 响应 500 FileTooLarge），但 contract 环缺失——该候选是文档未约束域内的 Type3 运行时故障观测，而非已登记契约的违反",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "wal_capacity_mb (lib/collection, lib/shard, lib/wal)",
+        "Can't init WAL (lib)",
+        "segment_capacity|set_len|allocate (lib/wal/src/segment.rs)",
+        "validate (lib/collection/src/operations/types.rs)",
+        "wal_capacity_mb in structured_contract.json (零命中)"
+      ],
+      "files_examined": [
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/lib/collection/src/config.rs (lines 25-80)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/lib/shard/src/wal.rs (lines 293-345)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/lib/wal/src/segment.rs (lines 119-180)"
+      ],
+      "source_excerpt": "lib/collection/src/config.rs:33-66 — struct WalConfig { /// Size of a single WAL segment in MB #[validate(range(min = 1))] pub wal_capacity_mb: usize, ... } impl From<&WalConfig> for WalOptions { ... WalOptions { segment_capacity: wal_capacity_mb * 1024 * 1024, ... } } impl Default for WalConfig { ... wal_capacity_mb: 32, ... }  ||  lib/wal/src/segment.rs:126-176 — pub fn create<P>(path: P, capacity: usize) -> Result<Segment> { ... let capacity = capacity & !7; if capacity < HEADER_LEN { return Err(...invalid segment capacity...); } ... #[cfg(not(unix))] { file.file().allocate(capacity as u64)?; file.set_len(capacity as u64)?; } #[cfg(unix)] { rustix::fs::ftruncate(&file, capacity as u64)?; } let mut mmap = MmapViewSync::from_file(&file, 0, capacity)?; ... }  ||  lib/shard/src/wal.rs:331-334 — pub enum WalError { #[error(\"Can't init WAL: {0}\")] InitWalError(String), ... }",
+      "call_chain_traced": "WalConfig.wal_capacity_mb (usize, 仅 validate(range(min=1)) 即下限校验，无上限) → From<&WalConfig> for WalOptions 换算 segment_capacity = wal_capacity_mb * 1024 * 1024 → Segment::create(path, capacity) 直接 file.allocate/set_len/ftruncate 预分配整段文件并 mmap → 请求 wal_capacity_mb=2147483647 时预分配 ~2TB 文件触发 OS errno 27 (FileTooLarge) → WalError::InitWalError 映射为 500 'Service internal error: Can't init WAL'。错误发生在 collection 创建 WAL 段的 I/O 预分配阶段，返回路径为 5xx 而非 4xx 校验拒绝",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env（错误为确定性 OS errno 27 FileTooLarge，由 2TB 预分配长度直接决定，与容器时序无关）",
+        "concurrency（单请求触发，0.19s 内返回）",
+        "request_typo（payload 与脚本定义一致，参数名 wal_capacity_mb 拼写正确且被服务端按合法字段解析——错误发生在消费该值阶段而非解析阶段）"
+      ],
+      "surviving": "resource-exhaustion-by-config：极端但语法合法的配置值（INT_MAX MB ≈ 2TB WAL 段）通过校验（仅 min=1）后在文件预分配处以 OS 错误失败并被包装为 500；是否算缺陷取决于审计视角——服务确实未崩溃（无 panic/abort，错误被捕获并返回），且后续 rl_12 前连接正常，但 HTTP 语义上这是应由 4xx 表达的配置不可行，且文档未声明该上限。另注：源码 usize 乘法 wal_capacity_mb*1024*1024 在 64 位平台无溢出，排除整数溢出解释"
+    }
+  }
+}

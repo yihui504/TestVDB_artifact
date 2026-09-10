@@ -1,0 +1,12 @@
+CONTROL alter query_mode=bogus: 200 {"code":65535,"message":"invalid query_mode value \"bogus\", valid values: [large_topk]"}
+T1 create properties.query_mode=bogus: 200 {"code":0,"data":{}}
+T1 create properties.query_mode=large_topk: 200 {"code":0,"data":{}}
+T1 persisted: False [{'key': 'timezone', 'value': 'UTC'}]
+T2 alter unknown keys: 200 {"code":0,"data":{}}
+T2 props after: [{'key': 'timezone', 'value': 'UTC'}, {'key': 'junk_key_abc', 'value': 'junk_value'}, {'key': 'query_mod', 'value': 'large_topk'}, {'key': 'nprobe', 'value': '0'}]
+T3 create-time junk persisted: ['timezone']
+DEFECT: ("T1: create-time properties.query_mode='bogus' ACCEPTED (code 0) while alter path validates � cross-endpoint validation asymmetry", '{"code":0,"data":{}}')
+DEFECT: ('T1: create-time properties.query_mode accepted but silently discarded (no effect, no error)', "[{'key': 'timezone', 'value': 'UTC'}]")
+DEFECT: ("T2: unknown properties ['junk_key_abc', 'query_mod', 'nprobe'] persisted to collection metadata via alter_properties (unvalidated write)", "[{'key': 'timezone', 'value': 'UTC'}, {'key': 'junk_key_abc', 'value': 'junk_value'}, {'key': 'query_mod', 'value': 'large_topk'}, {'key': 'nprobe', '")
+DEFECT: ('T3: create vs alter_properties treat unknown properties asymmetrically (create=False alter=True)', '')
+VERDICT: DEFECT_FOUND

@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_payload_overwrite_002",
+  "endpoint": "payload+overwrite",
+  "param": "payload",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "upsert_idempotence",
+  "oracle": {
+    "statement": "on a 1-point collection: overwrite {\"d\":\"new\"} twice -> both HTTP 200 and readback stays EXACTLY {\"d\":\"new\"}; set {\"e\":\"setval\"} -> readback EXACTLY {\"d\":\"new\",\"e\":\"setval\"}; overwrite {\"f\":2} -> readback EXACTLY {\"f\":2}; overwrite {} -> if 200 then readback payload empty ({} or null); vector equals baseline readback (<=1e-6) and exact count 1 at every checkpoint",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

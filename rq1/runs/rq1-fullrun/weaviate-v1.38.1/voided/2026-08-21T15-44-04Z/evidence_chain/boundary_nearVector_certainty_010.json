@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_nearVector_certainty_010",
+  "endpoint": "POST /v1/graphql",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约 assertions 含 weaviate_behavioral_graphql_query_001；certainty∈[0,1] 值域无专属 constraint，锚为源码 traverser_schema_search_params.go 的 validateCertaintyOrWeight（存在但未在 GraphQL near 路径生效）",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[cert_gt1] certainty: 1.5 -> 200 rows=0 / Type1 candidate: out-of-domain certainty: 1.5 accepted silently",
+      "secondary_observations": [
+        "[ctrl] certainty: 0.0 -> 200 rows=3",
+        "[cert_neg] certainty: -0.5 -> 200 rows=3（负 certainty 等价于无过滤，返回全部）",
+        "[dist_neg] distance: -2.0 -> 200 rows=0",
+        "[dist_gt1] distance: 5.0 -> 200 rows=3（cosine distance 域 [0,2]，5.0 超域仍返回全部）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "四个越界值全部 200 静默接受，无 errors 字段；越界 certainty/distance 的语义后果是过滤条件被静默放松或收紧（rows 0 或全量）"
+      },
+      "reproducibility": "单脚本（5 变体确定性）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_nearVector_certainty_010.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "boundary (族级；锚 traverser_schema_search_params.go L62-68 'must be between 0 and 1')",
+      "assertion_text_quoted": "certainty ∈ [0,1]（源码自证：validateCertaintyOrWeight 返回 \"must be between 0 and 1, but got '%f'\"；traverser_schema_search_params.go L39 注释 'Certainty must be a value between 0 and 1'）",
+      "api_violates_assertion": true,
+      "note": "1.5/-0.5 在 [0,1] 域外被 200 静默接受；源码中存在显式域校验函数但未挂载到 GraphQL nearVector 路径——值在 quote 约束域内且被接受，violates=True 无歧义",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 族级（源码 validateCertaintyOrWeight 自证 [0,1] 域）",
+        "doc: 源码锚本地核对",
+        "script: boundary_nearVector_certainty_010.py nearVector certainty/distance 变体",
+        "log: 1.5/-0.5/-2.0/5.0 全 200 静默"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "无专属 constraint_id，族级锚需 auditor 认定",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["validateCertaintyOrWeight", "Certainty (GraphQL near 参数提取)", "func ExtractNearVector"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\usecases\\traverser\\traverser_schema_search_params.go (L39-68)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\adapters\\handlers\\graphql\\local\\common_filters\\near_vector.go (全文 L23-151)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\adapters\\handlers\\graphql\\local\\get\\class_builder_fields.go (L400-404, L517-535)"
+      ],
+      "source_excerpt": "traverser_schema_search_params.go L62-68:\nfunc (p SearchParams) validateCertaintyOrWeight(c float32) error {\n\tif c >= 0 && c <= 1 { return nil }\n\treturn fmt.Errorf(\"must be between 0 and 1, but got '%f'\", c)\n}\n— 该校验属于 REST 端 SearchParams（L50 仅在 SearchParams.Validate 调用）。\nGraphQL 路径 common_filters/near_vector.go L33-42:\n\tcertainty, certaintyOK := source[\"certainty\"]\n\tif certaintyOK { args.Certainty = certainty.(float64) }  // ← 直接类型断言赋值，无 [0,1] 检查\n\tdistance ... args.Distance = distance.(float64)\n仅 L44 检查 certainty 与 distance 互斥，无值域校验",
+      "call_chain_traced": "GraphQL nearVector{certainty:1.5} → class_builder_fields L402 common_filters.ExtractNearVector → L33-42 裸赋值（无域校验）→ explorer 用越界 certainty 做相似度截断 → 200（rows 0 或全量取决于方向）；REST SearchParams 的 validateCertaintyOrWeight 未在此路径调用",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（ctrl 0.0 正常 3 行）"],
+      "surviving": "GraphQL 面向高级用户、类型系统仅保证 float 的辩护可能；但同仓 REST 路径有现成 validateCertaintyOrWeight 未复用——校验不对称 surviving"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+F1 min_should [berlin], min_count=1 -> status=200
+raw: {"result":{"count":8},"status":"ok","time":0.000121747}
+F1: count == 8 == 8 (branch functional)
+
+F2 min_should conditions present, min_count MISSING (required-path omission probe) -> status=400
+raw: {"status":{"error":"Format error in JSON body: missing field `min_count` at line 1 column 91"},"time":0.0}
+F2: rejected with 400 (required path enforced)
+
+F3 min_should conditions=[], min_count=1 (unsatisfiable) -> status=200
+raw: {"result":{"count":12},"status":"ok","time":0.000066498}
+F3: NOTE — 200 count == N_SEED recorded for the judge
+
+F4 min_should [berlin,paris], min_count=2 -> status=200
+raw: {"result":{"count":0},"status":"ok","time":0.000195461}
+F4: count == 0 (arithmetic-derived: no point satisfies both)
+
+F5 min_should [berlin], min_count=0 -> status=200
+raw: {"result":{"count":12},"status":"ok","time":0.000070026}
+F5: count == 12 (min_count=0 imposes no constraint)
+NOTE (judge call): F3: 200 with count == N_SEED — empty-clause-ignored convention vs unsatisfiable min_count=1 semantics (judge call against published filtering docs)
+VERDICT: NO_DEFECT

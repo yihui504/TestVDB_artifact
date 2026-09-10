@@ -1,0 +1,74 @@
+{
+  "defect_id": "boundary_r2_updatepwd_creds_004",
+  "endpoint": "users/update_password (+ Bearer auth path)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约只记载 users+update_password 端点存在与 password 6-72 规则（newPassword len 3/73 -> 1100 与之一致），未对'改密后旧凭证失效时限'给出显式 assertion——状态语义来自通用安全预期（凭据变更即时生效）。属契约 gap 而非契约违背。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "old cred -> HTTP 200 | new cred -> HTTP 200",
+      "secondary_observations": [
+        "wrong password(old)                                  -> code=1400  {\"code\":1400,\"message\":\"old password not correct for r2upw67461_u: not authenticated\"}",
+        "newPassword len 3 (min 6)                            -> code=1100  ...3 out of range 6 <= value <= 72...",
+        "newPassword len 73 (max 72)                          -> code=1100  ...73 out of range...",
+        "legit change                                         -> code=0     {\"code\":0,\"data\":{}}",
+        "root with wrong oldPassword                          -> code=1400  ...old password not correct for root: not authenticated",
+        "builder live-recheck 2026-08-22: old cred STILL valid after 20s; new cred 200"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "update_password 成功为 200+code:0；旧凭证仍 200 是状态违规而非错误响应形态"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_updatepwd_creds_004.py", "live-recheck 2026-08-22 by builder (20s 仍有效)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "users/update_password (契约 gap: 无旧凭证失效时限断言；锚定 users+create password 族 + Type4 状态不变量类别)",
+      "assertion_text_quoted": "users+create password: 6 <= len <= 72（同族校验器在 update 路径生效：len 3/73 -> 1100 实测一致）",
+      "api_violates_assertion": true,
+      "note": "violates=True 判定理由：update 成功(code:0)后旧密码在 >=3s（builder 复测 >=20s，可能无限期）仍可通过 Bearer 认证——'成功改密'的语义承诺（旧凭证失效）被状态层违反；契约未显式记载该时限，故 grounding 为 gap+安全语义，非逐字断言违背。",
+      "evidence_source": "doc+behavior"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: update_password 端点 + password 族规则（时效性为 gap）",
+        "doc: 本地 clone 源码 URL 可达",
+        "script: legit change code:0 -> Bearer user:oldpwd -> 200；循环 3 次(每次 sleep 1s) 均仍 200",
+        "log: 'old cred -> HTTP 200 | new cred -> HTTP 200' 逐字"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["UpdateCredential", "UpdateCredCache", "Sha256Password", "GetCredentialInfo", "alterUserV2AckCallback"],
+      "files_examined": ["internal/proxy/impl.go (UpdateCredential L5218-5287)", "internal/proxy/privilege/cache.go (GetCredentialInfo L95-121; UpdateCredential L131-144)", "internal/rootcoord/ddl_callbacks_rbac_credential.go (alterUserV2AckCallback L86-96)", "internal/rootcoord/root_coord.go (UpdateCredCache L1993-2002)"],
+      "source_excerpt": "internal/proxy/impl.go UpdateCredential 流程（L5243-5286 摘要）:\n  passwordVerify(old) -> ValidatePassword(new) -> crypto.PasswordEncrypt(new) -> mixCoord.UpdateCredential(CredentialInfo{Sha256Password: crypto.SHA256(new, user), EncryptedPassword})\nrootcoord ddl_callbacks_rbac_credential.go:86-96 (alterUserV2AckCallback):\n  if err := c.meta.AlterCredential(ctx, result); ...\n  if err := c.UpdateCredCache(ctx, result.Message.MustBody().CredentialInfo); err != nil { ... }\n  -> c.proxyClientManager.UpdateCredentialCache -> 各代理节点 proxy.UpdateCredentialCache -> priCache.UpdateCredential (改写 credMap[username].Sha256Password 为新值)\n关键：UpdateCredentialCache 是 ack 回调路径上的尽力通知；单节点部署下照理应即时失效。但实测旧 SHA256 仍命中（passwordVerify util.go:1511-1514: credInfo.Sha256Password != \"\" 时 sha256Pwd == credInfo.Sha256Password 即通过）——旧凭证继续 200 说明本节点缓存未被该路径改写或存在另一缓存层（HTTP 会话/token 层）仍按旧值验证。未能在源码面定位到'旧值继续命中'的确切持有者，此点为源码层未闭环。",
+      "call_chain_traced": "users/update_password -> proxy.UpdateCredential(旧密码校验+新密码加密) -> rootcoord broadcast AlterUserMessageV2 -> alterUserV2AckCallback -> AlterCredential(etcd) + UpdateCredCache -> proxy.privilegeCache.UpdateCredential。认证侧: Bearer -> passwordVerify -> SHA256 命中 credMap 即放行。",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error", "请求笔误(old/new 双向对照, new cred 200)", "短窗口 3s(builder 延伸复测 20s 仍有效, 排除亚秒级传播延迟)"],
+      "surviving": "多 proxy 节点缓存传播延迟理论上可解释，但本环境为单节点 standalone 容器，不成立；源码层未定位到旧值持续命中的确切持有者（缓存失效链在源码上看起来是即时 ack 回调），机制解释未完全闭环。"
+    }
+  },
+  "evidence_weight": {
+    "A_contract": "显式断言缺位(gap)——时效性无契约条文",
+    "B_log": "主观测逐字 + builder 20s 延伸复测，方向稳定",
+    "C_control": "wrong-old 1400 / root 对照齐全（校验器工作正常，排除校验缺失混淆）",
+    "D_source": "失效链(ack callback->UpdateCredentialCache)源码在且看似即时；'仍命中'持有者未定位——源码解释力弱",
+    "overall": "B 级：行为面扎实可复现，机制面未闭环，契约锚定靠安全语义而非显式条文"
+  }
+}

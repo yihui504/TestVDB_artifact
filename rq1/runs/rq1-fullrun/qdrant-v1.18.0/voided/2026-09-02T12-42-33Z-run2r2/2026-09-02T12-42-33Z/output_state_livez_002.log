@@ -1,0 +1,27 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] livez = /livez (runtime-derived from raw_knowledge.json api_endpoints[livez].url)
+[state_livez_002] run_token=1788449232_21112 base=http://127.0.0.1:6333
+== phase 0: sequential baseline ==
+[base1] GET /livez status=200 raw='healthz check passed'
+[base2] GET /livez status=200 raw='healthz check passed'
+[base3] GET /livez status=200 raw='healthz check passed'
+== phase 2: hostile volley — 10 workers x 7 methods x 2 rounds on /livez, concurrent with 3 GET reader threads ==
+[volley] total=140 5xx=0 transport0=0
+[readers during volley] ok=24/24 anomalies=0
+== phase 3: post-volley tail ==
+[tail1] GET /livez status=200 raw='healthz check passed'
+[tail2] GET /livez status=200 raw='healthz check passed'
+[tail3] GET /livez status=200 raw='healthz check passed'
+[tail4] GET /livez status=200 raw='healthz check passed'
+[tail5] GET /livez status=200 raw='healthz check passed'
+[summary] baseline 3/3 x200; volley 140 hostile-method probes (5xx=0, transport0=0); readers-during-volley ok=24/24; tail 5/5 x200
+NOTE: volley disposition DELETE: statuses [404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404] (shard documents GET/200 only; clean 4xx rejection or permissive 2xx are recorded, not claimable)
+NOTE: volley disposition HEAD: statuses [404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404] (shard documents GET/200 only; clean 4xx rejection or permissive 2xx are recorded, not claimable)
+NOTE: volley disposition OPTIONS: statuses [404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404] (shard documents GET/200 only; clean 4xx rejection or permissive 2xx are recorded, not claimable)
+NOTE: volley disposition PATCH: statuses [404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404] (shard documents GET/200 only; clean 4xx rejection or permissive 2xx are recorded, not claimable)
+NOTE: volley disposition POST: statuses [404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404] (shard documents GET/200 only; clean 4xx rejection or permissive 2xx are recorded, not claimable)
+NOTE: volley disposition PUT: statuses [404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 404] (shard documents GET/200 only; clean 4xx rejection or permissive 2xx are recorded, not claimable)
+liveness-face hostile-volley verification complete: the GET face answered 200 across baseline, concurrent reader-during-volley and post-volley probes, and every hostile-method probe on the route landed outside the 5xx band (200-while-alive semantics survived the volley; dispositions recorded as G9 notes) — no 5xx, no corrupted liveness signal, no reproducible transport loss — NO_DEFECT
+[cleanup probe] status=200 raw='healthz check passed'
+VERDICT: NO_DEFECT

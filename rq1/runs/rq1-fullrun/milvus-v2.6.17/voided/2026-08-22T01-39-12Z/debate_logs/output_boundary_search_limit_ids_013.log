@@ -1,0 +1,19 @@
+limit 0 -> code=65535 raw={"code":65535,"message":"topk [0] is invalid, it should be in range [1, 16384], but got 0"}
+limit -1 -> code=65535 raw={"code":65535,"message":"topk [-1] is invalid, it should be in range [1, 16384], but got -1"}
+limit 16385 (max+1) -> code=65535 raw={"code":65535,"message":"topk [16385] is invalid, it should be in range [1, 16384], but got 16385"}
+limit '10' string -> code=1801 raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field SearchReqV2.limit of type int32"}
+  NOTE: code=1801 (expected 65535/1100; Type2 candidate)
+limit null -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1},{"distance":0.080000006,"id":2}],"topks":[2]}
+
+offset -1 -> code=65535 raw={"code":65535,"message":"offset [-1] is invalid, it should be in range [1, 16384], but got -1"}
+offset+limit 16385 (window) -> code=65535 raw={"code":65535,"message":"offset+topk [16390] is invalid, it should be in range [1, 16384], but got 16390"}
+both ids+data -> code=1100 raw={"code":1100,"message":"primary keys (ids) and query vectors (data) are mutually exclusive. Please provide either 'ids' or 'data', not both"}
+neither -> code=1802 raw={"code":1802,"message":"either 'ids' (for primary key search) or 'data' (for vector search) must be provided"}
+ids empty list -> code=1802 raw={"code":1802,"message":"either 'ids' (for primary key search) or 'data' (for vector search) must be provided"}
+ids fractional 1.5 -> code=1100 raw={"code":1100,"message":"invalid parameter, error: invalid int64 id at index 0: 1.5 has fractional part"}
+ids string '1' -> code=0 raw={"code":0,"cost":0,"data":[{"distance":0,"id":1},{"distance":0.080000006,"id":2}],"topks":[2]}
+
+ids null elem -> code=1100 raw={"code":1100,"message":"invalid parameter, error: invalid id type at index 0: expected int64, got \u003cnil\u003e"}
+DEFECT: search limit null accepted (code 0), contract requires 65535
+DEFECT: ids string '1' -> code=0, contract expects 1100
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) - search boundary violation accepted

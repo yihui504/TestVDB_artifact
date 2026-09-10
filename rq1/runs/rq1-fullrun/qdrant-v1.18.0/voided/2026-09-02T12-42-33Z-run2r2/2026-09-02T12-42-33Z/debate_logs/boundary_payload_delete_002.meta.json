@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_delete_002",
+ "endpoint": "payload+delete",
+ "param": "filter",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "with 3 points carrying {\"city\":..,\"n\":..}, delete {\"filter\":{\"must\":[{\"key\":\"city\",\"match\":{\"value\":\"par\"}}]},\"keys\":[\"n\"],\"wait\":true} returns 200; scroll afterwards shows the par point payload exactly {\"city\":\"par\"} (\"n\" gone, \"city\" untouched), ams/tok payloads deep-equal baseline, all 3 vectors deep-equal the baseline readback vectors, exact count stays 3 — \"n\" residue on the matched point, \"city\" loss on the matched point, collateral change on unmatched points, vector change or count drift each = Type4_StateLogicViolation; non-200 on the legal filtered delete = Type1_IllegalSuccess; 5xx/transport = Type3_RuntimeFailure with /healthz re-check (constraint qdrant_state_payload_delete_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

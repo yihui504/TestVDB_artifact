@@ -1,0 +1,9 @@
+CASE default fill read-back ok=True | {"code":0,"cost":0,"data":[{"id":1,"tag":"fillme"}]}
+
+CASE truncate ok=True | {"code":0,"data":{}}
+CASE post-truncate query rows=0 | {"code":0,"cost":0,"data":[]}
+
+CASE post-truncate search ok=True | {"code":0,"cost":0,"data":[]}
+CASE truncate nonexistent ok=False | {"code":100,"message":"collection not found[database=default][collection=bnd_s13_nope]"}
+CASE re-insert after truncate ok=True | {"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[3]}}
+VERDICT_NO_DEFECT

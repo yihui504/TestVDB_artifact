@@ -1,0 +1,34 @@
+{
+  "defect_id": "vein_cardinality_oracle_is_null_matrix_1",
+  "endpoint": "POST /collections/{collection_name}/points/count",
+  "param": "exact",
+  "expected_defect_type": "Type2_PoorDiagnostics",
+  "strategy": "vein_cardinality_oracle_is_null",
+  "VERDICT": "BY_DESIGN_EXCLUDED",
+  "condition_class": "is_null",
+  "finding_summary": "is_null estimator on exact=false shows NO systematic bias - all counts match perfectly across all collection sizes (10/50/100/200). exact=true=exact=false=scroll ground truth (0% deviation). is_null estimator appears to be FIXED in v1.19.0 (contrast with bug_shape #10096 which found divergence). Perfect correlation suggests accurate estimator or effective fallback.",
+  "defect_details": {
+    "systematic_bias_pattern": "NONE - 0% deviation across all sizes",
+    "size_variants_tested": [10, 50, 100, 200],
+    "exact_matches": {
+      "10": "exact=true=2, exact=false=2, scroll=2",
+      "50": "exact=true=10, exact=false=10, scroll=10",
+      "100": "exact=true=20, exact=false=20, scroll=20",
+      "200": "exact=true=40, exact=false=40, scroll=40"
+    },
+    "root_cause_hypothesis": "is_null estimator is now accurate in v1.19.0, or fallback heuristic is well-calibrated",
+    "baseline_correct": true,
+    "estimator_correct": true
+  },
+  "test_methodology": {
+    "data_distribution": "20% null city, 40% NewYork, 40% London",
+    "control_validation": "scroll ground truth matches exact=true exactly",
+    "index_configuration": "keyword index on 'city' field to trigger approximate path",
+    "significance_threshold": ">20% deviation across all sizes = systematic bug"
+  },
+  "r2_context": {
+    "r1_trigger": "count(exact=false) is_null over-count 5 vs 4 in R1",
+    "r2_objective": "Multi-scale validation to distinguish systematic bias from approximation noise",
+    "conclusion": "R2 multi-scale testing confirms is_null is sound - no defect found"
+  }
+}

@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_set_004",
+ "endpoint": "payload+set",
+ "param": null,
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "face1 — set-payload points=[1] payload={\"lang\":\"nl\"} (wait=true query) on an existing collection returns exactly 200 with body.result an object, body.result.status a string, body.result.operation_id integer or null (UpdateResult grid per published OpenAPI; violations = Type4_StateLogicViolation) and the scroll readback shows the merged payload (200-ack without the merge = Type4); non-200 on the valid mutation = Type1_IllegalSuccess. face2 — the same body on a nonexistent collection returns exactly 404: a 2xx = Type1_IllegalSuccess (phantom-collection ack); another 4xx = NOTE (clean rejection ladder, R25); error naming = NOTE only (R29). 5xx on either face = Type3_RuntimeFailure with /healthz re-check; transport failure = SCRIPT_ERROR with /healthz re-check (constraint qdrant_behavioral_payload_set_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

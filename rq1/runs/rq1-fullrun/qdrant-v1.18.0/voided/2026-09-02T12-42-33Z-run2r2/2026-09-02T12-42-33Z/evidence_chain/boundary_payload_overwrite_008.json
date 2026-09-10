@@ -1,0 +1,92 @@
+{
+  "defect_id": "boundary_payload_overwrite_008",
+  "endpoint": "payload+overwrite (PUT /collections/{collection_name}/points/payload)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists; live fallback fetch succeeded (WebFetch tool domain-gated; MCP web reader returned the full page, canonical https://api.qdrant.tech/v-1-18-x/api-reference/points/overwrite-payload) = PASS. Version: URL segment v-1-18-x and page header v1.18.x vs target v1.18.0 = PASS. Content: the page carries BOTH the endpoint description 'Replaces the entire payload of a specified point with a new payload.' (supports the cited constraint's phrasing) AND the request field 'key string or null Optional — Assigns payload to each point that satisfy this path of property' with NO unsupported/ignored caveat (supports the claim premise); the two sit in internal tension on the same page. Endpoint precision: endpoint_registry payload+overwrite = PUT /collections/{collection_name}/points/payload, same source_url, doc_quote consistent with the page description = PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — case A: key-scoped overwrite OVER-REACHED and replaced the WHOLE payload (readback {'new': 2}) — the sibling top-level key 'keep' was destroyed; the [SPEC] key parameter narrows the assignment scope to the path",
+      "secondary_observations": [
+        "orig-log line 5: case A key=nested -> status=200 (request body per script debate_logs/boundary_payload_overwrite_008.py:223-227: PUT /collections/{coll}/points/payload {\"points\":[1],\"payload\":{\"new\":2},\"key\":\"nested\"}, wait=true; p1 baseline {\"keep\":\"me\",\"nested\":{\"old\":1,\"sub\":\"x\"}})",
+        "orig-log line 6: raw: {\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.003358717}",
+        "live re-run 2026-09-04 (fresh collection, same body): rest-PUT overwrite key=nested -> http=200 body={\"result\":{\"operation_id\":2,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.003305501}; readback p1 = {\"new\": 2} — deterministic reproduction of the primary observation",
+        "comparative probe (same body, other face): rest-POST set-payload key=nested -> http=200; readback p1 = {\"keep\":\"me\",\"nested\":{\"old\":1,\"sub\":\"x\",\"new\":2}} — key honored on the POST face (merge-at-path; sibling 'keep' survived), ignored on the PUT face",
+        "grpc face: live probe face_unavailable (no gRPC client in sandbox); source shows src/tonic/api/update_common.rs:327-328 hardcodes key: None for the OverwritePayload RPC with comment '// overwrite operation don't support indicate path of property' although proto SetPayloadPoints carries 'optional string key = 8' (lib/api/src/grpc/proto/points.proto:272-273)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No client-decidable error involved: the request is schema-valid per the published SetPayload schema and was accepted 200 ok; the defect face is a documented parameter silently ignored (scope over-reach), not error-code mapping."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["boundary_payload_overwrite_008"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_payload_overwrite_001",
+      "assertion_text_quoted": "after overwrite the point payload equals the provided payload; previously stored keys absent from the new payload are removed",
+      "api_violates_assertion": false,
+      "note": "Per the violates-declaration self-check: the quoted assertion is read literally — observed readback {\"new\": 2} DOES equal the provided payload and the previously stored keys (keep, nested) absent from it were removed, so the un-keyed end-state promise was kept, and the observed parameter (key) is OUTSIDE this quote's constraint domain (the assertion is silent about key; no constraint in structured_contract.json covers the key parameter — the violated promise lives one layer up in the endpoint page's request-schema field key='Assigns payload to each point that satisfy this path of property', for which the contract has no dedicated constraint); the script used the cited constraint + [SPEC] key semantics as a composite oracle, so whether the observed whole-payload over-reach (sibling 'keep' destroyed despite documented path-scoped assignment) counts as violating this state constraint vs a schema-publication defect is the auditor's adjudication.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_payload_overwrite_001 located in structured_contract.json constraints.state_constraints (source_status reachable, evidence_tier explicit); NOTE the candidates.jsonl entry's constraint_id field was EMPTY — the id was recovered from the attack string and successfully resolved in the contract, so no break",
+        "doc: v1.18.x overwrite-payload page (live-fetched) documents both the whole-payload-replacement description and the request field key ('Assigns payload to each point that satisfy this path of property') with no unsupported caveat — the claim's premise is grounded in the published schema",
+        "script: boundary_payload_overwrite_008 sends PUT /collections/{coll}/points/payload body {\"points\":[1],\"payload\":{\"new\":2},\"key\":\"nested\"} with wait=true against p1 baseline {\"keep\":\"me\",\"nested\":{\"old\":1,\"sub\":\"x\"}} (debate_logs/boundary_payload_overwrite_008.py:180-184, 223-227)",
+        "log: verdict line records readback {'new': 2} on http=200 — consistent with the raw response line, independently reproduced live (rest-PUT readback p1 = {\"new\": 2}), and explained by source (key discarded in do_overwrite_payload)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "SetPayload|overwrite-payload|overwrite_payload (openapi/)",
+        "PayloadKey|nested path|Assign payload (lib/)",
+        "overwrite_payload_handler|OverwritePayload( (lib/)",
+        "points/payload|set_payload|overwrite (src/actix)",
+        "fn do_overwrite_payload|fn do_set_payload",
+        "fn set_payload|fn overwrite_payload (lib/shard/src/update.rs)",
+        "fn merge_by_key",
+        "message SetPayloadPoints (proto)"
+      ],
+      "files_examined": [
+        "lib/shard/src/operations/payload_ops.rs",
+        "src/actix/api/update_api.rs",
+        "src/common/update.rs",
+        "lib/shard/src/update.rs",
+        "lib/segment/src/types.rs",
+        "src/tonic/api/update_common.rs",
+        "lib/api/src/grpc/proto/points.proto",
+        "openapi/openapi-points.ytt.yaml"
+      ],
+      "source_excerpt": "src/common/update.rs:639-654 (qdrant v1.18.0, tag v1.18.0 @ db3fca32) — REST overwrite face DISCARDS key:\n639    let SetPayload {\n640        points,\n641        payload,\n642        filter,\n643        shard_key,\n644        key: _,\n645    } = operation;\n646\n647    let operation =\n648        CollectionUpdateOperations::PayloadOperation(PayloadOps::OverwritePayload(SetPayloadOp {\n649            payload,\n650            points,\n651            filter,\n652            // overwrite operation doesn't support payload selector\n653            key: None,\n654        }));\n\nContrast — src/common/update.rs:600-606 (set face passes key through):\n600    let operation =\n601        CollectionUpdateOperations::PayloadOperation(PayloadOps::SetPayload(SetPayloadOp {\n602            payload,\n603            points,\n604            filter,\n605            key,\n606        }));\n\ngRPC face — src/tonic/api/update_common.rs:320-329 (same hardcode):\n327        // overwrite operation don't support indicate path of property\n328        key: None,\n\nPublished schema — lib/shard/src/operations/payload_ops.rs:67-78 (schemars-generated, shared by BOTH faces per openapi/openapi-points.ytt.yaml:247 (POST set_payload) and :287 (PUT overwrite_payload)):\n67  pub struct SetPayload {\n68      pub payload: Payload,\n70      pub points: Option<Vec<PointIdType>>,\n73      pub filter: Option<Filter>,\n75      pub shard_key: Option<api::rest::ShardKeySelector>,\n76      /// Assigns payload to each point that satisfy this path of property\n77      pub key: Option<JsonPath>,\n78  }\n\nProcessing — lib/shard/src/update.rs:109 vs :140:\n109             set_payload(segments, op_num, &payload, &points, &sp.key, hw_counter)\n140             overwrite_payload(segments, op_num, &payload, &points, hw_counter)\n(the overwrite processing function takes no key parameter at all)\n\nNested assignment honored only on the set face — lib/segment/src/types.rs:2019-2021:\n2019    pub fn merge_by_key(&mut self, value: &Payload, key: &JsonPath) {\n2020        JsonPath::value_set(Some(key), &mut self.0, &value.0);",
+      "call_chain_traced": "REST: PUT /collections/{name}/points/payload -> src/actix/api/update_api.rs:227 overwrite_payload (Json<SetPayload>, key deserializes fine — no deny_unknown_fields) -> src/common/update.rs:621 do_overwrite_payload destructures key: _ and builds PayloadOps::OverwritePayload(SetPayloadOp{key: None}) with comment 'overwrite operation doesn't support payload selector' -> lib/shard/src/update.rs:137-149 process_payload_operation OverwritePayload arm -> overwrite_payload() (no key parameter exists at this level) -> whole-payload replace. POST face: do_set_payload (src/common/update.rs:600-606) passes key through -> lib/shard/src/update.rs:716-743 set_payload -> Payload::merge_by_key (lib/segment/src/types.rs:2019) -> JsonPath::value_set. gRPC face: src/tonic/api/update_common.rs:301-341 overwrite_payload hardcodes key: None with comment, although proto SetPayloadPoints carries 'optional string key = 8'.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (live re-run on a fresh collection reproduced the identical outcome)",
+        "concurrency (wait=true + polled readback; single-threaded probe, deterministic)",
+        "cache delay (reset + re-probe between faces gave consistent readbacks)",
+        "request-parameter typo (request body verified byte-exact in the script source at debate_logs/boundary_payload_overwrite_008.py:223-227 and re-sent deliberately in the live probe)"
+      ],
+      "surviving": "Doc-vs-impl divergence on the overwrite face: the published SetPayload schema (shared by the POST set-payload and PUT overwrite-payload endpoints) advertises key as a path-scoped assignment selector on the PUT page, while both overwrite handlers (REST do_overwrite_payload and gRPC overwrite_payload) explicitly discard it per in-source by-design comments, silently accepting the field with 200 and destroying sibling top-level keys for any client trusting the schema; whether this is a specification defect (schema should not publish key on the PUT face, or the face should 4xx on it) rather than an implementation defect is left to the chain-auditor."
+    }
+  }
+}

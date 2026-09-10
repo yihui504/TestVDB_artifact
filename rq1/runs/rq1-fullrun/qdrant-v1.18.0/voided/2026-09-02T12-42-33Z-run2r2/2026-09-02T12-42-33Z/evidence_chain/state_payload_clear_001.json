@@ -1,0 +1,79 @@
+{
+  "defect_id": "state_payload_clear_001",
+  "endpoint": "payload+clear (POST /collections/{collection_name}/points/payload/clear)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists in the contract dir; WebFetch tool was domain-blocked for api.qdrant.tech; fallback fetch via web reader succeeded and returned the live page (canonical https://api.qdrant.tech/v-1-18-x/api-reference/points/clear-payload). Version: page carries 'v1.18.x' version selector and v-1-18-x URL, matching target v1.18.0. Content: page prose 'Removes the entire payload for specified points.' directly supports the constraint assertion 'after clear, targeted points carry no payload keys' (registry doc_quote: 'Removes all payload keys of the targeted points; 200 ok / 404.'); the page says NOTHING about vectors — the script's (F) 'clear is payload-scoped / vector byte-preservation' oracle is a script-side inference, not a documented promise, and the doc never promises byte-exact vector readback. Endpoint: registry path payload+clear -> POST /collections/{collection_name}/points/payload/clear exactly matches the request sent (log line 7); documented 200 example result envelope {status, operation_id} matches the observed body shape.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "DEFECT: (F) point 1 vector changed after payload clear: [0.2581989, 0.2581989, 0.5163978, 0.77459663] != [1.0, 1.0, 2.0, 3.0] — clear is payload-scoped — Type4_StateLogicViolation",
+      "secondary_observations": [
+        "[B baseline scroll] status=200 raw={\"result\":{\"points\":[{\"id\":1,\"payload\":{\"city\":\"c1\",\"score\":1,\"tag\":\"t1\"},\"vector\":[0.2581989, 0.2581989, 0.5163978, 0.77459663]},... — DECISIVE: the PRE-clear baseline readback ALREADY shows the L2-normalized vector ([1,1,2,3]/sqrt(15) = [0.2581989, 0.2581989, 0.5163978, 0.77459663], float32/SIMD precision); the post-clear readback (E) is byte-identical to this baseline, so the vector did NOT change at clear time — the script's (F) check compared against the raw upserted vector [1.0,1.0,2.0,3.0] instead of its own baseline readback, while the collection was created via rt.setup_default(C, 4, \"Cosine\") (script line 236)",
+        "[E] OK: targeted point 1 payload empty / [E] OK: targeted point 2 payload empty / [E] OK: targeted point 3 payload empty — the constraint's own domain (targeted points carry no payload keys) was fully satisfied",
+        "[E] OK: non-targeted point 4 payload intact / [E] OK: non-targeted point 5 payload intact / [E] OK: non-targeted point 6 payload intact — no collateral wipe",
+        "[G count-after count] status=200 raw={\"result\":{\"count\":6},\"status\":\"ok\",\"time\":0.000127205} — count invariant 6->6, clear did not delete points",
+        "cross-script same-pattern (NOT independent): output_state_payload_clear_004.log:5 [A baseline scroll] ... \"id\":0,\"vector\":[0.2581989,0.2581989,0.5163978,0.77459663] (pre-clear normalized baseline) with DEFECT lines 19-26 '(B) point N vector changed after payload clear'; state_payload_clear_002.log:20-21 and state_payload_clear_003.log:32-39 carry the same 'vector changed' verdicts — all 4 scripts share the identical oracle design setup_default(C,4,\"Cosine\") + compare-readback-to-RAW-upsert-vector, so the 4 hits are one correlated script-oracle artifact, not 4 independent server behaviors",
+        "face note: gRPC/SDK faces not probeable from this sandbox's REST logs; the in-chain comparison is same-face pre-clear-baseline vs post-clear-readback, which is byte-identical and dispositive"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "the clear request itself was valid (existing points [1,2,3], wait=true) and legitimately returned HTTP 200 with {\"result\":{\"operation_id\":2,\"status\":\"completed\"}}; no request-side-decidable error is involved in this candidate"
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["state_payload_clear_001", "state_payload_clear_002 (same pattern, lines 20-21)", "state_payload_clear_003 (same pattern, lines 32-39)", "state_payload_clear_004 (same pattern, lines 19-26)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_payload_clear_001",
+      "assertion_text_quoted": "after clear, targeted points carry no payload keys",
+      "api_violates_assertion": false,
+      "note": "The constraint's quoted domain (payload keys of targeted points) was fully satisfied per the log's own E-section (targeted 1-3 empty, non-targeted 4-6 intact, count 6->6). The triggering (F) phenomenon — readback vector differing from the raw upserted vector — lies OUTSIDE the constraint's quoted domain (vectors are not payload keys), and is upsert-time Cosine preprocessing that pre-dates the clear (visible in the log's own baseline line 5). Per the violates-declaration self-check: the constraint is not violated (compliant), and the F-observation belongs to no payload-clear constraint — it is a script-oracle mis-baselining, not an API violation of this assertion.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_payload_clear_001 exists in structured_contract.json state_constraints (state chunk_payload+clear); script header line 6 cites this constraint_id — present",
+        "doc: source_url reachable; prose 'Removes the entire payload for specified points.' supports the constraint; doc makes NO claim about vectors — the script's F-oracle exceeds the doc's promise — link present for the constraint, absent for the F-claim",
+        "script: raw requests match the documented endpoint exactly (PUT upsert wait=true; POST /collections/{name}/points/payload/clear body {\"points\":[1,2,3]} wait=true; POST scroll with_payload+with_vector) — present, BUT the (F) oracle compares post-clear readback vectors to RAW upsert vectors in a Cosine collection instead of to the (B) baseline readback it itself captured — script oracle defect",
+        "log: VERDICT: DEFECT_FOUND rests solely on the six (F) lines; the log's own baseline line ([B baseline scroll] point 1 vector [0.2581989, 0.2581989, 0.5163978, 0.77459663]) already contains the 'changed' value BEFORE any clear — the verdict pattern attributes an upsert-time normalization to the clear mutation — BROKEN"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "The log judged DEFECT_FOUND on the claim 'vector changed after payload clear', but its own earlier record (B baseline scroll, pre-clear) shows the identical normalized vector already stored before the clear; post-clear readback (E) is byte-identical to baseline. The phenomenon real in the log (normalized readback vector != raw upserted vector) originates at upsert time (Cosine metric preprocessing), not at the clear; every contract-domain check the constraint actually asserts (payload keys cleared selectively, non-targeted intact, count invariant) PASSED in the same log.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["ClearPayload", "clear_payload", "normalize|renormalize", "cosine_preprocess", "fn preprocess", "impl NamedVectors", "setup_default"],
+      "files_examined": [
+        "lib/segment/src/spaces/simple.rs (CosineMetric::preprocess L169-206, cosine_preprocess L228-235, stable-renormalization test L253-259)",
+        "lib/segment/src/types.rs (Distance::preprocess_vector L329-342)",
+        "lib/segment/src/data_types/named_vectors.rs (NamedVectors::preprocess L296-333, preprocess_dense_vector L335-350)",
+        "lib/segment/src/segment/entry.rs (upsert_point L653-674 with vectors.preprocess at L662; clear_payload L808-829)",
+        "lib/segment/src/index/payload_index_base.rs (PayloadIndexTrait::clear_payload L208-213)",
+        "lib/collection/src/collection_manager/collection_updater.rs (PayloadOps::ClearPayload processing/test L376-384)",
+        "lib/segment/src/data_types/vectors.rs (VectorInternal::preprocess L71-81 — sparse index sort only)"
+      ],
+      "source_excerpt": "// ============ UPSERT PATH: normalization happens HERE, at ingestion ============\n// lib/segment/src/segment/entry.rs:653-674\n    fn upsert_point(\n        &mut self,\n        op_num: SeqNumberType,\n        point_id: PointIdType,\n        mut vectors: NamedVectors,\n        hw_counter: &HardwareCounterCell,\n    ) -> OperationResult<bool> {\n        debug_assert!(self.is_appendable());\n        check_named_vectors(&vectors, &self.segment_config)?;\n        vectors.preprocess(|name| self.config().vector_data.get(name).unwrap());   // <-- L662: cosine normalization applied at upsert\n        let stored_internal_point = self.id_tracker.borrow().internal_id(point_id);\n        self.handle_point_version_and_failure(op_num, stored_internal_point, |segment| {\n            if let Some(existing_internal_id) = stored_internal_point {\n                segment.replace_all_vectors(existing_internal_id, op_num, &vectors, hw_counter)?;\n                Ok((true, Some(existing_internal_id)))\n            } else {\n                let new_index =\n                    segment.insert_new_vectors(point_id, op_num, &vectors, hw_counter)?;\n                Ok((false, Some(new_index)))\n            }\n        })\n    }\n\n// lib/segment/src/spaces/simple.rs:168-206, 228-235\n/// Equivalent to DotProductMetric with normalization of the vectors in preprocessing.\nimpl Metric<VectorElementType> for CosineMetric {\n    fn distance() -> Distance { Distance::Cosine }\n    fn similarity(v1: &[VectorElementType], v2: &[VectorElementType]) -> ScoreType {\n        DotProductMetric::similarity(v1, v2)\n    }\n    fn preprocess(vector: DenseVector) -> DenseVector {\n        // ... AVX/SSE/NEON dispatch ...\n        cosine_preprocess(vector)\n    }\n}\n\npub fn cosine_preprocess(vector: DenseVector) -> DenseVector {\n    let mut length: f32 = vector.iter().map(|x| x * x).sum();\n    if is_length_zero_or_normalized(length) {\n        return vector;\n    }\n    length = length.sqrt();\n    vector.iter().map(|x| x / length).collect()   // <-- L2 normalize: [1,1,2,3] -> [0.2581989, 0.2581989, 0.5163978, 0.77459663]\n}\n\n// simple.rs:253-256 (maintainer intent, stable by design)\n//    /// If we preprocess a vector multiple times, we expect the same result.\n//    /// Renormalization should not produce something different.\n\n// lib/segment/src/data_types/named_vectors.rs:335-350 (upsert L662 lands here)\n    fn preprocess_dense_vector(dense_vector: DenseVector, config: &VectorDataConfig) -> DenseVector {\n        match config.datatype {\n            Some(VectorStorageDatatype::Float32) | None => config\n                .distance\n                .preprocess_vector::<VectorElementType>(dense_vector),   // Distance::Cosine -> CosineMetric::preprocess\n            ...\n\n// lib/segment/src/types.rs:336-338\n        match self {\n            Distance::Cosine => CosineMetric::preprocess(vector),\n\n// ============ CLEAR PAYLOAD PATH: touches ONLY payload storage — no vector access ============\n// lib/segment/src/segment/entry.rs:808-829\n    fn clear_payload(\n        &mut self,\n        op_num: SeqNumberType,\n        point_id: PointIdType,\n        hw_counter: &HardwareCounterCell,\n    ) -> OperationResult<bool> {\n        let internal_id = self.id_tracker.borrow().internal_id(point_id);\n        self.handle_point_version_and_failure(op_num, internal_id, |segment| match internal_id {\n            Some(internal_id) => {\n                segment\n                    .payload_index\n                    .borrow_mut()\n                    .clear_payload(internal_id, hw_counter)?;      // <-- payload_index ONLY; vector storage never touched\n                segment.version_tracker.set_payload(Some(op_num));\n                Ok((true, Some(internal_id)))\n            }\n            None => Err(OperationError::PointIdError { missed_point_id: point_id }),\n        })\n    }\n\n// lib/segment/src/index/payload_index_base.rs:208-213\n    /// Drop all payload of the point\n    fn clear_payload(\n        &mut self,\n        point_id: PointOffsetType,\n        hw_counter: &HardwareCounterCell,\n    ) -> OperationResult<Option<Payload>>;",
+      "call_chain_traced": "Normalization (the real phenomenon behind the DEFECT lines): PUT /collections/{name}/points?wait=true -> Segment::upsert_point (entry.rs:653) -> vectors.preprocess(...) at entry.rs:662 -> NamedVectors::preprocess (named_vectors.rs:296) -> preprocess_dense_vector (named_vectors.rs:335) -> Distance::preprocess_vector (types.rs:329) -> Distance::Cosine => CosineMetric::preprocess (simple.rs:178) -> cosine_preprocess (simple.rs:228) L2-normalizes before storage; every later readback (scroll) returns this stored normalized vector — hence baseline B already shows [0.2581989,...]. Clear path: POST /collections/{name}/points/payload/clear {\"points\":[1,2,3]} -> PayloadOps::ClearPayload -> Segment::clear_payload (entry.rs:808) -> payload_index.clear_payload(internal_id) (payload_index_base.rs:209, doc 'Drop all payload of the point') -> payload storage/index only, version_tracker.set_payload; ZERO vector-storage calls anywhere in the clear path, so the clear mutation provably cannot alter vectors. Constraint implementation (payload keys removed for targeted points) is present and behaved correctly in this very log.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "by_design evidence is explicit in source: simple.rs:168 doc comment 'Equivalent to DotProductMetric with normalization of the vectors in preprocessing.' plus the maintainer test 'If we preprocess a vector multiple times, we expect the same result' (simple.rs:253-255). For the state constraint itself the outcome is validation_present (clear_payload implements exactly the asserted payload-key removal and the log's E-section confirms it). The DEFECT-triggering vector observation is the by-design cosine preprocessing at upsert, mis-attributed by the script's (F) oracle to the clear because it compared against the raw upsert vector instead of its own baseline readback.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_parameter_typo"],
+      "surviving": "by_design: Cosine-metric L2 normalization at upsert (entry.rs:662 -> simple.rs:228) fully explains the readback vectors; the log's own pre-clear baseline (line 5) already contains the normalized vector and the post-clear readback is byte-identical to it — the 'vector changed after payload clear' DEFECT pattern is a script-oracle mis-baselining (compared to raw upsert vector in a Cosine collection), reproduced 4/4 across the payload_clear script family that shares this oracle design"
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "defect_id": "semantic_r2_nprobe_02",
+  "endpoint": "entities/search (searchParams.nprobe)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约 endpoint registry 对 entities+search searchParams 的描述为 'nprobe/ef/level/radius/range_filter/search_list (index-type dependent)'（L3091），但未声明 nprobe 的类型契约（int-only）——类型混淆的文档级断言缺失，本链攻击面为『字符串应被拒而未拒』的类型约束，契约只隐含（参数语义上应为整数）。可达性 PASS（源码 source_url 同族可达）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "nprobe='4': 200 {\"code\":0,\"cost\":0,\"data\":[{\"distance\":0,\"id\":0},{\"distance\":0.001953125,\"id\":1},{\"distance\":0.0078125,\"id\":2},{\"distance\":0.017578125,\"id\":3},{\"distance\":0.03125,\"id\":4}],\"topks\":[5]}",
+      "secondary_observations": [
+        "基线 nprobe=4: 200 code:0，top-5 = id 0-4，distance 序列与字符串版完全一致（静默强转且语义生效）",
+        "index create: 200 {\"code\":65535,\"message\":\"CreateIndex failed: creating multiple indexes on same field is not supported\"}（环境预置残留，不影响 search 观测：load code:0 且检索正常）",
+        "claim 中的 nprobe=-1 / INT32_MAX 行为正常项：log 未包含其逐字行（脚本包含该 case 但 log 文件仅 9 行，被截断或仅输出核心 case）——如实记录，非编造"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "字符串类型 nprobe 以 HTTP 200 + code:0 静默接受并返回正确结果——类型错误未产生任何错误信号"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/semantic_r2_nprobe_02.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "(无专用 constraint；候选 constraint_id='type_coercion')",
+      "assertion_text_quoted": "v2 search request; searchParams keys are index-type dependent: {nprobe, ef, level, radius, range_filter, search_list} (endpoint registry L3091)",
+      "api_violates_assertion": true,
+      "note": "nprobe 语义为整数（IVF 扫描簇数），字符串 '4' 应类型拒绝；契约仅枚举参数名未显式声明类型——violates=True 建立在参数语义常识+SDK 类型基线（PyMilvus nprobe: int）上，契约字面支撑弱（semantically grounded, not verbatim anchored）。auditor 复核。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: endpoint registry searchParams 枚举含 nprobe（无类型断言）",
+        "doc: 契约无 nprobe int-only 原文（弱环）",
+        "script: semantic_r2_nprobe_02.py searchParams {'nprobe': '4'} vs {'nprobe': 4}",
+        "log: 字符串版与整数版 code:0 且结果逐字节一致（distance 序列相同）"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "契约/文档无 nprobe 类型约束原文——类型混淆判定的 doc 环靠语义推断而非引文（与 R1 ef 根因同族，源码环完整）。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["func generateSearchParams", "fmt.Sprintf(\"%v\"", "searchParams.params must be a dict", "Params"],
+      "files_examined": [
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go (generateSearchParams L2076-2131)"
+      ],
+      "source_excerpt": "utils.go generateSearchParams L2076-2131（派发所指 %v 透传点，逐字核实）：\n```go\nfunc generateSearchParams(reqSearchParams map[string]interface{}) ([]*commonpb.KeyValuePair, error) {\n    var searchParams []*commonpb.KeyValuePair\n    var params interface{}\n    if val, ok := reqSearchParams[Params]; ok { params = val }\n    paramsMap := make(map[string]interface{})\n    if params != nil { if paramsMap, ok = params.(map[string]interface{}); !ok {\n        return nil, merr.WrapErrParameterInvalidMsg(\"searchParams.params must be a dict\") } }\n    ...\n    bs, _ := json.Marshal(paramsMap)\n    searchParams = append(searchParams, &commonpb.KeyValuePair{Key: Params, Value: string(bs)})\n    for key, value := range reqSearchParams {\n        if key != Params {\n            if key == \"ignoreGrowing\" { key = common.IgnoreGrowing }\n            searchParams = append(searchParams, &commonpb.KeyValuePair{Key: key, Value: fmt.Sprintf(\"%v\", value)})\n        }\n    }\n    ...\n}\n```\n两个透传通道均无类型校验：顶层键经 L2125 `fmt.Sprintf(\"%v\", value)`——字符串 '4' 与整数 4 序列化结果同为 \"4\"，类型信息在此被抹平；嵌套 params 经 L2116 json.Marshal 保留 JSON 引号但下游 index 侧解析容忍。同 R1 ef 根因（派发所述 utils.go:2076 逐字确认）。",
+      "call_chain_traced": "REST search → handler_v2 search → generateSearchParams(reqSearchParams) → %v/json.Marshal 双通道透传（无 int 类型断言）→ proxy search task → segcore IVF 参数解析（容忍 '4'）→ 结果正确返回 code:0。",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error", "env", "concurrency", "request_typo"],
+      "surviving": "'宽松接受 + 结果正确' 的可用性抗辩：强转后行为与 int 版不可区分（本例无错误结果），危害仅为类型契约缺失的诊断/一致性层面；auditor 权衡 Type1 vs 弱化。"
+    }
+  },
+  "evidence_weight": "MODERATE_STRONG",
+  "evidence_weight_rationale": "源码环极强（%v 透传逐行、与 R1 ef 同根因交叉印证）、log 基线-攻击对照逐字一致；扣分：契约无类型断言原文（doc 弱锚）、claim 中 -1/INT32_MAX 项 log 未逐字留存、单脚本、结果正确削弱危害面。"
+}

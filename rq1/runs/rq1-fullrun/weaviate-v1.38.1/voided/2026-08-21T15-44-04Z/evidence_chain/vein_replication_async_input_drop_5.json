@@ -1,0 +1,64 @@
+{
+  "defect_id": "vein_replication_async_input_drop_5",
+  "endpoint": "POST /schema (replicationConfig.asyncEnabled)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "openapi-specs/schema.json ReplicationConfig（:1160 起）定义字段仅 factor/deletionStrategy/asyncConfig——无 asyncEnabled 输入字段；asyncEnabled 是输出侧（readback）由 restcompat wrapper 派生的展示字段。契约 POST /schema 注册了 replicationFactor 参数。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "create status=200 readback replicationConfig={\"deletionStrategy\": \"TimeBasedResolution\", \"factor\": 1, \"asyncEnabled\": false}",
+      "secondary_observations": [
+        "control factor=2: status=422 err=... init sharding state: could not find enough weaviate nodes for replication: 1 av..."
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "输入 asyncEnabled=true 被接受（200）但 readback 为 false（输入被丢弃）；对照 factor=2 正确 422（单节点无法满足）——replication 配置校验在 factor 上存在，对 asyncEnabled 沉默"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_replication_async_input_drop_5.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_silent_substitution (泛标签；实际引用 openapi ReplicationConfig 定义——asyncEnabled 非输入字段)",
+      "assertion_text_quoted": "openapi-specs/schema.json ReplicationConfig properties: factor (integer), deletionStrategy (enum), asyncConfig ($ref ReplicationAsyncConfig, x-omitempty) —— 无 asyncEnabled 输入属性",
+      "api_violates_assertion": true,
+      "note": "violates=True 的依据：API 接受（200）一个其数据模型不存在的输入键且不回显不告警；用户意图（启用异步复制）被静默丢弃。若 strict-validation，应 422 指出未知字段；至少 readback 的 asyncEnabled=false 与接受的输入=true 构成接受/生效分裂。注意语义细节：异步复制在 v1.38 由 factor>1 派生（见 D 层），输入侧 asyncEnabled 从来不是合法开关——这属于'已废弃输入被静默容忍'类。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: POST /schema replicationConfig；openapi ReplicationConfig 无 asyncEnabled 输入字段",
+        "doc: openapi-specs/schema.json ReplicationConfig 定义（clone 内）",
+        "script: vein_replication_async_input_drop_5.py POST {replicationConfig:{asyncEnabled:true}} + 对照 factor=2",
+        "log: 200 + readback asyncEnabled:false；对照 factor=2 → 422"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["AsyncEnabled", "asyncEnabled", "type ReplicationConfig", "wrapReplicationConfig"],
+      "files_examined": ["adapters/handlers/rest/restcompat/wrappers.go", "entities/models/replication_config.go", "entities/schema/collection.go"],
+      "source_excerpt": "adapters/handlers/rest/restcompat/wrappers.go:17-21, 34-42:\n  type replicationConfigOut struct {\n      *models.ReplicationConfig\n      AsyncEnabled bool `json:\"asyncEnabled\"`   // ← 输出侧 shadow 字段\n  }\n  func wrapReplicationConfig(rc *models.ReplicationConfig) *replicationConfigOut {\n      ...\n      AsyncEnabled: rc.Factor > 1 && !asyncReplicationGloballyDisabled.Load(),  // :40 派生：factor>1 且全局开关\n  }\n\nentities/models/replication_config.go:32-43 models.ReplicationConfig 字段仅 AsyncConfig/DeletionStrategy/Factor —— 无 AsyncEnabled 输入字段；输入 json 键 asyncEnabled 解码时被静默丢弃。readback 的 asyncEnabled 永远 = factor>1 派生值（factor=1 → false），与用户输入无关。",
+      "call_chain_traced": "POST /schema → models.Class decode（replicationConfig 无 asyncEnabled 字段→丢弃）→ 落盘(factor=1) → GET readback → wrapReplicationConfig → AsyncEnabled=factor>1&&!disabled=false",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "asyncEnabled 在 v1.38.1 是纯输出派生字段（factor>1 语义），输入侧丢弃是结构性行为。surviving 非平凡点：对已废弃/不存在的输入键无 422、无 deprecation 警告（deprecations/ 目录 grep asyncEnabled 零命中），用户意图静默失效——'静默丢弃 vs 显式拒绝'的缺陷定性留 auditor。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "derived_output_field_by_design（派生 shim 结构上不可能接受输入；但零告警丢弃用户显式输入是否构成缺陷由 auditor 裁）"
+    }
+  },
+  "evidence_weight": "medium（机制完全定位；缺陷定性依赖'静默丢弃已废弃输入'的裁决标准）"
+}

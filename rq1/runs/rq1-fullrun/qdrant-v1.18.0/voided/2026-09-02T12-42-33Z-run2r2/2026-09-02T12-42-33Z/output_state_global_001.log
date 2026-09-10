@@ -1,0 +1,14 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+FALLBACK_TRIGGERED: lock-option probes (locks+get GET /locks / locks+set POST /locks) have no qdrant runtime PATHS key; issuing the contract-derived REST path /locks via requests
+[FALLBACK_JUSTIFIED: scripts/runtime/qdrant.py PATHS (create_collection..metrics) exposes no locks key; chunk_global unit qdrant_inv_lock_blocks_mutations_001 is anchored on contract api_endpoints locks+set (POST /locks, source_url https://api.qdrant.tech/v-1-18-x/api-reference/service/post-locks, required body field write) and locks+get (GET /locks, response_shape result.write/result.error_message) whose api_endpoints url fields both read '/locks'; the path is derived 1:1 from the contract records and the runtime whitelist gap is a runtime-coverage gap, not a reason to drop the unit's only enabling API — same FALLBACK precedent as state_aliases_collection_list_001 in this session]
+[probe GET /locks] status=404 raw=
+[probe POST /locks write=false] status=404 raw=
+[create C1] status=200 raw={"result":true,"status":"ok","time":0.327619189}
+[seed upsert x2] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.125204729}
+[count sg1_1788422151_40472_c1] status=200 raw={"result":{"count":2},"status":"ok","time":0.001126453}
+[ENDPOINT_ABSENT] GET /locks and POST /locks both answered non-2xx on the deployed qdrant v1.18.0 OSS image (server commit db3fca327851e360c521065649e0f65a57fe7d3c per deployment_meta.json); the lock-option API this invariant is anchored to is not registered in that commit's route table (src/actix/api/service_api.rs registers only telemetry/metrics/stacktrace/healthz/livez/readyz/logger/truncate_unapplied_wal) — the write-lock cannot be actuated, so the lock-blocks-mutations invariant is not violable on this binary (run2 discipline: /locks = not_found_in_source doc backfill, not a binary defect); verifying the mutation plane is healthy and NOT silently locked below
+[absent-branch sanity upsert] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.004663931}
+[count sg1_1788422151_40472_c1] status=200 raw={"result":{"count":3},"status":"ok","time":0.000247421}
+absent-branch verification complete: no lock state exists and the mutation plane is healthy — NO_DEFECT
+VERDICT: NO_DEFECT

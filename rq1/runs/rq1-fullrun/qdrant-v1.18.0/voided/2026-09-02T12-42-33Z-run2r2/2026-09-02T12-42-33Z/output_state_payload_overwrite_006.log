@@ -1,0 +1,21 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['payload_overwrite', 'payload_set', 'points_get']
+[A upsert] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.002986792}
+[A baseline points+get] status=200 raw={"result":[{"id":1,"payload":{"orig":true},"vector":[0.18257418,0.36514837,0.5477225,0.73029673]},{"id":2,"payload":{"orig":true},"vector":[0.73029673,0.5477225,0.36514837,0.182574
+[B set {a,b} POST {'a': 1, 'b': 'two'}] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.002893171}
+[B readback points+get] status=200 raw={"result":[{"id":1,"payload":{"orig":true,"a":1,"b":"two"},"vector":[0.18257418,0.36514837,0.5477225,0.73029673]},{"id":2,"payload":{"orig":true,"a":1,"b":"two"},"vector":[0.730296
+[B readback count count] status=200 raw={"result":{"count":2},"status":"ok","time":0.000131236}
+[C overwrite {c} PUT {'c': 'three'}] status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.004138654}
+[D readback points+get] status=200 raw={"result":[{"id":1,"payload":{"c":"three"},"vector":[0.18257418,0.36514837,0.5477225,0.73029673]},{"id":2,"payload":{"c":"three"},"vector":[0.73029673,0.5477225,0.36514837,0.182574
+[D readback] OK: point 1 payload exactly {'c': 'three'}
+[D readback] OK: point 2 payload exactly {'c': 'three'}
+[D readback count count] status=200 raw={"result":{"count":2},"status":"ok","time":0.000085261}
+[E set {a} merge POST {'a': 1}] status=200 raw={"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.003073525}
+[E readback points+get] status=200 raw={"result":[{"id":1,"payload":{"c":"three","a":1},"vector":[0.18257418,0.36514837,0.5477225,0.73029673]},{"id":2,"payload":{"c":"three","a":1},"vector":[0.73029673,0.5477225,0.36514
+[E readback] OK: point 1 payload exactly {'a': 1, 'c': 'three'}
+[E readback] OK: point 2 payload exactly {'a': 1, 'c': 'three'}
+[E readback count count] status=200 raw={"result":{"count":2},"status":"ok","time":0.000194141}
+DEFECT: (B readback) point 1 payload {'orig': True, 'a': 1, 'b': 'two'} != expected EXACT {'a': 1, 'b': 'two'} — qdrant_bc_payload_overwrite_replace_001 pins replace-not-merge — Type4_StateLogicViolation
+DEFECT: (B readback) point 2 payload {'orig': True, 'a': 1, 'b': 'two'} != expected EXACT {'a': 1, 'b': 'two'} — qdrant_bc_payload_overwrite_replace_001 pins replace-not-merge — Type4_StateLogicViolation
+VERDICT: DEFECT_FOUND

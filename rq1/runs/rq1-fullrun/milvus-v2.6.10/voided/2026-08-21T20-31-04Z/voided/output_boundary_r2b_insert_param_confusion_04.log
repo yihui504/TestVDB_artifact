@@ -1,0 +1,12 @@
+insert data as object -> http=200 ok=False raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal object into Go struct field CollectionDataReq.data of type []map[string]interface {}"}
+insert rows as arrays -> http=200 ok=False raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal array into Go struct field CollectionDataReq.data of type map[string]interface {}"}
+insert data as string -> http=200 ok=False raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field CollectionDataReq.data of type []map[string]interface {}"}
+insert partitionNames as string -> http=200 ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[3]}}
+  readback ok=False raw={"code":101,"message":"failed to query: collection not loaded[collection=468545658377626472]"}
+insert timeout as string -> http=200 ok=True raw={"code":0,"cost":0,"data":{"insertCount":1,"insertIds":[4]}}
+  readback ok=False raw={"code":101,"message":"failed to query: collection not loaded[collection=468545658377626472]"}
+insert data null -> http=200 ok=False raw={"code":1802,"message":"missing required parameters, error: Key: 'CollectionDataReq.Data' Error:Field validation for 'Data' failed on the 'required' tag"}
+upsert data-as-object -> ok=False raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal object into Go struct field CollectionDataReq.data of type []map[string]interface {}"}
+DEFECT: insert accepted partitionNames as string (code=0)
+DEFECT: insert accepted timeout as string (code=0)
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess / request param type confusion)

@@ -1,0 +1,32 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] livez = /livez (runtime-derived from raw_knowledge.json api_endpoints[livez].url)
+[state_livez_001] run_token=1788438746_36988 base=http://127.0.0.1:6333
+== phase 0: sequential stability ==
+[seq1] GET /livez status=200 raw='healthz check passed'
+[seq2] GET /livez status=200 raw='healthz check passed'
+[seq3] GET /livez status=200 raw='healthz check passed'
+[seq4] GET /livez status=200 raw='healthz check passed'
+[seq5] GET /livez status=200 raw='healthz check passed'
+[seq6] GET /livez status=200 raw='healthz check passed'
+[seq7] GET /livez status=200 raw='healthz check passed'
+[seq8] GET /livez status=200 raw='healthz check passed'
+[seq9] GET /livez status=200 raw='healthz check passed'
+[seq10] GET /livez status=200 raw='healthz check passed'
+[seq11] GET /livez status=200 raw='healthz check passed'
+[seq12] GET /livez status=200 raw='healthz check passed'
+== phase 1: parameterized probe (api-key query face) ==
+[param1] GET /livez status=200 raw='healthz check passed'
+[param2] GET /livez status=200 raw='healthz check passed'
+== phase 2: concurrent burst — 10 workers x 5 probes = 50 parallel GET /livez ==
+[burst] ok=50/50 anomalies=0
+== phase 2b: mixed-load stability — livez probes concurrent with GET /collections + GET / load ==
+[mix] livez ok=30/30 anomalies=0; sibling-load faces ok=30/30 (context only)
+== phase 3: tail stability (collective re-check) ==
+[tail1] GET /livez status=200 raw='healthz check passed'
+[tail2] GET /livez status=200 raw='healthz check passed'
+[tail3] GET /livez status=200 raw='healthz check passed'
+[summary] ok=97/97 measured livez probes (seq 12/12, param 2/2, burst 50/50, mix 30/30, tail 3/3)
+liveness-face verification complete: every livez probe returned HTTP 200 across sequential, parameterized, concurrent-burst, mixed-sibling-load and post-burst probes (200-while-alive semantics held; the no-dependency-check clause survived concurrent sibling-face load); no spec-violating status, no false liveness signal, no reproducible transport loss — NO_DEFECT
+[cleanup probe] status=200 raw='healthz check passed'
+VERDICT: NO_DEFECT

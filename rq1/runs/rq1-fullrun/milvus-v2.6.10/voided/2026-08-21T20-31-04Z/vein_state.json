@@ -1,0 +1,45 @@
+{
+  "target": "milvus",
+  "version": "v2.6.10",
+  "session_dir": "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\results\\milvus\\v2.6.10\\2026-08-21T20-31-04Z",
+  "round": 1,
+  "top_endpoints": ["entities+query", "entities+search", "entities+insert"],
+  "richness_scores": {
+    "entities+query": 9.5,
+    "entities+search": 11.0,
+    "entities+hybrid_search": 10.5,
+    "entities+insert": 6.0,
+    "entities+delete": 5.0,
+    "v1+search": 5.5,
+    "collections+get_stats": 4.5
+  },
+  "condition_history": [
+    {"endpoint": "entities+query", "condition_type": "null_check", "finding": "DEFECT_FOUND",
+     "detail": "unknown field filter silently code:0 + empty data on dynamic-schema collections (query/search/delete); no-dyn control errors 1100. Root cause typeutil/schema.go:468 GetFieldFromNameDefaultJSON dynamic-JSON fallback",
+     "script": "vein_unknown_field_silent_accept_1.py"},
+    {"endpoint": "entities+insert", "condition_type": "type_mismatch", "finding": "DEFECT_FOUND",
+     "detail": "Int64 column accepts string \"5\" -> coerced to 5 on read-back; bool for Int64 rejected 1804; bool for Float rejected 1804 (asymmetric coercion)",
+     "inspired_by": "null_check", "script": "vein_insert_type_coercion_2.py"},
+    {"endpoint": "entities+search", "condition_type": "range_filter", "finding": "DEFECT_FOUND",
+     "detail": "searchParams passthrough: ef=-1/0/16.7/true/\"16\"/1e12 all code:0 with default results (silent substitution); utils.go:2076 generateSearchParams",
+     "script": "vein_searchparams_silent_default_3.py"},
+    {"endpoint": "entities+query", "condition_type": "pagination_cursor", "finding": "DEFECT_FOUND",
+     "detail": "query limit=0/-5 returns ALL rows, offset=-5 treated as 0; search rejects same values 65535 (cross-endpoint drift)",
+     "inspired_by": "range_filter", "script": "vein_query_limit_semantic_drift_4.py"},
+    {"endpoint": "v1+search", "condition_type": "type_mismatch", "finding": "DEFECT_FOUND",
+     "detail": "wrong-dim vector error leaks build path '/workspace/source/internal/core/src/query/Plan.cpp:91' + internal byte arithmetic",
+     "script": "vein_v1_internal_path_leak_5.py"},
+    {"endpoint": "entities+query", "condition_type": "collection_membership", "finding": "DEFECT_FOUND",
+     "detail": "outputFields unknown silently dropped on dyn collections (code:0, field missing); identical name errors 65535 on no-dyn and 1100 in filter",
+     "inspired_by": "null_check", "script": "vein_outputfields_silent_drop_6.py"},
+    {"endpoint": "entities+hybrid_search", "condition_type": "range_filter", "finding": "DEFECT_FOUND",
+     "detail": "sub-search params ef=\"abc\"/-3 silently code:0 with default results while rerank strategy is validated 65535 (asymmetric validation on 2.6 hybrid path)",
+     "inspired_by": "range_filter (endpoint cross-pollination search->hybrid_search)",
+     "script": "vein_hybrid_subsearch_params_7.py"}
+  ],
+  "by_design_excluded": [
+    {"detail": "unknown-field silent empty on dynamic collections could be argued by-design (unknown key = absent JSON key); excluded from over-claiming by pairing no-dyn control in-script and framing as validation asymmetry rather than cardinality bug"}
+  ],
+  "last_finding": {"endpoint": "entities+hybrid_search", "condition_type": "range_filter", "finding": "DEFECT_FOUND"},
+  "adjacent_pending": []
+}

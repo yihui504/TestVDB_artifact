@@ -1,0 +1,12 @@
+{
+ "defect_id": "state_points_query_largeoffset_009",
+ "endpoint": "points+query",
+ "param": "offset",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "count_consistency",
+ "oracle": {
+  "statement": "offset=5 -> 7 pts, offset=11 -> 1 pt, offset=12 (== count) -> 200 with 0 pts, offset=1e9 (query and no-query faces) -> 200 with 0 pts and no next_page_offset (5xx with /healthz alive = Type3); exact count stays 12 before/after (count change = Type4); timeout with alive service = documented slowness, not judged",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

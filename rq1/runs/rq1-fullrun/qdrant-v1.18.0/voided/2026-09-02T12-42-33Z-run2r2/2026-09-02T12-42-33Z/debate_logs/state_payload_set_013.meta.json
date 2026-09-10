@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_payload_set_013",
+  "endpoint": "payload+set",
+  "param": "payload",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "concurrent",
+  "oracle": {
+    "statement": "Race A: after T concurrent wait=true sets each writing its own disjoint key tk<j> on points [1,2], BOTH points carry base+keep+ALL T tk keys with exact values (a missing thread key = lost concurrent merge write, Type4); Race B: after 4 concurrent sets of the same key 'shared' with values 0..3, the final value is exactly one of {0,1,2,3} on both points (torn value = Type4); every op returns 200 (4xx on valid op = Type4; 5xx counts only with /healthz alive = Type3); id set {1,2}, vectors equal baseline readback (<=1e-6), exact count 2",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

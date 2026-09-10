@@ -1,0 +1,11 @@
+{
+  "defect_id": "state_cluster_status_003",
+  "endpoint": "cluster+status",
+  "param": null,
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "concurrent",
+  "oracle": {
+    "statement": "during collection create/drop churn every global GET /cluster read is 200 with key set and status value equal to the baseline fingerprint (>=2 deviations = Type4_StateLogicViolation; >=2 5xx = Type3_RuntimeFailure after /healthz 200); after the final verified drop (describe = 404) the control probe returns exactly 200 with the baseline fingerprint (non-200 = Type3 after liveness; fingerprint mismatch = Type4)",
+    "source": "docstring"
+  }
+}

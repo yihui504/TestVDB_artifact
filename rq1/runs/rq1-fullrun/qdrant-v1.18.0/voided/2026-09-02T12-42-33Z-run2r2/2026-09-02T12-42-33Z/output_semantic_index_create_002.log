@@ -1,0 +1,11 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: sic025ff4dd
+[constraint quote] 'field_schema IN {keyword, integer, float, geo, text, bool, datetime, uuid}; text tokenizer IN {prefix, whitespace, word, multilingual}'
+[setup] created sic025ff4dd_live (dim=4)
+[PUT index sic025ff4dd_live/ctrl_ok] schema="keyword" -> status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.3236951}
+[PUT index sic025ff4dd_live/h_int] schema=123 -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 44"},"time":0.0}
+[PUT index sic025ff4dd_live/h_bool] schema=true -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 46"},"time":0.0}
+[PUT index sic025ff4dd_live/h_arr] schema=["keyword"] -> status=200 raw={"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.325890991}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)
+array-shaped field_schema (JSON-type crossing into the enum branch) answered HTTP 200; constraint qdrant_type_index_create_001 pins field_schema to the PayloadSchemaType enum (+tokenizer enum) and request_required_paths requires field_schema.type - a 2xx means the wrongly-typed schema was silently coerced/accepted (BS-01): '{"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.325890991}'

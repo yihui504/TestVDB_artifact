@@ -1,0 +1,32 @@
+setup: ready
+ef string -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+ef negative -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+ef 0 -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+ef huge int -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+ef null -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+ef float -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+nprobe string -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+nprobe negative -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+nprobe 0 -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+nprobe huge -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+level bogus -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+level int -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+params string not dict -> http=200 code=1801 ok=False raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field SearchReqV2.searchParams of type map[string]interface {}"}
+params array -> http=200 code=1801 ok=False raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal array into Go struct field SearchReqV2.searchParams of type map[string]interface {}"}
+radius null -> http=200 code=65535 ok=False raw={"code":65535,"message":"fail to search on QueryNode 1: worker(1) query failed: N6milvus21ExecOperatorExceptionE :Operator::GetOutput failed for [Operator:PhyVectorSearchNode, plan node id: 577] :  =\
+range_filter bool -> http=200 code=0 ok=True raw={"code":0,"cost":0,"data":[{"distance":1,"id":1}],"topks":[1]}
+
+server alive after all cases: True
+VERDICT: NO_DEFECT - all searchParams cases survived (accepted or clean 4xx-envelope reject)

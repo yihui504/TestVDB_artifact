@@ -1,0 +1,17 @@
+{
+ "endpoint": "collections+optimizations",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_optimizations_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-optimizations",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "P1 ?with=queued -> HTTP 200 with result.queued an ARRAY (items carry optimizer:string and segments:array when present); P2 ?with=completed&completed_limit=3 -> HTTP 200 with result.completed an ARRAY and, on the first polled sample where completed is non-empty, len(completed) <= 3; P3 ?with=idle_segments -> HTTP 200 with result.idle_segments an ARRAY (items carry uuid:string and points_count:integer>=0); P4 completed_limit=5 WITHOUT with -> HTTP 200 with the default face unchanged (summary+running present; gated keys absent/null - param ignored exactly as documented); P5/P6 (unknown token / comma-separated form) measured-note legs, never 5xx (else Type3); any requested-key result still null/absent after the matching with= token = Type4_StateLogicViolation (documented response-selection param silently ignored, BS-01/BS-05); summary+running shape re-validated in every 200 sample; no completed activity in the poll window = vacuity skip-note, never a defect; 5xx with /healthz alive = Type3_RuntimeFailure; transport failure with healthy /healthz or create/upsert/delete setup failure = SCRIPT_ERROR",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ },
+ "defect_id": "semantic_collections_optimizations_003",
+ "param": "completed_limit",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "behavioral_contract"
+}

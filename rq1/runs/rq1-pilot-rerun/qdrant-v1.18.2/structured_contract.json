@@ -1,0 +1,3351 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "cache_ttl_hours": 168,
+  "cached_at": "2026-08-20T05:00:00Z",
+  "sdk": {
+    "package": "qdrant-client",
+    "version": "1.19.0",
+    "install_command": "pip install qdrant-client==1.19.0"
+  },
+  "docker": {
+    "repo": "qdrant/qdrant",
+    "available_tags": [
+      "v1.18.2",
+      "v1.18.2-pgsql",
+      "v1.18.2-bionic",
+      "latest"
+    ]
+  },
+  "api_endpoints": [
+    {
+      "path": "points+scroll",
+      "method": "POST",
+      "category": "data",
+      "description": "Scroll through points with pagination",
+      "source_url": "https://api.qdrant.tech/api-reference/points/scroll-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": false,
+          "description": "Batch size",
+          "default_value": 10
+        },
+        {
+          "name": "offset",
+          "type": "integer|string",
+          "required": false,
+          "description": "Pagination offset"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "description": "Filter conditions"
+        }
+      ]
+    },
+    {
+      "path": "points+get",
+      "method": "GET",
+      "category": "data",
+      "description": "Get a specific point by ID",
+      "source_url": "https://api.qdrant.tech/api-reference/points/get-point",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "point_id",
+          "type": "integer|string",
+          "required": true,
+          "description": "Point ID"
+        },
+        {
+          "name": "with_payload",
+          "type": "boolean|array",
+          "required": false,
+          "description": "Return payload"
+        },
+        {
+          "name": "with_vector",
+          "type": "boolean",
+          "required": false,
+          "description": "Return vectors"
+        }
+      ]
+    },
+    {
+      "path": "points+delete",
+      "method": "POST",
+      "category": "data",
+      "description": "Delete points from collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "points",
+          "type": "array",
+          "required": true,
+          "description": "Point IDs to delete"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "description": "Filter conditions"
+        },
+        {
+          "name": "wait",
+          "type": "boolean",
+          "required": false,
+          "description": "Wait for completion"
+        }
+      ]
+    },
+    {
+      "path": "points+search",
+      "method": "POST",
+      "category": "search",
+      "description": "Search for nearest points by vector similarity",
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "vector",
+          "type": "array",
+          "required": true,
+          "description": "Query vector"
+        },
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": false,
+          "description": "Max results",
+          "default_value": 10
+        },
+        {
+          "name": "score_threshold",
+          "type": "float",
+          "required": false,
+          "description": "Min score",
+          "default_value": 0.0
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "description": "Filter conditions"
+        },
+        {
+          "name": "params.hnsw_ef",
+          "type": "integer",
+          "required": false,
+          "description": "Search accuracy"
+        },
+        {
+          "name": "with_payload",
+          "type": "boolean|array",
+          "required": false,
+          "description": "Return payload"
+        },
+        {
+          "name": "with_vector",
+          "type": "boolean",
+          "required": false,
+          "description": "Return vectors"
+        }
+      ]
+    },
+    {
+      "path": "points+upsert",
+      "method": "PUT",
+      "category": "data",
+      "description": "Insert or update points in a collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "points",
+          "type": "array",
+          "required": true,
+          "description": "List of points"
+        },
+        {
+          "name": "points[].id",
+          "type": "integer|string",
+          "required": true,
+          "description": "Point ID"
+        },
+        {
+          "name": "points[].vector",
+          "type": "array",
+          "required": true,
+          "description": "Vector data"
+        },
+        {
+          "name": "points[].payload",
+          "type": "object",
+          "required": false,
+          "description": "Payload data"
+        },
+        {
+          "name": "wait",
+          "type": "boolean",
+          "required": false,
+          "description": "Wait for completion",
+          "default_value": false
+        }
+      ]
+    },
+    {
+      "path": "collections+update",
+      "method": "PATCH",
+      "category": "schema",
+      "description": "Update collection configuration",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/update-collection",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+exists",
+      "method": "GET",
+      "category": "schema",
+      "description": "Check if collection exists",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/collection-exists",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "required": true,
+          "description": "Collection name"
+        }
+      ]
+    },
+    {
+      "path": "collections+list",
+      "method": "GET",
+      "category": "schema",
+      "description": "List all collections",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collections",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+delete",
+      "method": "DELETE",
+      "category": "schema",
+      "description": "Delete a collection",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "required": true,
+          "description": "Collection name"
+        }
+      ]
+    },
+    {
+      "path": "collections+get",
+      "method": "GET",
+      "category": "schema",
+      "description": "Get collection details and configuration",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "required": true,
+          "description": "Collection name"
+        }
+      ]
+    },
+    {
+      "path": "collections+create",
+      "method": "PUT",
+      "category": "schema",
+      "description": "Create a new collection with specified vector configuration and HNSW index parameters",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "vectors",
+          "type": "object",
+          "required": true,
+          "description": "Vector configuration"
+        },
+        {
+          "name": "vectors.size",
+          "type": "integer",
+          "required": true,
+          "description": "Dimension of vectors"
+        },
+        {
+          "name": "vectors.distance",
+          "type": "string",
+          "required": true,
+          "description": "Distance metric (Cosine, Euclidean, Dot, Manhattan)"
+        },
+        {
+          "name": "hnsw_config.m",
+          "type": "integer",
+          "required": false,
+          "description": "Max connections per node"
+        },
+        {
+          "name": "hnsw_config.ef_construct",
+          "type": "integer",
+          "required": false,
+          "description": "Index build speed/accuracy"
+        },
+        {
+          "name": "hnsw_config.m",
+          "type": "integer",
+          "required": false,
+          "description": "Max connections per node",
+          "default_value": 16
+        },
+        {
+          "name": "hnsw_config.ef_construct",
+          "type": "integer",
+          "required": false,
+          "description": "Index build speed/accuracy",
+          "default_value": 100
+        },
+        {
+          "name": "optimizers_config.indexing_threshold",
+          "type": "integer",
+          "required": false,
+          "description": "Min vector count for indexing",
+          "default_value": 20000
+        },
+        {
+          "name": "shard_number",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "sharding_method",
+          "type": "object",
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "replication_factor",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "write_consistency_factor",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "on_disk_payload",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "hnsw_config",
+          "type": "object",
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "wal_config",
+          "type": "object",
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "optimizers_config",
+          "type": "object",
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "quantization_config",
+          "type": "object",
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "sparse_vectors",
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "strict_mode_config",
+          "type": "object",
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        },
+        {
+          "name": "metadata",
+          "type": "object",
+          "required": false,
+          "source": "openapi (Step 6b field backfill)"
+        }
+      ]
+    },
+    {
+      "path": "aliases",
+      "method": "GET",
+      "category": "admin",
+      "description": "List all aliases",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "cluster",
+      "method": "GET",
+      "category": "admin",
+      "description": "Check cluster status",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "cluster+peer+delete",
+      "method": "DELETE",
+      "category": "admin",
+      "description": "Remove peer from cluster",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "cluster+recover",
+      "method": "POST",
+      "category": "admin",
+      "description": "Recover cluster state",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "cluster+telemetry",
+      "method": "GET",
+      "category": "admin",
+      "description": "Collect cluster telemetry data",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "details_level",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "collections+aliases+update",
+      "method": "POST",
+      "category": "admin",
+      "description": "Update collection aliases",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+aliases+list",
+      "method": "GET",
+      "category": "admin",
+      "description": "List collection aliases",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+cluster+get",
+      "method": "GET",
+      "category": "admin",
+      "description": "Retrieve cluster details",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+cluster+update",
+      "method": "POST",
+      "category": "admin",
+      "description": "Update cluster setup",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+exists",
+      "method": "GET",
+      "category": "schema",
+      "description": "Check collection existence",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+facet",
+      "method": "POST",
+      "category": "data",
+      "description": "Payload field facets",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+index+create",
+      "method": "PUT",
+      "category": "index",
+      "description": "Create payload index",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+index+delete",
+      "method": "DELETE",
+      "category": "index",
+      "description": "Delete payload index",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+optimizations",
+      "method": "GET",
+      "category": "admin",
+      "description": "Get optimization progress",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "points+batch",
+      "method": "POST",
+      "category": "data",
+      "description": "Batch update points",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "wait",
+          "type": "boolean",
+          "source": "openapi"
+        },
+        {
+          "name": "ordering",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "operations",
+          "type": "array",
+          "required": true,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+count",
+      "method": "POST",
+      "category": "data",
+      "description": "Count points",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "exact",
+          "type": "boolean",
+          "required": false,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+discover",
+      "method": "POST",
+      "category": "search",
+      "description": "Discover points",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "target",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "context",
+          "type": [
+            "array",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi",
+          "sub_fields": [
+            "positive",
+            "negative"
+          ]
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "params",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "offset",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_payload",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_vector",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "using",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "lookup_from",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+discover+batch",
+      "method": "POST",
+      "category": "search",
+      "description": "Discover batch points",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "searches",
+          "type": "array",
+          "required": true,
+          "source": "openapi",
+          "sub_fields": [
+            "shard_key",
+            "target",
+            "context",
+            "filter",
+            "params",
+            "limit",
+            "offset",
+            "with_payload",
+            "with_vector",
+            "using"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "points+payload+set",
+      "method": "POST",
+      "category": "data",
+      "description": "Set payload",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "points+payload+overwrite",
+      "method": "PUT",
+      "category": "data",
+      "description": "Overwrite payload",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "points+payload+clear",
+      "method": "POST",
+      "category": "data",
+      "description": "Clear payload",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "wait",
+          "type": "boolean",
+          "source": "openapi"
+        },
+        {
+          "name": "ordering",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+payload+delete",
+      "method": "POST",
+      "category": "data",
+      "description": "Delete payload",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "wait",
+          "type": "boolean",
+          "source": "openapi"
+        },
+        {
+          "name": "ordering",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "keys",
+          "type": "array",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "points",
+          "type": [
+            "array",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+query",
+      "method": "POST",
+      "category": "search",
+      "description": "Query points",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "prefetch",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "query",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "using",
+          "type": [
+            "string",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "params",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "score_threshold",
+          "type": [
+            "number",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "limit",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "offset",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_vector",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_payload",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "lookup_from",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+query+batch",
+      "method": "POST",
+      "category": "search",
+      "description": "Query points in batch",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "searches",
+          "type": "array",
+          "required": true,
+          "source": "openapi",
+          "sub_fields": [
+            "shard_key",
+            "prefetch",
+            "query",
+            "using",
+            "filter",
+            "params",
+            "score_threshold",
+            "limit",
+            "offset",
+            "with_vector"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "points+query+groups",
+      "method": "POST",
+      "category": "search",
+      "description": "Query point groups",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "prefetch",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "query",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "using",
+          "type": [
+            "string",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "params",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "score_threshold",
+          "type": [
+            "number",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_vector",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_payload",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "lookup_from",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "group_by",
+          "type": "string",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "group_size",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "limit",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_lookup",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+recommend",
+      "method": "POST",
+      "category": "search",
+      "description": "Recommend points",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "positive",
+          "type": "array",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "negative",
+          "type": "array",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "strategy",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "params",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "offset",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_payload",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_vector",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "score_threshold",
+          "type": [
+            "number",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "using",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "lookup_from",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+recommend+batch",
+      "method": "POST",
+      "category": "search",
+      "description": "Recommend batch points",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "searches",
+          "type": "array",
+          "required": true,
+          "source": "openapi",
+          "sub_fields": [
+            "shard_key",
+            "positive",
+            "negative",
+            "strategy",
+            "filter",
+            "params",
+            "limit",
+            "offset",
+            "with_payload",
+            "with_vector"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "points+recommend+groups",
+      "method": "POST",
+      "category": "search",
+      "description": "Recommend point groups",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "positive",
+          "type": "array",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "negative",
+          "type": "array",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "strategy",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "params",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_payload",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_vector",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "score_threshold",
+          "type": [
+            "number",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "using",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "lookup_from",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "group_by",
+          "type": "string",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "group_size",
+          "type": "integer",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "with_lookup",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+search+batch",
+      "method": "POST",
+      "category": "search",
+      "description": "Search batch points",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "searches",
+          "type": "array",
+          "required": true,
+          "source": "openapi",
+          "sub_fields": [
+            "shard_key",
+            "vector",
+            "filter",
+            "params",
+            "limit",
+            "offset",
+            "with_payload",
+            "with_vector",
+            "score_threshold"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "points+search+groups",
+      "method": "POST",
+      "category": "search",
+      "description": "Search point groups",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "vector",
+          "type": "object",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "params",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_payload",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "with_vector",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "score_threshold",
+          "type": [
+            "number",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "group_by",
+          "type": "string",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "group_size",
+          "type": "integer",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "limit",
+          "type": "integer",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "with_lookup",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+search+matrix+offsets",
+      "method": "POST",
+      "category": "search",
+      "description": "Distance matrix offsets",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "sample",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "limit",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "using",
+          "type": [
+            "string",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+search+matrix+pairs",
+      "method": "POST",
+      "category": "search",
+      "description": "Distance matrix pairs",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "consistency",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "sample",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "limit",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "using",
+          "type": [
+            "string",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+vectors+update",
+      "method": "PUT",
+      "category": "data",
+      "description": "Update vectors",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "points+vectors+delete",
+      "method": "POST",
+      "category": "data",
+      "description": "Delete vectors",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": [
+        {
+          "name": "collection_name",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "wait",
+          "type": "boolean",
+          "source": "openapi"
+        },
+        {
+          "name": "ordering",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "timeout",
+          "type": "integer",
+          "source": "openapi"
+        },
+        {
+          "name": "api-key",
+          "type": "string",
+          "source": "openapi"
+        },
+        {
+          "name": "points",
+          "type": [
+            "array",
+            "null"
+          ],
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        },
+        {
+          "name": "vector",
+          "type": "array",
+          "required": true,
+          "source": "openapi"
+        },
+        {
+          "name": "shard_key",
+          "type": "object",
+          "required": false,
+          "source": "openapi"
+        }
+      ]
+    },
+    {
+      "path": "points+get+by_id",
+      "method": "GET",
+      "category": "data",
+      "description": "Retrieve a point",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+shards+list",
+      "method": "GET",
+      "category": "admin",
+      "description": "List shard keys",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+shards+create",
+      "method": "PUT",
+      "category": "admin",
+      "description": "Create a shard key",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+shards+delete",
+      "method": "POST",
+      "category": "admin",
+      "description": "Delete a shard key",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+shards+snapshot+download",
+      "method": "GET",
+      "category": "admin",
+      "description": "Download shard snapshot",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+shards+snapshots+list",
+      "method": "GET",
+      "category": "admin",
+      "description": "List all snapshots (shard)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+shards+snapshots+create",
+      "method": "POST",
+      "category": "admin",
+      "description": "Create a snapshot (shard)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+shards+snapshots+recover",
+      "method": "PUT",
+      "category": "admin",
+      "description": "Recover from snapshot (shard)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+shards+snapshots+upload",
+      "method": "POST",
+      "category": "admin",
+      "description": "Recover from uploaded snapshot (shard)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+shards+snapshots+download+by_name",
+      "method": "GET",
+      "category": "admin",
+      "description": "Download snapshot (shard)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+shards+snapshots+delete",
+      "method": "DELETE",
+      "category": "admin",
+      "description": "Delete snapshot (shard)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+snapshots+list",
+      "method": "GET",
+      "category": "admin",
+      "description": "List all snapshots (collection)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+snapshots+create",
+      "method": "POST",
+      "category": "admin",
+      "description": "Create a snapshot (collection)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+snapshots+recover",
+      "method": "PUT",
+      "category": "admin",
+      "description": "Recover from snapshot (collection)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+snapshots+upload",
+      "method": "POST",
+      "category": "admin",
+      "description": "Recover from uploaded snapshot (collection)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+snapshots+download+by_name",
+      "method": "GET",
+      "category": "admin",
+      "description": "Download snapshot (collection)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+snapshots+delete",
+      "method": "DELETE",
+      "category": "admin",
+      "description": "Delete snapshot (collection)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+vectors+create",
+      "method": "PUT",
+      "category": "schema",
+      "description": "Create named vector",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "collections+vectors+delete",
+      "method": "DELETE",
+      "category": "schema",
+      "description": "Delete named vector",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "issues+report",
+      "method": "GET",
+      "category": "admin",
+      "description": "Report issues",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "issues+clear",
+      "method": "DELETE",
+      "category": "admin",
+      "description": "Clear issues",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "health+livez",
+      "method": "GET",
+      "category": "admin",
+      "description": "Kubernetes liveness probe",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "locks+get",
+      "method": "GET",
+      "category": "admin",
+      "description": "Check write protection",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "locks+set",
+      "method": "POST",
+      "category": "admin",
+      "description": "Set write protection",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "quotas+get",
+      "method": "GET",
+      "category": "admin",
+      "description": "Get global quotas",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "quotas+set",
+      "method": "PUT",
+      "category": "admin",
+      "description": "Set global quotas",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "health+readyz",
+      "method": "GET",
+      "category": "admin",
+      "description": "Kubernetes readiness probe",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "storage+snapshots+list",
+      "method": "GET",
+      "category": "admin",
+      "description": "List all snapshots (storage)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "storage+snapshots+create",
+      "method": "POST",
+      "category": "admin",
+      "description": "Create a snapshot (storage)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "storage+snapshots+download",
+      "method": "GET",
+      "category": "admin",
+      "description": "Download snapshot (storage)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    },
+    {
+      "path": "storage+snapshots+delete",
+      "method": "DELETE",
+      "category": "admin",
+      "description": "Delete snapshot (storage)",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "parameters": []
+    }
+  ],
+  "endpoint_registry": [
+    {
+      "path": "points+scroll",
+      "method": "POST",
+      "source_url": "https://api.qdrant.tech/api-reference/points/scroll-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Scroll through points with pagination",
+      "verified_at": "2026-08-20T15:33:11.930864Z"
+    },
+    {
+      "path": "points+get",
+      "method": "GET",
+      "source_url": "https://api.qdrant.tech/api-reference/points/get-point",
+      "doc_version": "1.19.x",
+      "doc_quote": "Get a specific point by ID",
+      "verified_at": "2026-08-20T15:33:11.930864Z"
+    },
+    {
+      "path": "points+delete",
+      "method": "POST",
+      "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete points from collection",
+      "verified_at": "2026-08-20T15:33:11.930864Z"
+    },
+    {
+      "path": "points+search",
+      "method": "POST",
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Search for nearest points by vector similarity",
+      "verified_at": "2026-08-20T15:33:11.930864Z"
+    },
+    {
+      "path": "points+upsert",
+      "method": "PUT",
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+      "doc_version": "1.19.x",
+      "doc_quote": "Insert or update points in a collection",
+      "verified_at": "2026-08-20T15:33:11.930864Z"
+    },
+    {
+      "path": "collections+update",
+      "method": "PATCH",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/update-collection",
+      "doc_version": "1.19.x",
+      "doc_quote": "Update collection configuration",
+      "verified_at": "2026-08-20T15:33:11.930864Z"
+    },
+    {
+      "path": "collections+exists",
+      "method": "GET",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/collection-exists",
+      "doc_version": "1.19.x",
+      "doc_quote": "Check if collection exists",
+      "verified_at": "2026-08-20T15:33:11.930864Z"
+    },
+    {
+      "path": "collections+list",
+      "method": "GET",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collections",
+      "doc_version": "1.19.x",
+      "doc_quote": "List all collections",
+      "verified_at": "2026-08-20T15:33:11.930864Z"
+    },
+    {
+      "path": "collections+delete",
+      "method": "DELETE",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete a collection",
+      "verified_at": "2026-08-20T15:33:11.930864Z"
+    },
+    {
+      "path": "collections+get",
+      "method": "GET",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "doc_version": "1.19.x",
+      "doc_quote": "Get collection details and configuration",
+      "verified_at": "2026-08-20T15:33:11.930864Z"
+    },
+    {
+      "path": "collections+create",
+      "method": "PUT",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+      "doc_version": "1.19.x",
+      "doc_quote": "Create a new collection with specified vector configuration and HNSW index parameters",
+      "verified_at": "2026-08-20T15:33:11.930864Z"
+    },
+    {
+      "path": "aliases",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "List all aliases",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "cluster",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Check cluster status",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "cluster+peer+delete",
+      "method": "DELETE",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Remove peer from cluster",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "cluster+recover",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Recover cluster state",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "cluster+telemetry",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Collect cluster telemetry data",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+aliases+update",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Update collection aliases",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+aliases+list",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "List collection aliases",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+cluster+get",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Retrieve cluster details",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+cluster+update",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Update cluster setup",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+exists",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Check collection existence",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+facet",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Payload field facets",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+index+create",
+      "method": "PUT",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Create payload index",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+index+delete",
+      "method": "DELETE",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete payload index",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+optimizations",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Get optimization progress",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+batch",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Batch update points",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+count",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Count points",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+discover",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Discover points",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+discover+batch",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Discover batch points",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+payload+set",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Set payload",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+payload+overwrite",
+      "method": "PUT",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Overwrite payload",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+payload+clear",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Clear payload",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+payload+delete",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete payload",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+query",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Query points",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+query+batch",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Query points in batch",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+query+groups",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Query point groups",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+recommend",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Recommend points",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+recommend+batch",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Recommend batch points",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+recommend+groups",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Recommend point groups",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+search+batch",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Search batch points",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+search+groups",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Search point groups",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+search+matrix+offsets",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Distance matrix offsets",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+search+matrix+pairs",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Distance matrix pairs",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+vectors+update",
+      "method": "PUT",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Update vectors",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+vectors+delete",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete vectors",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "points+get+by_id",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Retrieve a point",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+shards+list",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "List shard keys",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+shards+create",
+      "method": "PUT",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Create a shard key",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+shards+delete",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete a shard key",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+shards+snapshot+download",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Download shard snapshot",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+shards+snapshots+list",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "List all snapshots (shard)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+shards+snapshots+create",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Create a snapshot (shard)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+shards+snapshots+recover",
+      "method": "PUT",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Recover from snapshot (shard)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+shards+snapshots+upload",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Recover from uploaded snapshot (shard)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+shards+snapshots+download+by_name",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Download snapshot (shard)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+shards+snapshots+delete",
+      "method": "DELETE",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete snapshot (shard)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+snapshots+list",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "List all snapshots (collection)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+snapshots+create",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Create a snapshot (collection)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+snapshots+recover",
+      "method": "PUT",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Recover from snapshot (collection)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+snapshots+upload",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Recover from uploaded snapshot (collection)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+snapshots+download+by_name",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Download snapshot (collection)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+snapshots+delete",
+      "method": "DELETE",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete snapshot (collection)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+vectors+create",
+      "method": "PUT",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Create named vector",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "collections+vectors+delete",
+      "method": "DELETE",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete named vector",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "issues+report",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Report issues",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "issues+clear",
+      "method": "DELETE",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Clear issues",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "health+livez",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Kubernetes liveness probe",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "locks+get",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Check write protection",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "locks+set",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Set write protection",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "quotas+get",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Get global quotas",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "quotas+set",
+      "method": "PUT",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Set global quotas",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "health+readyz",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Kubernetes readiness probe",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "storage+snapshots+list",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "List all snapshots (storage)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "storage+snapshots+create",
+      "method": "POST",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Create a snapshot (storage)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "storage+snapshots+download",
+      "method": "GET",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Download snapshot (storage)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    },
+    {
+      "path": "storage+snapshots+delete",
+      "method": "DELETE",
+      "source_url": "openapi (Step 6b cross-check fallback)",
+      "doc_version": "1.19.x",
+      "doc_quote": "Delete snapshot (storage)",
+      "verified_at": "2026-08-20T15:32:51.150807Z"
+    }
+  ],
+  "constraints": {
+    "type_constraints": [
+      {
+        "constraint_id": "qdrant_type_create_collection_001",
+        "endpoint": "collections+create",
+        "description": "vectors.size must be positive integer",
+        "assertion": "vectors.size > 0 AND type(vectors.size) = integer",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_type_create_collection_002",
+        "endpoint": "collections+create",
+        "description": "vectors.distance must be one of: Cosine, Euclidean, Dot, Manhattan",
+        "assertion": "vectors.distance IN ['Cosine', 'Euclidean', 'Dot', 'Manhattan']",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_type_upsert_points_001",
+        "endpoint": "points+upsert",
+        "description": "points array must contain 1-1000 elements",
+        "assertion": "len(points) >= 1 AND len(points) <= 1000",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_type_search_points_001",
+        "endpoint": "points+search",
+        "description": "limit must be positive integer",
+        "assertion": "type(limit) = integer AND limit > 0",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_type_search_points_002",
+        "endpoint": "points+search",
+        "description": "vector dimension must match collection dimension",
+        "assertion": "len(vector) = collection.vectors.size",
+        "type": "type_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+        "source_status": "reachable",
+        "source_verified": true
+      }
+    ],
+    "range_constraints": [
+      {
+        "constraint_id": "qdrant_range_create_collection_001",
+        "endpoint": "collections+create",
+        "description": "hnsw_config.m (max connections) in range [2, 100]",
+        "assertion": "hnsw_config.m >= 2 AND hnsw_config.m <= 100",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_range_create_collection_002",
+        "endpoint": "collections+create",
+        "description": "hnsw_config.ef_construct in range [10, 1000]",
+        "assertion": "hnsw_config.ef_construct >= 10 AND hnsw_config.ef_construct <= 1000",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_range_create_collection_003",
+        "endpoint": "collections+create",
+        "description": "optimizers_config.indexing_threshold >= 0",
+        "assertion": "optimizers_config.indexing_threshold >= 0",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_range_search_points_001",
+        "endpoint": "points+search",
+        "description": "limit in range [1, 1000]",
+        "assertion": "limit >= 1 AND limit <= 1000",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_range_search_points_002",
+        "endpoint": "points+search",
+        "description": "score_threshold in range [0, 1]",
+        "assertion": "score_threshold >= 0 AND score_threshold <= 1",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_range_search_points_003",
+        "endpoint": "points+search",
+        "description": "hnsw_ef in range [1, 10000]",
+        "assertion": "params.hnsw_ef >= 1 AND params.hnsw_ef <= 10000",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_range_scroll_points_001",
+        "endpoint": "points+scroll",
+        "description": "limit in range [1, 1000]",
+        "assertion": "limit >= 1 AND limit <= 1000",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/scroll-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_range_delete_points_001",
+        "endpoint": "points+delete",
+        "description": "points batch size in range [1, 1000]",
+        "assertion": "len(points) >= 1 AND len(points) <= 1000",
+        "type": "range_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+        "source_status": "reachable",
+        "source_verified": true
+      }
+    ],
+    "state_constraints": [
+      {
+        "constraint_id": "qdrant_state_create_collection_001",
+        "endpoint": "collections+create",
+        "description": "Collection creation is atomic - fails if collection already exists",
+        "assertion": "NOT exists(collection_name) BEFORE create",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_state_delete_collection_001",
+        "endpoint": "collections+delete",
+        "description": "Collection deletion is atomic - fails if collection does not exist",
+        "assertion": "exists(collection_name) BEFORE delete",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_state_upsert_points_001",
+        "endpoint": "points+upsert",
+        "description": "Upsert is atomic per point - concurrent upserts by same ID are serialized",
+        "assertion": "atomic(points[].id)",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_state_search_points_001",
+        "endpoint": "points+search",
+        "description": "Search is consistent with completed upserts",
+        "assertion": "consistent(search_results, completed_upserts)",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_state_delete_points_001",
+        "endpoint": "points+delete",
+        "description": "Delete points operation is atomic and serialized",
+        "assertion": "serial(delete_operation)",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+        "source_status": "reachable",
+        "source_verified": true
+      },
+      {
+        "constraint_id": "qdrant_state_scroll_points_001",
+        "endpoint": "points+scroll",
+        "description": "Scroll provides consistent snapshot",
+        "assertion": "isolation_level(snapshot)",
+        "type": "state_constraint",
+        "evidence_tier": "explicit",
+        "source_url": "https://api.qdrant.tech/api-reference/points/scroll-points",
+        "source_status": "reachable",
+        "source_verified": true
+      }
+    ]
+  },
+  "assertions": [
+    {
+      "assertion_id": "qdrant_behavioral_create_collection_001",
+      "endpoint": "collections+create",
+      "description": "Valid collection creation returns 200 OK",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK on success",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_create_collection_002",
+      "endpoint": "collections+create",
+      "description": "Invalid parameters or existing collection returns 400 Bad Request",
+      "category": "behavioral",
+      "expected_behavior": "returns 400 Bad Request on invalid/exists",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type2_PoorDiagnostics"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_get_collection_001",
+      "endpoint": "collections+get",
+      "description": "Existing collection returns 200 OK",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with collection details",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_get_collection_002",
+      "endpoint": "collections+get",
+      "description": "Non-existent collection returns 404 Not Found",
+      "category": "behavioral",
+      "expected_behavior": "returns 404 Not Found",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/collections/get-collection",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_delete_collection_001",
+      "endpoint": "collections+delete",
+      "description": "Existing collection deletion returns 200 OK",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK on success",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_delete_collection_002",
+      "endpoint": "collections+delete",
+      "description": "Non-existent collection deletion returns 404 Not Found",
+      "category": "behavioral",
+      "expected_behavior": "returns 404 Not Found",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_upsert_points_001",
+      "endpoint": "points+upsert",
+      "description": "Valid upsert returns 200 OK",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK on success",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_upsert_points_002",
+      "endpoint": "points+upsert",
+      "description": "Invalid upsert (non-existent collection) returns 404 Not Found",
+      "category": "behavioral",
+      "expected_behavior": "returns 404 Not Found if collection missing",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_search_points_001",
+      "endpoint": "points+search",
+      "description": "Valid search returns 200 OK with scored results",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with array of scored points",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_search_points_002",
+      "endpoint": "points+search",
+      "description": "Empty collection search returns empty array (no error)",
+      "category": "behavioral",
+      "expected_behavior": "returns empty array [], no error",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type4_StateLogicViolation"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_search_points_003",
+      "endpoint": "points+search",
+      "description": "Non-existent collection returns 404 Not Found",
+      "category": "behavioral",
+      "expected_behavior": "returns 404 Not Found",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_delete_points_001",
+      "endpoint": "points+delete",
+      "description": "Valid delete returns 200 OK",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK on success",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_delete_points_002",
+      "endpoint": "points+delete",
+      "description": "Missing points selector returns 400 Bad Request",
+      "category": "behavioral",
+      "expected_behavior": "returns 400 Bad Request if neither points nor filter specified",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/delete-points",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type2_PoorDiagnostics"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_get_point_001",
+      "endpoint": "points+get",
+      "description": "Existing point returns 200 OK with point data",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with point details",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/get-point",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_get_point_002",
+      "endpoint": "points+get",
+      "description": "Non-existent point returns 404 Not Found",
+      "category": "behavioral",
+      "expected_behavior": "returns 404 Not Found",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/get-point",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    },
+    {
+      "assertion_id": "qdrant_behavioral_scroll_points_001",
+      "endpoint": "points+scroll",
+      "description": "Valid scroll returns 200 OK with batch of points",
+      "category": "behavioral",
+      "expected_behavior": "returns 200 OK with points array",
+      "evidence_tier": "explicit",
+      "source_verified": true,
+      "source_url": "https://api.qdrant.tech/api-reference/points/scroll-points",
+      "doc_version": "1.19.x",
+      "defect_type_if_violated": "Type3_RuntimeFailure"
+    }
+  ],
+  "behavioral_contracts": [
+    {
+      "contract_id": "qdrant_contract_create_query_001",
+      "description": "Create-then-Query visibility contract",
+      "scenario": "Create collection and upsert points, then immediately query",
+      "expected_behavior": "Newly created collection and upserted points are immediately visible to subsequent queries (no artificial delay)",
+      "related_endpoints": [
+        "collections+create",
+        "points+upsert",
+        "points+search"
+      ],
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection"
+    },
+    {
+      "contract_id": "qdrant_contract_delete_query_001",
+      "description": "Delete-then-Query invisibility contract",
+      "scenario": "Delete collection or points, then immediately query",
+      "expected_behavior": "Deleted collection/points are immediately invisible to subsequent queries (returns 404 or empty results)",
+      "related_endpoints": [
+        "collections+delete",
+        "points+delete",
+        "points+search",
+        "collections+get"
+      ],
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection"
+    },
+    {
+      "contract_id": "qdrant_contract_update_atomic_001",
+      "description": "Update atomicity contract",
+      "scenario": "Concurrent upserts to same point ID",
+      "expected_behavior": "Concurrent updates to same point are serialized - final state reflects one complete update, no partial/corrupted state",
+      "related_endpoints": [
+        "points+upsert"
+      ],
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points"
+    }
+  ],
+  "state_invariants": [
+    {
+      "invariant_id": "qdrant_invariant_create_001",
+      "description": "After creating a collection, it should be visible in collection list and retrievable via GET",
+      "assertion": "create_collection(c) => exists(c) AND get_collection(c) succeeds",
+      "scope": "global",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/create-collection"
+    },
+    {
+      "invariant_id": "qdrant_invariant_delete_001",
+      "description": "After deleting a collection, it should not exist and should not be retrievable",
+      "assertion": "delete_collection(c) => NOT exists(c) AND get_collection(c) returns 404",
+      "scope": "global",
+      "source_url": "https://api.qdrant.tech/api-reference/collections/delete-collection"
+    },
+    {
+      "invariant_id": "qdrant_invariant_count_001",
+      "description": "After inserting N points, count query should return N",
+      "assertion": "upsert(N points) => count() = N",
+      "scope": "per_collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/upsert-points"
+    },
+    {
+      "invariant_id": "qdrant_invariant_search_001",
+      "description": "After upserting a point, it should be searchable",
+      "assertion": "upsert(p) => search(p.vector) includes p",
+      "scope": "per_collection",
+      "source_url": "https://api.qdrant.tech/api-reference/points/search-points"
+    }
+  ],
+  "data_types": [
+    {
+      "name": "Dense Vector",
+      "description": "Array of floating-point numbers with fixed dimension",
+      "fields": [
+        {
+          "name": "data",
+          "type": "array<float>",
+          "required": true,
+          "description": "Vector components"
+        },
+        {
+          "name": "dimension",
+          "type": "integer",
+          "required": true,
+          "description": "Fixed size (must match collection config)"
+        }
+      ]
+    },
+    {
+      "name": "Point",
+      "description": "Single data point with vector and optional payload",
+      "fields": [
+        {
+          "name": "id",
+          "type": "integer|string",
+          "required": true,
+          "description": "Unique identifier"
+        },
+        {
+          "name": "vector",
+          "type": "Dense Vector",
+          "required": true,
+          "description": "Vector data"
+        },
+        {
+          "name": "payload",
+          "type": "object",
+          "required": false,
+          "description": "Key-value metadata"
+        }
+      ]
+    },
+    {
+      "name": "Collection Config",
+      "description": "Collection configuration with vector params and HNSW settings",
+      "fields": [
+        {
+          "name": "vectors.size",
+          "type": "integer",
+          "required": true,
+          "description": "Vector dimension"
+        },
+        {
+          "name": "vectors.distance",
+          "type": "enum",
+          "required": true,
+          "description": "Distance metric (Cosine, Euclidean, Dot, Manhattan)"
+        },
+        {
+          "name": "hnsw_config.m",
+          "type": "integer",
+          "required": false,
+          "description": "Max connections per node (default 16)"
+        },
+        {
+          "name": "hnsw_config.ef_construct",
+          "type": "integer",
+          "required": false,
+          "description": "Index build speed/accuracy (default 100)"
+        }
+      ]
+    }
+  ],
+  "_passport": {
+    "schema_version": "2.0",
+    "contract_hash": "sha256:62837603c84f47da04dbf8693551bb8d013fc7e2e2be439525dc145d1f386be7",
+    "contract_hash_algorithm": "sha256",
+    "source": {
+      "doc_urls": [
+        "https://api.qdrant.tech/api-reference",
+        "https://api.qdrant.tech/api-reference/collections/create-collection",
+        "https://api.qdrant.tech/api-reference/collections/get-collection",
+        "https://api.qdrant.tech/api-reference/collections/delete-collection",
+        "https://api.qdrant.tech/api-reference/collections/get-collections",
+        "https://api.qdrant.tech/api-reference/collections/collection-exists",
+        "https://api.qdrant.tech/api-reference/collections/update-collection",
+        "https://api.qdrant.tech/api-reference/points/upsert-points",
+        "https://api.qdrant.tech/api-reference/points/search-points",
+        "https://api.qdrant.tech/api-reference/points/delete-points",
+        "https://api.qdrant.tech/api-reference/points/get-point",
+        "https://api.qdrant.tech/api-reference/points/scroll-points"
+      ],
+      "doc_version": "1.19.x",
+      "crawl_method": "webfetch",
+      "crawled_at": "2026-08-20T05:00:00Z"
+    },
+    "generation": {
+      "knowledge_extractor_agent": "testvdb:knowledge-extractor",
+      "contract_formalizer_agent": "testvdb:contract-formalizer",
+      "generated_at": "2026-08-20T15:35:30.275217Z",
+      "cache_ttl_hours": 168
+    },
+    "integrity": {
+      "verified": true,
+      "verified_at": "2026-08-20T15:35:30.275217Z",
+      "core_crud_coverage_pct": 100.0,
+      "endpoint_count": 76,
+      "constraint_count": 19
+    }
+  }
+}

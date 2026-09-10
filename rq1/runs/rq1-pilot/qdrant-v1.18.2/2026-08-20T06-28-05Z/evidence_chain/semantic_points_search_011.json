@@ -1,0 +1,76 @@
+{
+  "defect_id": "semantic_points_search_011",
+  "endpoint": "points+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "score_threshold parameter documented as 'float' type in OpenAPI schema (v1.19.x), but documentation does not explicitly state that integer values should be rejected. Schema defines ScoreType = f32, which via serde JSON coercion accepts integers (e.g., 1 becomes 1.0). The semantic contract implies type strictness but implementation permits type coercion.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Testing string '0.5': status=400; Testing integer 1: status=200; VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)",
+      "secondary_observations": [
+        "String '0.5' correctly rejected with HTTP 400 (valid type checking for string inputs)",
+        "Integer 1 incorrectly accepted with HTTP 200 (type coercion allows integer→float conversion)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A (HTTP 200 with success code)",
+        "note": "score_threshold=1 (integer) accepted via HTTP 200, no error returned. Type1 violation: illegal value succeeds."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_points_search_011"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "N/A",
+      "assertion_text_quoted": "API should reject non-float score_threshold values (behavioral contract inferred from type specification). OpenAPI schema (v1.18.x, line 589) declares score_threshold as Option<ScoreType> where ScoreType = f32 (lib/common/common/src/types.rs:8). Schema defines parameter as 'type': 'float'.",
+      "api_violates_assertion": true,
+      "note": "API violates type strictness: accepts integer 1 via serde JSON→f32 coercion. Log shows HTTP 200 for integer input, confirming violation.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:score_threshold type=float (OpenAPI)",
+        "doc:https://api.qdrant.tech/api-reference/points/search-points (reachable)",
+        "script:POST /collections/{collection}/points/search with score_threshold=1 (integer)",
+        "log:HTTP 200 OK (integer accepted)"
+      ],
+      "chain_broken_at": "implementation",
+      "break_detail": "Link breaks at serde deserialization layer (lib/api/src/rest/schema.rs:589): score_threshold: Option<ScoreType> where ScoreType=f32 accepts JSON integers via automatic coercion. Contract declares 'float' type, but implementation permits integer→float conversion. No type-specific validation prevents this.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "score_threshold",
+        "ScoreType",
+        "QueryRequestInternal",
+        "type f32"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs",
+        "lib/common/common/src/types.rs",
+        "src/common/inference/query_requests_rest.rs"
+      ],
+      "source_excerpt": "File: lib/api/src/rest/schema.rs (lines 565-609)\n\n#[derive(Debug, Serialize, Deserialize, JsonSchema, Validate)]\npub struct QueryRequestInternal {\n    /// Sub-requests to perform first...\n    #[validate(nested)]\n    pub prefetch: Option<Vec<Prefetch>>,\n    \n    /// Query to perform...\n    #[validate(nested)]\n    pub query: Option<QueryInterface>,\n    \n    /// Return points with scores better than this threshold.\n    pub score_threshold: Option<ScoreType>,  // (line 589) No type-specific validation\n    \n    /// Max number of points to return.\n    #[validate(range(min = 1))]\n    pub limit: Option<usize>,\n    ...\n}\n\nFile: lib/common/common/src/types.rs (lines 7-8)\n\n/// Type of vector matching score\npub type ScoreType = f32;\n\n// Serde automatically coerces JSON integers to f32. No custom deserializer.\n// Compare with 'limit' field above which has #[validate(range(min = 1))]\n// score_threshold lacks type-specific validation, only Option<> wrapper.",
+      "call_chain_traced": "JSON → serde deserialize → QueryRequestInternal.score_threshold: Option<ScoreType> (f32) → integer 1 coerced to 1.0 → API accepts → HTTP 200. No validation layer checks JSON type vs. declared type.",
+      "verification_outcome": "validation_absent",
+      "note": "Source confirms type coercion behavior. No validation attribute (like #[validate]) on score_threshold field. serde's default behavior accepts integers for f32 fields. Contract expects float-only, implementation permits integers.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env"],
+      "surviving": "Type coercion by design (serde default), not environment or concurrency issue. Implementation explicitly permits integer→float conversion without validation check."
+    }
+  }
+}

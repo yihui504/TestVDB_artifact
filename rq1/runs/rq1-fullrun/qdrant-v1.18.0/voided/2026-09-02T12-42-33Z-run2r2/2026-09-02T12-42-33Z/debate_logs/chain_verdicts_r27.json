@@ -1,0 +1,97 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "state_payload_clear_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, api_violates_assertion=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "log",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_state_payload_clear_001, id+quote_ok, api_violates_assertion=false -> REFUTED (mechanical). The log's own pre-clear baseline scroll already shows the normalized vector [0.2581989,0.2581989,0.5163978,0.77459663]=[1,1,2,3]/sqrt(15) and the post-clear readback is byte-identical, so the (F) 'vector changed after payload clear' DEFECT line is the script oracle comparing readback to the raw un-normalized upload on a Cosine collection. Source corroborates: simple.rs:168/228 declares by-design upsert-time cosine normalization and the clear_payload path (entry.rs:808-829) touches payload_index only; the constraint's own payload-keys domain fully passed (targets 1-3 empty, non-targets 4-6 intact, count 6->6).",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_payload_clear_002",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, api_violates_assertion=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_state_payload_clear_001, id+quote_ok, api_violates_assertion=false -> REFUTED (mechanical). The (B) 'point 10 vector changed' readback [0.9365858,...] equals the uploaded [10,1,2,3]/sqrt(114) exactly, and no pre-clear readback was ever captured, so 'changed AFTER clear' is an inference artifact of the vec_ok(stored, uploaded_VEC) oracle on a Cosine collection. Controlled in-session probe boundary_collections_create_017 shows upsert-time normalization with no clear involved (Cosine normalizes [3,4,0,0]->[0.6,0.8,0,0], Euclid control unchanged) and clear_payload's source path touches only payload_index; every payload-keys readback (B/C/E empty, D exact new dict, repeat clear 200) satisfied the constraint.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_payload_clear_003",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, api_violates_assertion=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "log",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_state_payload_clear_001, id+quote_ok, api_violates_assertion=false -> REFUTED (mechanical). All 100 '(raceA/raceB) vector changed' DEFECT lines come from vec_ok comparing scroll readback against raw un-normalized VECTORS=[i+1,1,2,3] on a Cosine collection, and the log's own pre-race baseline scroll already carries the identical normalized [0.2581989,...], so the divergence predates every race. Zero torn payloads across all raceB rounds, count stable at 20, all 85+ ops 200-completed — the constraint's payload domain passed everywhere. Source shows cosine_preprocess at upsert (simple.rs:228) and a clear path (entry.rs:808 -> struct_payload_index.rs:984) with no vector-storage access.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_payload_clear_004",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "behavior",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, api_violates_assertion=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "log",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_state_payload_clear_001, id+quote_ok, api_violates_assertion=false -> REFUTED (mechanical). The pre-clear baseline (log line 5) already shows the Cosine-normalized [0.2581989,...] and the post-clear readback (line 7) is byte-identical, contradicting the 16 '(B)/(E) vector changed' lines that compare readback against un-normalized upload originals under distance=Cosine. Filter-branch selectivity was exactly correct (grp=a cleared ids 0-3, n>=6 cleared ids 6-7, grp=zzz no-match mutated nothing, zero under/over-clear lines, count 8 stable); source confirms by-design ingestion normalization (simple.rs:168 doc comment) and a clear_payload path that never touches vector storage. Oracle-presence correlation: the only 4 payload_clear scripts carrying the vec_ok-vs-raw oracle all returned DEFECT_FOUND while the 7 siblings without it all returned NO_DEFECT.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "defect": 0,
+    "not_defect": 4,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 0, "both": 0, "behavior": 4},
+    "root_cause_distribution": {"script_error": 4},
+    "constraint_category_distribution": {"state": 4},
+    "candidate_class_distribution": {"strict_defect": 0, "exploratory_candidate": 0, "rejected": 4}
+  }
+}

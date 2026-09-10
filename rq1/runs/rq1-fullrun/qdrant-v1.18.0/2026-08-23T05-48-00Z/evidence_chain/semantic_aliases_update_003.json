@@ -1,0 +1,87 @@
+{
+  "defect_id": "semantic_aliases_update_003",
+  "endpoint": "aliases+update (POST /collections/aliases)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url 200 可达(curl)；URL 含 v-1-18-x 匹配 target 1.18.0；端点 POST /collections/aliases 在 contract endpoint_registry 查表命中 aliases+update。但内容一致性 PARTIAL：页面嵌入 schema 的 create_alias 对象 key 为 \"alias_name\"(string)，页面 grep 无任何 'unicode/UTF/character-set' 表述——即『文档承诺 unicode alias 合法』这一 claim 前提在文档层无明确文字支持，仅 schema 声明类型为 string(未限定字符集)。另注：文档页面同时出现 SDK 示例字段 alias_name 与部分示例片段字段 alias，字段命名在页面内不完全一致。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "unicode alias create: 400 {\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum AliasOperations at line 1 column 128\"}}",
+      "secondary_observations": [
+        "actions=string: 400 (invalid type: string, expected a sequence)",
+        "actions=object: 400 (invalid type: map, expected a sequence)",
+        "unknown verb drop_alias: 400 (data did not match any variant of untagged enum AliasOperations)",
+        "collection_name=12345: 400 (data did not match any variant of untagged enum AliasOperations)",
+        "actions=[]: 200 (NOTE: empty actions accepted, possible no-op, judged by reviewer)"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "请求侧格式错误以 HTTP 400 返回，语义正确(无 2xx+业务码伪装)。且 400 错误信息仅报 untagged enum 失配、未指出缺哪个字段(Type2 诊断性问题的输入，供 auditor 参考)。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_aliases_update_003",
+        "boundary_aliases_update_02",
+        "state_aliases_update_002"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_aliases_update_001",
+      "assertion_text_quoted": "alias changes are atomic: no collection modifications can happen between alias operations (assertion: alias operations applied atomically)",
+      "api_violates_assertion": false,
+      "note": "违反声明自检：候选 claim_hint 指向 Type1_IllegalRejection(合法 unicode alias 被 400 拒)，但该 constraint(qdrant_state_aliases_update_001)断言的是原子性语义，与 claim 现象(合法值被拒)不在同一约束域——本候选的 constraint 引用与 claim 存在错位(contract 只有这一条 aliases+update 的 state constraint，无『alias 名不得含非 ASCII』或『任意 string 均合法』的 behavioral constraint)。log 的 400 由字段名 alias≠alias_name 的反序列化失配引起，与原子性断言无关，故对『本条 constraint』violates=false；是否构成对 string 类型契约的违反由 auditor 依据下方 source_grounding 裁量。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_aliases_update_001 @ aliases+update, assertion=alias operations applied atomically (source_url v-1-18-x, source_verified=true)",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/aliases/update-aliases 可达(curl 200)；嵌入 schema create_alias 对象 key=\"alias_name\" type=string；无 unicode/字符集限定表述",
+        "script: debate_logs/semantic_aliases_update_003.py L99-101 发送 {\"create_alias\": {\"alias\": \"сэм_alias_<ts>\", \"collection_name\": COLL}} — 字段名为 alias 而非 alias_name",
+        "log: output_semantic_aliases_update_003.log — unicode alias create: 400 untagged enum AliasOperations 失配 → VERDICT: DEFECT_FOUND (Type1_IllegalRejection)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "log 判 DEFECT_FOUND(IllegalRejection)但断链在脚本环与 log 环之间：脚本请求体使用字段名 \"alias\"，而源码 CreateAlias 结构体与文档嵌入 schema 均要求 \"alias_name\"。400 是 serde untagged enum 对缺字段请求的正确拒绝，reject 原因是请求格式非法而非 unicode 内容非法。IDE 无证据表明同一 alias 值在正确字段名(alias_name)下会被拒(未执行该对照请求)。constraint 引用亦与 claim 错位(contract 环偏弱)。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "enum AliasOperations",
+        "create_alias (files: lib)",
+        "collections/aliases",
+        "update_aliases|ChangeAliasesOperation",
+        "alias_name|collection_name (lib/common/common/src/validation.rs)",
+        "validate_collection_name"
+      ],
+      "files_examined": [
+        "lib/storage/src/content_manager/collection_meta_ops.rs (L25-105, L180-215, L345-360)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (L290-340 update_aliases handler)",
+        "src/actix/api/collections_api.rs (L180-195 REST route POST /collections/aliases)",
+        "lib/common/common/src/validation.rs (L36-150 INVALID_NAME_CHARS/validate_collection_name)",
+        "lib/storage/tests/integration/alias_tests.rs (定位)"
+      ],
+      "source_excerpt": "// lib/storage/src/content_manager/collection_meta_ops.rs L36-47\n/// Create alternative name for a collection.\n/// Collection will be available under both names for search, retrieve,\n#[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct CreateAlias {\n    pub collection_name: String,\n    pub alias_name: String,\n}\n\n#[derive(...)]\npub struct CreateAliasOperation {\n    pub create_alias: CreateAlias,\n}\n\n// L78-86: untagged enum — 缺 alias_name 字段时三个 variant 全部失配 → 400\n#[derive(...)]\n#[serde(untagged)]\npub enum AliasOperations {\n    CreateAlias(CreateAliasOperation),\n    DeleteAlias(DeleteAliasOperation),\n    RenameAlias(RenameAliasOperation),\n}\n\n// src/actix/api/collections_api.rs L180-195: REST handler 直接 Json<ChangeAliasesOperation> 反序列化\n#[post(\"/collections/aliases\")]\nasync fn update_aliases(..., operation: Json<ChangeAliasesOperation>, ...) {\n    dispatcher.submit_collection_meta_op(CollectionMetaOperations::ChangeAliases(operation.0), ...)\n}\n\n// lib/storage/src/content_manager/toc/collection_meta_ops.rs L299-337: 处理链仅做存在性校验(validate_collection_exists / validate_collection_not_exists / alias_lock.insert)，无字符集校验，alias_name: String 原生接受任意 UTF-8",
+      "call_chain_traced": "actix route POST /collections/aliases (src/actix/api/collections_api.rs:180) → Json<ChangeAliasesOperation> serde 反序列化(actions: Vec<AliasOperations>, untagged enum, collection_meta_ops.rs:348-352/78-86) → dispatcher.submit_collection_meta_op → toc/collection_meta_ops.rs:299 update_aliases(写锁 + 逐 action 执行 insert/remove/rename)。反序列化层是 400 的产生点：请求字段 \"alias\" 无法匹配任何 variant(全部要求 alias_name)，与字符串内容是否 unicode 无关。",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "CreateAlias.alias_name 为无校验 String(仅 filesystem-unsafe 字符校验存在于 collection name 路径 validate_collection_name，且在 alias 处理链中未见对 alias_name 调用该校验)。untagged enum 对缺字段请求返回 400 是 serde 序列化的 by-design 行为。关键事实：脚本发送的字段名是 alias 而源码/文档要求 alias_name——观测到的 400 不能归因于 unicode 内容。未做『正确字段名 + unicode 值』对照请求，该对照是否构成真实 IllegalRejection 未在本次取证中验证。"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_param_typo_partial"],
+      "surviving": "request_field_name_mismatch: 脚本使用 \"alias\" 字段而 API 契约(源码+文档嵌入 schema)要求 \"alias_name\"，400 是反序列化对非法请求体的正确拒绝(Type1_IllegalRejection 判定很可能是脚本侧字段名笔误造成的假阳性)；次级幸存：actions=[] 返回 200 的 no-op 语义待 reviewer 裁量"
+    }
+  }
+}

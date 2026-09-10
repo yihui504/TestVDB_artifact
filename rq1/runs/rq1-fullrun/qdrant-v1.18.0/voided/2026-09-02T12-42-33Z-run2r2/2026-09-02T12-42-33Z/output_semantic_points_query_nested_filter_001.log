@@ -1,0 +1,19 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+G1a nested (no index yet) -> status=200
+raw: {"result":{"points":[{"id":701,"version":1,"score":1.4142135},{"id":703,"version":1,"score":1.4142135}]},"status":"ok","time":0.000713233}
+G1a OK: nested filter evaluated correctly without an index
+index create (nested) -> status=400
+raw: {"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 58"},"time":0.0}
+NOTE index create rejected with 400 — matches the boundary-lane finding that 'nested' is a plausible non-member of the documented field_schema enum; recorded
+SKIPPED-note G1b: nested index creation was rejected, so the with-index face cannot run; G1a's disposition carries this constraint (no false conclusion drawn)
+G2 adjacent has_id + nested -> status=200
+raw: {"result":{"points":[{"id":701,"version":1,"score":1.4142135}]},"status":"ok","time":0.00046646}
+G2 OK: adjacent-clause composition intersects correctly
+G3 nested missing key -> status=400
+raw: {"status":{"error":"Format error in JSON body: Expected some form of condition, which can be a field condition (like {\"key\": ..., \"match\": ... }), or some other mentioned in the documentation: https://qdrant.tech/documentation/concepts/filtering/#filtering-conditions at line 1 column 187"},"time":0.0}
+G3 OK: keyless nested condition rejected by 4xx
+G4 has_id inside nested -> status=200
+raw: {"result":{"points":[]},"status":"ok","time":0.000507201}
+NOTE G4: has_id inside nested was ACCEPTED with 200 (returned []) although the data type documents it as NOT supported inside nested — doc-consistency signal recorded, not judged (G3-avoidance)
+VERDICT: NO_DEFECT

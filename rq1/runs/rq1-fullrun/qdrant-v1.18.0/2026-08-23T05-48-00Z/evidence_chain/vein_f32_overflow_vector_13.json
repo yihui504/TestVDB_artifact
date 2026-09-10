@@ -1,0 +1,108 @@
+{
+  "defect_id": "vein_f32_overflow_vector_13",
+  "endpoint": "PUT /collections/{collection_name}/points + POST /collections/{collection_name}/points/query + POST /collections/{collection_name}/points (read-back)",
+  "defect_type": "Type1",
+  "defect_type_note": "按日志观测模式映射（非法输入静默接受 + 输出违反自身 schema），非终判；meta.json expected_defect_type=Type1 一致",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "可达性：WebFetch api.qdrant.tech 与 qdrant.tech 均被网络策略阻挡（domain_blocked，不视为 FAIL），回退本地同批文档快照（tmp_gen/qdrant118/，契约构建期抓取，raw_knowledge.md 标 doc_version 1.18.x versioned）。版本：concepts 快照与契约同批（1.18.x），但 OpenAPI 快照 spec.json 的 info.version=1.0.0（qdrant openapi 惯例）无法精确钉到 1.18 → PARTIAL。内容：文档明说 f32 存储（见 doc_evidence 引文），与行为一致；但文档对超出 f32 范围的输入分量无任何行为规定（拒绝/截断/饱和均未提及）——纯文档空白；而 OpenAPI ScoredPoint.score 声明 required+type:number，观测 score=null 直接违反 → PARTIAL。端点：upsert/query/read-back 三端点均为真实 REST 端点，契约 points+upsert/points+query 断言在册。",
+      "evidence_source": "doc",
+      "doc_evidence": {
+        "f32_storage_quote": "concepts_vectors.txt L1717: 'By default, Qdrant stores each vector dimension as a 32-bit floating-point number.' L1722: 'This is the default datatype for vectors in Qdrant. It is a 32-bit (4 bytes) floating-point number.'",
+        "score_schema_quote": "spec.json components.schemas.ScoredPoint: score {type: number, format: double, description: 'Points vector distance to the query vector'}, required: [id, version, score]",
+        "vector_input_schema_quote": "spec.json VectorStruct oneOf 第一支: {type: array, items: {type: number, format: double}} — 请求侧分量按 f64 number 声明，1e300 是合法 JSON number",
+        "datatype_param_quote": "spec.json VectorParamsDatatype description: 'For float32 datatype - vectors are stored as single-precision floating point numbers, 4 bytes.'",
+        "doc_gap": "文档未规定超出 f32 表示范围的输入分量的任何行为（无 reject/clamp/saturate 字样）；uint8 有显式范围 [0,255] 而 float32 无对应范围声明"
+      }
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "upsert with 1e300 components: 200 (accepted) ; read-back id=999 vector: [None, None, None, None] ; read-back id=0   vector (control): [0.47472346, 0.20748034, 0.7965247, 0.31166944]",
+      "secondary_observations": [
+        "normal query top3: [(999, None), (5, 0.9892007), (1, 0.970391)] — null score 点排在真实匹配之上（claim 的 ranked above exact matches 主后果）",
+        "query [1e300 x4] scores: [None, None, None] — 超范围查询向量使全部 score 为 null",
+        "query at f32max scores: [None, 0.0, 0.0] | 3.5e38 scores: [None, None, None] — 边界恰在 f32::MAX=3.4028235e38：边界值内查询得数值 score 0.0，超界全 null"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "更严格描述：HTTP 200 + 正常成功响应（Qdrant result/status ok），完全无错误信号——请求侧可判定的错误（分量超出存储类型 f32 表示范围）被当作有效输入整体吞掉，比『2xx+错误码』更极端。后续读回与查询也未产生任何 4xx/错误码，错误只以 schema 违反的 null 形式漏出。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_f32_overflow_vector_13"],
+      "log_granularity_note": "log 为脚本 stdout 观测行（10 行全文已读），非 raw REQ/RESP dump；观测行是原始输出行而非聚合词，脚本源码（vein_scripts/vein_f32_overflow_vector_13.py L41-75）与每行观测一一对应，可交叉核对",
+      "verdict_logic_note": "脚本判定条件（L77-81）：s_up==200 且 vec999 含 None 且 null_first(999 排第一且 score None) 且 all_null → DEFECT_FOUND；日志四条件全满足。对照点 id=0 同响应内数值正常（同响应对比，排除环境因素）",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "constraint_binding_note": "派发条目 constraint_id 为空串（机械提取未绑定）。手动 ground 到两条最近契约基础：assertion qdrant_behavioral_points_query_001 与 data_types.DenseVector。",
+      "assertion_text_quoted": "qdrant_behavioral_points_query_001: '200 QueryResponse {result: [ScoredPoint], next_page_offset?}; 400 invalid query; 404 collection' (endpoint points+query, source_url https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points, doc_version 1.18.x versioned) ; data_types.DenseVector: 'fixed-length float array matching collection size; float32 default'",
+      "api_violates_assertion": true,
+      "note": "判定理由：query_001 承诺 200 响应携带 ScoredPoint（其 schema 中 score 为 required number），观测正常查询返回 score=null 的点且排第一，直接违反该 schema 承诺；同时 DenseVector 声明 float32 存储，而 API 对超出 f32 表示范围的输入（f64 合法 number）既不 400 也不截断提示，静默转 inf/NaN 后以 null 形式漏出——违反『float array』的类型承诺。violates=true 与观测（200 接受 + null score）和引用约束（ScoredPoint number）无矛盾。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_query_001 (points+query 200 → ScoredPoint) + data_types.DenseVector (float32 default) — 手动绑定，机械 constraint_id 为空",
+        "doc: OpenAPI ScoredPoint.score required+number（本地 spec.json 快照，api.qdrant.tech domain_blocked）+ concepts_vectors.txt L1717/L1722 f32 存储声明；文档对超 f32 范围输入行为无规定（空白）",
+        "script: vein_scripts/vein_f32_overflow_vector_13.py — PUT points upsert id=999 vector=[1e300 x4]（L41-43）→ POST points read-back with_vector（L48-49）→ POST points/query 正常向量（L56-57）/ [1e300 x4]（L63-64）/ f32max 与 3.5e38 边界（L69-74）",
+        "log: output_vein_f32_overflow_vector_13.log — 200 accepted / read-back [None x4] / top3 [(999,None),...] / 全 null score / f32max 边界行"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "断点仅一处且为绑定缺失：派发条目 constraint_id 为空串（机械提取未完成绑定），非『引用了不存在/不一致的约束』。doc/script/log 三环经脚本源码逐行比对全部一致（脚本打印语句与日志观测行一一对应）。此断点由 builder 以手动 grounding 补链，供 auditor 复核手动绑定的适当性。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "ScoredPoint (files_matches, lib/api+lib/common)",
+        "pub enum Vector { / impl Validate for Vector (lib/api/src/rest/schema.rs)",
+        "type DenseVector / type VectorElementType (lib/segment)",
+        "type ScoreType (lib/common)",
+        "fn upsert_points / do_upsert_points (src/actix+src/common)",
+        "fn check_named_vectors / fn check_vector_against_config / fn check_vector (lib/segment/src/common/mod.rs)",
+        "CosineMetric / fn cosine_preprocess / fn is_length_zero_or_normalized (lib/segment/src/spaces)",
+        "vectors.preprocess( (segment entry 写入路径)",
+        "FixedLengthPriorityQueue / peek_top_smallest (lib/common+lib/segment)",
+        "OrderedFloat / ordered-float (lib/common/common/src/types.rs + Cargo.toml)",
+        "is_finite (全 lib 树 — 确认写入/打分路径无 finite 防护)"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs (Vector enum L30-59 Validate Dense→Ok(()); ScoredPoint L441-462; PointInsertOperations L1501-1515)",
+        "lib/common/common/src/types.rs (L8 ScoreType=f32; L14-31 ScoredPointOffset Ord 用 OrderedFloat)",
+        "lib/segment/src/data_types/vectors.rs (L253 VectorElementType=f32; L264 DenseVector=Vec<f32>)",
+        "lib/segment/src/spaces/simple.rs (L169-206 CosineMetric preprocess→cosine_preprocess; L228-235 cosine_preprocess 实现)",
+        "lib/segment/src/spaces/tools.rs (L14-16 is_length_zero_or_normalized)",
+        "lib/segment/src/segment/entry.rs (L652-674 upsert_point: check_named_vectors + preprocess，无 finite 检查)",
+        "lib/segment/src/common/mod.rs (L188-203 check_vector_against_config Dense 只查维度)",
+        "lib/common/common/src/fixed_length_priority_queue.rs (全文 105 行: BinaryHeap<Reverse<T>> top-K)",
+        "lib/segment/src/vector_storage/query_scorer/metric_query_scorer.rs (全文 106 行: score=similarity=query·stored)",
+        "Cargo.toml (L249 ordered-float 5.3.0)",
+        "openapi/ 目录结构确认 (ytt 模板 + schemars 从 Rust 类型生成)"
+      ],
+      "source_excerpt": "// (1) lib/api/src/rest/schema.rs L48-59 — REST 层唯一向量内容校验，Dense 分支完全放行\nimpl Validate for Vector {\n    fn validate(&self) -> Result<(), validator::ValidationErrors> {\n        match self {\n            Vector::Dense(_) => Ok(()),          // <-- 无 finite/range/NaN 检查（对比 Sparse 有 v.validate()）\n            Vector::Sparse(v) => v.validate(),\n            Vector::MultiDense(m) => validate_multi_vector(m),\n            ...\n        }\n    }\n}\n// 同文件 L441-449: pub struct ScoredPoint { pub score: ScoreType, ... } — score 为非 Option 的 f32，无 skip_serializing_if，NaN 序列化路径无守卫\n\n// (2) lib/segment/src/data_types/vectors.rs L253+264\npub type VectorElementType = f32;                       // 存储 f32；REST JSON f64 number 经 serde 反序列化 as-cast 饱和到 inf，无错误\npub type DenseVector = TypedDenseVector<VectorElementType>; // = Vec<f32>\n\n// (3) lib/segment/src/common/mod.rs L188-203 — 写入前检查只查维度\nfn check_vector_against_config(vector: VectorRef, vector_config: &VectorDataConfig) -> OperationResult<()> {\n    match vector {\n        VectorRef::Dense(vector) => {\n            let dim = vector_config.size;\n            if vector.len() != dim {\n                return Err(OperationError::WrongVectorDimension { expected_dim: dim, received_dim: vector.len() });\n            }\n            Ok(())                                     // <-- 维度匹配即通过，分量值无检查\n        }\n        ...\n\n// (4) lib/segment/src/segment/entry.rs L653-662 — upsert 写入路径\nfn upsert_point(&mut self, op_num, point_id, mut vectors: NamedVectors, hw_counter) -> OperationResult<bool> {\n    check_named_vectors(&vectors, &self.segment_config)?;   // 只查维度/命名\n    vectors.preprocess(|name| ...);                          // Cosine: cosine_preprocess\n\n// (5) lib/segment/src/spaces/simple.rs L228-235 — 归一化无溢出防护\npub fn cosine_preprocess(vector: DenseVector) -> DenseVector {\n    let mut length: f32 = vector.iter().map(|x| x * x).sum();  // [inf x4] → length = inf\n    if is_length_zero_or_normalized(length) { return vector; }  // tools.rs L15: length<EPSILON || |length-1|<=1e-6 → inf 两支均 false\n    length = length.sqrt();                                     // sqrt(inf) = inf\n    vector.iter().map(|x| x / length).collect()                 // inf/inf = NaN  ← 静默产生 NaN 存储\n}\n\n// (6) lib/common/common/src/types.rs L14-25 — NaN score 排第一的排序机制\npub struct ScoredPointOffset { pub idx: PointOffsetType, pub score: ScoreType }\nimpl Ord for ScoredPointOffset {\n    fn cmp(&self, other: &Self) -> Ordering {\n        OrderedFloat(self.score).cmp(&OrderedFloat(other.score)) // ordered-float 5.3.0 总序：NaN 视为最大\n    }\n}\n// 配合 fixed_length_priority_queue.rs BinaryHeap<Reverse<T>> 保留最大 → NaN score 点排 top 第一\n// (7) metric_query_scorer.rs L73: score = TMetric::similarity(&query, stored) = dot(normal_query, NaN_vector) = NaN → serde_json 序列化 non-finite f32 → null（JSON 无 inf/NaN 语法，crate 级确定行为）",
+      "call_chain_traced": "REST PUT /collections/{c}/points (src/actix/api/update_api.rs L34 upsert_points, Json<PointInsertOperations> serde 反序列化：JSON number 1e300 以 f64 解析后 cast Vec<f32> 饱和为 inf，无错误) → do_upsert_points (src/common/update.rs) → 校验链 UpdateOperation::Upsert→PointInsertOperations→Vector::validate → Dense 分支 Ok(()) 直接放行 → lib/segment/src/segment/entry.rs upsert_point → check_named_vectors→check_vector_against_config（只查维度）→ vectors.preprocess→cosine_preprocess（inf→NaN，静默）→ 存储为 [NaN x4]。读回路径：POST /collections/{c}/points with_vector → Record.vector Option<VectorStructOutput> 序列化 NaN → serde_json null → 观测 [None x4]。查询路径：POST points/query → MetricQueryScorer score=dot(query,NaN)=NaN → ScoredPointOffset Ord=OrderedFloat（ordered-float 5.3.0 总序 NaN 最大）→ FixedLengthPriorityQueue(BinaryHeap) NaN 排第一 → ScoredPoint.score(f32 非 Option) 序列化 NaN → null → 观测 (999,None) 排第一。边界吻合：query=f32::MAX x4 时 preprocess length=inf→sqrt=inf→MAX/inf=0 → 正常点 score=dot(0vec,normalized)=0.0、id999 score=0*NaN=NaN → 观测 [None,0.0,0.0]；query=3.5e38>f32::MAX → cast inf → preprocess NaN → 全 NaN → 观测 [None,NoneNoneNone]。",
+      "verification_outcome": "validation_absent",
+      "verification_outcome_detail": "写入路径三道关卡全部无分量值校验：(a) REST Validate Dense→Ok(())；(b) check_vector_against_config 只查维度；(c) cosine_preprocess 对溢出无防护（inf/inf=NaN 静默通过）。全 lib 树 is_finite 仅出现在 quantization/formula-scorer/测试，不在 upsert 校验、向量反序列化或 cosine 路径。输出侧 score 为非 Option f32 且无 non-finite 守卫 → NaN 以 null 漏出违反自身 OpenAPI required+number schema。无注释/default/idempotent 等 by-design 标记覆盖此行为。",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — 同一响应内对照点 id=0 读回数值正常、正常查询中其余点 score 数值正常（控制组在同一 HTTP 响应内）",
+        "concurrency — 脚本纯串行请求，无并发",
+        "cache_delay — upsert 带 wait=true，读回与查询紧随其后",
+        "request_typo — 脚本源码可核对，四组观测（upsert/read-back/normal-query/boundary）指向同一机制且互相印证"
+      ],
+      "surviving": "部分 by-design 抗辩存在：文档明确声明 float32 存储 datatype（concepts_vectors L1717），且 REST 请求 schema（VectorStruct items format:double）合法接受 f64 number，『接受 1e300 并按 f32 语义存储』可辩称为文档 datatype 声明的自然后果（文档空白处）。但该抗辩无法覆盖两点：(1) 读回/查询输出 null 分量与 null score 违反 qdrant 自身 OpenAPI（ScoredPoint.score required+number；vector array of number），输出侧 schema 违反无文档授权；(2) null score 排在 exact match 之上破坏排序契约。auditor 权衡。"
+    }
+  }
+}

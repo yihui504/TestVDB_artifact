@@ -1,0 +1,80 @@
+{
+  "defect_id": "state_r2_release_inflight_004",
+  "endpoint": "v2/vectordb/collections/release (+ in-flight v2/vectordb/entities/search)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "evidence_weight": "downgraded_flaky_race",
+  "weight_note": "竞态窗口 flaky：主观测（首跑 4x65535 delegator collection not found）未在归档 log 中固化——归档 log 为复跑产物，仅含规范 101 路径；主观测只能以 claim 转述形式记录，auditor 复核时无法从 raw log 逐字验证 65535 行",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "endpoint_registry: v2/vectordb/collections/release -> handler_v2.go v2.3.22, doc_quote 'Release collection -> NotLoad'; milvus_bc_error_envelope (pkg/util/merr/errors.go v2.3.22 reachable): 业务错误 HTTP 200 + body code；source_url 均为 github.com/milvus-io/milvus blob v2.3.22，版本精确匹配",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "归档 log（复跑，未复现竞态）主观测行: (0, 0, 200, 101, 'failed to search: collection not loaded[collection=468539281521155132]') — 5 轮 load/release x 15 并发 search，101x45 / 200x15，VERDICT: NO_DEFECT",
+      "secondary_observations": [
+        "首跑（agent R2 run, meta param=release, claim 转述，未固化于归档 log）: 4x http=200 body code=65535, message 含 \"failed to search/query delegator ... collection not found\"，与同窗口规范 code 101 混出 —— 竞态窗口内 QueryNode 侧 collection 对象已卸载走 merr 101，而 proxy shard-delegator 路径异常被 lb_policy 包成非规范码",
+        "output_state_partition_load_06.log:11 同结构 delegator 错误（不同 root cause）: query released P1: 200 {\"code\":65535,\"message\":\"failed to search/query delegator 1 for channel ...: fail to Query, QueryNode ID = 1, reason=partition not loaded[partition=...]\"} —— 证明 65535 delegator 错误形态在本 target 非孤例"
+      ],
+      "claim_alignment": "partial",
+      "claim_alignment_note": "claim 主观测是首跑的 65535 delegator 行；归档 log 只覆盖复跑（101 规范路径）。两条观测均如实记录；65535 行缺 raw 逐字证据是链的薄弱环",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "两条观测均为 HTTP 200 + body code（101 规范 / 65535 非规范）；符合 bc_error_envelope 的 200 信封，但 65535 不在 {100,1802,1804} 规范码集内"
+      },
+      "reproducibility": "间歇",
+      "reproducibility_note": "flaky-race 特征：首跑触发 65535，主进程复跑 5x15 组合未复现（101/200 分布）；release 与 in-flight search 竞态窗口窄",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/state_r2_release_inflight_004.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_bc_error_envelope",
+      "assertion_text_quoted": "REST error model: business errors use HTTP 200 + nonzero body code. expected_behavior: HTTP 200 with body code in {100 collection not found, 1802 missing/invalid params, 1804 invalid data}; only auth(401/403), timeout, unmatched-route(404) are non-200",
+      "api_violates_assertion": true,
+      "note": "violates=True 理由：首跑 65535 观测的错误本质是 release 竞态下的服务端内部错误（非客户端输入错误），不在 envelope 枚举码集内；归档 log 的 101 观测本身合规（collection not loaded 的变体），不构成违反——violation 判定只挂 65535 主观测，其 raw 证据链薄弱已如实降级",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_bc_error_envelope (errors.go v2.3.22, body code 枚举 {100,1802,1804})",
+        "doc: endpoint_registry v2/vectordb/collections/release 'Release collection -> NotLoad' (handler_v2.go v2.3.22)",
+        "script: state_r2_release_inflight_004.py — 5x load/release 循环 + 15 并发 in-flight search (debate_logs/output_state_r2_release_inflight_004.log 全文已读: create/load x5/rel x5/60 search)",
+        "log: 复跑=101x45+200x15 NO_DEFECT; 首跑(claim)=4x65535 delegator collection not found 未固化"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "主观测（首跑 65535 delegator）无归档 raw log 逐字支撑——归档 log 是复跑且未复现；claim->log 环断裂。auditor 需以降级权重处理",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "failed to search/query delegator (internal/proxy)",
+        "collection not loaded (internal/querynodev2 + pkg/util/merr)",
+        "errUnexpected / 65535 (pkg/util/merr/errors.go)"
+      ],
+      "files_examined": [
+        "internal/proxy/lb_policy.go:175-205",
+        "internal/querynodev2/services.go:698-711",
+        "pkg/util/merr/errors.go:49,153",
+        "pkg/util/merr/utils.go:33-49"
+      ],
+      "source_excerpt": "internal/proxy/lb_policy.go:186-190:  err = workload.exec(ctx, targetNode, client, workload.channel); if err != nil { ... lastErr = errors.Wrapf(err, \"failed to search/query delegator %d for channel %s\", targetNode, workload.channel); return lastErr }\ninternal/querynodev2/services.go:705-710:  collection := node.manager.Collection.Get(req.Req.GetCollectionID()); if collection == nil { err := merr.WrapErrCollectionNotLoaded(req.GetReq().GetCollectionID()); resp.Status = merr.Status(err); return resp, nil }\npkg/util/merr/errors.go:49:  ErrCollectionNotLoaded = newMilvusError(\"collection not loaded\", 101, false)\npkg/util/merr/errors.go:153:  errUnexpected = newMilvusError(\"unexpected error\", (1<<16)-1, false)  // == 65535",
+      "call_chain_traced": "release 竞态中 QueryNode collection 已卸载 -> searchSegments 检 collection==nil -> merr 101（规范路径，即归档 log 观测）；异常路径：shard workload.exec 失败 -> lb_policy.go:188 errors.Wrapf 'failed to search/query delegator %d for channel %s' -> 该 wrap 后错误若非 milvusError 类型，merr.Code() (utils.go:33-49 default 分支) 落 errUnexpected=65535 —— 与首跑 claim 的 65535+delegator 文案精确吻合",
+      "verification_outcome": "validation_present",
+      "verification_note": "65535 不是缺失校验而是错误码映射兜底（unexpected -> 65535）；delegator wrap 文案在源码逐字存在；两条观测的码值（101/65535）均有源码级解释。是否构成 envelope 违规留 auditor",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (首跑与复跑同 docker v2.3.22 同 session)", "request_typo (脚本固定参数)"],
+      "surviving": "concurrency_race_window_narrow（release 与 in-flight search 竞态，窗口窄导致复跑未复现——这是现象本身而非排除项）; observation_not_archived（主观测缺 raw 逐字证据）"
+    }
+  }
+}

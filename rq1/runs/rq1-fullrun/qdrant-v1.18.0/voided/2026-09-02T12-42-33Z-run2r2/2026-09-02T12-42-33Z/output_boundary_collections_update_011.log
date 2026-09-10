@@ -1,0 +1,10 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[spec side] create without indexing_threshold -> readback resolves indexing_threshold=10000
+[record] DEFECT_FOUND (Type2_PoorDiagnostics - doc-stale) - create/readback face materializes the documented 10000; the OptimizersConfigDiff (update) prose 'Default value is 20,000' is contradicted by the single resolved default (measured indexing_threshold=10000)
+[prose side] PATCH optimizers_config.indexing_threshold=null -> status=200 raw={"result":true,"status":"ok","time":0.015111695}
+[prose side] after explicit null readback indexing_threshold=10000 (was 10000)
+NOTE: explicit null left the value unchanged (diff null = no-change); the update-face documented default 20000 is not re-materialized by PATCH
+[echo] PATCH optimizers_config.indexing_threshold=50000 -> status=200 raw={"result":true,"status":"ok","time":0.01304065}
+[echo] readback after explicit 50000 -> indexing_threshold=50000
+VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics - doc-stale) - create/readback face materializes the documented 10000; the OptimizersConfigDiff (update) prose 'Default value is 20,000' is contradicted by the single resolved default (measured indexing_threshold=10000)

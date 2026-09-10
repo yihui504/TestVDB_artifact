@@ -1,0 +1,10 @@
+[delete no id/filter] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, id/filter]"}
+[delete both id+filter] http=200 body={"code":200,"data":{}}
+[query filter='id >>>'] http=200 body={"code":65535,"message":"cannot parse expression: id \u003e\u003e\u003e, error: line 1:5 mismatched input '\u003e' expecting {'(', '[', EXISTS, '+', '-', '~', NOT, JSONContains, JSONContainsAll, JSONC
+[query filter="'; DROP TABLE--"] http=200 body={"code":65535,"message":"cannot parse expression: '; DROP TABLE--, error: line 1:15 mismatched input '\u003cEOF\u003e' expecting {'(', '[', EXISTS, '+', '-', '~', NOT, JSONContains, JSONContainsAll, J
+[query filter=''] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, filter]"}
+[query filter='id in [notalist]'] http=200 body={"code":65535,"message":"cannot parse expression: id in [notalist], error: value 'notalist' in list cannot be a non-const expression"}
+[query filter="vector like '%x%'"] http=200 body={"code":65535,"message":"cannot parse expression: vector like '%x%', error: like operation on non-string or no-json field is unsupported"}
+[get id='not-a-number'] http=200 body={"code":1806,"message":"please check the primary key and its' type can only in [int, string], error: unable to cast \"not-a-number\" of type string to int64"}
+[get id=99999 control] http=200 body={"code":200,"data":[]}
+VERDICT: NO_DEFECT

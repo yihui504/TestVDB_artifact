@@ -1,0 +1,72 @@
+{
+  "defect_id": "vein_range_filter_schema_vi_ints_1",
+  "endpoint": "POST /v1/schema (create class) -> vectorIndexConfig int params",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "无契约约束（constraint_id 为空，vein 自由探索）；weaviate.io 文档被网络层拦截（domain_blocked），无法核对 ef 范围文档原文；源码 config.go:29 DefaultEF=-1 注释 'indicates let Weaviate pick' 佐证 ef=-1 为默认哨兵、-5/0 非合法值（部分内容一致性支撑）；POST /v1/schema 端点在源码确认存在",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: candidate ef=-5: POST=200 readback=-5; c2: candidate efZero=0: POST=200 readback=0; c3: candidate vectorCacheMaxObjects=-1: POST=200 readback=-1; c4: candidate cleanupIntervalSeconds=-1: POST=200 readback=-1; c5: candidate pq.centroids=-1: POST=200 readback=-1（全部 200 且 GET 读回确认持久化）",
+      "secondary_observations": [
+        "control maxConnections=-1: POST=422 {\"error\":[{\"message\":\"class.VectorIndexConfig can not parse: parse vector index config: invalid hnsw config: maxConnecti...\"}]",
+        "control efConstruction=-5: POST=422 {\"error\":[{\"message\":\"class.VectorIndexConfig can not parse: parse vector index config: invalid hnsw config: efConstruct...\"}]"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "请求侧非法 int 值（ef=-5/0、vectorCacheMaxObjects=-1、cleanupIntervalSeconds=-1、pq.centroids=-1）以 HTTP 200 + 回显非法值返回，无错误码；同一 config 对象上 maxConnections=-1/efConstruction=-5 以 HTTP 422 显式拒绝——验证表面不对称"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_range_filter_schema_vi_ints_1",
+        "boundary_schema_dynamicEfMin_negative",
+        "boundary_schema_dynamicEfMax_negative"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "(无契约断言 — candidates.jsonl constraint_id 为空，vein 自由探索。断言支撑来自源码显式校验声明与默认值语义：hnsw config.go validate() 对 maxConnections/efConstruction 有最小约束 'must be a positive integer with a minimum of 4'，而 ef/vectorCacheMaxObjects/cleanupIntervalSeconds/pq.centroids 无任何范围校验；DefaultEF=-1 注释 'indicates let Weaviate pick' 表明 -1 是哨兵而非合法配置)",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: (none — constraint_id 空，vein 自由探索，无契约断言可引)",
+        "doc: weaviate.io domain_blocked；源码 DefaultEF=-1 sentinel 注释作部分支撑",
+        "script: vein_range_filter_schema_vi_ints_1.py — 5 候选 int 参数 + 2 对照（同 config 对象）",
+        "log: output_vein_range_filter_schema_vi_ints_1.log — 5 候选 200+readback 持久化，2 对照 422 拒绝"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "constraint_id 为空（未引用契约约束）且 doc 层 domain_blocked；判定支撑由 script->log->source 三环独立承担（源码 validate() 校验清单明确不含 ef/vectorCacheMaxObjects/cleanupIntervalSeconds/pq.centroids），不构成判定失效",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["invalid hnsw config", "MinmumMaxConnections", "MinmumEFConstruction", "DefaultEF", "ValidatePQConfig", "Centroids"],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go",
+        "entities/vectorindex/hnsw/pq_config.go",
+        "usecases/schema/parser.go"
+      ],
+      "source_excerpt": "entities/vectorindex/hnsw/config.go:260-282 func (u *UserConfig) validate() error — 仅校验: MaxConnections < MinmumMaxConnections(4) 或 > MaximumMaxConnections(2047) -> error；EFConstruction < MinmumEFConstruction(4) -> error；filterStrategy 枚举。L153-205 解析段确认 ef(L171)、cleanupIntervalSeconds(L159)、vectorCacheMaxObjects(L195) 仅 OptionalIntFromMap 无范围校验。L29: DefaultEF = -1 // indicates \"let Weaviate pick\"。pq_config.go:75-95 ValidatePQConfig — 仅 cfg.Enabled 时校验 Segments<0、encoder type、encoder distribution；无 Centroids 校验",
+      "call_chain_traced": "parser.parseVectorIndexConfig (usecases/schema/parser.go:167) -> parseGivenVectorIndexConfig -> hnsw.ParseAndValidateConfig -> UserConfig.validate()：maxConnections/efConstruction 有 min 校验（422 'invalid hnsw config' 路径，与 log 对照一致）；ef/vectorCacheMaxObjects/cleanupIntervalSeconds 无校验直接写入 UserConfig 并持久化（log readback 确认 -5/-1/-1 原值落库）；pq.centroids 经 parsePQMap -> ValidatePQConfig（pq 默认 disabled，validate 直接 return nil）无校验。源码确认验证表面不对称：部分 int 参数有约束、其余无",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request_typo"],
+      "surviving": null
+    }
+  }
+}

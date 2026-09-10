@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_points_recommend_filter_type_009",
+ "endpoint": "points+recommend",
+ "param": "filter",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "type",
+ "oracle": {
+  "statement": "G valid filter must[grp=red] -> 200 with 1..3 results ALL payload grp=red (other length / non-red leak = Type4; non-200 = Type1 valid-request-rejected); T1 must-as-string / T2 must_not-as-object / T3 should-as-int / T4 match=null / T5 key-missing -> 400 or 422 each (2xx = Type1_IllegalSuccess; if the 2xx returns a non-red point the invalid filter was silently IGNORED — live proof, read-only member of the R35 family); 5xx with /healthz alive = Type3",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

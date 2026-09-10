@@ -1,0 +1,10 @@
+[search vector NaN raw] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character 'N' looking for beginning of value"}
+[search vector Infinity raw] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character 'I' looking for beginning of value"}
+[search vector -Infinity raw] http=200 body={"code":1801,"message":"can only accept json format request, error: invalid character 'I' in numeric literal"}
+[search vector null elem] http=200 body={"code":200,"data":[]}
+[search vector str elem] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field SearchReq.vector of type float32"}
+[insert null elem] http=200 body={"code":200,"data":{"insertCount":1,"insertIds":[468539281520724791]}}
+[insert extremes control] http=200 body={"code":200,"data":{"insertCount":1,"insertIds":[468539281520724793]}}
+DEFECT: search null elem: Type1_IllegalSuccess
+DEFECT: insert null elem: Type1_IllegalSuccess (NaN-typed float stored?)
+VERDICT: DEFECT_FOUND

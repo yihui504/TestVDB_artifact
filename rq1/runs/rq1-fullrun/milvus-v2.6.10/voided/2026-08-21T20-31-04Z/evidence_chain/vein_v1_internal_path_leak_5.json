@@ -1,0 +1,78 @@
+{
+  "defect_id": "vein_v1_internal_path_leak_5",
+  "endpoint": "v1+entities+search",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约含 v1 端点断言（milvus_behavioral_envelope_006 v1+collections+list）证明 v1 面在契约域内；但无任何约束规定错误消息脱敏标准——vein 契约 vein_v1_internal_path_leak 主张错误响应不得泄露构建路径/内部行号。覆盖缺口如实记。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "PASS leaks_source_path 'fail to search on QueryNode 1: worker(1) query failed: parser searchRequest failed: => vector dimension mismatch, expected vector size(byte) 16, actual 12. at /workspace/source/internal/core/src/query/Plan.cpp:91...'",
+      "secondary_observations": [
+        "PASS leaks_plan_location — 同消息含内部行号 Plan.cpp:91 与字节运算 (expected 16 vs actual 12 bytes)",
+        "PASS control_v1_search_ok {'code': 200, 'data': [...]} — 正常路径 v1 基线"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 + code:65535，错误消息携带 C++ 源文件绝对路径（构建环境 /workspace/source 前缀）、文件名:行号、内部节点 id 与字节级维度——信息泄露叠加泛化码。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_v1_internal_path_leak_5.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_v1_internal_path_leak",
+      "assertion_text_quoted": "面向客户端的错误响应不得泄露服务端内部实现细节（源码路径、文件行号、构建环境目录、内部节点拓扑）",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates=True 理由：错误消息原文含 /workspace/source/internal/core/src/query/Plan.cpp:91 与 QueryNode 1/worker(1) 内部标识——'不得泄露内部实现细节'被直接否定。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: vein_v1_internal_path_leak（vein 自生；官方契约无脱敏约束——缺口记）",
+        "doc: 契约 v1 面断言（envelope_006）可达，v1 在域内",
+        "script: vein_v1_internal_path_leak_5.py 错维向量触发",
+        "log: leaks_source_path/leaks_plan_location 原文行"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "\"vector dimension mismatch\" core/query/Plan.cpp",
+        "ThrowInfo 定义位置（__FILE__ 宏：clone 内未命中——milvus-common 外部依赖）",
+        "parser searchRequest failed internal/util/segcore/plan.go",
+        "worker query failed querynodev2/delegator",
+        "fail to search on QueryNode task_search.go"
+      ],
+      "files_examined": [
+        ".milvus-src-2610/internal/core/src/query/Plan.cpp:82-105 (ThrowInfo(DimNotMatch, \"vector dimension mismatch, expected vector size(byte) {}, actual {}.\") — 消息文本不含路径，路径由 ThrowInfo 宏附加)",
+        ".milvus-src-2610/internal/util/segcore/plan.go:106 (errors.Wrap(err, \"parser searchRequest failed\"))",
+        ".milvus-src-2610/internal/querynodev2/delegator/delegator.go:840-856 (worker(%d) query failed: %s 包装)",
+        ".milvus-src-2610/internal/proxy/task_search.go:1039 (errors.Wrapf(..., \"fail to search on QueryNode %d\"))",
+        ".milvus-src-2610/internal/core/thirdparty/milvus-common/ (仅 FetchContent 壳)"
+      ],
+      "source_excerpt": "// core/src/query/Plan.cpp:91-97\n\tif (field_meta.get_sizeof() != line_size) {\n\t\tThrowInfo(DimNotMatch,\n\t\t\tfmt::format(\"vector dimension mismatch, expected vector \"\n\t\t\t\t\"size(byte) {}, actual {}.\",\n\t\t\t\tfield_meta.get_sizeof(), line_size));\n\t}\n// 错误传播链: Plan.cpp ThrowInfo(宏附加 __FILE__:__LINE__ → \"/workspace/source/internal/core/src/query/Plan.cpp:91\") → plan.go:106 wrap → delegator.go:851 wrap(worker id) → task_search.go:1039 wrap(nodeID) → HTTP message 全文透出",
+      "call_chain_traced": "ThrowInfo 宏定义在 milvus-common（FetchContent 外部拉取，本 clone 无源码——宏附加 __FILE__:__LINE__ 的确切实现无法本地取证，但 __FILE__ 在构建时展开为编译期路径 /workspace/source/...，行为由 log 观测直证）。四层 Go 包装均未脱敏，全文透传到 REST 响应。",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "request_typo"],
+      "surviving": null
+    }
+  }
+}

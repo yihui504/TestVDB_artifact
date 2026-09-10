@@ -1,0 +1,96 @@
+{
+  "defect_id": "state_points_query_batch_upsert_idem_004",
+  "endpoint": "points+query+batch (POST /collections/{collection_name}/points/query/batch)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PARTIAL: WebFetch channel domain_blocked (tool-side network restriction, both attempts); direct curl re-verify: root https://api.qdrant.tech/ alive (307), but the deep route returns HTTP 404 as a Fern SPA fallback (body contains NEXT_HTTP_ERROR_FALLBACK;404) identically for v-1-18-x and v-1-19-x slugs, so the 404 is client-side-routing behavior, not a dead versioned page; v1.18.x/slug v-1-18-x is present in the live site's version registry per the fetched body. Version PASS. Content PASS via the version-pinned OpenAPI shipped inside the target clone (docs/redoc/v1.18.x/openapi.json, the artifact the api-reference site renders): POST /collections/{collection_name}/points/query/batch description 'Universally query points in batch. This endpoint covers all capabilities of search, recommend, discover, filters. But also enables hybrid and multi-stage queries.' with response result: array of per-query QueryResponse -- equivalent formulation of the constraint's 'executes multiple queries in one call; returns 200 with a list of per-query results'; the spec's VectorInput anyOf explicitly includes ExtendedPointId (bare uint64/uuid point id), so the script's bare-integer query form is documented-legal. Endpoint precision PASS: endpoint_registry entry points+query+batch (structured_contract.json:2144, POST, searches required, same source_url); the script registered /collections/{collection_name}/points/query/batch verbatim from raw_knowledge api_endpoints[].",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[w1-batch batch by-id 500] status=200 raw={\"result\":[{\"points\":[]},{\"points\":[{\"id\":500,\"version\":1,\"score\":0.70710677}]}],\"status\":\"ok\",\"time\":0.000483983} -> DEFECT: (w1-batch) by-id search of 500 returned ids [] (expected exactly [500]) — duplicated or missing point — Type4_StateLogicViolation (identical at w2-batch and w3-batch)",
+      "secondary_observations": [
+        "rest/count: [w1 count] status=200 raw={\"result\":{\"count\":1},...} — count==1 at w1, w2, w3 (duplicate upserts of id 500 never duplicated the point; upsert idempotence HELD)",
+        "rest/get baseline (R27): [w1 GET 500] vector=[1.0,0.0,0.0,0.0] -> [w2 GET 500] vector=[0.0,1.0,0.0,0.0] -> [w3 GET 500] vector=[0.0,1.0,0.0,0.0] — overwrite flip landed, duplicate write stable, NO stale read on the GET face",
+        "rest/query_batch same-request control: the SECOND batch entry (nearest query [0.5,0.5,0.0,0.0]) returned {\"points\":[{\"id\":500,\"version\":1,\"score\":0.70710677}]} with version tracking 1->2->3 across waves — point 500 WAS visible through the same batch face via a vector query, with correct cosine 1/sqrt(2) to the stored V1/V2",
+        "R27 discipline honored: WARN: (w1-batch) batch by-id entry carries no readable vector — vector comparison skipped (response_shape does not promise the field; no defect claim) — the script never compared readback to uploaded raw vectors, so no readback-mismatch claim was fabricated",
+        "comparative rest/query_batch cross-script (point_delete_003): DEFECT: (P) by-id search of live id 10 did not return it (got [13, 11, 12]) — the by-id face returned OTHER points (score 0.0) but never the queried id; and [mixed batch by-id [10, 12, 11]] status=404 raw={\"status\":{\"error\":\"Not found: No point with id 12 found\"}} — a by-id query of a nonexistent id 404s, proving the face first resolves id->stored vector, then searches",
+        "comparative rest/query_batch cross-script (lifecycle_006): [post-cycle batch by-id 11] returned [{\"points\":[{\"id\":12,...},{\"id\":13,...},{\"id\":15,...}]},...] — by-id of 11 returns neighbors, not 11; index_toggle_007 and alignment_002 logs show the same by-id-not-self pattern"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "the request was schema-legal (bare ExtendedPointId is a documented query form) and returned HTTP 200; no request-side-decidable error is involved in the claimed defect"
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_points_query_batch_upsert_idem_004",
+        "state_points_query_batch_point_delete_003",
+        "state_points_query_batch_alignment_002",
+        "state_points_query_batch_index_toggle_007",
+        "state_points_query_batch_lifecycle_006"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_batch_001",
+      "assertion_text_quoted": "\"assertion_id\": \"qdrant_behavioral_points_query_batch_001\",\n      \"endpoint\": \"points+query+batch\",\n      \"description\": \"executes multiple queries in one call; returns 200 with a list of per-query results; 404 for a missing collection\",\n      \"category\": \"behavioral\",\n      \"expected_behavior\": \"HTTP 200 with one result per search in the same order; missing collection returns 404\"",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check resolved: the observed response (HTTP 200, len(result)==2==len(searches), order preserved, result[].points arrays present) satisfies the ENTIRE constraint domain; the claim's phenomenon (by-id entry must contain exactly [500]) lies OUTSIDE the quote's constraint domain — it originates from the script docstring oracle ('the by-id entry containing exactly point id 500'), not from any contract text. Constraint-citation re-survey performed: no other constraint promises by-id self-return — qdrant_state_points_query_001 instead CONFIRMS the observed semantics ('by-id query uses the referenced point's stored vector'), and qdrant_bc_upsert_read_your_write_001 visibility is satisfied (point 500 immediately visible to query/count/get, same batch response, correct version). So violates=false is correct and no citation change is warranted.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_query_batch_001 present in structured_contract.json (raw lines 7332-7343); promises only 200 + one result per search in the same order + 404 missing collection",
+        "doc: live deep route returns SPA-fallback 404 for ALL version slugs (WebFetch channel domain_blocked); equivalent prose verified from the version-pinned docs/redoc/v1.18.x/openapi.json shipped in the target clone ('Universally query points in batch...'; result: array; VectorInput anyOf includes bare ExtendedPointId)",
+        "script: state_points_query_batch_upsert_idem_004.py sent searches=[{\"query\": 500, \"limit\": 3, \"with_vector\": true}, {\"query\": [0.5,0.5,0.0,0.0], \"limit\": 2}] — the bare-integer by-id form is schema-legal; the script oracle additionally demanded ids==[500] from the by-id entry",
+        "log: VERDICT: DEFECT_FOUND keyed to the oracle expectation 'expected exactly [500]'; the raw response complies with the contract assertion, and the empty by-id entry is source-explained designed exclusion of referenced ids"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "The DEFECT_FOUND verdict was declared on an extra-contractual oracle expectation. The contract->doc link promises 200 with one ordered result per search (satisfied by the raw response); neither the contract nor the versioned spec promises that a by-id query returns the referenced point itself. Source forensics shows the empty entry is the designed by-id semantics: the referenced id is resolved to its stored vector and then EXCLUDED from the search results via a must_not has_id filter (lib/collection/src/operations/universal_query/collection_query.rs:704-708 + 525-535, explicit code comments), so a by-id query over a single-point collection necessarily yields points:[]. The upsert-idempotence, overwrite-flip, stale-read, and count-invariance phenomena the attack actually targeted all PASSED (count==1 all waves; GET readback V1->V2 flip landed; point 500 visible to the same batch face via the vector query). The misalignment originates in the script oracle (docstring) and surfaces at the log verdict.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "PointIds",
+        "enum VectorInput",
+        "VectorInput::Id",
+        "QueryInterface",
+        "VectorInputInternal::Id",
+        "exclude_referenced_ids",
+        "ExtendedPointId"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs (lines 537-547 VectorInput::Id bare-point-id variant; 603-607 QueryRequestBatch; 549-593 QueryRequestInternal)",
+        "lib/api/src/rest/validate.rs (lines 50-62 VectorInput::Id => Ok)",
+        "src/common/inference/query_requests_rest.rs (lines 152-158, 197-218 rest->core conversion: Id -> VectorInputInternal::Id -> Query::Vector(VectorQuery::Nearest(...)))",
+        "lib/collection/src/operations/universal_query/collection_query.rs (lines 146-159 VectorInputInternal; 512-535 exclude_referenced_ids; 644-709 get_referenced_point_ids_on_collection + try_into_shard_request)",
+        "docs/redoc/v1.18.x/openapi.json (VectorInput anyOf includes ExtendedPointId; batch-query endpoint description; result: array)"
+      ],
+      "source_excerpt": "lib/collection/src/operations/universal_query/collection_query.rs:679-708 —\n    /// Substitutes all the point ids in the request with the actual vectors, as well as editing filters so that ids are not included in the response.\n    pub fn try_into_shard_request(\n        self,\n        collection_name: &str,\n        ids_to_vectors: &ReferencedVectors,\n    ) -> CollectionResult<ShardQueryRequest> {\n        Self::validation(\n            &self.query,\n            &self.using,\n            &self.prefetch,\n            self.score_threshold,\n        )?;\n\n        let mut offset = self.offset;\n        if matches!(self.query, Some(Query::Sample(SampleInternal::Random)))\n            && self.prefetch.is_empty()\n        {\n            // Shortcut: Ignore offset with random query, since output is not stable.\n            offset = 0;\n        }\n\n        let query_lookup_collection = self.get_lookup_collection().cloned();\n        let query_lookup_vector_name = self.get_lookup_vector_name();\n        let using = self.using.clone();\n\n        // Edit filter to exclude all referenced point ids (root and nested) on the searched collection\n        // We do not want to exclude vector ids from different collection via lookup_from.\n        let referenced_point_ids = self.get_referenced_point_ids_on_collection(collection_name);\n\n        let filter = exclude_referenced_ids(referenced_point_ids, self.filter);\n\nsame file 663-670 (root-level bare-id collection) —\n        if !lookup_other_collection && let Some(Query::Vector(vector_query)) = &self.query {\n            if let VectorQuery::Nearest(VectorInputInternal::Id(id)) = vector_query {\n                refs.push(*id);\n            }\n            refs.extend(vector_query.get_referenced_ids())\n        };\n\nsame file 525-535 —\n/// Exclude the referenced ids by editing the filter.\nfn exclude_referenced_ids(ids: Vec<ExtendedPointId>, filter: Option<Filter>) -> Option<Filter> {\n    let ids: AHashSet<_> = ids.into_iter().collect();\n\n    if ids.is_empty() {\n        return filter;\n    }\n\n    let id_filter = Filter::new_must_not(Condition::HasId(HasIdCondition::from(ids)));\n    Some(id_filter.merge_owned(filter.unwrap_or_default()))\n}\n\nlib/api/src/rest/schema.rs:537-547 (parse entry: the bare integer is a legal query form) —\n#[derive(Debug, Serialize, Deserialize, JsonSchema)]\n#[serde(untagged)]\npub enum VectorInput {\n    DenseVector(DenseVector),\n    SparseVector(SparseVector),\n    MultiDenseVector(MultiDenseVector),\n    Id(segment::types::PointIdType),\n    Document(Document),\n    Image(Image),\n    Object(InferenceObject),\n}",
+      "call_chain_traced": "POST /points/query/batch -> QueryRequestBatch.searches[0].query = bare 500 -> serde untagged QueryInterface::Nearest(VectorInput::Id(500)) [schema.rs:539-547] -> validator VectorInput::Id => Ok [validate.rs:53] -> convert_query_with_inferred: rest Id -> VectorInputInternal::Id -> core Query::Vector(VectorQuery::Nearest(Id(500))) [query_requests_rest.rs:157,203-217] -> collection-level id->vector resolution via resolve_referenced_vectors_batch (a nonexistent id yields StorageError 404 'No point with id X found' — behaviorally confirmed in point_delete_003 log) -> CollectionQueryRequest::try_into_shard_request: get_referenced_point_ids_on_collection pushes the bare id [collection_query.rs:665-670] -> exclude_referenced_ids wraps the filter in must_not has_id(500) [collection_query.rs:525-535,704-708] -> nearest search over the 1-point collection minus point 500 itself -> result[0].points == [] deterministically. The same exclusion applies to recommend/discover referenced ids (shared get_referenced_ids path) — recommendation semantics: the query seed point is never returned.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "stale_read/WAL visibility (point 500 returned by the vector-query entry of the SAME batch response at the current version 1/2/3; GET readback flipped V1->V2 correctly; count exact==1 in all waves)",
+        "point duplication or loss (exact count==1 after every duplicate upsert)",
+        "env",
+        "concurrency",
+        "by_design (root cause: empty by-id entry is the documented-in-code exclusion of referenced ids)"
+      ],
+      "surviving": null
+    }
+  }
+}

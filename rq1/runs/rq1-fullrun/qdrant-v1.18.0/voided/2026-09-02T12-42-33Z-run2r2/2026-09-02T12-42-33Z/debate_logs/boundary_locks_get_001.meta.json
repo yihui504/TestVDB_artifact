@@ -1,0 +1,17 @@
+{
+  "defect_id": "boundary_locks_get_001",
+  "endpoint": "locks+get",
+  "param": "result.write / result.error_message (locks+get response_shape grid: strict boolean write, string|null error_message, envelope time:number/status:string/result:object)",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "type",
+  "constraint_ids": [
+    "qdrant_type_locks_get_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/get-locks",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "live /locks: every 200 body must satisfy the full grid — time number, status string, result object, result.write present and JSON boolean, result.error_message present and string-or-null — in baseline, locked (write===True, incl. 5 repeated GETs) and released (write===False) states; any 200 deviating from the grid = Type1_IllegalSuccess (shape violation on a success status); 5xx on a live GET with /healthz alive = Type3_RuntimeFailure; if GET+POST /locks both answer a concrete non-2xx status (404 expected on OSS v1.18.0), NO_DEFECT with endpoint-absence evidence (constraint not actuable)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

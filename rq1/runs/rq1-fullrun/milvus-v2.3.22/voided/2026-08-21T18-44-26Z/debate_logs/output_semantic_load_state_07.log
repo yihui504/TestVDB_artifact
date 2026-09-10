@@ -1,0 +1,13 @@
+create: 200 {"code":200,"data":{}}
+state_before_load: 200 {"code":200,"data":{"loadProgress":100,"loadState":"LoadStateLoaded"},"message":""}
+OBSERVATION: explicit-schema collection auto-Loaded without explicit load call (v2 create+index path)
+load: 200 {"code":200,"data":{}}
+  state: LoadStateLoaded progress: 100
+insert: 200 {"code":200,"data":{"insertCount":5,"insertIds":[1,2,3,4,5]}}
+topk3: 200 {"code":200,"data":[{"distance":1,"id":1},{"distance":4,"id":2},{"distance":9,"id":3}]}
+offset: 200 {"code":200,"data":[{"distance":4,"id":2},{"distance":9,"id":3}]}
+release: 200 {"code":200,"data":{}}
+state_after_release: 200 {"code":200,"data":{"loadState":"LoadStateNotLoad"}}
+search_after_release: 200 {"code":101,"message":"failed to search: collection not loaded[collection=468539281521145714]"}
+VERDICT: DEFECT_FOUND
+- explicit-schema collection auto-Loaded before load() call (Type4_StateLogicViolation: load is async/explicit per contract)

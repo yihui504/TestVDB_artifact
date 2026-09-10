@@ -1,0 +1,26 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[probe tokenizer=prefix] PUT index tok_prefix -> status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.41145462}
+  OK(persist): 'tok_prefix' echoed '{"data_type": "text", "params": {"type": "text", "tokenizer": "prefix"}, "points": 0}'
+[probe tokenizer=whitespace] PUT index tok_whitespace -> status=200 raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.510389745}
+  OK(persist): 'tok_whitespace' echoed '{"data_type": "text", "params": {"type": "text", "tokenizer": "whitespace"}, "points": 0}'
+[probe tokenizer=word] PUT index tok_word -> status=200 raw={"result":{"operation_id":7,"status":"completed"},"status":"ok","time":0.425718911}
+  OK(persist): 'tok_word' echoed '{"data_type": "text", "params": {"type": "text", "tokenizer": "word"}, "points": 0}'
+[probe tokenizer=multilingual] PUT index tok_multilingual -> status=200 raw={"result":{"operation_id":9,"status":"completed"},"status":"ok","time":0.493134813}
+  OK(persist): 'tok_multilingual' echoed '{"data_type": "text", "params": {"type": "text", "tokenizer": "multilingual"}, "points": 0}'
+[probe tokenizer='bogus' (unknown member)] field=tok_bad_name -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 86"},"time":0.0}
+  OK(reject): 'tokenizer='bogus' (unknown member)' -> 400 (tokenizer enum 400 face)
+[probe tokenizer='Word' (case variant)] field=tok_case -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 81"},"time":0.0}
+  OK(reject): 'tokenizer='Word' (case variant)' -> 400 (tokenizer enum 400 face)
+[probe tokenizer='' (empty string)] field=tok_empty -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 78"},"time":0.0}
+  OK(reject): 'tokenizer='' (empty string)' -> 400 (tokenizer enum 400 face)
+[probe tokenizer=123 (integer into string-enum slot)] field=tok_int -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 77"},"time":0.0}
+  OK(reject): 'tokenizer=123 (integer into string-enum slot)' -> 400 (tokenizer enum 400 face)
+[probe tokenizer=null] field=tok_null -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 79"},"time":0.0}
+  OK(reject): 'tokenizer=null' -> 400 (tokenizer enum 400 face)
+[probe tokenizer=['word'] (array into string-enum slot)] field=tok_arr -> status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum PayloadFieldSchema at line 1 column 82"},"time":0.0}
+  OK(reject): 'tokenizer=['word'] (array into string-enum slot)' -> 400 (tokenizer enum 400 face)
+[measure tokenizer absent on type=text] status=200 readback={"data_type": "text", "params": {"type": "text", "tokenizer": "word"}, "points": 0} (declared default path — which member materialized?)
+[measure tokenizer on non-text type=keyword] status=200 readback={"data_type": "keyword", "params": {"type": "keyword"}, "points": 0} (extra-field disposition — dropped or kept, judge to adjudicate)
+OK: 4/4 in-domain tokenizers persisted; 6/6 bad tokenizers rejected 400/422
+VERDICT: NO_DEFECT

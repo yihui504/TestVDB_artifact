@@ -1,0 +1,61 @@
+{
+  "defect_id": "semantic_search_correctness_001",
+  "endpoint": "/collections/{collection_name}/points/search:POST",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url reachable, version mismatch, semantic correctness (nearest neighbor ranking) is behavioral expectation not explicitly quoted",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: search for vector [1.0, 0.0] → result order [2,3,4,5,1] (score=0.0 all), expected id=1 first (exact match)",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "Search succeeded but ranking violated semantic expectation"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_search_correctness_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "qdrant_behavioral_search_points_001 - Search returns scored results (nearest neighbor first implied)",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_behavioral_search_points_001 (search returns scored results)",
+        "doc:https://api.qdrant.tech/api-reference/points/search-points (behavioral)",
+        "script:semantic_search_correctness_001 (search with exact match query)",
+        "log:result order [2,3,4,5,1] all score=0.0, id=1 not first"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Search returned non-deterministic ranking with uniform scores, exact match not ranked first violating semantic correctness",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["search.*score", "ranking", "nearest.*neighbor", "distance.*sort"],
+      "files_examined": ["not_available_local"],
+      "source_excerpt": "",
+      "call_chain_traced": "not_available_local - v1.18.0 source not cloned",
+      "verification_outcome": "not_available_local",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "state_logic_violation"
+    }
+  }
+}

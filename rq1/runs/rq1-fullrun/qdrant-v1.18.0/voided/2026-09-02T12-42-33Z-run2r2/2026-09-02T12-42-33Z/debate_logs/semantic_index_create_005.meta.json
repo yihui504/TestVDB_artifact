@@ -1,0 +1,17 @@
+{
+  "endpoint": "index+create",
+  "constraint_ids": [
+    "qdrant_type_index_create_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/indexes/create-field-index",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "on two identically-constructed self-created collections, field_schema keyword as string 'keyword' (COL_S) and as object {'type':'keyword'} (COL_O) BOTH answer 200 and BOTH echo data_type 'keyword' in describe result.payload_schema (asymmetric 200-vs-4xx across the two spellings of one parameter family = Type4 G9; divergent echoed data_type = Type4; 200-without-echo = Type4 silent-ignore family); byte-identical re-PUT of the object-form body answers 200 again with unchanged data_type echo and exactly 1 field entry (non-200 on the identical duplicate, mutated data_type, or count != 1 = Type4 duplication-instability); 5xx with healthy /healthz = Type3_RuntimeFailure; transport/setup failure = SCRIPT_ERROR (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  },
+  "defect_id": "semantic_index_create_005",
+  "param": "field_schema",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "metamorphic"
+}

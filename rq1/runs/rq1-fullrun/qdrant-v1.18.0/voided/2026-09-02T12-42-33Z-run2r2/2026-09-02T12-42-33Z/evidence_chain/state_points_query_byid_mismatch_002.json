@@ -1,0 +1,96 @@
+{
+  "defect_id": "state_points_query_byid_mismatch_002",
+  "endpoint": "points+query",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: contract source_url https://qdrant.tech/documentation/search/search/ recorded source_status=degraded and no doc_preflight.json sidecar exists in the contract directory, so re-verified myself on 2026-09-04 - the live page fetched successfully and contains the Query-by-ID and lookup_from sections (degraded status recovered). Version: concept page has no version routing (no_version_in_url, contract itself records 'current (site latest; no version archive)'); the OpenAPI face is versioned v-1-18-x but api.qdrant.tech was network-blocked today (WebFetch domain-unverifiable, web-reader 500) - version pinning was instead established from the local v1.18.0 tag source whose schemars doc comments / proto comments generate the published v-1-18-x reference. Content: the live page DOES document the load-bearing positive behavior verbatim ('The above example will fetch the default vector from the point with this id, and use it as the query vector.', 'If the `using` parameter is also specified, Qdrant will use the vector with that name.', 'It is also possible to reference an ID from a different collection, by setting the `lookup_from` parameter.') but the constraint's exact negative sentence 'fetched vectors must match the characteristics of the using vector, otherwise an error is returned' is ABSENT from the current live page (doc drift on the unversioned page; the sentence is recorded in raw_knowledge.json at mining time with tag [DOC search]); the omitted-lookup_from.vector default-vector promise is documented in the version-pinned REST schema doc comment and gRPC proto comment, not on this page. Endpoint: endpoint_registry carries points+query POST (verified 2026-09-02) matching the script's runtime PATHS key 'query'.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "[D5-pos-lookup-dim8] status=400 raw={\"status\":{\"error\":\"Wrong input: Not existing vector name error: i\"},\"time\":0.000290583}",
+      "secondary_observations": [
+        "[D6-neg-lookup-dim4-into-8] status=400 raw={\"status\":{\"error\":\"Wrong input: Not existing vector name error: i\"},\"time\":0.000158331} — the true characteristics-MISMATCH leg (dim 4 source into dim 8 'i') fails with the SAME name-resolution error, so the constraint's promised characteristics check is unreachable via the named-using lookup_from construction in the query face",
+        "[D2-neg-using-i-missing] status=404 raw={\"status\":{\"error\":\"Not found: Vector with name \\\"i\\\" for point not found\"},\"time\":0.000140201} — same-collection mismatch (point lacks the using vector) is honored as 4xx",
+        "[D4-neg-using-nope] status=400 raw={\"status\":{\"error\":\"Wrong input: Not existing vector name error: nope\"},\"time\":0.00011051} — nonexistent name rejected",
+        "[D7-neg-unnamed-using-zzz] status=400 raw={\"status\":{\"error\":\"Wrong input: Not existing vector name error: zzz\"},\"time\":0.00014227} — unnamed collection, using name cannot exist, rejected",
+        "[D1-pos-using-t] status=200 raw={\"result\":{\"points\":[]},\"status\":\"ok\",\"time\":0.000564618} and [D3-pos-using-i] status=200 raw={\"result\":{\"points\":[]},\"status\":\"ok\",\"time\":0.000516291} — same-collection positive controls pass (fetch-and-use works when no lookup_from)",
+        "comparative face=rest-query, sibling artifact output_boundary_points_query_byid_dim_001.log line 8-10: 'leg C1 lookup_from matching dim4==dim4 -> status=200 ... OK: 200 with 3 points (envelope result.points)' — omitted lookup_from.vector WORKS when the target is an unnamed-default collection (using then defaults to \"\"), i.e. the documented default-vector fallback does function on the unnamed face",
+        "comparative face=rest-query, same sibling artifact lines 12-14: 'leg M1 lookup_from mismatched dim8 vs dim4 -> status=400 raw: {\"status\":{\"error\":\"Wrong input: Vector dimension error: expected dim: 4, got 8\"}}' — when name resolution succeeds the characteristics check runs and produces the DIMENSION error, proving D5's 'Not existing vector name error' preempted the characteristics check rather than being its verdict",
+        "comparative face=source-level cross-face (recommend/discover vs query): lib/collection/src/common/retrieve_request_trait.rs:41-44 and 93-96 resolve an omitted lookup_from.vector to DEFAULT_VECTOR_NAME for the recommend and discover faces — the documented default-vector fallback is implemented there but not in the query face (live re-issue of a recommend-face probe was not performed in this builder context; comparison rests on run artifacts plus source)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No client-error-swallowed-as-2xx case in this chain; the phenomenon is the inverse - a request that is legal per the documented default-vector fallback (lookup_from.vector omitted) is REJECTED with 400. The rejection itself is the deviation under study, not the status-class mapping."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["state_points_query_byid_mismatch_002"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_points_query_001",
+      "assertion_text_quoted": "by-id lookup (query = point id) fetches the stored vector of that point; fetched vectors must match the characteristics of the using vector, otherwise an error is returned [DOC search]",
+      "api_violates_assertion": true,
+      "note": "candidates.jsonl carried constraint_id=\"\" (mechanical extraction miss); recovered from the script header line 6 'constraint_ids: qdrant_state_points_query_001', and the script docstring quotes the constraint verbatim. Violated face: the fetch-and-use clause ('by-id lookup ... fetches the stored vector of that point') on a documented-legal request - D5 omits lookup_from.vector, which the version-pinned schema documents as 'If not provided, the default vector field will be used' (REST, lib/api/src/rest/schema.rs:1105-1108) and 'Which vector to use for search, if not specified - use default vector' (gRPC proto, points.proto:674); C_AUX8's default vector is dim 8 Cosine, matching using 'i' (dim 8 Cosine), so per documented semantics the lookup must be served 200. The negative clause (mismatch -> error) is NOT violated: D2/D4/D6/D7 all errored as promised. Violates-declaration self-check: the observed parameter (omitted lookup_from.vector) is inside the documented domain and the fetched default vector matches the using characteristics, so the 400 is not a legitimate domain rejection; the constraint citation stands and violates=true is the honest reading.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_points_query_001 present in structured_contract.json constraints.state_constraints (verbatim text matches the script docstring); NOTE candidates.jsonl dispatch row had constraint_id=\"\" - recovered from script header, no contract-link break",
+        "doc: https://qdrant.tech/documentation/search/search/ live-fetched 2026-09-04 - by-id fetch-and-use and lookup_from cross-collection behavior present verbatim; the constraint's exact 'characteristics ... otherwise an error is returned' sentence has drifted off the unversioned page (mining-time capture in raw_knowledge.json); the default-vector fallback promise for omitted lookup_from.vector is in the version-pinned REST schema doc comment and gRPC proto comment that generate the published v-1-18-x OpenAPI",
+        "script: state_points_query_byid_mismatch_002.py leg D5 sends POST /collections/{C_MAIN}/points/query body {\"query\":90,\"using\":\"i\",\"limit\":3,\"lookup_from\":{\"collection\":C_AUX8}} with lookup_from.vector omitted (C_MAIN named vectors t=4/i=8 Cosine; C_AUX8 unnamed 8-dim Cosine; point 90 seeded with an 8-dim vector) - a characteristics-MATCH by-id lookup",
+        "log: output_state_points_query_byid_mismatch_002.log line 18 records the primary observation status=400 'Wrong input: Not existing vector name error: i'; line 23 adjudicates DEFECT Type4_StateLogicViolation; line 24 VERDICT: DEFECT_FOUND"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Not existing vector name",
+        "VectorNameNotExists",
+        "lookup_from",
+        "LookupLocation",
+        "get_lookup_vector_name",
+        "CollectionQueryResolveRequest",
+        "DEFAULT_VECTOR_NAME (lib/collection/src/operations)"
+      ],
+      "files_examined": [
+        "lib/segment/src/common/operation_error.rs (lines 19-35, 108-125)",
+        "lib/collection/src/common/retrieve_request_trait.rs (lines 1-140, full)",
+        "lib/collection/src/operations/universal_query/collection_query.rs (lines 65-97, 537-655, 755-783)",
+        "lib/collection/src/common/fetch_vectors.rs (lines 1-120, 320-430)",
+        "lib/api/src/rest/schema.rs (lines 1102-1113)",
+        "lib/api/src/grpc/proto/points.proto (lines 672-678)",
+        "lib/collection/src/operations/conversions.rs (lines 155-229, 1290-1344)",
+        "src/common/inference/query_requests_rest.rs (using default at lines 73/136/336)",
+        "lib/segment/src/common/mod.rs (check_vector_name, lines 25-40)"
+      ],
+      "source_excerpt": "1) lib/collection/src/common/retrieve_request_trait.rs:108-125 (query face, v1.18.0):\n    impl RetrieveRequest for CollectionQueryResolveRequest {\n        fn get_lookup_collection(&self) -> Option<&String> {\n            self.lookup_from.as_ref().map(|x| &x.collection)\n        }\n        fn get_referenced_point_ids(&self) -> Vec<PointIdType> {\n            self.referenced_ids.clone()\n        }\n        fn get_lookup_vector_name(&self) -> VectorNameBuf {\n            match &self.lookup_from {\n                None => self.using.clone(),\n                Some(lookup_from) => match &lookup_from.vector {\n                    None => self.using.clone(),\n                    Some(vector_name) => vector_name.clone(),\n                },\n            }\n        }\n        ...\n    }\n2) same file, lines 35-46 (recommend face, contrast):\n        fn get_lookup_vector_name(&self) -> VectorNameBuf {\n            match &self.lookup_from {\n                None => match &self.using {\n                    None => DEFAULT_VECTOR_NAME.to_owned(),\n                    Some(UsingVector::Name(vector_name)) => vector_name.clone(),\n                },\n                Some(lookup_from) => match &lookup_from.vector {\n                    None => DEFAULT_VECTOR_NAME.to_owned(),\n                    Some(vector_name) => vector_name.clone(),\n                },\n            }\n        }\n   (discover face, lines 87-98, is identical to the recommend face.)\n3) lib/collection/src/operations/universal_query/collection_query.rs:542-548 and 649-655 (the other two query-path resolutions, same substitution):\n        fn get_lookup_vector_name(&self) -> VectorNameBuf {\n            self.lookup_from\n                .as_ref()\n                .and_then(|lookup_from| lookup_from.vector.as_ref())\n                .unwrap_or(&self.using)\n                .to_owned()\n        }\n4) lib/api/src/rest/schema.rs:1102-1113 (the published OpenAPI source for LookupLocation):\n    pub struct LookupLocation {\n        /// Name of the collection used for lookup\n        pub collection: String,\n        /// Optional name of the vector field within the collection.\n        /// If not provided, the default vector field will be used.\n        #[serde(default)]\n        pub vector: Option<VectorNameBuf>,\n        /// Specify in which shards to look for the points, if not specified - look in all shards\n        #[serde(default, skip_serializing_if = \"Option::is_none\")]\n        pub shard_key: Option<ShardKeySelector>,\n    }\n5) lib/api/src/grpc/proto/points.proto:672-678:\n    message LookupLocation {\n      string collection_name = 1;\n      // Which vector to use for search, if not specified - use default vector\n      optional string vector_name = 2;\n      // Specify in which shards to look for the points, if not specified - look in all shards\n      optional ShardKeySelector shard_key_selector = 3;\n    }\n6) lib/segment/src/common/operation_error.rs:26-28 (the observed error string):\n        #[error(\"Not existing vector name error: {received_name}\")]\n        VectorNameNotExists { received_name: VectorNameBuf },\n7) src/common/inference/query_requests_rest.rs:73 (REST using default): using: using.unwrap_or_else(|| DEFAULT_VECTOR_NAME.to_owned()),\n8) lib/segment/src/common/mod.rs:27-38 (where the fetch fails): check_vector_name -> get_vector_config_or_error(vector_name, segment_config) is_err -> sparse fallback -> VectorNameNotExists for name \"i\" against C_AUX8's default-only schema.",
+      "call_chain_traced": "REST POST /collections/{C_MAIN}/points/query {\"query\":90,\"using\":\"i\",\"limit\":3,\"lookup_from\":{\"collection\":C_AUX8}} -> src/common/inference/query_requests_rest.rs:73 (using=\"i\" explicit, non-optional internally) -> CollectionQueryRequest -> flatten_resolver_requests (collection_query.rs:626-631) -> CollectionQueryResolveRequest{referenced_ids:[90], lookup_from, using:\"i\"} -> resolve_referenced_vectors_batch (fetch_vectors.rs:344-352) calls request.get_lookup_vector_name() -> retrieve_request_trait.rs:120-124 lookup_from.vector==None -> returns self.using (\"i\") instead of DEFAULT_VECTOR_NAME -> retrieve_points on C_AUX8 with WithVector::Selector([\"i\"]) (fetch_vectors.rs:29-48) -> check_vector_name(\"i\", C_AUX8 default-only config) fails (segment/src/common/mod.rs:27-38) -> OperationError::VectorNameNotExists{received_name:\"i\"} -> CollectionError::BadInput (lib/collection/src/operations/types.rs:1110) -> HTTP 400 'Wrong input: Not existing vector name error: i'. Under the documented default-vector fallback the fetch would use C_AUX8's unnamed 8-dim Cosine vector, which matches using \"i\" (8, Cosine), and the scoring-time dimension check (cf. sibling log M1 'Vector dimension error') would pass -> 200. Behavior is byte-identical across local clones v1.18.0, v1.18.1, v1.18.2, v1.18.3 and v1.19.0 (no later fix).",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "verification_note": "Absent behavior = the documented default-vector fallback for an omitted lookup_from.vector on the query face. Both published API faces promise it (REST schema doc comment 'If not provided, the default vector field will be used'; gRPC proto 'if not specified - use default vector') and the recommend/discover faces implement it (DEFAULT_VECTOR_NAME), while all three query-path resolutions substitute `using` instead - converting a characteristics-MATCHING, documented-legal lookup into 400 VectorNameNotExists and simultaneously making the promised characteristics check unreachable through this construction (D6 same error). by_design_in_source is NOT available under the v3.4 tightened rule: none of the three query-path sites carries any comment, docstring, or maintainer citation declaring intent; the behavior is uniform and version-stable but wholly undocumented. Forensic sufficiency: every grep keyword above produced hits and every hit file was read; the claim parameter names (lookup_from/LookupLocation/using) were pursued to the resolution functions, so not_found_in_source is not applicable.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service healthy: all setup/seed requests and D1/D3 positive controls returned 200; deterministic 400 with sub-millisecond latency)",
+        "concurrency (strictly sequential single-request legs, no shared state across legs beyond the seeded collections)",
+        "request-typo (script source lines 236-238 show the exact intended body; collections and point 90 seeded successfully)",
+        "cache-delay (stateless read path; error reproduces the schema-check outcome deterministically)"
+      ],
+      "surviving": "undocumented implementation choice: the query face may deliberately intend 'lookup_from.vector defaults to the using vector name' (convenient when both collections share vector names), stable v1.18.0-v1.19.0 with no in-source intent evidence; per the v3.4 tightened rule this cannot be classified by_design_in_source without explicit intent evidence, so it survives as an unproven design-intent possibility alongside a genuine doc-vs-implementation inconsistency (both published API faces and the recommend/discover faces document/implement the default-vector fallback)"
+    }
+  }
+}

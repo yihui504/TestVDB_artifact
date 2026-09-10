@@ -1,0 +1,55 @@
+{
+  "defect_id": "boundary_extrakeys_08",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint create_010 itself RECORDS the code-0 unvalidated pass-through (live-confirmed) - the contract tier labels it 'suspected Type1_IllegalSuccess candidate, NOT a guaranteed contract' (family create_008 bare-warmup). Doc layer honest; assertion is a GT-surface record rather than a promised rejection.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "create Status: 200 / Raw: {\"code\":0\",\"data\":{}} / VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) - create accepted extra illegal keys unvalidated (quick-create dimension=8 with searchParams:{nprobe:0}, params:{warmup:'bogus', nprobe:-5})",
+      "secondary_observations": ["describe Status: 200 Raw code 0 - full describe body scanned; script logic: values absent from describe => silent-drop branch (three-state reject/silent-drop/persist); log excerpt does not print scan verdict line for persistence but create-accept is the primary observation"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "nprobe=0 / nprobe=-5 / warmup='bogus' all accepted as HTTP 200 code 0 without validation"},
+      "reproducibility": "单脚本 (family corroborated by insert-path sibling milvus_type_entities_insert_002 same pass-through semantics)",
+      "script_error": false,
+      "triggering_scripts": ["boundary_extrakeys_08"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_collections_create_010",
+      "assertion_text_quoted": "collections+create body containing searchParams/params extras => code 0 (no REST-side validation of those keys)",
+      "api_violates_assertion": false,
+      "note": "observed behavior (code 0) MATCHES the assertion text literally - the constraint documents the gap rather than demanding rejection. api_violates_assertion=false because the quoted assertion is a factual record of the same behavior, not a must/should constraint; the DEFECT_FOUND label reflects the suspected-Type1 framing in create_008/create_010 (bare warmup KNOWN GAP family). Auditor to weigh whether contract-grounded-at-gap-record suffices for a defect claim. No constraint-domain mismatch: params keys are exactly the documented surface.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:create_010 documents code-0 pass-through (suspected gap)", "doc:request_v2.go CollectionReq has Params map + no searchParams field; handler whitelist 2019-2049", "script:boundary_extrakeys_08.py quick-create with searchParams.nprobe=0 + params.warmup='bogus' + params.nprobe=-5", "log:create 200 code 0 DEFECT_FOUND (Type1_IllegalSuccess)"],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["searchParams (request_v2.go - zero hits in CollectionReq)", "WarmupScalarFieldKey forwarding whitelist", "nprobe (handler create path - zero hits)"],
+      "files_examined": ["internal/distributed/proxy/httpserver/request_v2.go:643-656", "internal/distributed/proxy/httpserver/handler_v2.go:1850,1999-2049"],
+      "source_excerpt": "CollectionReq (request_v2.go:643-656) has Params map[string]interface{} but NO searchParams field - that JSON key is dropped at binding. Params map values are consulted only for named keys (enableDynamicField:1850, max_length:1828, partitionsNum:1960, shardsNum:1992, consistencyLevel:2000, ttlSeconds:2019, partitionKeyIsolation:2025, mmap:2031, warmup.*:2037); 'warmup' (bare) and 'nprobe' are not among them, so arbitrary values pass unvalidated -> code 0. Bare-warmup gap: task.go:466-477 validates only IsCollectionWarmupKey (warmup.scalarField etc.), bare 'warmup' key is not field-level (rejected there) nor collection-level (validated at 472) - it simply never gets forwarded/validated.",
+      "call_chain_traced": "JSON body -> gin bind into CollectionReq (searchParams dropped; params kept as opaque map) -> handler reads whitelisted keys only -> unknown keys silently ignored -> proxy create -> task validators never see them -> code 0",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "typo"],
+      "surviving": "'unknown keys are ignored by convention' (Postel-style JSON tolerance) - a legitimate by-design defense for silent-drop semantics; however contract labels this family a suspected gap and -5/0 numeric junk surviving without 1100 contrasts with validated keys on the same map; recorded, not adjudicated"
+    },
+    "evidence_weight": "medium-high (exact source drop-chain; single script but family-corroborated; contract self-labels as gap so auditor must decide gap-vs-defect)"
+  }
+}

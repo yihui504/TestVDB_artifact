@@ -1,0 +1,14 @@
+name len 255 (max) -> code=0 raw={"code":0,"data":{}}
+name len 256 (max+1) -> code=1100 raw={"code":1100,"message":"Invalid collection name: nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+name len 1000 -> code=1100 raw={"code":1100,"message":"Invalid collection name: nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+name empty -> code=1802 raw={"code":1802,"message":"missing required parameters, error: Key: 'CollectionReq.CollectionName' Error:Field validation for 'CollectionName' failed on the 'requi
+name NUL embedded -> code=1100 raw={"code":1100,"message":"Invalid collection name: ab\u0000cd. collection name can only contain numbers, letters and underscores: invalid parameter"}
+numShards 0 -> code=0 raw={"code":0,"data":{}}
+numShards -1 -> code=0 raw={"code":0,"data":{}}
+numShards 17 (max+1) -> code=0 raw={"code":0,"data":{}}
+VarChar max_length=65536 -> code=1100 raw={"code":1100,"message":"the maximum length specified for the field(t) should be in (0, 65535], but got 65536 instead: invalid parameter"}
+VarChar max_length=-1 -> code=1100 raw={"code":1100,"message":"the maximum length specified for the field(t) should be in (0, 65535], but got -1 instead: invalid parameter"}
+DEFECT: create with numShards 0 accepted (code 0), contract: 1<=numShards<=16
+DEFECT: create with numShards -1 accepted (code 0), contract: 1<=numShards<=16
+DEFECT: create with numShards 17 (max+1) accepted (code 0), contract: 1<=numShards<=16
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) - name/shards/varchar range violation accepted

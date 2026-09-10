@@ -1,0 +1,18 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: bcc0114b766
+[constraint quote] vectors.distance IN {Cosine, Euclid, Dot, Manhattan}; VectorParams.required = [size, distance]; vectors.size is an unsigned integer (uint64)
+[vectors={} (no vector space defined - BS-01)] status=200 raw={"result":true,"status":"ok","time":0.213936728}
+[vectors={'size':4} distance missing] status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 24"},"time":0.0}
+[conform] 'vectors={'size':4} distance missing' rejected with 400
+[vectors={'distance':'Cosine'} size missing] status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 35"},"time":0.0}
+[conform] 'vectors={'distance':'Cosine'} size missing' rejected with 400
+[distance='Euclidean' (non-enum alias)] status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 49"},"time":0.0}
+[conform] 'distance='Euclidean' (non-enum alias)' rejected with 400
+[size=-1 (uint64 violation)] status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 47"},"time":0.0}
+[conform] 'size=-1 (uint64 violation)' rejected with 400
+[size='4' (string type confusion)] status=400 raw={"status":{"error":"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 48"},"time":0.0}
+[conform] 'size='4' (string type confusion)' rejected with 400
+[distance='Manhattan' (enum closure, least-common member)] status=200 raw={"result":true,"status":"ok","time":0.290198311}
+[conform] 'distance='Manhattan' (enum closure, least-common member)' 200; readback config.params.vectors.distance='Manhattan' (persisted as sent)
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess: 'vectors={} (no vector space defined - BS-01)' ACCEPTED with 200 - constraint asserts VectorParams.required=[size,distance] (a collection with no compliant vector space must be rejected); raw: {"result":true,"status":"ok","time":0.213936728})

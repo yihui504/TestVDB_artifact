@@ -1,0 +1,15 @@
+create: 200 {"code":200,"data":{}}
+create partition: 200 {"code":200,"data":{}}
+partition load P1: 200 {"code":200,"data":{}}
+collection loadState after partition load: (('LoadStateLoaded', None), '{"code":200,"data":{"loadProgress":100,"loadState":"LoadStateLoaded"},"message":""}')
+insert into P1: 200 {"code":200,"data":{"insertCount":3,"insertIds":[0,1,2]}}
+insert into _default (not partition-loaded): 200 {"code":200,"data":{"insertCount":3,"insertIds":[100,101,102]}}
+query P1 only (after lag): 200 {"code":200,"data":[{"id":0},{"id":1},{"id":2}]}
+query P2 only (not loaded): 200 {"code":200,"data":[{"id":100},{"id":101},{"id":102}]}
+partition release P1: 200 {"code":200,"data":{}}
+collection loadState after partition release: (('LoadStateLoaded', None), '{"code":200,"data":{"loadProgress":100,"loadState":"LoadStateLoaded"},"message":""}')
+query released P1: 200 {"code":65535,"message":"failed to search/query delegator 1 for channel by-dev-rootcoord-dml_5_468539281521145538v0: fail to Query, QueryNode ID = 1, reason=partition not loaded[partition=[468539281521145545]]"}
+DEFECT_CANDIDATE Type3/Type4: query on released partition returns UnexpectedError(65535) instead of structured 101 not-loaded
+insert into released P1: 200 {"code":200,"data":{"insertCount":2,"insertIds":[50,51]}}
+query all after full load: http 200 code 200 rows 8 {"code":200,"data":[{"id":0},{"id":1},{"id":2},{"id":50},{"id":51},{"id":100},{"id":101},{"id":102}]}
+VERDICT: NO_DEFECT

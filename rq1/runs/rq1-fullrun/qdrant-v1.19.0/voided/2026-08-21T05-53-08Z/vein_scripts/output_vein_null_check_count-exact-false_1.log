@@ -1,0 +1,28 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[SETUP] Creating collection vein_null_check_count...
+[SETUP] Inserting test points with null payload values...
+[SETUP] Creating payload index on 'city' field...
+[TEST 1] Counting points with exact=true and is_null filter on 'city' field...
+[TEST 1] exact=true count: 4
+[TEST 2] Counting points with exact=false and is_null filter on 'city' field...
+[TEST 2] exact=false count: 5
+[TEST 3] Verifying ground truth with scroll query...
+[TEST 3] scroll ground truth count: 4
+[ANALYSIS] Comparing cardinality estimates...
+[ANALYSIS] Divergence: exact=true=4, exact=false=5, scroll=4
+[ANALYSIS] Absolute difference: 1 points (25.0%)
+VERDICT: DEFECT_FOUND
+DEFECT_TYPE: Type2_PoorDiagnostics
+SEVERITY: High
+DESCRIPTION: Cardinality estimator for is_null filter on 'city' field is inaccurate
+EVIDENCE:
+  - exact=true (scan path): 4 points
+  - exact=false (estimator): 5 points
+  - scroll (ground truth): 4 points
+  - Divergence: 25.0% exceeds 20% threshold
+EXPECTED_BEHAVIOR: exact=false should return approximately same count as exact=true (within 20% tolerance)
+ACTUAL_BEHAVIOR: Cardinality estimator overestimates by 1 points (25.0%)
+ROOT_CAUSE: The index-based cardinality estimator for is_null conditions produces incorrect estimates
+IMPACT: Applications relying on approximate counts for UI pagination, progress bars, or resource estimation will see incorrect values
+RELATED: Historical issue #10096 (indexed vs unindexed path divergence on is_null)

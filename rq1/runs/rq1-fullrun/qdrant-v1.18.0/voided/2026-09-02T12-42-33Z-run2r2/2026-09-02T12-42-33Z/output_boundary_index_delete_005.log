@@ -1,0 +1,31 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] keys present=['delete_index', 'describe_collection', 'drop_collection']
+[leg wait=true qp={'wait': 'true'}] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.282388463}
+[wait=true] envelope ok: result.status='completed' operation_id=2
+[leg wait=false qp={'wait': 'false'}] status=200 raw={"result":{"operation_id":4,"status":"acknowledged"},"status":"ok","time":0.024666764}
+[wait=false] envelope ok: result.status='acknowledged' operation_id=4
+[leg ordering=strong qp={'ordering': 'strong'}] status=200 raw={"result":{"operation_id":6,"status":"acknowledged"},"status":"ok","time":0.036047428}
+[ordering=strong] envelope ok: result.status='acknowledged' operation_id=6
+[leg combined-valid qp={'wait': 'true', 'ordering': 'strong', 'timeout': '30'}] status=200 raw={"result":{"operation_id":8,"status":"completed"},"status":"ok","time":0.719061249}
+[combined-valid] envelope ok: result.status='completed' operation_id=8
+[leg wait=yes qp={'wait': 'yes'}] status=400 raw={"status":{"error":"Deserialize error in query parameters: provided string was not `true` or `false`"},"time":0.0}
+[leg wait=yes] disposition measured-only: 400 (coercion/boundary value; 200 or clean 4xx both defensible; only 5xx/hang claimed)
+[leg wait=1 qp={'wait': '1'}] status=400 raw={"status":{"error":"Deserialize error in query parameters: provided string was not `true` or `false`"},"time":0.0}
+[leg wait=1] disposition measured-only: 400 (coercion/boundary value; 200 or clean 4xx both defensible; only 5xx/hang claimed)
+[leg timeout=0 qp={'timeout': '0'}] status=200 raw={"result":{"operation_id":10,"status":"acknowledged"},"status":"ok","time":0.017159387}
+[timeout=0] envelope ok: result.status='acknowledged' operation_id=10
+[leg timeout=-1 qp={'timeout': '-1'}] status=400 raw={"status":{"error":"Deserialize error in query parameters: std::time::Duration cannot be negative"},"time":0.0}
+[leg timeout=-1] disposition measured-only: 400 (coercion/boundary value; 200 or clean 4xx both defensible; only 5xx/hang claimed)
+[leg timeout=i32max qp={'timeout': '2147483647'}] status=200 raw={"result":{"operation_id":12,"status":"acknowledged"},"status":"ok","time":0.030097887}
+[timeout=i32max] envelope ok: result.status='acknowledged' operation_id=12
+[leg timeout=overflow20 qp={'timeout': '99999999999999999999'}] status=400 raw={"status":{"error":"Deserialize error in query parameters: number too large to fit in target type"},"time":0.0}
+[leg timeout=overflow20] disposition measured-only: 400 (coercion/boundary value; 200 or clean 4xx both defensible; only 5xx/hang claimed)
+[leg timeout=abc qp={'timeout': 'abc'}] status=400 raw={"status":{"error":"Deserialize error in query parameters: invalid digit found in string"},"time":0.0}
+[leg timeout=abc] disposition measured-only: 400 (coercion/boundary value; 200 or clean 4xx both defensible; only 5xx/hang claimed)
+[leg ordering=bogus qp={'ordering': 'not_an_ordering'}] status=400 raw={"status":{"error":"Deserialize error in query parameters: unknown variant `not_an_ordering`, expected one of `weak`, `medium`, `strong`"},"time":0.0}
+[leg ordering=bogus] disposition measured-only: 400 (coercion/boundary value; 200 or clean 4xx both defensible; only 5xx/hang claimed)
+[summary] legs=12 dispositions={'wait=true': 200, 'wait=false': 200, 'ordering=strong': 200, 'combined-valid': 200, 'wait=yes': 400, 'wait=1': 400, 'timeout=0': 200, 'timeout=-1': 400, 'timeout=i32max': 200, 'timeout=overflow20': 400, 'timeout=abc': 400, 'ordering=bogus': 400} defects=0
+query-param boundary grid on the idempotent delete face: all valid legs (wait/ordering/combined) returned exactly 200 with conforming envelopes; coercion and boundary values (wait=yes/1, timeout 0/-1/i32max/overflow/abc, ordering=bogus) produced no 5xx and no server-side hang - NO_DEFECT
+[cleanup] dropped bidl5_1788435249_33512_col
+VERDICT: NO_DEFECT

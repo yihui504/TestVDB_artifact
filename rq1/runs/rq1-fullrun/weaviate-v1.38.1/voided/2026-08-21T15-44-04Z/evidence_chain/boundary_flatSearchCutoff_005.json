@@ -1,0 +1,71 @@
+{
+  "defect_id": "boundary_flatSearchCutoff_005",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "evidence_weight": "strong",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint weaviate_type_create_collection_003 'flatSearchCutoff is integer'，source_url=entities/vectorindex/hnsw/config.go；本地 clone 核对：类型由 OptionalIntFromMap 保证（字符串'100'被丢弃→默认 0 前的 SetDefaults 已置 40000，见 log str 变体），但值域（非负/上限）无校验",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[neg] flatSearchCutoff=-1 -> create=200 persisted=-1 / [huge] flatSearchCutoff=10000000000 -> create=200 persisted=10000000000 / DEFECT[neg] Type1_IllegalSuccess: -1 persisted verbatim",
+      "secondary_observations": [
+        "[ctrl] flatSearchCutoff=40000 -> create=200 persisted=40000",
+        "[zero] flatSearchCutoff=0 -> create=200 persisted=0",
+        "[str] flatSearchCutoff='100' -> create=200 persisted=0（字符串被静默丢弃，注意非默认 40000——回读为 0，静默归一方向与源码 SetDefaults 推断需 auditor 复核）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "-1 与 10^10 均为请求侧可判定非法/失比值，200 verbatim 持久化；字符串类型错配也未 4xx 而是静默变换"
+      },
+      "reproducibility": "单脚本（4 个攻击值一致，确定性）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_flatSearchCutoff_005.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_type_create_collection_003",
+      "assertion_text_quoted": "flatSearchCutoff is integer",
+      "api_violates_assertion": true,
+      "note": "主观测为值域违规（-1/10^10 verbatim），type 约束本身仅约束类型；字符串'100'变体直接违反 type 约束（被静默丢弃归 0 而非拒绝）——两类观测均构成违反，violates=True",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_type_create_collection_003 'flatSearchCutoff is integer'",
+        "doc: source_url=entities/vectorindex/hnsw/config.go（本地核对）",
+        "script: boundary_flatSearchCutoff_005.py 5 组变体",
+        "log: neg=-1 / huge=10^10 verbatim 200；str='100'→persisted 0"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["DynamicEfMin|dynamicEfMin (定位 hnsw config.go)", "flatSearchCutoff"],
+      "files_examined": [
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\entities\\vectorindex\\hnsw\\config.go (L24-45, L201-205, L260-323)",
+        "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\.weaviate-src-1381\\entities\\vectorindex\\common\\config.go (L45-90 OptionalIntFromMap)"
+      ],
+      "source_excerpt": "entities/vectorindex/hnsw/config.go L201-205:\n\tif err := vectorIndexCommon.OptionalIntFromMap(asMap, \"flatSearchCutoff\", func(v int) {\n\t\tuc.FlatSearchCutoff = v\n\t}); err != nil { return uc, err }\nvalidate() L260-323 无 FlatSearchCutoff 检查。L34: DefaultFlatSearchCutoff=40000。\ncommon/config.go OptionalIntFromMap L45-73: 值类型 switch 仅处理 json.Number/float64，字符串类型不命中 case 且无 default 报错 → setFn 不调用 → 静默保留 SetDefaults 值",
+      "call_chain_traced": "POST /schema → hnsw.ParseAndValidateConfig → OptionalIntFromMap(\"flatSearchCutoff\") 赋值（无值域检查）→ validate() 跳过 → verbatim 持久化；字符串输入走 type switch 无匹配分支被丢弃",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（ctrl 40000 正常）"],
+      "surviving": null
+    }
+  }
+}

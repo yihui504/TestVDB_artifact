@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_optimizations_001",
+ "endpoint": "collections+optimizations",
+ "param": "collection_name (lifecycle 200/404 state channel of the optimizer-status face)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "delete_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_optimizations_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-optimizations",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "never-created -> HTTP 404; live (after create) -> HTTP 200 with result an object, invariant under wait=true point upserts; after a confirmed drop -> HTTP 404 again (200 after delete or on a never-created name = Type4 phantom readout; 404/other non-200 on the live collection = Type4 channel lie); after recreate -> 200 with clean envelope whose summary.queued_points (when present) is 0; present group keys typed against the materialized response_shape wrongly = Type4 shape conflict; 5xx = Type3 only with /healthz liveness",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

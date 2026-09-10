@@ -1,0 +1,89 @@
+{
+  "defect_id": "semantic_points_query_id_order_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: no doc_preflight.json sidecar exists anywhere in the plugin tree; two live WebFetch attempts of https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points failed on domain verification (domain_blocked, recorded PARTIAL not FAIL); contract build-time records (endpoint_registry points+query verified_at 2026-09-02T12:34:08Z and assertion source_status=reachable) indicate the URL was reachable at contract construction. version: URL segment v-1-18-x is the versioned api-reference for the 1.18.x line matching target v1.18.0. content: the documented page is generated from utoipa doc-comments in the source clone — lib/api/src/rest/schema.rs:557 carries verbatim 'Query to perform. If missing without prefetches, returns points ordered by their IDs.', so assertion clause 2 (id-order on query-missing-without-prefetch) is doc-verbatim, but assertion clause 1 ('query may be omitted when prefetches are present') is not doc-verbatim text anywhere in the source-of-doc (grep zero hits) — it is an implicature of the 'without prefetches' qualifier, which would be vacuous if query-missing-with-prefetches were an illegal state; live-page confirmation of the rendered wording was blocked. endpoint: endpoint_registry entry 'points+query' method POST with identical source_url and doc_quote '400 on an invalid query'; the script posts exactly that path.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "F5 query omitted with prefetch -> status=400 | raw: {\"status\":{\"error\":\"Bad request: A query is needed to merge the prefetches. Can't have prefetches without defining a query.\"},\"time\":0.000018535} (output_semantic_points_query_id_order_001.log lines 15-16; F5 body per script lines 235-238: {\"prefetch\": [{\"query\": {\"nearest\": [0.0, 1.0, 0.25, 0.5]}, \"limit\": 5}], \"limit\": 5})",
+      "secondary_observations": [
+        "[rest][same-param comparative, rule-5/6] F1 no query limit=15 -> status=200 — identical query-omission with prefetch ABSENT accepted, ids strictly ascending: raw: {\"result\":{\"points\":[{\"id\":501,\"version\":0,\"score\":1.0},{\"id\":502,...},{\"id\":508,...}]} (lines 3-5); F2 rerun identical (determinism), F3 limit=5 slices id order, F4 filter city=A returns the ascending A-subset — the omitted-value disposition flips from accepted (prefetch absent) to rejected (prefetch present) on the same endpoint and same omitted field",
+        "[rest][multi-script reproduction] output_boundary_points_query_noid_order_001.log lines 16-17: 'leg N4 prefetch-only (query omitted with prefetch) -> status=400' raw: {\"status\":{\"error\":\"Bad request: A query is needed to merge the prefetches. Can't have prefetches without defining a query.\"},\"time\":0.000094258} — different script, different collection and seed ids (1-10 vs 501-515), identical 400 and identical error text; its N1 no-query no-prefetch and N3 query=null legs both 200",
+        "[grpc][face_unavailable] gRPC Query points routes through the same collection-layer guard per source (src/tonic/api/query_common.rs:774 query -> convert_query_points_from_grpc -> do_query_points -> CollectionQueryRequest::try_into_shard_request -> validation), so the same rejection is expected on the grpc face, but no gRPC execution exists in this run — behavioral comparison not obtainable, recorded honestly",
+        "[label discrepancy, recorded factually] the triggering VERDICT line reads 'DEFECT_FOUND (Type1_IllegalSuccess)' because the script hardcodes that label for any 4xx on documented legs (script lines 181-185); the observed phenomenon is the rejection direction (documented-legal request shape refused), not a silent success"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "inverse direction observed: the F5 request is schema-legal (query is Option<QueryInterface> in lib/api/src/rest/schema.rs:559, hence not in the OpenAPI required list) yet was refused with HTTP 400 + a diagnostic body that names the policy ('A query is needed to merge the prefetches...'); no 2xx-masking of client errors on this endpoint in this log (the one 400 carries an explicit error message)"
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["semantic_points_query_id_order_001", "boundary_points_query_noid_order_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_004",
+      "assertion_text_quoted": "query may be omitted when prefetches are present; a query missing without prefetches returns points ordered by their ids (OpenAPI QueryRequest description)",
+      "api_violates_assertion": true,
+      "note": "The F5 request (prefetch present, top-level query omitted) sits squarely inside clause 1's domain and was rejected 400, so the assertion is violated on clause 1; clause 2 (id-order when query missing without prefetch) is satisfied by F1-F4. Caveat for the auditor: clause 1 is the assertion's paraphrase of the OpenAPI qualifier implicature, not doc-verbatim text — the doc-comment (schema.rs:557) only specifies the no-prefetch case's behavior. Note also candidates.jsonl's constraint_id field was empty; the constraint was recovered from the attack string and the script header (line 7) and exists as structured_contract.json assertions[29].",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: structured_contract.json assertions[29] qdrant_behavioral_points_query_004 (endpoint points+query, evidence_tier explicit, source_url https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points) — linked to the candidate via the attack string and script header line 7 despite the empty constraint_id field in candidates.jsonl (mechanical extraction gap, not a missing constraint)",
+        "doc: source_url v-1-18-x query-points page generated from lib/api/src/rest/schema.rs utoipa doc-comments — line 557 'Query to perform. If missing without prefetches, returns points ordered by their IDs.' covers assertion clause 2 verbatim; clause 1 exists only as implicature; live fetch domain_blocked, build-time records reachable",
+        "script: debate_logs/semantic_points_query_id_order_001.py — POST /collections/{coll}/points/query (lines 170-173); F5 body {\"prefetch\": [{\"query\": {\"nearest\": [0.0,1.0,0.25,0.5]}, \"limit\": 5}], \"limit\": 5} (lines 235-238); F1-F4 bodies omit both query and prefetch",
+        "log: output_semantic_points_query_id_order_001.log lines 15-17 — F5 -> status=400, body 'Bad request: A query is needed to merge the prefetches. Can't have prefetches without defining a query.', VERDICT: DEFECT_FOUND"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "A query is needed to merge the prefetches",
+        "may be omitted when prefetches",
+        "struct QueryRequest",
+        "without prefetch|prefetches are present",
+        "ordered by their id",
+        "::validation\\(|Self::validation",
+        "CollectionQueryRequest"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs (lines 530-630: QueryRequestInternal/QueryRequest/QueryRequestBatch)",
+        "lib/collection/src/operations/universal_query/collection_query.rs (lines 550-620, 655-745, 700-790)",
+        "lib/collection/src/collection/query.rs (lines 700-745: query=None handled as a legal intermediate state)",
+        "src/actix/api/query_api.rs (grep: line 30-32 route #[post(\"/collections/{collection_name}/points/query\")] async fn query_points)",
+        "src/tonic/api/query_common.rs (grep: line 774 pub async fn query -> convert_query_points_from_grpc -> do_query_points)",
+        "lib/storage/src/content_manager/toc/point_ops.rs (grep: CollectionQueryRequest import + query dispatch)"
+      ],
+      "source_excerpt": "1) lib/api/src/rest/schema.rs:549-562 (the OpenAPI source-of-truth for the documented page):\n    #[derive(Debug, Serialize, Deserialize, JsonSchema, Validate)]\n    pub struct QueryRequestInternal {\n        /// Sub-requests to perform first. If present, the query will be performed on the results of the prefetch(es).\n        #[validate(nested)]\n        #[serde(default, with = \"MaybeOneOrMany\")]\n        #[schemars(with = \"MaybeOneOrMany<Prefetch>\")]\n        pub prefetch: Option<Vec<Prefetch>>,\n\n        /// Query to perform. If missing without prefetches, returns points ordered by their IDs.\n        #[validate(nested)]\n        pub query: Option<QueryInterface>,\n\n        /// Define which vector name to use for querying. If missing, the default vector is used.\n        pub using: Option<VectorNameBuf>,\n\n2) lib/collection/src/operations/universal_query/collection_query.rs:742-753 (the code that produced the observed F5 400):\n    pub fn validation(\n        query: &Option<Query>,\n        using: &VectorNameBuf,\n        prefetch: &[CollectionPrefetch],\n        score_threshold: Option<ScoreType>,\n    ) -> CollectionResult<()> {\n        // Check no prefetches without a query\n        if !prefetch.is_empty() && query.is_none() {\n            return Err(CollectionError::bad_request(\n                \"A query is needed to merge the prefetches. Can't have prefetches without defining a query.\",\n            ));\n        }",
+      "call_chain_traced": "REST face: src/actix/api/query_api.rs:30 #[post(\"/collections/{collection_name}/points/query\")] async fn query_points -> schema QueryRequest (lib/api/src/rest/schema.rs:596, flattens QueryRequestInternal) -> conversions -> lib/storage/src/content_manager/toc/point_ops.rs query dispatch -> lib/collection/src/collection/query.rs (query=None is a handled legal intermediate state, lines 708-745) -> CollectionQueryRequest::try_into_shard_request (collection_query.rs:680) -> Self::validation (line 685) -> bad_request at lines 749-753 when !prefetch.is_empty() && query.is_none(). Nested prefetches validate through try_into_shard_prefetch (lines 572-576, same validation). gRPC face: src/tonic/api/query_common.rs:774 query -> convert_query_points_from_grpc -> do_query_points -> same collection-layer path, so both faces enforce the same guard. The schema-level doc-comment ('If missing without prefetches, returns points ordered by their IDs') and the enforcement ('Can't have prefetches without defining a query') coexist in the same repo: the doc names behavior for the no-prefetch omission case only, while dedicated validation refuses the with-prefetch omission case.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "The rejection is produced by a purpose-built guard with a purpose comment ('// Check no prefetches without a query', line 748) and a hand-written policy error message (line 751), sitting in a validation family that also enforces 'no score_threshold without a query' (lines 756-770) and 'no fusion with using' (lines 772-779) — explicit intent evidence in source, not unannotated silent behavior. Caveat: the clone is shallow (single snapshot commit db3fca3, git blame attributes all lines to it), so no deeper maintainer citation from history was obtainable. The doc-side half of the assertion (id-order on omission without prefetch) is implemented and behaviorally confirmed by F1-F4; the tension is between the guard's explicit policy and the OpenAPI description's implicature that query may be omitted with prefetches present.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (F1-F4 clean 200s on the same endpoint in the same run; service healthy; no transport issues)",
+        "concurrency (sequential single-threaded script; fresh unique collection spqI1+tag per run; F2 determinism re-run identical)",
+        "cache-delay (stateless read path; two independent scripts with different collections/seed ids produced the identical 400 and error text)",
+        "request-typo (F5 body is well-formed JSON that passed serde parsing — the nested prefetch query is a valid nearest form; the 400 names the semantic policy, not a parse error; sibling script's N1-N3 controls confirm the request encoding was correct)"
+      ],
+      "surviving": null
+    }
+  }
+}

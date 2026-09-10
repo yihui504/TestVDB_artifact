@@ -1,0 +1,88 @@
+{
+  "defect_id": "semantic_collections_create_017",
+  "endpoint": "collections+create (PUT /collections/{collection_name})",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS via web reader on https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection (WebFetch tool itself returned domain-blocked; mcp webReader succeeded — not counted as domain_blocked since content was retrieved). Version PASS: URL segment v-1-18-x / doc_version '1.18.x (versioned)' vs target v1.18.0 (major.minor 1.18 match). Content PARTIAL: the page documents `vectors` as 'object or map from strings to objects, Optional' with exactly two example modes (single {\"size\":128,\"distance\":\"Cosine\"} / named map {\"default\":{...}}) — but the page documents ONLY a 'successful operation' response; the constraint's cited 400 text 'Format error in JSON body: data did not match any variant of untagged enum VectorsConfig' does NOT appear on the page (contract itself marks that assertion source_url='inferred', and raw_knowledge.md line 78 records the 400 text as 'runtime observed', not doc-quoted). The page never states that an empty object {} is invalid, and vectors is Optional (note: raw_knowledge.md line 60 captured it as 'required' — knowledge-capture drift vs live page). Endpoint PASS: PUT /collections/{collection_name} confirmed in endpoint_registry entry collections+create (method PUT, same source_url, verified_at 2026-08-23T05:20:00Z).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[empty object] vectors={} -> 200 {\"result\":true,\"status\":\"ok\",\"time\":0.196189132}  (output_semantic_collections_create_017.log line 3; body sent: PUT /collections/sem_vc0_{TS} {\"vectors\": {}})",
+      "secondary_observations": [
+        "output_boundary_collections_create_01.log:22 — CASE vectors={} empty: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.223438327} (independent script, same endpoint, same acceptance)",
+        "output_boundary_collections_create_01.log:21 — CASE vectors=null: status=400 body={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 17\"}} (shapes matching NO enum variant DO get the 400 rejection)",
+        "output_boundary_collections_create_01.log:24 — CASE vectors missing entirely: status=200 body={\"result\":true,\"status\":\"ok\",\"time\":0.221132689} (absent field also accepted — brackets {} as equivalent-to-absent)",
+        "output_boundary_collections_create_01.log:3-20 — eight distance/size sub-field abuses (Bogus enum, lowercase euclid, null/123 distance, size 0/-1/1.5/'4'/null) all rejected 400 with the same untagged-enum format error"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx (accepted as success — result:true, status:ok; no error code at all)",
+        "note": "If the empty object is deemed a client-side error, the server returned the strongest form of 2xx acceptance (full success envelope), not 2xx+business-error-code. Contrast shapes that match no enum variant: clean HTTP 400 with format-error body."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["semantic_collections_create_017", "boundary_collections_create_01"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_collections_create_001",
+      "assertion_text_quoted": "description: \"invalid vectors config enum gives 400 with JSON format error\"; category: \"HTTP 400, Format error in JSON body: data did not match any variant of untagged enum VectorsConfig\"; expected_behavior/source_url fields: https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection (assertion's own source_url field: \"inferred\", evidence_tier Type2_PoorDiagnostics). Related: qdrant_type_collections_create_003 \"vectors with invalid enum value => HTTP 400 Format error in JSON body\". NOTE: candidates.jsonl carried constraint_id=\"\" (mechanical extraction dropped it); constraint recovered from script header 'constraint_ids: qdrant_behavioral_collections_create_001'.",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "Per violates-self-check: the assertion is conditional (IF invalid vectors config THEN 400). The observed value {} is not established as inside the constraint's 'invalid' domain: the doc types vectors as 'object or map from strings to objects, Optional' (a degenerate empty map is not explicitly excluded), and the source (see source_grounding) treats Multi(empty) as the designed default state, identical to omitting the field (which also returns 200). Shapes that genuinely match NO variant (null / scalar / array) are rejected 400 exactly as the constraint states (boundary_01 lines 3-21). Hence on the strict reading the constraint is not violated by {}. The competing reading — that the doc's two example modes imply size+distance presence so {} is 'malformed' — has no explicit doc or contract text forbidding the empty shape (checked: no constraint in structured_contract.json declares vectors must be non-empty). Recorded as false with this rationale; final call belongs to chain-auditor."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_collections_create_001 exists in structured_contract.json (assertion 'invalid vectors config enum gives 400 with format error'; its source_url field is the literal string 'inferred' — the 400 behavior is runtime-observed, not doc-quoted; candidates.jsonl constraint_id empty, recovered from script header)",
+        "doc: v-1-18-x create-collection page live-fetched — vectors documented Optional, 'object or map from strings to objects', single mode {size,distance} / multiple mode named map; page documents only 'successful operation' response; {} never declared invalid",
+        "script: debate_logs/semantic_collections_create_017.py — PUT /collections/sem_vc0_{TS} with body {\"vectors\": {}} via safe_request; shape #1 of a 9-shape malformed-family sweep; exits on first 2xx",
+        "log: output_semantic_collections_create_017.log line 3 — HTTP 200 {\"result\":true,\"status\":\"ok\"} → VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The doc ring does not affirmatively support the claim: (a) the 400-format-error behavior the constraint relies on is not documented anywhere on the create-collection page (only the success response is), so the 'inferred' assertion cannot be grounded in doc text; (b) the page never states an empty object {} is invalid, and marks vectors Optional — leaving the degenerate empty-map shape in an unspecified zone. Behavior and source rings are intact (200 observed, mechanism found in source); the contract→doc premise link for 'invalid ⇒ 400' is inference over runtime behavior, not documentation.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "enum VectorsConfig",
+        "at least one vector|empty vectors|vectors_num() == 0",
+        "perform_create_collection|CreateCollectionOperation::new",
+        "put_collections_collection|create_collection (src/actix + lib/api)",
+        "Collection must have (removed historical error text)",
+        "fn is_empty|fn params_iter (on VectorsConfig)"
+      ],
+      "files_examined": [
+        ".qdrant-src-1190/lib/collection/src/operations/types.rs (lines 1455-1509)",
+        ".qdrant-src-1190/lib/storage/src/content_manager/collection_meta_ops.rs (lines 105-126, 186-250)",
+        ".qdrant-src-1190/lib/storage/src/content_manager/conversions.rs (lines 68-122)",
+        ".qdrant-src-1190/src/actix/api/collections_api.rs (lines 112-129, 330)",
+        ".qdrant-src-1190/lib/storage/src/content_manager/toc/create_collection.rs (lines 30-90)",
+        ".qdrant-src-1190/lib/edge/python/src/config/mod.rs (lines 28-58)"
+      ],
+      "source_excerpt": "Clone pinned at tag v1.18.0 (git tag --points-at HEAD = v1.18.0; Cargo.toml version = 1.18.0; shallow depth=1 so no history search possible).\n\n[1] lib/collection/src/operations/types.rs:1468-1484 (the untagged enum + designed empty state):\n  #[derive(Debug, Deserialize, Serialize, JsonSchema, Anonymize, Clone, PartialEq, Hash, Eq)]\n  #[serde(rename_all = \"snake_case\", untagged)]\n  pub enum VectorsConfig {\n      Single(VectorParams),\n      Multi(BTreeMap<VectorNameBuf, VectorParams>),\n  }\n\n  impl Default for VectorsConfig {\n      fn default() -> Self {\n          VectorsConfig::Multi(Default::default())   // = Multi(empty BTreeMap)\n      }\n  }\n\n  impl VectorsConfig {\n      pub fn empty() -> Self {\n          VectorsConfig::Multi(BTreeMap::new())\n      }\n\n[2] lib/storage/src/content_manager/collection_meta_ops.rs:109-114 (REST-facing struct — vectors has serde default, NOT Option):\n  pub struct CreateCollection {\n      /// Vector data config.\n      /// It is possible to provide one config for single vector mode and list of configs for multiple vectors mode.\n      #[serde(default)]\n      #[validate(nested)]\n      pub vectors: VectorsConfig,\n\n[3] collection_meta_ops.rs:207-217 (only vector NAMES are validated — empty Multi has zero keys, loop is a no-op):\n      if let collection::operations::types::VectorsConfig::Multi(multi) = &create_collection.vectors {\n          for vector_name in multi.keys() {\n              common::validation::validate_vector_name(vector_name).map_err(|err| {\n                  StorageError::bad_input(format!(\"Invalid dense vector name `{vector_name}`: {err}\"))\n              })?;\n          }\n      }\n\n[4] lib/storage/src/content_manager/conversions.rs:92-96 (gRPC path — explicit developer TODO that the at-least-one validation is knowingly absent):\n      vectors: match vectors_config.and_then(|config| config.config) {\n          Some(vector_config) => vector_config.try_into()?,\n          // TODO(sparse): sparse or dense vectors config is required\n          None => Default::default(),\n      },\n\n[5] src/actix/api/collections_api.rs:112-129 (REST handler binds Json<CreateCollection> directly and calls the name-only validation):\n  async fn create_collection(..., operation: Json<CreateCollection>) {\n      let create_collection_op =\n          CreateCollectionOperation::new(collection.collection_name.clone(), operation.into_inner());\n      ... CollectionMetaOperations::CreateCollection(create_collection_op),\n\n[6] lib/storage/src/content_manager/toc/create_collection.rs:48-70 (perform path checks only existence / max_collections limit / alias conflict — no vectors-emptiness check).",
+      "call_chain_traced": "PUT /collections/{name} → src/actix/api/collections_api.rs create_collection: Json<CreateCollection> (serde untagged: {} fails Single(VectorParams) lacking size/distance, then matches Multi as empty BTreeMap) → CreateCollectionOperation::new validates only vector-name keys (empty map ⇒ zero iterations, no rejection) and dense/sparse name uniqueness → storage toc/create_collection.rs perform (existence/limit/alias checks only) → collection created with zero dense-vector configs. Same state is canonically reachable without any smuggling: omitting vectors triggers #[serde(default)] → VectorsConfig::default() = Multi(empty) — which is why 'vectors missing entirely' also returned 200 in boundary_01 line 24. gRPC conversion path maps missing vectors_config to Default::default() under the literal comment 'TODO(sparse): sparse or dense vectors config is required'. Contrast: JSON null matches neither untagged variant → 400 format error (boundary_01 line 21).",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "Every grep hit for the claim's keywords (vectors / VectorsConfig / empty-vector error strings) was read; no code path rejects an empty dense-vectors config in v1.18.0. The acceptance of {} is the designed serde/default path (Default and empty() constructors exist precisely for the zero-dense-vectors state used by sparse-only/payload-only collections), while the 'at least one of dense/sparse required' validation exists only as an unimplemented TODO in conversions.rs:94 — i.e., acceptance is by design, and the stricter validation the claim implicitly assumes is acknowledged as missing by the developers themselves. Both facts recorded; auditor weighs them."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — deterministic 200 across two independent scripts and two run contexts (semantic_017 time 0.196s, boundary_01 time 0.223s), identical success envelope",
+        "concurrency — single sequential request, no parallelism in either script's {} case",
+        "cache/staleness — fresh unique collection names per run (sem_vc0_{TS}), no reuse",
+        "request typo — raw request body is exactly {\"vectors\": {}} (minimal, unambiguous)"
+      ],
+      "surviving": "by-design/underspecification: {} deserializes to the designed empty-Multi state, equivalent to omitting vectors (also 200), i.e., a collection with no dense vectors; the doc types the field as Optional map-of-strings-to-objects and never forbids the degenerate empty shape, so the 'malformed' premise rests on interpreting the two documented example shapes as exhaustive. This competing explanation survives all mundane exclusions — it is the substantive question for the auditor, not an environmental artifact."
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+ "defect_id": "boundary_consistency_enum_015",
+ "endpoint": "entities+search",
+ "defect_type": "Type1",
+ "built_by": "evidence-builder",
+ "steps": {
+  "doc_verification": {
+   "result": "DOC_VERIFIED",
+   "link_reachability": "PASS",
+   "version_match": "PASS",
+   "content_consistency": "PASS",
+   "endpoint_precision": "PASS",
+   "sdk_rest_confusion": false,
+   "detail": "constraint milvus_type_entities_search_001 断言 consistencyLevel IN 5 枚举否则 1100；实测 5 个枚举值全通过、大小写/杂串/含空格/类型错误全被正确拒绝（1100/1801），错误消息逐字匹配断言文案；endpoint registry 命中 entities+search（枚举值列表也在 registry 参数中）",
+   "evidence_source": "doc"
+  },
+  "execution_evidence": {
+   "grade": "B",
+   "log_pattern": "consistencyLevel='' -> http=200 code=0 ok=True raw={\"code\":0,\"cost\":0,\"data\":[{\"distance\":1,\"id\":1}],\"topks\":[1]}（枚举外空串被接受）",
+   "secondary_observations": [
+    "consistencyLevel=None -> http=200 code=0 ok=True raw={\"code\":0,\"cost\":0,\"data\":[{\"distance\":1,\"id\":1}],\"topks\":[1]}",
+    "consistencyLevel='strong' -> code=1100（枚举校验对非空非法串有效）",
+    "consistencyLevel='STRONG'/'Bogus'/'Bounded '/'Strong; DROP'/'Eventually\\ud800' -> 全 code=1100",
+    "consistencyLevel=5 / {'$gt':''} -> code=1801 json 类型拒绝",
+    "5 个合法枚举值 Strong/Session/Bounded/Eventually/Customized -> 全 code=0（对照 PASS）"
+   ],
+   "claim_alignment": "aligned",
+   "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "非法非空串以 200+1100 正确拒绝；''/None 以 200+code:0 接受（默认值回退）"},
+   "reproducibility": "单脚本",
+   "script_error": false,
+   "triggering_scripts": ["debate_logs/boundary_consistency_enum_015.py"],
+   "evidence_source": "behavior"
+  },
+  "contract_grounding": {
+   "constraint_id": "milvus_type_entities_search_001",
+   "assertion_text_quoted": "consistencyLevel IN {Strong,Session,Bounded,Eventually,Customized} else code==1100 (message: consistencyLevel can only be [...], default: Bounded)",
+   "api_violates_assertion": false,
+   "note": "断言自身括注 'default: Bounded'——''/None 语义等价于'未指定'，走默认 Bounded；枚举校验对非空值严格执行。violates=False：空值合规于'default: Bounded' 条款。若 judge 视 REST 语义 '' 与 null 为显式传参（非省略），则可主张诊断面缺陷（Type2），但非断言违反",
+   "evidence_source": "doc"
+  },
+  "chain_trace": {
+   "chain_links": [
+    "contract: milvus_type_entities_search_001",
+    "doc: handler_v2.go:1065/1140/1473/1606 错误文案与断言逐字一致",
+    "script: boundary_consistency_enum_015.py 15 组 consistencyLevel 值",
+    "log: '' / None -> code=0；其余非法全 1100/1801"
+   ],
+   "chain_broken_at": null,
+   "break_detail": null,
+   "evidence_source": "doc+behavior"
+  },
+  "source_grounding": {
+   "grep_queries": ["convertConsistencyLevel", "consistencyLevel can only be", "ConsistencyLevel_value"],
+   "files_examined": [
+    "internal/distributed/proxy/httpserver/utils.go (convertConsistencyLevel L1654-1664)",
+    "internal/distributed/proxy/httpserver/handler_v2.go (search L1473, query L1065)"
+   ],
+   "source_excerpt": "utils.go L1654-1664:\nfunc convertConsistencyLevel(reqConsistencyLevel string) (commonpb.ConsistencyLevel, bool, error) {\n\tif reqConsistencyLevel != \"\" {\n\t\tlevel, ok := commonpb.ConsistencyLevel_value[reqConsistencyLevel]\n\t\tif !ok {\n\t\t\treturn 0, false, merr.WrapErrParameterInvalidMsg(fmt.Sprintf(\"parameter:'%s' is incorrect, please check it\", reqConsistencyLevel))\n\t\t}\n\t\treturn commonpb.ConsistencyLevel(level), false, nil\n\t}\n\t// ConsistencyLevel_Bounded default in PyMilvus\n\treturn commonpb.ConsistencyLevel_Bounded, true, nil\n}\n—— 空串显式走默认 Bounded 并置 UseDefaultConsistency=true；JSON null 反序列化为 Go \"\" 同路径。注释自证 default 语义与 PyMilvus 对齐。",
+   "call_chain_traced": "HTTP search/query -> convertConsistencyLevel: '' -> (Bounded, useDefault=true, nil) -> 请求成功 code=0；非空非法 -> WrapErrParameterInvalidMsg -> 1100",
+   "verification_outcome": "by_design_in_source",
+   "evidence_source": "source"
+  },
+  "mundane_explanation": {
+   "excluded": ["env", "concurrency", "request_typo"],
+   "surviving": null
+  }
+ }
+}

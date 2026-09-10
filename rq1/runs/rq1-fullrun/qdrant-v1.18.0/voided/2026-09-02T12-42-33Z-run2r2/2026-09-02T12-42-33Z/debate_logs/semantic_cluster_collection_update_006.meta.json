@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_collection_update_006",
+  "endpoint": "cluster+collection+update",
+  "param": "shard_key",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "metamorphic",
+  "oracle": {
+    "statement": "after create_sharding_key(K)=200 and drop_sharding_key(K)=200, cluster info stops mentioning K within 30s and recreating the SAME key K is accepted 200 - key never disappearing after an accepted drop, or recreate rejected with already-exists-class 4xx after K was observed gone, is Type4_StateLogicViolation (constraint qdrant_state_cluster_collection_update_001)",
+    "source": "docstring"
+  }
+}

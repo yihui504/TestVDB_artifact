@@ -1,0 +1,94 @@
+{
+  "defect_id": "boundary_collections_delete_02",
+  "endpoint": "DELETE /collections/{collection_name} (collections+delete)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "可达性 PASS (页面标题 'Delete a collection | Qdrant | API Reference'，版本选择器 v1.18.x；WebFetch 通道被 domain 验证拦截但 webReader 抓取成功)；版本匹配 PASS (v1.18.x vs target v1.18.0)；内容一致性 FAIL——页面仅定义 200 'Deleted' 响应，result 为 'boolean Optional' (可为 false)，全文无 404 响应定义、无 'non-existent => 404' 表述；v1.18.0 官方 OpenAPI spec (本地 .sourcedeps/qdrant/v1.18.0/openapi.json) 同样只定义 responses:{'200'}，result:{type:object, properties:{result:{type:boolean}}}，无 Collections_delete_collection_Response_404 schema。constraint 的 'DELETE missing => 404' 半边在文档中不存在——contract description 自标 '(runtime verified)' 仅覆盖 existing=>200 半边，404 半边系从 GET 端点 (其确实 runtime 404: raw_knowledge L92) 类推；端点精确性 PASS (DELETE /collections/:collection_name 与 spec paths 及 contract endpoint_registry 一致)。对照：raw_knowledge L140 Check Collection Exists 端点明确 'never 404 for missing collection (existence expressed in body)'——qdrant 惯例是用 body 表达存在性。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "DELETE #2: status=200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000081779}",
+      "secondary_observations": [
+        "DELETE #1: status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.006610741} (契约 existing=>200 半边符合)",
+        "setup create: 200 {\"result\":true,\"status\":\"ok\",\"time\":0.230522814}",
+        "跨脚本 bd01: 'DELETE missing: status=200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000076543}' 且 'GET after delete: status=404 raw={\"status\":{\"error\":\"Not found: Collection `bd01_existing_col` doesn't exist!\"}}' (证明 DELETE 时目标确实不存在，且 GET 同状态走 404)",
+        "跨脚本 bd12: '[lower] DELETE /collections/bd12_case_a -> 200 raw={\"result\":false,...}' 且 'real collection GET after lookalike delete: 200' (名字传递无笔误，真实 collection 未被误删——200 非误删所致)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "对不存在资源的 DELETE (客户端可判定状态) 以 HTTP 200 返回；响应体甚至无错误码——status:\"ok\"，仅靠 result:false 布尔区分语义。与同状态 GET 返回 HTTP 404 + error envelope 形成同库内不一致。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_collections_delete_01 (DELETE missing -> 200+result:false)",
+        "boundary_collections_delete_02 (本候选: second DELETE -> 200+result:false)",
+        "boundary_collections_delete_05 (unicode-missing/trailing-space/plus-name/reserved-aliases 4 例 -> 200+result:false)",
+        "boundary_collections_delete_12 (lower/upper/trailing-space/leading-space lookalike 4 例 -> 200+result:false)",
+        "state_collections_delete_001 (delete missing -> 200)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_collections_delete_001",
+      "assertion_text_quoted": "DELETE existing => 200; DELETE missing => 404 (description: 'deleting non-existent collection returns 404; deleting existing collection returns 200 (runtime verified)')",
+      "api_violates_assertion": true,
+      "note": "字面判定为 true：观测 DELETE missing -> HTTP 200 + result:false 与 assertion 字面 'DELETE missing => 404' 直接矛盾，且观测场景恰在 quote 约束域内 (非约束域外值)，故按 E5 自检规则如实记 violates=true，不做模糊折中。但必须同时记录：assertion 的 404 半边在 source_url 文档页与 v1.18.0 OpenAPI spec 中均无依据 (doc 层内容一致性 FAIL)，violates=true 仅是行为 vs 契约字面的冲突，契约本身缺文档授权——断链在 doc 环，终判归 chain-auditor。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_collections_delete_001 assertion 'DELETE existing => 200; DELETE missing => 404'",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection —— 页面仅定义 200 'Deleted'，result:'boolean Optional' (false 合法)，无 404 定义；OpenAPI v1.18.0 同 (responses 仅 200)",
+        "script: boundary_collections_delete_02 幂等探针——create(200) -> DELETE#1(200 result:true) -> DELETE#2(同 URL 重复 DELETE)",
+        "log: 'DELETE #2: status=200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000081779}' -> VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "contract 引用文档，但文档不包含 'missing => 404' 断言：页面与 OpenAPI spec 均只承诺 200 + result:boolean(可为 false)。契约该半边系从 GET 端点行为类推且自标 '(runtime verified)' 的只有 existing=>200 半边。行为环(script->log)自洽无断链；断点在 contract->doc 授权环。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "fn delete_collection",
+        "delete_collection (src/actix)",
+        "DeleteCollection (lib/storage/src/content_manager)",
+        "enum HttpError|NotFound (lib/api/src/http)",
+        "HttpError (src/actix/helpers.rs)",
+        "idempot.*delete|delete.*idempotent",
+        "delete.*not.*(exist|found).*(false|idempot)"
+      ],
+      "files_examined": [
+        "src/actix/api/collections_api.rs (L130-204: delete_collection handler)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (L55-109: perform_collection_meta_op 分派; L180-296: delete_collection 实现)",
+        "src/actix/helpers.rs (L52-131: process_response/Ok->200; L226-254: StorageError->HTTP 映射)",
+        "tests/consensus_tests/test_cluster_operation_coalescing.py (L1-47: 并发重复 DELETE 官方测试)",
+        "conversions.rs / snapshot_api.rs (grep 命中，grpc 转换与 snapshot 端点，非本路径)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/toc/collection_meta_ops.rs:211-296 (v1.18.0):\n\n    pub(super) async fn delete_collection(\n        &self,\n        collection_name: &str,\n    ) -> Result<bool, StorageError> {\n        let _collection_create_guard = self.collection_create_lock.lock().await;\n\n        self.alias_persistence.write().await.remove_collection(collection_name)?;\n\n        let to_delete;\n        let result;\n        let collection_path = self.get_collection_path(collection_name);\n        let safe_delete_path = self.storage_config.storage_path.join(\".deleted\");\n\n        let removed_opt = self.collections.write().await.remove(collection_name);\n        if let Some(removed) = removed_opt {\n            // ... stop/abort resharding, stop_gracefully, try_unwrap_with_timeout, safe_delete_in_tmp ...\n            result = true;\n        } else {\n            // we hold the collection_create lock to make sure no one is creating this collection\n            // otherwise we would delete its content now\n            if collection_path.exists() {\n                log::warn!(\"Collection {collection_name} is not loaded, but its directory still exists. Deleting it.\");\n                to_delete = Some(safe_delete_in_tmp(&collection_path, &safe_delete_path)?);\n            } else {\n                to_delete = None;\n            }\n\n            result = false;          // <-- collection 不存在: 显式 Ok(false)，非 Err(NotFound)\n        }\n\n        if let Some(to_delete) = to_delete {\n            tokio::task::spawn_blocking(move || { if let Err(error) = to_delete.close() { log::error!(\"Can't delete collection from disk: {error}\"); } });\n        }\n\n        Ok(result)\n    }\n\nsrc/actix/helpers.rs:61-64:  Ok(res) => HttpResponse::Ok().json(ApiResponse { result: Some(res), status: ApiStatus::Ok, ... })  // -> HTTP 200 + {\"result\":false,\"status\":\"ok\"}\nsrc/actix/helpers.rs:246:  StorageError::NotFound { .. } => http::StatusCode::NOT_FOUND  // 框架存在 404 映射，DELETE 路径未走\n\ntests/consensus_tests/test_cluster_operation_coalescing.py:12-15,43-44:\n    def delete_collection_in_loop(peer_url, collection_name):\n        while True:\n            # fails if the response is NOT successful\n            drop_collection(peer_url, collection_name)\n    ... # check that the delete processes did not fail\n    if not delete_p1.is_alive() or not delete_p2.is_alive(): raise Exception(\"Parallel delete processes failed\")  # 官方测试锁定: 重复 DELETE 持续 2xx",
+      "call_chain_traced": "actix handler #[delete(\"/collections/{collection_name}\")] (src/actix/api/collections_api.rs:160-178, 无存在性预检) -> dispatcher.submit_collection_meta_op(CollectionMetaOperations::DeleteCollection) -> perform_collection_meta_op 分派 (collection_meta_ops.rs:78-81) -> TOC::delete_collection (L211) -> self.collections.write().await.remove(name) 为 None (不存在) -> 注释解释持 create-lock 防并发创建竞态 -> result=false -> Ok(false) -> process_response (src/actix/helpers.rs:61-64) Ok 分支固定 HttpResponse::Ok() -> HTTP 200 + result:false + status:ok。与 log 主观测逐字段吻合 (result:false/status:ok/time:0.00008)。对照组: GET 不存在走 StorageError::NotFound -> helpers.rs:246 -> 404 (bd01 log 实测 GET after delete=404 证实)。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "源码显式 by-design 证据三重:(1) delete_collection 签名即 Result<bool,...>，不存在分支显式 result=false 并 Ok 返回，注释解释并发安全考量;(2) 官方集成测试 test_cluster_operation_coalescing 以两进程无限循环 DELETE 同一 collection 并断言全部请求成功——锁定重复 DELETE 必须持续 2xx 的幂等语义;(3) 框架存在 NotFound->404 映射而 DELETE 路径有意不触发。故 'DELETE missing 应 404' 的校验不是缺失(validation_absent 不成立)而是被有意实现为返回 200+result:false。claim 的 404 期望源于契约侧，非目标库承诺。终判归 chain-auditor。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (同一 Docker 实例串行请求，DELETE#1 与 #2 间无环境扰动)",
+        "concurrency (脚本单线程串行: create->DELETE#1->DELETE#2，无并发窗口)",
+        "caching_delay (bd01: delete 后 GET 立即 404，状态真实变更，非缓存假象)",
+        "request_typo (bd12: lookalike 名 GET 后真实 collection 仍在=200，证明名字传递准确；本脚本 DELETE#2 与 #1 同一变量同 URL)"
+      ],
+      "surviving": "by_design_idempotent_delete: 源码 Ok(false) + 官方 coalescing 测试锁定 + 文档 result:boolean(Optional) 允许 false——'200+result:false' 是 qdrant 对不存在 collection DELETE 的有意设计，平凡解释成立且无法排除，实质消解了 DEFECT 主张的文档基础 (契约 404 半边无文档授权)。"
+    }
+  }
+}

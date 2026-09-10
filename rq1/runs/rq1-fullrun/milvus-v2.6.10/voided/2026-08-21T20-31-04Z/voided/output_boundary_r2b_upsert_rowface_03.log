@@ -1,0 +1,11 @@
+upsert Int64 pk as string -> http=200 ok=True raw={"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[1]}}
+upsert Int64 field as string -> http=200 ok=True raw={"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[2]}}
+upsert VarChar field as int -> http=200 ok=True raw={"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[3]}}
+upsert vector as string -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: \"Syntax error at index 1: invalid char\\n\\n\\tnot-a-vector\\n\\t.^..........\\n\": invalid parameter[expected=FloatVector][actual=not-a-v
+upsert unknown extra key -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: has pass more field without dynamic schema, please check it: invalid parameter"}
+upsert null pk -> http=200 ok=False raw={"code":1804,"message":"fail to deal the insert data, error: strconv.ParseInt: parsing \"\": invalid syntax: invalid parameter[expected=Int64][actual=]"}
+readback -> ok=False raw={"code":101,"message":"failed to query: collection not loaded[collection=468545658377626513]"}
+DEFECT: upsert accepted Int64 pk as string silently (code=0)
+DEFECT: upsert accepted Int64 field as string silently (code=0)
+DEFECT: upsert accepted VarChar field as int silently (code=0)
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess / upsert type confusion)

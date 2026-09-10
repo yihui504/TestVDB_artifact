@@ -1,0 +1,49 @@
+[SETUP] Creating collection with integer payload field...
+
+[TEST 1] Control: Type-matched filter (integer = integer)
+  Response: HTTP 200
+  Count: 1
+
+[TEST 2] DEFECT: String filter value on integer field
+  Response: HTTP 200
+  Count: 0
+  Status: _safe_err(resp)
+
+============================================================
+VERDICT: DEFECT_FOUND
+Defect Type: Type1_IllegalSuccess
+Severity: P1_High
+
+Finding: Type-mismatched filter value (string on integer field) silently accepted with count=0
+
+Expected Behavior: HTTP 400 Bad Request - type mismatch validation error
+Actual Behavior: HTTP 200 OK with count=0 - silent acceptance
+
+Bug Shape: qdrant-type-coercion-type-confusion
+Reference Issue: #9373
+============================================================
+{
+  "verdict": "DEFECT_FOUND",
+  "defect_type": "Type1_IllegalSuccess",
+  "severity": "P1_High",
+  "finding": "Type-mismatched filter value (string on integer field) silently accepted with count=0",
+  "expected": "HTTP 400 Bad Request - type mismatch validation error",
+  "actual": "HTTP 200 OK with count=0 - silent acceptance",
+  "endpoint": "POST /collections/{collection}/points/count",
+  "test_case": "filter value type mismatch (string vs integer)",
+  "control_group_result": "Type-matched filter works correctly (count=1)",
+  "bug_shape": "qdrant-type-coercion-type-confusion",
+  "reference_issue": 9373,
+  "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+  "evidence": {
+    "http_status": 200,
+    "response": {
+      "result": {
+        "count": 0
+      },
+      "status": "ok",
+      "time": 0.000263758
+    },
+    "raw_text": "{\"result\":{\"count\":0},\"status\":\"ok\",\"time\":0.000263758}"
+  }
+}

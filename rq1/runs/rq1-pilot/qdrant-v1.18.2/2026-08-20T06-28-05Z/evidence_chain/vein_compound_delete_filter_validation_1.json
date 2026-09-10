@@ -1,0 +1,89 @@
+{
+  "defect_id": "vein_compound_delete_filter_validation_1",
+  "endpoint": "DELETE /collections/{collection}/points",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "OpenAPI spec exists and defines DELETE /collections/{collection_name}/points endpoint with PointsSelector schema. v1.18.2 matches. However, the spec does not explicitly document validation requirements for empty filter {} or ambiguous combinations (points + filter). Test at tests/openapi/test_optional_vectors.py shows {\"filter\": {}} is treated as valid input (assert response.ok), but this may be a test gap rather than intended behavior. No explicit documentation stating empty filter should be rejected.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[TEST 1] Empty filter {} - should reject (no condition specified) → Response: HTTP 200, Status: ok, Operation ID: 2. [TEST 2] Both points AND filter specified - should reject (ambiguous) → Response: HTTP 200, Status: ok, Operation ID: 3. [TEST 3] Valid compound filter → Response: HTTP 200 (control group)",
+      "secondary_observations": [
+        "empty_filter: expected 'HTTP 400 Bad Request - empty filter is invalid', actual 'HTTP 200 - _safe_err(resp)', finding: DEFECT",
+        "ambiguous_selector: expected 'HTTP 400 Bad Request - ambiguous selector (both points and filter)', actual 'HTTP 200 - _safe_err(resp)', finding: DEFECT",
+        "valid_compound_filter: expected 'HTTP 200 OK - valid filter', actual 'HTTP 200 - success', finding: PASS"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A (target returns 200, no business error code)",
+        "note": "Target accepts invalid requests with HTTP 200 + status:ok. No 4xx/5xx returned, no business error code in response body (operation_id returned instead). Target does not distinguish valid from invalid filter selectors."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_compound_delete_filter_validation_1.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "N/A (vein attack - no explicit constraint_id in candidates.jsonl)",
+      "assertion_text_quoted": "N/A - behavioral contract attack. Expected: 'API should reject invalid filter selectors with 400 error'. Actual: 'Returns 200 OK with operation_id, silently accepting invalid input'",
+      "api_violates_assertion": true,
+      "note": "This is a vein attack (behavioral gap). The API lacks documented assertions about empty filter or ambiguous selector validation. Test expectation is that empty filter {} and points+filter combinations should be rejected with 400, but this is based on common API design principles rather than explicit qdrant documentation.",
+      "evidence_source": "behavior"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: N/A (behavioral attack - no explicit constraint)",
+        "doc: OpenAPI spec defines endpoint but lacks validation spec",
+        "script: vein_compound_delete_filter_validation_1.py tests empty filter and points+filter combination",
+        "log: Both invalid patterns return HTTP 200 with operation_id, no rejection"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "note": "Chain is complete: execution clearly shows target accepts invalid input that should be rejected. Missing explicit documentation makes this a behavioral Type1 defect.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "PointsSelector",
+        "empty.*filter",
+        "do_delete_points",
+        "FilterSelector",
+        "impl Validate for PointsSelector"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/point_ops.rs",
+        "src/common/update.rs",
+        "src/actix/api/update_api.rs",
+        "lib/segment/src/types.rs",
+        "tests/openapi/test_delete_points.py",
+        "tests/openapi/test_optional_vectors.py"
+      ],
+      "source_excerpt": "From lib/collection/src/operations/point_ops.rs:\n\n#[derive(Debug, Deserialize, Serialize, JsonSchema)]\n#[serde(untagged, rename_all = \"snake_case\")]\npub enum PointsSelector {\n    PointIdsSelector(PointIdsList),\n    FilterSelector(FilterSelector),\n}\n\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate)]\n#[serde(rename_all = \"snake_case\")]\npub struct FilterSelector {\n    pub filter: Filter,\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub shard_key: Option<ShardKeySelector>,\n}\n\nimpl Validate for PointsSelector {\n    fn validate(&self) -> Result<(), ValidationErrors> {\n        match self {\n            PointsSelector::PointIdsSelector(ids) => ids.validate(),\n            PointsSelector::FilterSelector(filter) => filter.validate(),\n        }\n    }\n}\n\n---\n\nFrom src/common/update.rs (do_delete_points function):\n\npub async fn do_delete_points(\n    toc_provider: impl CheckedTocProvider,\n    collection_name: String,\n    points: PointsSelector,\n    internal_params: InternalUpdateParams,\n    params: UpdateParams,\n    auth: Auth,\n    hw_measurement_acc: HwMeasurementAcc,\n) -> Result<UpdateResult, StorageError> {\n    let toc = toc_provider.check_strict_mode(&points, &collection_name, params.timeout_as_secs(), &auth).await?;\n\n    let (operation, shard_key) = match points {\n        PointsSelector::PointIdsSelector(PointIdsList { points, shard_key }) => {\n            (PointOperations::DeletePoints { ids: points }, shard_key)\n        }\n        PointsSelector::FilterSelector(FilterSelector { filter, shard_key }) => {\n            (PointOperations::DeletePointsByFilter(filter), shard_key)\n        }\n    };\n    // No validation for empty filter or ambiguous selector here\n    ...\n}\n\n---\n\nFrom lib/segment/src/types.rs (Filter struct):\n\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone, PartialEq, Eq, Default, Hash)]\n#[serde(deny_unknown_fields, rename_all = \"snake_case\")]\npub struct Filter {\n    #[validate(nested)]\n    #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")]\n    pub should: Option<Vec<Condition>>,\n    #[validate(nested)]\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub min_should: Option<MinShould>,\n    #[validate(nested)]\n    #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")]\n    pub must: Option<Vec<Condition>>,\n    #[validate(nested)]\n    #[serde(default, with = \"MaybeOneOrMany\", skip_serializing_if = \"Option::is_none\")]\n    pub must_not: Option<Vec<Condition>>,\n}\n\nimpl Filter {\n    pub fn new() -> Self {\n        Filter {\n            should: None,\n            min_should: None,\n            must: None,\n            must_not: None,\n        }\n    }\n    // No validation for empty filter (all fields None)\n}",
+      "call_chain_traced": "HTTP request → actix update_api.rs (delete_points handler) → do_delete_points → match on PointsSelector → no validation for empty filter or ambiguous selector → operation proceeds → returns 200 OK",
+      "verification_outcome": "validation_absent",
+      "note": "Source code shows that PointsSelector is an untagged enum that deserializes JSON as either PointIdsList (requires 'points' field) OR FilterSelector (requires 'filter' field). Empty JSON {} matches FilterSelector with Filter::new() (all fields None). The code path shows NO validation for: (1) empty filter {} where must/must_not/should are all None, (2) ambiguous selector with both 'points' AND 'filter' fields (serde deserialization would fail but test shows it doesn't). The Validate impl on PointsSelector only validates nested structures, not semantic correctness. Filter struct has no custom validation for emptiness. do_delete_points accepts PointsSelector without checking if it's semantically valid. This is validation_absent - the code does not validate these edge cases at all.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "race",
+        "network",
+        "payload"
+      ],
+      "surviving": null,
+      "note": "Not environmental - same endpoint, same request patterns, deterministic 200 responses. Not a timing/race issue - single-threaded test execution, no concurrent operations. Not network-related - HTTP 200 indicates successful processing. The defect is in the validation logic itself (or lack thereof)."
+    }
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "boundary_cluster_recover_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (mechanized, id+quote_ok, violates=false; mechanical B=NOT_TRIGGERED so no CONFLICT) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": "approximate_by_design",
+      "constraint_category": "state",
+      "category_no_fit_reason": null,
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_state_cluster_recover_001, id+quote_ok (assertion verbatim), api_violates_assertion=false -> REFUTED; the state promise governs post-success reset semantics, but the op was refused pre-execution with zero state mutation (in-chain: count 5 intact, GET /cluster 'disabled' unchanged after the 500), so violates=false is an honest domain declaration, not a gap. B=NEUTRAL: no numeric/enum/type constraint class is engaged and no violating value was accepted (refusal-class phenomenon; HTTP-semantics tautology unmet: measured honest 5xx, not 2xx-masked); the 400-vs-500 family divergence (remove_peer bad_request in the same file) is cross-endpoint error-class divergence, not the rule-5 same-endpoint silent-acceptance shape. The surviving defect signal (undocumented 500 vs documented 200-only face, family-inconsistent error class) lives on the behavioral sibling constraint and is judged DEFECT in this same batch by boundary_cluster_recover_002/003/004 — no coverage lost.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_cluster_recover_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit is a behavioral endpoint assertion (documented 200-only disposition promise for POST /cluster/recover), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_recover_001, id+quote_ok (description field verbatim), violates=true -> CONFIRMED; the request is exactly the documented bodyless control yet returned 500 'Service internal error: Qdrant is running in standalone mode' (log: probe time 0.000231952), and the live v1.18.x page documents '200 Successful' as the only response with no mode precondition — so the 500 sits outside every documented disposition. B=NEUTRAL (no violating value accepted; refusal-class; measured honest 5xx so no 2xx-masking tautology); C=WEAK_REFUTED (deterministic typed self-describing gate, main.rs 'We don't need sender for the single-node mode' construction comment — but the 500-vs-4xx class choice is unannotated while three sibling sites classify the identical precondition bad_request->400, so not explicit by-design); D=NO_SIGNAL. Source doubt (standalone-precondition gate) recorded, not acted on — verdict kept per mechanized discipline; suggest main-process manual review of whether the 200 promise presupposes a distributed deployment.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_cluster_recover_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit is a behavioral endpoint assertion (documented 200-only disposition promise for POST /cluster/recover), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_recover_001, id+quote_ok, violates=true -> CONFIRMED; the chain's own forensics establish the 500 is input-independent (all 10 malformed bodies byte-identical to the no-body control's 500, source: handler has no body extractor), so the malformed body is only the trigger instance — the primary observation remains a 500 outside the sole documented '200 Successful' face (repo OpenAPI likewise documents only a boolean 200). B=NEUTRAL (no accepted violating value; the body is never parsed so type tautology is unobservable); C=WEAK_REFUTED (typed condition-naming gate, no intent annotation on the disposition class); D=NO_SIGNAL. Source doubt recorded, not acted on; verdict kept per mechanized discipline.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "boundary_cluster_recover_004",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit is a behavioral endpoint assertion (documented 200-only disposition promise for POST /cluster/recover), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_recover_001, id+quote_ok, violates=true -> CONFIRMED; doc face live-verified as 200-only, observed 500 standalone-mode for the 1MB/8MB/NUL probes and the no-body control alike (microsecond latencies, healthz 200 throughout). The script's declared resource-limit/DoS mechanism is disconfirmed in-chain (handler never reads the body) — but the claim's defect face (documented 200 vs observed undocumented 500) is genuinely covered, so no correspondence drift. Source grounding marked by_design_in_source scoped to the main.rs None-sender comment; the 500-vs-4xx class choice itself is unannotated and family-inconsistent (siblings use 400 'Distributed mode disabled') — source doubt recorded, not acted on; verdict kept per mechanized discipline.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_cluster_recover_001",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit is a behavioral endpoint assertion (documented 200-only disposition promise for POST /cluster/recover), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_recover_001, id+quote_ok (builder legitimately re-anchored from the empty dispatch constraint_id to the behavioral unit the fired phenomenon engages; the co-anchored state constraint's legs all passed), violates=true -> CONFIRMED — bodyless documented-form POST returned 500 'Service internal error: Qdrant is running in standalone mode' (time 0.000488066) outside the sole documented 200 face. Chain-declared doc break transcribed: the STATE unit's doc_quote ('Removes cluster metadata...') is older-doc wording absent from the live v1.18.x page — but the cited BEHAVIORAL unit's 200 face is live-verified, so the broken link does not carry the A ruling. B=NEUTRAL, C=WEAK_REFUTED (typed gate, unannotated class choice vs sibling 400s), D=NO_SIGNAL; source doubt recorded, verdict kept per mechanized discipline.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_cluster_recover_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit is a behavioral endpoint assertion (documented 200-only disposition promise for POST /cluster/recover), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_recover_001, id+quote_ok (empty dispatch constraint_id recovered from script header, both units present in contract), violates=true -> CONFIRMED — three back-to-back documented-form calls all returned deterministic 500 standalone-mode (family ['5xx'] stable, healthz 200 between each) while docs render only a 200 face (vendored OpenAPI adds only 4XX/default). All state legs passed (count==6, GET /cluster 200), so the surviving signal is purely the Type3 disposition — exactly the claimed phenomenon. Preverify sidecar WARN 'oracle_degenerate' noted as a reliability reference only (not a finding; the executed oracle and DEFECT lines are concrete). Source by_design marking is scoped to the None-sender comment; the 500-vs-4xx family split is unannotated — doubt recorded, verdict kept per mechanized discipline.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_cluster_recover_003",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (mechanized, id+quote_ok, quote verbatim from expected_behavior field) -> implied_verdict=DEFECT -> final=DEFECT"
+      },
+      "chain_broken_at": null,
+      "root_cause_if_fp": null,
+      "constraint_category": "other",
+      "category_no_fit_reason": "Violated unit is a behavioral endpoint assertion (documented 200-only disposition promise for POST /cluster/recover), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_recover_001, id+quote_ok (expected_behavior 'HTTP 200 on cluster recovery' verbatim in contract), violates=true -> CONFIRMED — mid-storm bodyless recover returned 500 standalone-mode while the writer plane was fully clean (40/40 accepted, 0 4xx/5xx/transport, final count 45==45), ruling out concurrency as the cause and isolating the same deterministic disposition deviation. The registry doc_quote drift (older-doc wording) is noted in-chain; the 200 face itself is live-verified. B=NEUTRAL, C=WEAK_REFUTED (typed gate; class choice unannotated vs sibling 400 'Distributed mode disabled'), D=NO_SIGNAL; source doubt recorded, verdict kept per mechanized discipline.",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "defect": 6,
+    "not_defect": 1,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 1, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {"approximate_by_design": 1},
+    "constraint_category_distribution": {"state": 1, "other": 6},
+    "candidate_class_distribution": {"strict_defect": 6, "exploratory_candidate": 0, "rejected": 1}
+  }
+}

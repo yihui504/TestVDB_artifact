@@ -1,0 +1,65 @@
+{
+  "defect_id": "state_collections_create_04",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation at api.qdrant.tech not reachable (domain_blocked). Contract qdrant_range_create_collection_002 asserts ef_construct in [10,1000]. State consistency test: ef_construct=0 rejected (422), but ef_construct=9 accepted (200).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: ef_construct=0 → HTTP 422 rejected; c2: ef_construct=9 → HTTP 200 accepted",
+      "secondary_observations": ["ef_construct=0 correctly rejected with validation error (minimum:4 enforced by schema)"],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx (for ef_construct=0) + HTTP 2xx (for ef_construct=9)",
+        "note": "Partial validation: ef_construct=0 rejected per OpenAPI minimum:4, but ef_construct=9 accepted despite contract requiring [10,1000]. Validation present but incorrect threshold."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_collections_create_04"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_002",
+      "assertion_text_quoted": "hnsw_config.ef_construct >= 10 AND hnsw_config.ef_construct <= 1000",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_002 (assertion: ef_construct >= 10 AND ef_construct <= 1000)",
+        "doc:OpenAPI v1.18.x schema defines ef_construct minimum:4 (partial validation)",
+        "script:PUT /collections/{name} with hnsw_config.ef_construct=0 and ef_construct=9",
+        "log:ef_construct=0 → HTTP 422 (schema minimum:4 enforced); ef_construct=9 → HTTP 200 (schema permits [4,∞), contract requires [10,1000])"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "OpenAPI schema minimum:4 provides partial validation (catches ef_construct=0) but threshold is wrong. Allows ef_construct=9 despite contract requiring >=10. Schema and contract mismatch.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["ef_construct", "validate.*hnsw", "minimum.*4"],
+      "files_examined": [
+        "lib/segment/src/index/hnsw_index/config.rs",
+        "docs/redoc/v1.18.x/openapi.json",
+        "tests/openapi/test_validation.py"
+      ],
+      "source_excerpt": "File: docs/redoc/v1.18.x/openapi.json, Lines 7902-7907\n\"ef_construct\": {\n  \"description\": \"Number of neighbours...\",\n  \"type\": \"integer\",\n  \"format\": \"uint\",\n  \"minimum\": 4  // Wrong minimum (should be 10)\n}\n\nFile: tests/openapi/test_validation.py, Line 47\n\"hnsw_config\": {\"ef_construct\": 0} → expects validation error\n\nLog shows ef_construct=0 → 422 (minimum:4 works), but ef_construct=9 → 200 (threshold too low).",
+      "call_chain_traced": "OpenAPI schema minimum:4 provides validation but with wrong threshold. ef_construct=0 triggers 422 correctly per schema, but ef_construct=9 passes validation despite violating contract >=10. No validation layer corrects threshold.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay"],
+      "surviving": "ef_construct=9 violates [10,1000] contract but accepted. Schema minimum:4 provides partial validation (catches 0) but threshold is wrong. Not by-design - test_validation.py shows strict validation expected. Contract-specified range not enforced."
+    }
+  }
+}

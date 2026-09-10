@@ -1,0 +1,34 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[SETUP] Creating collection and inserting data...
+Create collection: status=200
+Insert points: status=200
+
+[TEST 1] params.hnsw_ef = -1 (negative)
+  Response: status=400
+  OK: Properly rejected with 400
+
+[TEST 2] params.hnsw_ef = 0 (zero)
+  Response: status=200
+  POTENTIAL DEFECT: Accepted zero hnsw_ef value
+
+[TEST 3] params.hnsw_ef = 999999 (extremely large)
+  Response: status=200
+  OBSERVED: Accepted large hnsw_ef value (may be valid)
+
+[TEST 4] params.unknown_field = 'test'
+  Response: status=200
+  OBSERVED: Silently ignored unknown params field
+
+[TEST 5] params = null (type mismatch)
+  Response: status=200
+  OBSERVED: Accepted params=null
+
+[TEST 6] params = {} (empty object)
+  Response: status=200
+  OBSERVED: Accepted empty params object
+
+============================================================
+VERDICT: NO_DEFECT
+Need to review actual responses to determine DEFECT_FOUND vs NO_DEFECT
+============================================================

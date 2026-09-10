@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_peer_delete_006",
+  "endpoint": "cluster+peer+delete",
+  "param": "peer_id",
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "special_value",
+  "oracle": {
+    "statement": "malformed/encoded peer_id path segments (a%00b NUL, 123%2F456 encoded slash, %2E%2E, %E4%B8%AD, %FF invalid UTF-8, 2048-char overlong) -> DELETE /cluster/peer/{peer_id} returns 4xx each (route 404 / validation 400 both qualify); 2xx = Type1_IllegalSuccess; 5xx or parser-error leakage (panic/serde/utf/decode in body) = Type3_RuntimeFailure with /healthz rechecked; connection reset with healthy /healthz = SCRIPT_ERROR anomaly",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

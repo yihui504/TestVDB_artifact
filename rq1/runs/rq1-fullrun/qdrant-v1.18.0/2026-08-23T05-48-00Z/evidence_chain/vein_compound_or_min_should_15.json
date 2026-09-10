@@ -1,0 +1,90 @@
+{
+  "defect_id": "vein_compound_or_min_should_15",
+  "endpoint": "POST /collections/{collection_name}/points/count (+ /points/scroll, /points/query)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No constraint source_url exists (constraint_id empty - vein candidate). Supplementary live fetch of qdrant filtering docs: reachable (qdrant.tech/documentation/concepts/filtering/ redirects to /documentation/search/filtering/; WebFetch was domain_blocked, fetched via alternate web reader). Live page documents should=OR semantics ('When using should, the clause becomes true if at least one condition listed inside should is satisfied') consistent with the unsatisfiability argument, but contains NO min_should section; the version-era local extraction tmp_gen/qdrant118/concepts_filtering.txt likewise has 0 min_should mentions - min_should is exposed only via the REST/OpenAPI schema (schemars on lib/segment/src/types.rs Filter.min_should), not prose. Live page is current-version (contains v1.19.0 features: Prefix Match, Slice), not v1.18.0-pinned. Endpoints count/scroll/query are standard documented REST endpoints (scroll+filter examples on the doc page; vein meta.json lists the exact endpoint).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "min_should empty conditions min_count=1: status=200 count=10 ids=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]  (log line 3; probe() sends filter={\"min_should\":{\"conditions\":[],\"min_count\":1}} to POST /points/count exact:true and POST /points/scroll limit:100 on fresh 10-point collection vein_c15; count=10 and scroll returns ALL 10 ids = match-all)",
+      "secondary_observations": [
+        "control min_count=0 empty: status=200 count=10  (min_count=0 + empty conditions = vacuous no-op, match-all consistent)",
+        "control 2 real conds min_count=2: count=1 ids=[8] (expect [8])  (cat=a AND num>=8 -> exact intersection, correct)",
+        "control 3 real conds min_count=1: count=7 ids=[1, 2, 4, 5, 7, 8, 9] (union of cat=a and num>=8)  (OR union, correct)",
+        "query with empty min_should: status=200 n=10  (POST /points/query with same unsatisfiable filter also returns all 10)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No business error code at all: the semantically unsatisfiable client filter is accepted as HTTP 200 plain success with a FULL (wrong) result set. Stronger than the 2xx+business-code pattern - silent 2xx success on semantically invalid input. No 400/422 rejection occurred (source confirms no request-level validation exists for min_count vs conditions length)."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_compound_or_min_should_15"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No structured-contract constraint exists (constraint_id empty; no structured_contract.json in session dir; chunks.json has 0 min_should hits). Closest published normative texts: [doc, live filtering page + local era extraction concepts_filtering.txt:352] 'When using should, the clause becomes true if at least one condition listed inside should is satisfied. In this sense, should is equivalent to the operator OR.' [source, in-tree doc comment v1.18.0 lib/segment/src/index/query_estimator.rs:156-160] 'Estimate cardinality for min_should (at least min_count conditions). Returns zero immediately when min_count exceeds the number of estimations, which matches filter semantics and avoids generating impossible combinations.' [source, v1.19.0 lib/segment/src/index/query_optimization/optimized_filter.rs check()] 'Not enough conditions to match min_count -> return Ok(false)'.",
+      "api_violates_assertion": true,
+      "note": "violates=True rationale: min_count=1 means 'at least 1 of the listed conditions must match'; with zero listed conditions this is unsatisfiable, so the clause must be false for every point (generalization of the documented should='at least one' semantics). Observed: all 10/10 points returned with 200 on count/scroll/query. The codebase itself asserts this semantics three independent ways in v1.18.0 (estimator exact(0) 'matches filter semantics'; exact checker check_min_should false; live doc should semantics), and v1.19.0 rewrote the optimized path to return Ok(false) for this exact edge - so the value is NOT compliant and the constraint domain is the right one.",
+      "evidence_source": "doc+source"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: MISSING - constraint_id empty in candidates.jsonl; no structured_contract.json in session dir; chunks.json has no min_should constraint (0 grep hits). Vein candidate: hypothesis generated by the script itself (vein meta: strategy vein_compound_or, expected Type1).",
+        "doc: qdrant filtering docs (live current page + local v1.18-era extraction) document should=OR 'at least one condition ... satisfied' but contain NO min_should prose (0 mentions both); min_should exists only in the REST/OpenAPI schema generated from lib/segment/src/types.rs Filter.min_should.",
+        "script: vein_scripts/vein_compound_or_min_should_15.py verified - creates fresh 10-point collection vein_c15, sends {\"filter\":{\"min_should\":{\"conditions\":[],\"min_count\":1}}} to POST /points/count (exact:true) and /points/scroll (probe) and /points/query; 3 controls (min_count=0 vacuous; real conds min_count=2 expecting exactly [8]; real conds min_count=1 expecting union).",
+        "log: output_vein_compound_or_min_should_15.log - primary observation line 3 (status=200 count=10 all ids), controls lines 4-6 all mathematically correct, cross-endpoint line 7 (query n=10), VERDICT line 8 DEFECT_FOUND. Full log read (9 lines).",
+        "source: lib/segment/src/index/query_optimization/optimizer.rs:59-79 (v1.18.0) - guard '&& !conditions.is_empty()' silently drops the whole min_should clause when conditions is empty regardless of min_count; all-None OptimizedFilter then matches every point via check_optimized_filter None=>true. This is the executed path for scroll/count/query (struct_payload_index.rs iter_filtered_points:665-684 -> struct_filtered_context:373-388 -> optimize_filter)."
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "Broken at contract link: no structured-contract constraint covers filter.min_should (empty constraint_id; session lacks structured_contract.json; chunks.json 0 hits) - this candidate is contract-ungrounded by construction. Doc link intact but partial (min_should undocumented in prose; should-semantics inferential). Script->log link fully consistent (expected vs returned ids cross-check in script source; log line 5 'expect [8]' matches returned [8] proving correct serialization/comprehension). Source link independently confirms the mechanism and shows upstream v1.19.0 changed this exact edge to match-none.",
+      "evidence_source": "doc+behavior+source"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "min_should|MinShould (path=lib/segment/src, type=rust, v1.18.0 clone)",
+        "min_should (concepts_filtering.txt, chunks.json, all output_*.log)",
+        "fn optimize_filter (v1.19.0 lib/segment/src, locate refactor)",
+        "struct_filtered_context|check_filter\\(|iter_filtered_points|fn query_points (lib/segment/src)",
+        "conditions.is_empty (v1.18.3 / v1.19.0 optimizer guard comparison)",
+        "min_should|MinShould (lib/api/src, REST/gRPC schema)"
+      ],
+      "files_examined": [
+        "v1.18.0/lib/segment/src/types.rs (MinShould struct 3780-3788, Filter 3790-3826)",
+        "v1.18.0/lib/segment/src/payload_storage/query_checker.rs (check_filter 35-43, check_min_should 56-75)",
+        "v1.18.0/lib/segment/src/index/query_optimization/optimizer.rs (optimize_filter 39-106)",
+        "v1.18.0/lib/segment/src/index/query_optimization/optimized_filter.rs (check_optimized_filter 27-32, check_min_should 49-65)",
+        "v1.18.0/lib/segment/src/index/struct_payload_index.rs (struct_filtered_context 373-388, query_points 584-607, iter_filtered_points 665-684)",
+        "v1.18.0/lib/segment/src/index/query_estimator.rs (combine_min_should_estimations 156-169)",
+        "v1.19.0/lib/segment/src/index/struct_payload_index/read_view/optimizer.rs (optimize_filter 48-110)",
+        "v1.19.0/lib/segment/src/index/query_optimization/optimized_filter.rs (ConditionChecker::check 44-88)"
+      ],
+      "source_excerpt": "[v1.18.0 lib/segment/src/index/query_optimization/optimizer.rs:59-79 — ROOT CAUSE]\n            min_should: if let Some(MinShould {\n                conditions,\n                min_count,\n            }) = filter.min_should.as_ref()\n                && !conditions.is_empty()\n            {\n                let (optimized_conditions, estimation) = self.optimize_min_should(\n                    conditions,\n                    *min_count,\n                    payload_provider.clone(),\n                    total,\n                    hw_counter,\n                )?;\n                filter_estimations.push(estimation);\n                Some(OptimizedMinShould {\n                    conditions: optimized_conditions,\n                    min_count: *min_count,\n                })\n            } else {\n                None      // <- empty conditions: whole min_should clause silently dropped, min_count ignored\n            },\n\n[v1.18.0 lib/segment/src/index/query_optimization/optimized_filter.rs:27-32 + 49-52]\npub fn check_optimized_filter(filter: &OptimizedFilter, point_id: PointOffsetType) -> bool {\n    check_should(&filter.should, point_id)\n        && check_min_should(&filter.min_should, point_id)\n        && check_must(&filter.must, point_id)\n        && check_must_not(&filter.must_not, point_id)\n}\nfn check_min_should(...) { match min_should {\n        None => true,   // <- dropped clause => true for EVERY point\n\n[v1.18.0 lib/segment/src/types.rs:3780-3788 — no validation tying min_count to conditions]\npub struct MinShould {\n    #[validate(nested)]\n    pub conditions: Vec<Condition>,\n    pub min_count: usize,\n}\n\n[v1.18.0 lib/segment/src/index/query_estimator.rs:156-169 — codebase-internal semantics contradicts optimizer]\n/// Estimate cardinality for `min_should` (at least `min_count` conditions).\n/// Returns zero immediately when `min_count` exceeds the number of\n/// estimations, which matches filter semantics...\n    if min_count > estimations.len() {\n        return CardinalityEstimation::exact(0);\n\n[v1.19.0 lib/segment/src/index/query_optimization/optimized_filter.rs check() — upstream changed this edge to match-none]\n        let mut remaining = *min_should_count;\n        let mut min_should_iter = min_should.iter();\n        while remaining > 0 {\n            let Some(condition) = min_should_iter.next() else {\n                // Not enough conditions to match `min_count`\n                return Ok(false);\n            };",
+      "call_chain_traced": "REST Filter deserialized as types.rs Filter{min_should:Option<MinShould>} -> StructPayloadIndex::optimize_filter (optimizer.rs:59-79): '&& !conditions.is_empty()' guard drops empty-conditions min_should to None regardless of min_count -> OptimizedFilter with all four clauses None -> check_optimized_filter (optimized_filter.rs:27-32, each None=>true) matches EVERY point -> executed by iter_filtered_points full-scan branch (struct_payload_index.rs:665-684, via struct_filtered_context 373-388) which serves scroll/count/query (query_points 584-607). Schema layer: MinShould derives Validate but only nested-validates conditions; no rule that min_count <= conditions.len(), so no 400 rejection possible. Contradicting in-tree paths that evaluate the edge correctly (unsatisfiable => no match): (a) exact checker query_checker.rs:56-75 '.filter(check).take(min_count).count()==min_count' gives 0==1 => false; (b) cardinality estimator query_estimator.rs:161-169 returns exact(0) with comment 'matches filter semantics'; (c) upstream v1.19.0 rewrite (read_view/optimizer.rs:48-110 + new OptimizedFilter::check) explicitly returns Ok(false) 'Not enough conditions to match min_count' for empty conditions with min_count>=1. The v1.18.0 optimizer path is the odd one out and was changed in v1.19.0.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env - collection vein_c15 created and populated by the script itself (10 points inserted), returned ids [0..9] exactly equal inserted ids; deterministic",
+        "concurrency - sequential single-client HTTP requests, no parallel access",
+        "cache/read-staleness - same match-all result on 3 different endpoints (count/scroll/query) in the same run",
+        "request_typo/serialization - script source verified: exact payload {\"min_should\":{\"conditions\":[],\"min_count\":1}}; controls with real conditions return mathematically correct results (min_count=2 -> exactly [8]; min_count=1 -> 7-element union), proving the server parsed and evaluated real-condition min_should correctly, isolating the empty-conditions edge"
+      ],
+      "surviving": "undocumented-feature edge: min_should has zero prose documentation (live docs and v1.18-era extraction both 0 mentions), so a defender could argue 'empty conditions' is undefined behavior outside any published contract rather than a violation. Counter-evidence recorded for the auditor: v1.18.0's own estimator comment declares min_count>len => 0 'matches filter semantics'; v1.18.0's own exact checker evaluates it false; v1.19.0 changed the optimized path to match-none with an explicit code comment. Also the codebase's uniform optimizer convention of ignoring empty condition lists (should/must/must_not get the same is_empty guard) could be cited as by-design pattern - but for min_count>0 that convention contradicts the three in-tree semantics statements above."
+    }
+  }
+}

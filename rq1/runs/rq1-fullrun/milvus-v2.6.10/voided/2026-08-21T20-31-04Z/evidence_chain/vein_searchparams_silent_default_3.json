@@ -1,0 +1,78 @@
+{
+  "defect_id": "vein_searchparams_silent_default_3",
+  "endpoint": "entities+search",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "vein 自生契约 vein_searchparams_silent_default；官方约束集中 search 参数仅有 topk range（milvus_range_entities_search_001），对 searchParams.ef 无任何校验断言——契约覆盖缺口，一致性 PARTIAL。官方 SDK 文档有 ef 建议 range（[topk, dim]），未在本 contract source_url 集内。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "PASS ef_neg_silent_code0 {'code': 0, 'cost': 0, 'data': [...5 rows...]} + PASS ef_neg_same_as_default 'invalid ef silently ignored, results identical to default' — ef=-1",
+      "secondary_observations": [
+        "ef=0 / ef=16.7 / ef=true / ef=\"16\" / ef=1e12 五种非法值全部 code:0 且 PASS *_same_as_default（六种全静默替换默认）",
+        "PASS control_valid_ef code:0 — 合法 ef 基线结果相同"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "六种非法 ef 无一触发任何错误通道——比 2xx+业务码更彻底的静默（纯 200+code:0），语义参数被无声替换。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "vein_scripts/vein_searchparams_silent_default_3.py (6/6 非法值)",
+        "vein_scripts/vein_hybrid_subsearch_params_7.log 子搜索路径同模式复现"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "vein_searchparams_silent_default",
+      "assertion_text_quoted": "searchParams.params.ef 为索引语义参数，非法值（负数/0/浮点/bool/非数字字符串/超大值）应报错或至少产生可观测差异，不得静默替换为默认值",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates=True 理由：观测 6/6 非法值 code:0 且结果与默认逐位一致（same_as_default 断言全过），'不得静默替换'被全谱否定。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: vein_searchparams_silent_default（vein 自生，官方契约无 ef 断言——覆盖缺口如实记）",
+        "doc: 官方 search 相关约束可达",
+        "script: vein_searchparams_silent_default_3.py 13 断言含逐值 same_as_default 对照",
+        "log: 6 组 silent_code0 + same_as_default 原文行"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "generateSearchParams httpserver/utils.go:2076",
+        "\"ef\" internal/ pkg/ (go 层零命中——ef 校验不在 Go 侧)",
+        "search_info_ nlohmann::json::parse core/query/PlanProto.cpp",
+        "knowhere 子模块存在性 (仅 FetchContent 壳，无源码)"
+      ],
+      "files_examined": [
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go:2076-2134 (generateSearchParams 全函数)",
+        ".milvus-src-2610/internal/core/src/query/PlanProto.cpp:55-110 (SearchInfo 构造)",
+        ".milvus-src-2610/internal/core/thirdparty/knowhere/CMakeLists.txt (knowhere 为 FetchContent 外部拉取)"
+      ],
+      "source_excerpt": "// utils.go:2076-2134 generateSearchParams：仅校验 params 是 dict + 消歧（ambiguous parameter），任意 key/value（含 ef）序列化进 KeyValuePair 透传：\n\tbs, _ := json.Marshal(paramsMap)\n\tsearchParams = append(searchParams, &commonpb.KeyValuePair{Key: Params, Value: string(bs)})\n\tfor key, value := range reqSearchParams { if key != Params { searchParams = append(searchParams, ...fmt.Sprintf(\"%v\", value)) } }\n// PlanProto.cpp:63-66：search_info.search_params_ = nlohmann::json::parse(query_info_proto.search_params()); 无 ef 键校验",
+      "call_chain_traced": "handler_v2 search → generateSearchParams（无 ef 校验，序列化透传）→ proxy → segcore PlanProto.cpp SearchInfo（json 整体解析，无键白名单）→ knowhere HNSW 索引层消费 ef（外部依赖 FetchContent，本 clone 无源码）——knowhere 侧默认值/容错行为无法本地取证，如实记 not found in clone。",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "cache_delay"],
+      "surviving": null
+    }
+  }
+}

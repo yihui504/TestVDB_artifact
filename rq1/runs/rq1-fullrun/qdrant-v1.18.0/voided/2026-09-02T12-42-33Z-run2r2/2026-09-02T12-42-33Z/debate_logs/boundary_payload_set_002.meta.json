@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_set_002",
+ "endpoint": "payload+set",
+ "param": "payload",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "each of the seven malformed geo/datetime literals (string lon, missing lat, null lat, array-as-geo, impossible-calendar, space-separator, garbage) set via payload+set (wait=true query) returns 4xx (unnamed 4xx = NOTE only per R29); with all seven rejected the geo channel control matches exactly [8] and the final readback is deep-equal baseline; any 200 stops the script — byte-equal persist = Type1_IllegalSuccess, escalated to Type3_RuntimeFailure (with /healthz re-check) if the follow-on native filter or typed index create on the same field returns 5xx, or to Type4_StateLogicViolation on a silently wrong filter match set; distorted readback = Type4; transport failure = SCRIPT_ERROR with /healthz re-check (constraint qdrant_type_payload_set_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

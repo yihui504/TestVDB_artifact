@@ -1,0 +1,98 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "round": "r5",
+  "verdicts": [
+    {
+      "defect_id": "boundary_cluster_collection_update_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": "script_error",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Unit involved is a behavioral endpoint assertion (200/400/404 status-disposition promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_collection_update_001 (assertions[56], quote verbatim from description), violates=false -> REFUTED; the in-log control (existing collection bccu1b16c0b44c -> identical 400 'Format error in JSON body: data did not match any variant of untagged enum ClusterOperations') proves the ghost-name probe's 400 is body-deserialization-driven — OP_BODY {\"create_sharding_key\": {\"shard_id\": 4321}} lacks required shard_key — so the missing-collection name was never consulted. fp=both: doc content_consistency FAIL (v1.18.x page and OpenAPI shards document only the 200 response; the 404/400 clauses are ungrounded) and source validation_present (extractor 400 at src/actix/mod.rs:249-261 precedes name handling; the 404 face exists at helpers.rs:246) each independently overturn. B=NEUTRAL (no violating value accepted — proper 4xx per http_semantics; no objective class applies); C=WEAK_REFUTED (correct rejection behavior, but no explicit by-design intent evidence); D=NO_SIGNAL; chain broken at doc (transcribed, with script and log-verdict links also broken per break_detail); root cause script_error.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_cluster_collection_update_001",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "source",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "request_param_typo",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Unit involved is a behavioral endpoint assertion (200/400/404 status-disposition promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_collection_update_001 (quote verbatim from description), violates=false -> REFUTED; the log_pattern's flat body {\"operation\": \"move_shard\", \"shard_id\": 0, ...} on ghost collection s5cu1_1788373537_no_such_collection matches no variant of the untagged enum ClusterOperations (source cluster_ops.rs wrapper form {\"move_shard\": {...}} required), so the 400 'Format error...' is framework-level body rejection before collection lookup — the asserted 404 face was never exercised. fp=source: validation_present — the untagged-enum shape IS the validation the assertion's domain presupposes, and the standalone-deployment gate (consensus_state None -> 400 'Distributed mode disabled' at collections.rs:260-264, cross-log state_001 A/B) makes the 404 branch unreachable regardless of body correctness. B=NEUTRAL (no acceptance of a violating value); C=WEAK_REFUTED; D=NO_SIGNAL; chain broken at script (transcribed); root cause request_param_typo (script-side flat-body construction error).",
+      "rework_order": null
+    },
+    {
+      "defect_id": "semantic_cluster_collection_update_005",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "both",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "WEAK_REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, violates=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "script",
+      "root_cause_if_fp": "request_param_typo",
+      "constraint_category": "other",
+      "category_no_fit_reason": "Unit involved is a behavioral endpoint assertion (200-acceptance / 400 / 404 disposition promise), which none of type/range/state/resource_bound/doc_consistency expresses.",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_collection_update_001 (quote verbatim from expected_behavior), violates=false (out-of-domain: the assertion's 200 promise is scoped to VALID operations) -> REFUTED; the face1 log_pattern 400 'Format error in JSON body...' is serde correctly rejecting {\"operation\": \"create_sharding_key\", \"shard_key\": ...} — docs example '{\"abort_resharding\": {}}' and OpenAPI single-key CreateShardingKeyOperation show no 'operation' field exists — so the claim's 'legal face' premise is false. fp=both: doc (live page + OpenAPI contradict the script's body shape, which traces to raw_knowledge's flattened 'operation' extraction artifact) and source (validation_present; plus boundary_007/008 cross-logs show even correct-form bodies get 400 'Distributed mode disabled' on this standalone deployment, so 200 was unexercisable and the timeout>=1 / drop_sharding_key faces were never executed). B=NEUTRAL (nothing valid was rejected; no objective class); C=WEAK_REFUTED; D=NO_SIGNAL; chain broken at script (transcribed); root cause request_param_typo; quality flag: the chain's mundane_exclusion buckets appear inverted (the two explain-away causes sit under 'excluded', 'surviving' is null) — an auxiliary-field labeling slip that contradicts neither the core sections nor the mechanical ruling.",
+      "rework_order": null
+    },
+    {
+      "defect_id": "state_cluster_collection_update_002",
+      "verdict": "DEFECT",
+      "fp_evidence_source": null,
+      "perspective_analysis": {
+        "contract": {"verdict_A": "CONFIRMED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "NEUTRAL", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "REFUTED"},
+        "cognition": {"verdict_D": "NO_SIGNAL", "matched_pattern": null, "developer_quote": null},
+        "aggregation_applied": "verdict_A=CONFIRMED (id+quote_ok, violates=true) -> implied_verdict=DEFECT -> final=DEFECT (mechanical; source by_design doubt recorded, cannot overturn per E2 rule)"
+      },
+      "chain_broken_at": "contract",
+      "root_cause_if_fp": null,
+      "constraint_category": "type",
+      "category_no_fit_reason": null,
+      "candidate_class": "strict_defect",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_type_cluster_collection_info_001 (type_constraints[14], assertion quoted verbatim), violates=true -> CONFIRMED -> DEFECT (mechanical): the grade-A log_pattern shows the baseline GET /collections/{name}/cluster returning 200 with five of the six asserted members present and resharding_operations absent, reproduced by 6 scripts (family precedent: r4 ruled the same phenomenon DEFECT on this same constraint for semantic_cluster_collection_info_002 / state_cluster_collection_info_001). Doubt recorded, not applied: source by_design_in_source (types.rs:340 '// TODO(resharding): remove this skip when releasing resharding' above #[serde(skip_serializing_if)]; grpc face always-present empty repeated field per conversions.rs:1559-1563) and doc PARTIAL (v1.18.x OpenAPI marks the member nullable/not-required — the contract 'contains' reading over-claims), so this is flagged for main-process manual contract review per the E2 mechanized rule. B=NEUTRAL (a missing optional response member fits no objective constraint class); C=REFUTED (explicit intent evidence in source, cannot overturn A); D=NO_SIGNAL (maintainer priorities like 'cluster communication over single-node correctness' are don't-care dimensions — confidence annotation only); chain broken at contract (transcribed: dispatch constraint_id empty, the script-declared behavioral/state faces show zero violations — the battery was all clean 4xx — and the verdict grounds in the type info constraint by substitution).",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "defect": 1,
+    "not_defect": 3,
+    "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 0, "source": 1, "both": 2, "behavior": 0},
+    "root_cause_distribution": {"script_error": 1, "request_param_typo": 2},
+    "constraint_category_distribution": {"other": 3, "type": 1},
+    "candidate_class_distribution": {"strict_defect": 1, "exploratory_candidate": 0, "rejected": 3}
+  }
+}

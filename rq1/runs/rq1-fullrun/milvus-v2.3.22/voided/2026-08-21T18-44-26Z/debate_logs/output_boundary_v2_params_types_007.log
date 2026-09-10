@@ -1,0 +1,8 @@
+[params={'level': 'not-a-number-str'}] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field SearchReqV2.params of type float64"}
+[params={'level': None}] http=200 body={"code":200,"data":[]}
+[params={'level': [1, 2]}] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal array into Go struct field SearchReqV2.params of type float64"}
+[params={'level': {'nested': 1}}] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal object into Go struct field SearchReqV2.params of type float64"}
+[params={'level': True}] http=200 body={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal bool into Go struct field SearchReqV2.params of type float64"}
+[numeric control] http=200 body={"code":200,"data":[]}
+DEFECT: params={'level': None}: Type1_IllegalSuccess (non-numeric accepted)
+VERDICT: DEFECT_FOUND

@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_overwrite_006",
+ "endpoint": "payload+overwrite",
+ "param": "payload",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "type",
+ "oracle": {
+  "statement": "each of the six type-confused bodies (payload omitted / payload=[] / payload=\"city\" / payload=42 / payload=null / points=\"1\", all on an existing collection with wait=true query) returns 4xx with the confused parameter named in the error (silent or unnamed 4xx = Type2_PoorDiagnostics); any 200 is a defect — readback shows payload state changed = Type4_StateLogicViolation (type-confused body executed a destructive overwrite), payloads deep-equal baseline = Type1_IllegalSuccess (invalid value accepted); 5xx/transport = Type3_RuntimeFailure with /healthz re-check; all six rejected leaves the payloads deep-equal baseline at the final readback (constraint qdrant_behavioral_payload_overwrite_001: \"invalid input returns 400\")",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

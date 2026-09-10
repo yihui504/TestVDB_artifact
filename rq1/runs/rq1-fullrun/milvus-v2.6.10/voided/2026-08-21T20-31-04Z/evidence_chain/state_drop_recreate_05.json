@@ -1,0 +1,72 @@
+{
+  "defect_id": "state_drop_recreate_05",
+  "endpoint": "collections+drop",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint milvus_state_collections_drop_001 断言 'drop succeeds from any load state / atomic, 无 alias 前置条件'；但实现 rootcoord/drop_collection_task.go:61-67 存在显式 alias 前置拒绝——契约断言与源码实现直接矛盾（契约声称的行为在实现中不存在）。source_url handler_v2.go 可达；矛盾点如实记录：契约错或实现错由 auditor 裁定。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "drop: {\"code\":65535,\"message\":\"unable to drop the collection [stt_recr_05] because it has associated aliases [stt_recr_05_alias], please remove all aliases before dropping the collection\"}",
+      "secondary_observations": [
+        "drop after alias removal: {\"code\":0,\"data\":{}} — 移除 alias 后同集合 drop 成功（前置条件因果确认）",
+        "drop alias-bound target2: {\"code\":65535,...associated aliases [stt_recr_05_alias]...} — 第二阶段独立复现",
+        "recreate 后 alias alter -> CLS2 {\"code\":0} 且 alias describe 正确指向 stt_recr_05_b；query via rebound alias {\"code\":0,\"data\":[{\"id\":100}]}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200 + code:65535 泛化码承载业务前置条件失败；无专用 1xxx 错误码。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/state_drop_recreate_05.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_state_collections_drop_001",
+      "assertion_text_quoted": "drop is atomic and does not require release first; drop succeeds from any load state",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates=True 理由：断言声称 drop 无前置条件（atomic, from any load state）；观测显示存在 alias 前置条件且失败返回泛化 65535——断言声称的行为（无条件成功）被观测否定，且源码有显式拒绝分支。断言域覆盖 drop 端点本身，非错引。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_state_collections_drop_001 'drop succeeds from any load state'",
+        "doc: source_url handler_v2.go 可达，但契约断言与同 clone 内 rootcoord 实现矛盾",
+        "script: state_drop_recreate_05.py 两 phase 独立触发 alias 关联 drop",
+        "log: 两处 65535 'associated aliases' 原文行"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "契约断言（atomic 无前置）与实现源码 drop_collection_task.go:61-67（alias 前置拒绝）内容一致性 FAIL——契约声称的行为在源码与运行观测中均不存在，断链在 doc/content 层。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "\"associated aliases\" internal/ pkg/",
+        "drop_collection_task.go 全文",
+        "ListAliasesByID rootcoord"
+      ],
+      "files_examined": [
+        ".milvus-src-2610/internal/rootcoord/drop_collection_task.go:40-80 (alias 检查 + 拒绝分支)"
+      ],
+      "source_excerpt": "// internal/rootcoord/drop_collection_task.go:58-67\n\t// meta cache of all aliases should also be cleaned.\n\taliases := t.meta.ListAliasesByID(ctx, collMeta.CollectionID)\n\n\t// Check if all aliases have been dropped.\n\tif len(aliases) > 0 {\n\t\terr = fmt.Errorf(\"unable to drop the collection [%s] because it has associated aliases %v, please remove all aliases before dropping the collection\", t.Req.GetCollectionName(), aliases)\n\t\tlog.Ctx(ctx).Warn(\"drop collection failed\", zap.String(\"database\", t.Req.GetDbName(), zap.Error(err))\n\t\treturn err\n\t}",
+      "call_chain_traced": "handler_v2 drop → rootcoord dropCollectionTask.Execute → ListAliasesByID > 0 → 裸 fmt.Errorf（非 merr 错误，无专用码）→ HTTP 层 Code() 回落 65535。前置拒绝是显式设计代码（注释 'Check if all aliases have been dropped'），非偶然路径。",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo"],
+      "surviving": "缺陷实质=契约与实现矛盾（契约断言过期/错误）+ 泛化错误码；alias 前置本身在源码中 by-design，矛盾归属留 auditor"
+    }
+  }
+}

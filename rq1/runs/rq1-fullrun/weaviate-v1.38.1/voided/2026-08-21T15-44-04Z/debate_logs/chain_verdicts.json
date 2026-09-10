@@ -1,0 +1,556 @@
+{
+ "auditor": "chain-auditor",
+ "target": "weaviate",
+ "version": "v1.38.1",
+ "self_check": "PASS",
+ "verdicts": [
+  {
+   "defect_id": "boundary_sharding_desiredCount_001",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    }
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "desiredCount=-1/-100 返 200 且 readback None（phantom）；源码 validate() 仅查 key/strategy/function，0/1.5 对照 422 证通道存在。机械 A=CONFIRMED。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_sharding_desiredCount_dos_002",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    }
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "desiredCount=100000 无上限校验致容器挂起（Type3）；config.go L42 DesiredVirtualCount 乘法放大，validate() 无该字段校验。机械 A=CONFIRMED。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_hnsw_dynamicEfMin_004",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    }
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "min=200/max=100 verbatim 持久化直接违反 min<=max 断言；同 validate() 对 maxConnections 422 证明选择性缺失。机械 A=CONFIRMED。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_hnsw_dynamic_ef_cross_1",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: 机械 B 未触发，LLM 兜底 B=CONFIRMED（dynamicEfMin/Max 搜索宽度计数参数，负值/逆序配对违反计数下界）→ final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "引文格式不匹配致 A=NEUTRAL，但行为证据同 004（stored min=500 max=100 verbatim 200，对照组 422）+源码 validate() 逐行证实 DynamicEF 零校验。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_flatSearchCutoff_005",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    }
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "-1 与 10^10 verbatim 200（validate() 无该字段检查）；字符串 '100' 违反 type=integer 被静默丢弃归 0 而非 4xx。机械 A=CONFIRMED。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_replicationFactor_003",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "CONFIRMED",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "类型恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    }
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "文档键 replicationFactor 任意值（含 float/str/-1）全部 200 静默丢生 factor=1；别名键 factor=3 却 422——同域两键校验不对称。机械 A=CONFIRMED。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_gql_limit_negative_009",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: 机械 B=CONFIRMED（limit=-1 计数负值 200 返全部行）→ final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "负 limit GraphQL 返全部、REST 返 200 空体；REST get.go 错误文案自证负值应报错。pagination.go L40 负值特判疑为 nearXXX 距离搜索设计，但无条件吞掉普通 Get 且 REST 空体畸形——源码疑义记 D 锚点方向，机械 B=CONFIRMED 不改判。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_bm25_params_007",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: 机械 B=CONFIRMED → final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "同一 ValidateConfig：cleanupIntervalSeconds=-1 走 422、10^12 走 200 verbatim，0 静默归一 60——同函数校验不对称源码逐行证实。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_hnsw_EF_006",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: 机械 B=CONFIRMED → final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "EF=-1/0/10^9 全 200 无校验（validate() 对 EF 零检查），大写键合法值 64 也被静默丢弃——校验缺席为主观测。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_nearVector_certainty_010",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "HTTP语义恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: 机械 B=CONFIRMED → final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "certainty 1.5/-0.5、distance -2.0/5.0 全 200 静默，过滤被静默放松/收紧；REST 侧现成 validateCertaintyOrWeight [0,1] 未挂 GraphQL 路径。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_distance_metric_enum_008",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "枚举闭集"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: LLM 兜底 B=CONFIRMED（distance 枚举闭集：'invalid'/空串 200 归一 cosine）→ final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "非法枚举被静默归一 cosine 而非 422（vectorIndexType 对照 422 证拒绝机制存在）；合法值 dot 也被替换为 cosine——度量丢失，OptionalStringFromMap 非字符串静默 nil 机制源码证实。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_shard_status_echo_2",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "枚举闭集"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: LLM 兜底 B=CONFIRMED（status 域 READY/READONLY：NOT_A_STATUS 200 回显；不存在分片应 404）→ final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "bogus 分片+非法状态 200 逐字回显，真分片同值 422 对照；index.go:3549 !isOwner return nil 静默吞+handler 回显请求体，双缺陷点逐行定位，四环齐。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_bm25_motm_negative_3",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: LLM 兜底 B=CONFIRMED（最少匹配 token 数为计数参数，-5 违反下界）→ final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "-5 静默接受且等价 unset（search_segment.go:146 termsMatched>=负值恒真返全部）；GraphQL 层与执行层双点证实零校验。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_vector_null_empty_013",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "类型恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: 机械 B=CONFIRMED（类型恒真）→ final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "主观测 [1,2] int 向量 200 接受但读回 vector=null（接受/丢失分裂）；strvec 对照 400 证类型检查通道存在。读回 null 丢弃点未定位仅降置信不改判。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "boundary_property_type_confusion_012",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "类型恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: 机械 B=CONFIRMED（null int 200 vs 同批 5 种类型错误全 422）→ final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "int 属性 null 独被 200 接受（properties_validation 对 nil 跳过检查）——类型恒真违规明确；空 id 换随机 UUID 为文档化 by-design，仅次现象不计入。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "state_batch_04",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "数值下界"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: LLM 兜底 B=CONFIRMED（committed 20 vs reported 21 计数分裂+COUNT 通道不计入）→ final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "auto-schema 建类 by-design，surviving 的是计数分裂：committed 20 ≠ reported 21 且 Aggregate COUNT 不计入该对象——三通道状态矛盾违反 object_count_001。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_schema_silent_drop_nested_4",
+   "verdict": "DEFECT",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "CONFIRMED",
+     "objective_constraint_class": "类型恒真"
+    },
+    "behavioral": {
+     "verdict_C": "CONFIRMED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: LLM 兜底 B=CONFIRMED（布尔配置错位静默丢弃+运行时 IsNull 报错）→ final=DEFECT"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "错位键 200 无警告+null-state 未生效+IsNull 运行时报错（prop_value_pairs.go:349 守卫）；同类错位场景（virtualPerPhysical 更新）有显式报错，沉默非一致设计。",
+   "rework_order": null
+  },
+  {
+   "defect_id": "vein_replication_async_input_drop_5",
+   "verdict": "NEEDS_MORE_EVIDENCE",
+   "fp_evidence_source": null,
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "WEAK_REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: B=NEUTRAL（废弃输入键静默容忍非四类客观约束，factor 键校验完备）+ D=NO_SIGNAL + C=WEAK_REFUTED → final=NEEDS_MORE_EVIDENCE"
+   },
+   "chain_broken_at": null,
+   "root_cause_if_fp": null,
+   "rationale": "asyncEnabled 在 v1.38.1 是纯输出派生字段（factor>1），输入丢弃为结构性 by-design，零 deprecation 告警仅诊断弱信号；非客观约束违规且无认知锚点，保守回炉。",
+   "rework_order": {
+    "type": "EVIDENCE_GAP",
+    "claim": "输入 asyncEnabled=true 被接受（200）但 readback 为 false（输入被丢弃）",
+    "chain_covered": "机制定位：asyncEnabled 非输入字段，restcompat wrapper 派生输出",
+    "drift_point": "缺用户面影响证据：文档/SDK 是否引导用户设 asyncEnabled 输入",
+    "targeted_instruction": "补证：检索 weaviate 文档/客户端 SDK 是否曾将 asyncEnabled 作为输入键暴露；有则补 deprecated-input-silent-drop 断言锚，无则判 NOT_DEFECT(fp=source)"
+   }
+  },
+  {
+   "defect_id": "boundary_sharding_virtualPerPhysical_014",
+   "verdict": "NOT_DEFECT",
+   "fp_evidence_source": "behavior",
+   "perspective_analysis": {
+    "contract": {
+     "verdict_A": "NEUTRAL",
+     "agent_suspects_contract_wrong": false
+    },
+    "physical": {
+     "verdict_B": "NEUTRAL",
+     "objective_constraint_class": "无"
+    },
+    "behavioral": {
+     "verdict_C": "REFUTED"
+    },
+    "cognition": {
+     "verdict_D": "NO_SIGNAL",
+     "matched_pattern": null,
+     "developer_quote": null
+    },
+    "aggregation_applied": "GREY_ZONE: B=NEUTRAL（主观测未触达目标字段，无违规观测）+ D=NO_SIGNAL + C=REFUTED（字段错配确证）→ final=NOT_DEFECT"
+   },
+   "chain_broken_at": "script",
+   "root_cause_if_fp": "request_param_typo",
+   "rationale": "脚本发送键 virtualPerPhysicalShards，服务端字段为 virtualPerPhysical（json tag+grep 零命中）——非法值从未触达校验路径，200 是未知字段丢弃+默认 128。源码确无该字段范围校验属潜在缺陷，但需正确字段名的行为证据。",
+   "rework_order": null
+  }
+ ],
+ "summary": {
+  "total": 19,
+  "defect": 16,
+  "not_defect": 1,
+  "needs_more_evidence": 2,
+  "fp_evidence_source_distribution": {
+   "doc": 0,
+   "source": 0,
+   "both": 0,
+   "behavior": 1
+  },
+  "root_cause_distribution": {
+   "request_param_typo": 1
+  }
+ }
+}

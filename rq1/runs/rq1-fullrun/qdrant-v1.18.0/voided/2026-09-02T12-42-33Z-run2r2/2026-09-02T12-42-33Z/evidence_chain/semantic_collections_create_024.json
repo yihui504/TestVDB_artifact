@@ -1,0 +1,95 @@
+{
+  "defect_id": "semantic_collections_create_024",
+  "endpoint": "collections+create (PUT /collections/{collection_name})",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: WebFetch to api.qdrant.tech returned domain_blocked; fallback fetch via web reader succeeded and returned the full page (title 'Create a collection | Qdrant | API Reference') - PASS with tool-path disclosure. Version: URL is the versioned /v-1-18-x/ api-reference, matching target v1.18.0 on major.minor - PASS. Content: the page's own words document shard_number as 'uint or null Optional ... For auto sharding: Number of shards in collection. - Default is 1 for standalone, otherwise equal to the number of nodes - Minimum is 1' (and the custom-sharding variant likewise 'Minimum is 1') with NO documented maximum - the constraint's factual premise is verbatim-consistent; the graceful-handling obligation itself is the contract's own declared inferred tier, and no source_verified flag contradicts it. Endpoint: endpoint_registry entry 'collections+create' PUT with the same source_url and doc_quote 'Successful operation returns 200 with CollectionOperationResponse...' matches the page and the request actually sent - PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[create scc024_1788393554_ext_uint32max shard_number=4294967295] status=0 elapsed=3.2s raw=('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+      "secondary_observations": [
+        "semantic_collections_create_024: [transport-extremeA_uint32max] /healthz probe status=0 raw=('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')) - service dead immediately after the spec-legal request",
+        "semantic_collections_create_024: [legal 1] created and echoed - echo oracle proven / [legal 8] created and echoed - echo oracle proven (positive direction of the same code path held: 200 + describe echo of shard_number)",
+        "semantic_collections_create_024: [drop scc024_1788393554_legal_1] status=0 / [drop ..._legal_8] status=0 - even cleanup failed because the service was already dead; the script's extremeB(1000) leg and post-condition never ran because the forbidden outcome short-circuited at extremeA",
+        "boundary_collections_create_013 (rest face, value-domain comparison): [shard_number=0] status=422 raw={\"status\":{\"error\":\"Validation error in JSON body: [shard_number: value 0 invalid, must be 1 or larger]\"},\"time\":0.0} - the LOWER bound is validated; no upper-bound rejection exists anywhere in the matrix",
+        "boundary_collections_create_013 (rest face): [shard_number=-1] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: invalid value: integer `-1`, expected u32 at line 1 column 65\"},\"time\":0.0} - serde u32 domain edge",
+        "boundary_collections_create_013 (rest face): [shard_number=1000 (spec-legal, resource strain)] status=0 raw=HTTPConnectionPool(host='127.0.0.1', port=6333): Read timed out. (read timeout=120) followed by [healthz attempt 1] status=200 raw=healthz check passed - feasible large values degrade but do not kill",
+        "boundary_collections_create_013 (rest face): [shard_number=100000 (spec-legal, resource strain)] status=0 Read timed out + [healthz attempt 1] status=200 - service survives; only the uint32 max kills",
+        "boundary_collections_create_013 (rest face): [shard_number=4294967295 (spec-legal, resource strain)] status=0 raw=('Connection aborted.', RemoteDisconnected(...)) + [healthz attempt 1..3] status=0 - independent reproduction with 3 liveness attempts",
+        "state_collections_create_015 (rest face): [B create shard=4294967295] status=0 raw=('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')) + [liveness B-transport] healthz status=0 + [liveness B-transport-retry] healthz status=0 - third independent reproduction after a healthy create/upsert/count baseline",
+        "healthz_poll_r11.log (session-level liveness poller, independent of any script): 07:38:28 through 07:47:54 healthz=000 continuously, first 200 again at 07:50:26 - roughly a 12-minute outage requiring external restart (no self-recovery)",
+        "face_unavailable: replication_factor (same uint/min-1/no-max family, lib/api/build.rs:128) was not probed at extremes by any script this session; the gRPC/tonic face was not probed either - comparison lines for those faces are honestly not available and were not fabricated"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No HTTP response of any class was returned - the server closed the connection mid-request (RemoteDisconnected) because the process died; strictly worse than 2xx-masking. The input was decidable (spec-legal per the documented uint/min-1/no-max contract), so the graceful options were 200-completed, 4xx-rejected, or descriptive-5xx; none occurred."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["semantic_collections_create_024", "boundary_collections_create_013", "state_collections_create_015"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_resource_shard_number_001",
+      "assertion_text_quoted": "inferred: any spec-legal shard_number (>= 1, no documented max) must be completed, rejected with an error, or fail with a documented service error - never crash the service",
+      "api_violates_assertion": true,
+      "note": "violates-declaration self-check: the claim's phenomenon is service death on a spec-legal value, and 4294967295 lies inside the quote's constraint domain (>= 1, no documented max - doc-verified verbatim), so violates=true is sound with no constraint-citation change. None of the three allowed dispositions occurred: not completed (no 200), not rejected (no 4xx), no documented service error (no response at all; process death confirmed by /healthz dead ~12 min).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_resource_shard_number_001 present in structured_contract.json resource_bound_constraints (type=resource_bound, level=system, evidence_tier=inferred, endpoint=collections+create, source_url=https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection)",
+        "doc: source_url fetched successfully; page documents shard_number 'uint or null Optional ... Minimum is 1' with no maximum - the constraint's premise is the documentation's own wording",
+        "script: semantic_collections_create_024.py header declares constraint_ids: qdrant_resource_shard_number_001; sends PUT /collections/{name} with shard_number=1 and 8 (positive legs, both 200 + echo) then 4294967295 (spec-legal extreme)",
+        "log: output_semantic_collections_create_024.log records DEFECT_FOUND (Type3_RuntimeFailure) - uint32max request closed the connection and /healthz died; corroborated by 2 sibling logs and the session healthz poller"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "note": "The candidates.jsonl dispatch entry carried constraint_id=\"\" (empty); the constraint linkage was recovered from the triggering script's own header (constraint_ids field), which points unambiguously at qdrant_resource_shard_number_001 - a dispatch-metadata omission, not a chain break.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "must be 1 or larger",
+        "shard_number.*range|range.*shard_number",
+        "all_local",
+        "MAX_SHARD|max_shard|shard_number.*(limit|max)|too many shards",
+        "async fn create_collection",
+        "0..shard_number|for shard_id"
+      ],
+      "files_examined": [
+        "lib/api/build.rs (lines 90-169, validation registry for generated CreateCollection types)",
+        "lib/collection/src/operations/validation.rs (lines 1-110 + test section, range-error message rendering)",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (lines 35-84, standalone distribution path)",
+        "lib/storage/src/content_manager/toc/create_collection.rs (lines 20-147, full create path incl. NonZeroU32 check)",
+        "lib/collection/src/shards/collection_shard_distribution.rs (lines 1-35, all_local)",
+        "lib/collection/src/collection/mod.rs (lines 100-204, Collection::new shard-building loop)"
+      ],
+      "source_excerpt": "lib/api/build.rs:113-154 (validation registry - generated types get validate attributes here):\n    fn configure_validation(builder: Builder) -> Builder {\n        builder\n            .validates(&[\n                (\"GetCollectionInfoRequest.collection_name\", \"length(min = 1, max = 255), custom(function = \\\"common::validation::validate_collection_name_legacy\\\")\"),\n                (\"CreateCollection.collection_name\", \"length(min = 1, max = 255), custom(function = \\\"common::validation::validate_collection_name\\\")\"),\n                (\"CreateCollection.hnsw_config\", \"\"),\n                ...\n                (\"CreateCollection.shard_number\", \"range(min = 1)\"),            // <-- min-only: NO max\n                (\"CreateCollection.replication_factor\", \"range(min = 1)\"),\n                (\"CreateCollection.write_consistency_factor\", \"range(min = 1)\"),\n                ...\n                (\"WalConfigDiff.wal_retain_closed\", \"range(min = 1)\"),\n                (\"OptimizersConfigDiff.deleted_threshold\", \"range(min = 0.0, max = 1.0)\"),\n                (\"VectorParams.size\", \"range(min = 1, max = 65536)\"),           // <-- contrast: an explicit max IS applied where intended\n\nlib/storage/src/content_manager/toc/collection_meta_ops.rs:50-62 (standalone path passes the user value straight through):\n                        ShardingMethod::Auto => {\n                            let collection_defaults = self.storage_config.collection.as_ref();\n\n                            let number_of_peers = 1; // this is a single node deployment\n                            let suggested_shard_number = collection_defaults\n                                .map(|config| config.get_shard_number(number_of_peers));\n\n                            let shard_number = operation\n                                .create_collection\n                                .shard_number\n                                .or(suggested_shard_number);\n                            CollectionShardDistribution::all_local(shard_number, self.this_peer_id)\n                        }\n\nlib/collection/src/shards/collection_shard_distribution.rs:13-20 (materializes the full distribution in memory):\nimpl CollectionShardDistribution {\n    pub fn all_local(shard_number: Option<u32>, this_peer_id: PeerId) -> Self {\n        Self {\n            shards: (0..shard_number.unwrap_or(1))\n                .map(|shard_id| (shard_id, HashSet::from([this_peer_id])))\n                .collect(),\n        }\n    }\n\nlib/storage/src/content_manager/toc/create_collection.rs:132-136 (the only shard_number guard on the create path is the zero check):\n        let collection_params = CollectionParams {\n            vectors,\n            sparse_vectors,\n            shard_number: NonZeroU32::new(shard_number)\n                .ok_or_else(|| StorageError::bad_input(\"`shard_number` cannot be 0\"))?,\n\nlib/collection/src/collection/mod.rs:130-131,142-164 (one replica set built per shard entry):\n        for (shard_id, mut peers) in shard_distribution.shards {\n            let is_local = peers.remove(&this_peer_id);\n            ...\n            let replica_set = ShardReplicaSet::build(\n                shard_id, shard_key.clone(), name.clone(), this_peer_id, is_local, peers, ...)\n            .await?;",
+      "call_chain_traced": "PUT /collections/{name} -> CreateCollection schema struct, validation = #[validate(range(min = 1))] ONLY (lib/api/build.rs:127; the 422 for shard_number=0 seen in boundary_013 is this attribute rendering through validation.rs) -> TableOfContent::perform_collection_meta_op (collection_meta_ops.rs:57-61: standalone, number_of_peers=1, user shard_number passed through unchanged) -> CollectionShardDistribution::all_local materializes an AHashMap over (0..4294967295), each entry carrying a heap-allocated HashSet (collection_shard_distribution.rs:16-18) -> create_collection.rs:135 NonZeroU32 zero-check only -> Collection::new loops one ShardReplicaSet::build per entry (collection/mod.rs:130). At uint32 max the distribution map alone is on the order of hundreds of GB before a single shard exists; the process dies mid-request (RemoteDisconnected, /healthz 000 ~12 min until external restart). No upper-bound constant or check exists anywhere in lib/ (grep MAX_SHARD/max_shard/too many shards: zero validation hits), and no comment/docstring declares the absence intentional; contrast VectorParams.size which carries an explicit max=65536 in the same registry, and the boundary_013 matrix which shows feasible extremes (1000, 100000) timing out with healthz alive - only uint32 max is fatal.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "concurrency race (single sequential request; deterministic across 3 independent scripts + session poller)",
+        "request-parameter typo (positive legs shard_number=1/8 on the identical code path returned 200 with exact describe echo; the extreme value was intentional and doc-legal)",
+        "cache delay / eventual consistency (transport-level process death, not a stale-read phenomenon)",
+        "harness artifact (outage independently confirmed by the session-level healthz poller, 07:38:28-07:50:26, outside any script)"
+      ],
+      "surviving": "container memory ceiling is the proximate kill mechanism for the allocation storm - on hypothetically unbounded hardware uint32-max might degrade from 'death' to an unresolvable hang, but that alternative is itself a forbidden outcome under the same assertion (neither completed, rejected, nor a documented error), so the violation survives at any memory size"
+    }
+  }
+}

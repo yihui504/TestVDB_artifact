@@ -1,0 +1,21 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] index-delete keys present=['delete_index', 'create_index', 'describe_collection', 'drop_collection']
+[setup upsert] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.00866853}
+[setup create index f_kw] status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.546761567}
+[describe gate] describe status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":6,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_constr
+[delete#1 existing] DELETE index status=200 raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.292474702}
+[delete#1 existing] envelope ok: result.status='completed' operation_id=5
+[describe after delete#1] describe status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":6,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_constr
+[delete#2 non-existent] DELETE index status=200 raw={"result":{"operation_id":7,"status":"completed"},"status":"ok","time":0.302451537}
+[delete#2 non-existent] envelope ok: result.status='completed' operation_id=7
+[delete#3 non-existent] DELETE index status=200 raw={"result":{"operation_id":9,"status":"completed"},"status":"ok","time":0.294262662}
+[delete#3 non-existent] envelope ok: result.status='completed' operation_id=9
+[delete never-indexed payload field] DELETE index status=200 raw={"result":{"operation_id":11,"status":"completed"},"status":"ok","time":0.288955021}
+[delete never-indexed payload field] envelope ok: result.status='completed' operation_id=11
+[delete never-existing field] DELETE index status=200 raw={"result":{"operation_id":13,"status":"completed"},"status":"ok","time":0.289604271}
+[delete never-existing field] envelope ok: result.status='completed' operation_id=13
+[summary] 5 delete legs on live collection; describe residue=none; defects=0
+idempotent delete lifecycle complete: existing-index delete 200 with describe-clean readback; 2nd/3rd repeat deletes, never-indexed payload field and never-existing field all 200 — unconditional idempotent-200 promise holds on every leg - NO_DEFECT
+[cleanup] dropped bidl1_1788435238_28088_col
+VERDICT: NO_DEFECT

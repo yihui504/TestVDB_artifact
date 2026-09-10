@@ -1,0 +1,71 @@
+{
+  "defect_id": "semantic_search_score_threshold_type_confusion_001",
+  "endpoint": "points+search",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "OpenAPI schema lists score_threshold as type [number, null]. Version 1.19.x documented at https://api.qdrant.tech/api-reference/points/search-points.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Test: string '0.5' -> status=400; Test: integer 1 -> status=200",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 (N/A) | HTTP 4xx (400 for string)",
+        "note": "Integer 1 incorrectly accepted (HTTP 200), string '0.5' correctly rejected (HTTP 400)"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_search_score_threshold_type_confusion_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_search_points_001",
+      "assertion_text_quoted": "score_threshold type: [number, null] per OpenAPI spec at structured_contract.json:318-325",
+      "api_violates_assertion": true,
+      "note": "API accepts integer 1 for score_threshold when schema specifies number type (float). Integer accepted as valid score_threshold, bypassing type check.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: score_threshold type is [number, null] in OpenAPI schema",
+        "script: sends integer value 1 as score_threshold",
+        "log: HTTP 200 returned - request accepted",
+        "analysis: type coercion allows integer where number expected"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "Chain complete - type validation failure at API boundary allows integer through",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "score_threshold.*type",
+        "validate.*number",
+        "JsonSchema.*score"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs",
+        "lib/collection/src/operations/types.rs"
+      ],
+      "source_excerpt": "structured_contract.json:318-325: \"name\": \"score_threshold\", \"type\": [\"number\", \"null\"], \"required\": false, \"source\": \"openapi (mechanical backfill)\"",
+      "call_chain_traced": "REST API schema allows numeric types via JSON schema validation. Integer 1 passes JSON 'number' check (JSON allows integers as numbers). No explicit rejection of integer vs float.",
+      "verification_outcome": "by_design_in_source",
+      "note": "JSON Schema treats integer as subset of number (RFC 8259). score_threshold=1 is valid per JSON spec even if OpenAPI documents 'number'. This is by-design behavior of JSON schema validation, not a validation bug.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "json_schema_type_coercion"
+    }
+  }
+}

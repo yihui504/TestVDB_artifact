@@ -1,0 +1,95 @@
+{
+  "defect_id": "boundary_points_query_noid_order_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: the contract's own preflight record (structured_contract.json endpoint_registry, points+query entry, verified_at 2026-09-02T12:34:08.403684+00:00, source_status 'reachable'; no separate doc_preflight.json sidecar exists) gives PASS; my own WebFetch re-check of https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points returned domain_blocked (network restriction, not treated as FAIL) and the doc content was instead verified against the byte-identical artifact the vendor serves from this URL: the repo's own docs/redoc/v1.18.x/openapi.json at clone HEAD. Version: URL segment v-1-18-x matches target 1.18.0 on major.minor; the repo redoc file self-reports info.version 'v1.18.x' - PASS. Content: the doc's verbatim sentence is 'Query to perform. If missing without prefetches, returns points ordered by their IDs.' (openapi.json QueryRequest.query and Prefetch.query; generated from lib/api/src/rest/schema.rs:557/763/1230 doc comments); this verbatimly supports the assertion's second clause (id-order when query missing WITHOUT prefetches, behaviorally confirmed 200) but the assertion's first clause 'query may be omitted when prefetches are present' appears nowhere in the doc (grep 'query may be omitted' = zero hits repo-wide) - the only doc-side support for it is schema-optionality (query absent from QueryRequest's required list, nullable) - PARTIAL. Endpoint: endpoint_registry lists points+query -> POST with exactly the URL the script called - PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "leg N4 prefetch-only (query omitted with prefetch) -> status=400 | raw: {\"status\":{\"error\":\"Bad request: A query is needed to merge the prefetches. Can't have prefetches without defining a query.\"},\"time\":0.000094258} (request: POST /collections/{coll}/points/query, body {\"prefetch\":[{\"query\":{\"nearest\":[0.5,0.25,0.125,0.0625]},\"limit\":3}],\"limit\":3})",
+      "secondary_observations": [
+        "same log leg N1 no-query no-prefetch limit=5 -> status=200, ids [1, 2, 3, 4, 5] ascending (the doc-verbatim half of the assertion is FULFILLED: query missing without prefetches returns points ordered by id)",
+        "same log leg N3 query=null limit=5 -> status=200, identical id sequence (explicit null == missing)",
+        "sibling script semantic_points_query_id_order_001 log: 'F5 query omitted with prefetch -> status=400' with the identical error text - second independent script, same endpoint, same pattern",
+        "live re-run (rest single face, localhost:6333 qdrant v1.18.0, container self-reported commit db3fca32 = clone HEAD tag v1.18.0): R2 body {\"prefetch\":[{\"query\":{\"nearest\":[0.5,0.25,0.125,0.0625]},\"limit\":3}],\"limit\":3} -> http=400 raw={\"status\":{\"error\":\"Bad request: A query is needed to merge the prefetches. Can't have prefetches without defining a query.\"},\"time\":0.000032623} - byte-stable reproduction; control R1 {\"limit\":3} -> http=200 ids [1,2,3] ascending",
+        "comparative rest batch face: R4 POST /collections/{c}/points/query/batch {\"searches\":[{\"prefetch\":[{\"query\":{\"nearest\":[...]},\"limit\":3}],\"limit\":3}]} -> http=400 same error text; control R5 {\"searches\":[{\"limit\":3}]} -> http=200 id-ordered - same omitted query, disposition differs only by prefetch presence, identically on the batch face",
+        "comparative rest groups face: R6 POST /collections/{c}/points/query/groups {\"group_by\":\"city\",\"limit\":2,\"prefetch\":[...]} -> http=400 same error text",
+        "comparative rest nested level: R7 outer query present but inner PrefetchQuery query-missing-with-prefetch -> http=400 same error text (the query-required rule applies recursively at every prefetch level)",
+        "comparative same-family parameter (rest single): R3 {\"score_threshold\":10} with query absent -> http=400 'Bad request: A query is needed to use the score_threshold. Can't have score_threshold without defining a query.' - same-family 'requires a query' validation, different message",
+        "grpc face: face_unavailable for live probing (no gRPC client in this sandbox); source-traced only - src/tonic/api/query_common.rs:774-792 convert_query_points_from_grpc funnels into the same CollectionQueryRequest::validation, so the gRPC face is expected to reject identically (source-level inference, not an observation)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The server classifies prefetch-only as a proper client error (400 with a specific message), not a 2xx mask; the rejected request is nevertheless schema-valid per the v1.18.x OpenAPI (query is not in any required list and is nullable). Note for the classifier: the log's verdict label reads 'Type1_IllegalSuccess' while the observed phenomenon is a REJECTION of a request the contract deems omissible (over-rejection flavor, not illegal-acceptance); the label is recorded verbatim, its aptness is the auditor's call."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["boundary_points_query_noid_order_001", "semantic_points_query_id_order_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_004",
+      "assertion_text_quoted": "query absent and no prefetch: the response contains points ordered by id (documented behavior)",
+      "api_violates_assertion": true,
+      "note": "violates-declaration self-check: against the assertion text as written, the N4 400 directly contradicts clause 1 ('query may be omitted when prefetches are present') and clause 2 is fulfilled (N1/N2/N3 and R1/R5 return 200 with id-ordered points), so violates=true w.r.t. the contract text; however the violated clause is not doc-verbatim - it is the contract writer's inference from schema-optionality - which is recorded as the doc-layer break in chain_trace, not silently absorbed here. The dispatch entry's constraint_id field was empty; the id was recovered from the script header (constraint_ids: qdrant_behavioral_points_query_004) and the attack text.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_query_004 exists in structured_contract.json (structured_contract.json:7319-7331, category behavioral, level endpoint, source_url api.qdrant.tech/v-1-18-x/api-reference/query/query-points); dispatch constraint_id field empty, recovered from script header line 9",
+        "doc: v1.18.x OpenAPI (repo artifact docs/redoc/v1.18.x/openapi.json, generated from lib/api/src/rest/schema.rs:557) QueryRequest.query = 'Query to perform. If missing without prefetches, returns points ordered by their IDs.'; query not required, nullable; NO sentence anywhere stating query may be omitted when prefetches are present",
+        "script: debate_logs/boundary_points_query_noid_order_001.py leg N4 sends POST /collections/{coll}/points/query with body {\"prefetch\":[{\"query\":{\"nearest\":[0.5,0.25,0.125,0.0625]},\"limit\":3}],\"limit\":3}",
+        "log: output_boundary_points_query_noid_order_001.log leg N4 -> status=400 with 'Bad request: A query is needed to merge the prefetches. Can't have prefetches without defining a query.'; script labels it DEFECT_FOUND (Type1_IllegalSuccess)"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The break is specific to the clause the N4 claim depends on: the claim says 'the documented query-absent request was REJECTED', but the cited documentation never documents query-absence-with-prefetch as legal. The v1.18.x OpenAPI sentence scopes the missing-query promise to 'without prefetches' (a deliberate qualifier present at both QueryRequest.query and Prefetch.query levels and in the generating schema.rs doc comments), and 'query may be omitted when prefetches are present' has zero textual occurrence in the doc, the proto, or the repo. The only doc-side support is structural (query not in a required list, nullable => prefetch-only is schema-valid). The other chain links are intact and the phenomenon itself is deterministic and face-uniform, so this is a grounding gap for the claim's premise, not an execution gap. Secondary doc-internal tension worth the auditor's attention: the gRPC proto (lib/api/src/grpc/proto/points.proto:1079/1103) carries the OLDER unqualified phrasing 'Query to perform. If missing, returns points ordered by their IDs.' without the 'without prefetches' scoping that the REST OpenAPI has.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "A query is needed to merge the prefetches",
+        "ordered by their ids (case-insensitive)",
+        "query may be omitted",
+        "without prefetches",
+        "message QueryRequest|prefetch|ordered (points.proto)",
+        "async fn query_points",
+        "CollectionQueryRequest"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/universal_query/collection_query.rs",
+        "tests/openapi/test_query.py",
+        "lib/api/src/rest/schema.rs",
+        "docs/redoc/v1.18.x/openapi.json",
+        "lib/api/src/grpc/proto/points.proto",
+        "src/actix/api/query_api.rs",
+        "src/tonic/api/query_common.rs",
+        "lib/storage/src/content_manager/toc/point_ops.rs"
+      ],
+      "source_excerpt": "lib/collection/src/operations/universal_query/collection_query.rs:742-753 (clone HEAD db3fca32 = running server's self-reported commit):\n    pub fn validation(\n        query: &Option<Query>,\n        using: &VectorNameBuf,\n        prefetch: &[CollectionPrefetch],\n        score_threshold: Option<ScoreType>,\n    ) -> CollectionResult<()> {\n        // Check no prefetches without a query\n        if !prefetch.is_empty() && query.is_none() {\n            return Err(CollectionError::bad_request(\n                \"A query is needed to merge the prefetches. Can't have prefetches without defining a query.\",\n            ));\n        }\n\ntests/openapi/test_query.py:23-44 (maintainer-authored OpenAPI conformance test):\ndef test_query_validation(collection_name):\n    response = request_with_validation(\n        api=\"/collections/{collection_name}/points/query\",\n        method=\"POST\",\n        path_params={\"collection_name\": collection_name},\n        body={\n            \"prefetch\": [\n                {\n                    \"query\": {\n                        \"recommend\": {\n                            \"positive\": [1]\n                        },\n                    }\n                }\n            ]\n        },\n    )\n    assert not response.ok, response.text\n    assert response.json()[\"status\"][\"error\"] == (\"Bad request: A query is needed to merge the prefetches. Can't have prefetches without defining a query.\")\n\nlib/api/src/rest/schema.rs:550-559 (source of the published OpenAPI text):\npub struct QueryRequestInternal {\n    /// Sub-requests to perform first. If present, the query will be performed on the results of the prefetch(es).\n    #[validate(nested)]\n    #[serde(default, with = \"MaybeOneOrMany\")]\n    #[schemars(with = \"MaybeOneOrMany<Prefetch>\")]\n    pub prefetch: Option<Vec<Prefetch>>,\n\n    /// Query to perform. If missing without prefetches, returns points ordered by their IDs.\n    #[validate(nested)]\n    pub query: Option<QueryInterface>,",
+      "call_chain_traced": "REST: actix route POST /collections/{collection_name}/points/query (src/actix/api/query_api.rs:32 query_points) -> convert_query_request_from_rest -> Dispatcher/TableOfContent (lib/storage/src/content_manager/toc/point_ops.rs query/query_batch take CollectionQueryRequest) -> CollectionQueryRequest::try_into_shard_request (collection_query.rs:680) -> Self::validation (collection_query.rs:685) which rejects !prefetch.is_empty() && query.is_none(); validation recurses at every level because try_into_shard_prefetch (collection_query.rs:572-604) re-invokes CollectionQueryRequest::validation for each nested prefetch (line 576, recursion at 600-604) - this is why the nested case R7 also 400s. gRPC: src/tonic/api/query_common.rs:774 query(QueryPoints) -> convert_query_points_from_grpc (line 791-792) -> the same CollectionQueryRequest -> the same validation, so REST single/batch/groups (all live-observed 400) and gRPC (source-traced) are face-uniform.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env/service health: /healthz alive; deterministic 400 across two scripts and an independent live re-run on the same container",
+        "version skew: running server self-reports commit db3fca327851e360c521065649e0f65a57fe7d3c, identical to clone HEAD (tag v1.18.0) used for forensics",
+        "script error/request typo: script exit code 0; the N4 request was re-sent byte-equivalent live and reproduced the exact 400 body",
+        "concurrency race: single sequential request per leg"
+      ],
+      "surviving": null
+    }
+  }
+}

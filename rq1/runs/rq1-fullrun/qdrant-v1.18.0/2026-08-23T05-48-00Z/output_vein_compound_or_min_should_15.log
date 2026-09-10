@@ -1,0 +1,8 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+min_should empty conditions min_count=1: status=200 count=10 ids=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+control min_count=0 empty: status=200 count=10
+control 2 real conds min_count=2: count=1 ids=[8] (expect [8])
+control 3 real conds min_count=1: count=7 ids=[1, 2, 4, 5, 7, 8, 9] (union of cat=a and num>=8)
+query with empty min_should: status=200 n=10
+VERDICT: DEFECT_FOUND — min_should with conditions=[] and min_count=1 returns the ENTIRE collection (match-all) on count/scroll/query, though it is unsatisfiable; real-condition controls behave correctly, isolating the empty-conditions edge

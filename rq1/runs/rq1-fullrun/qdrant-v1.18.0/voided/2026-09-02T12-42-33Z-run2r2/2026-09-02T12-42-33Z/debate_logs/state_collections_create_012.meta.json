@@ -1,0 +1,12 @@
+{
+ "defect_id": "state_collections_create_012",
+ "endpoint": "collections+create",
+ "param": "strict_mode_config.max_resident_memory_percent",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "count_consistency",
+ "oracle": {
+  "statement": "max_resident_memory_percent 1 and 100 creates -> 200 with readback echoing each; 0 and 101 -> 400/422 + describe 404 (2xx = Type1; residue = Type4)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,18 @@
+create: 200 {"code":0,"data":{}}
+insert: 200 {"code":0,"cost":0,"data":{"insertCount":100,"insertIds":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,
+load: 200 {"code":0,"data":{}}
+flush: 200 {"code":0,"data":{}}
+count after insert: 100 {"code":0,"data":{"rowCount":100}}
+query rows: 100 {"code":0,"cost":0,"data":[{"id":0},{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":6},{"id":7},{"id":8},{"id":9},{"i
+truncate: 200 {"code":0,"data":{}}
+count after truncate: 0 {"code":0,"data":{"rowCount":0}}
+query rows after truncate: 0 {"code":0,"cost":0,"data":[]}
+
+schema after truncate: [None, None]
+load state after truncate: 200 {"code":0,"data":{"loadProgress":100,"loadState":"LoadStateLoaded"},"message":""}
+re-insert 10: 200 {"code":0,"cost":0,"data":{"insertCount":10,"insertIds":[0,1,2,3,4,5,6,7,8,9]}}
+visible rows (Strong) after re-insert: 10
+rowCount after truncate+reinsert+flush: 0
+truncate nonexistent: 200 {"code":100,"message":"collection not found[database=default][collection=no_such_coll_xyz]"}
+DEFECT: ('get_stats rowCount=0 while Strong query sees 10 rows after post-truncate flush', '{"code":0,"data":{"rowCount":0}}')
+VERDICT: DEFECT_FOUND

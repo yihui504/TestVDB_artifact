@@ -1,0 +1,61 @@
+{
+  "defect_id": "vein_replication_gt_shards_collections_create_1",
+  "endpoint": "PUT /collections/{collection}",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "FAIL",
+      "version_match": "N/A",
+      "content_consistency": "N/A",
+      "endpoint_precision": "N/A",
+      "sdk_rest_confusion": false,
+      "detail": "source_url not specified - this is an R3 vein mining candidate without documented contract grounding. Cannot verify documentation claims about replication_factor vs shard_number semantic constraints.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "VERDICT: DEFECT_FOUND; EVIDENCE: replication_factor(2) > shard_number(1) returns 200 (semantically invalid); CONTROL: Valid combinations (2>1, 1=1) correctly return 200; TEST_RESPONSE: {\"result\":true,\"status\":\"ok\",\"time\":0.24345609}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx (业务成功码)",
+        "note": "API returns HTTP 200 with result=true for semantically invalid config (replication_factor > shard_number), treating it as successful collection creation"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_replication_gt_shards_collections_create_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint_id specified - this is an R3 vein mining candidate without contract grounding",
+      "api_violates_assertion": true,
+      "note": "No constraint to verify against - defect based on distributed system semantics (replication_factor cannot exceed shard_number as replicas are per-shard)",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:N/A (no constraint_id)", "doc:N/A (no source_url)", "script:vein_replication_gt_shards_collections_create_1.py", "log:DEFECT_FOUND - replication_factor=2 > shard_number=1 returned 200"],
+      "chain_broken_at": "contract",
+      "break_detail": "No constraint_id exists for this R3 candidate - contract grounding is missing",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["replication_factor", "shard_number", "create_collection", "CollectionParams"],
+      "files_examined": [
+        "lib/storage/src/content_manager/toc/create_collection.rs (lines 105-111: replication_factor and write_consistency_factor extraction)",
+        "lib/storage/src/content_manager/toc/create_collection.rs (lines 132-147: CollectionParams construction with NonZeroU32 validation)"
+      ],
+      "source_excerpt": "From lib/storage/src/content_manager/toc/create_collection.rs:\nlet replication_factor = replication_factor\n    .or_else(|| collection_defaults_config.and_then(|i| i.replication_factor))\n    .unwrap_or_else(|| config::default_replication_factor().get());\n\nlet write_consistency_factor = write_consistency_factor\n    .or_else(|| collection_defaults_config.and_then(|i| i.write_consistency_factor))\n    .unwrap_or_else(|| config::default_write_consistency_factor().get());\n\nlet collection_params = CollectionParams {\n    vectors,\n    sparse_vectors,\n    shard_number: NonZeroU32::new(shard_number)\n        .ok_or_else(|| StorageError::bad_input(\"`shard_number` cannot be 0\"))?,\n    sharding_method,\n    on_disk_payload: on_disk_payload.unwrap_or(self.storage_config.on_disk_payload),\n    replication_factor: NonZeroU32::new(replication_factor).ok_or_else(|| {\n        StorageError::bad_input(\"`replication_factor` cannot be 0\".to_string())\n    })?,\n    write_consistency_factor: NonZeroU32::new(write_consistency_factor).ok_or_else(\n        || StorageError::bad_input(\"`write_consistency_factor` cannot be 0\".to_string()),\n    )?,\n    read_fan_out_factor: None,\n    read_fan_out_delay_ms: None,\n};",
+      "call_chain_traced": "1. REST request to PUT /collections/{collection} with shard_number=1, replication_factor=2\n2. create_collection extracts replication_factor and write_consistency_factor from request (lines 105-111)\n3. CollectionParams constructed (lines 132-147) with validation:\n   - shard_number must be NonZeroU32 (rejects 0)\n   - replication_factor must be NonZeroU32 (rejects 0)\n   - write_consistency_factor must be NonZeroU32 (rejects 0)\n4. No cross-field validation exists: code does NOT check if replication_factor <= shard_number\n5. No semantic validation that replicas cannot exceed shards (each shard can have N replicas, but total replicas across all shards logically shouldn't exceed total shard count)\n6. Result: collection creation succeeds with invalid configuration replication_factor=2 > shard_number=1",
+      "verification_outcome": "validation_absent",
+      "note": "Source confirms validation_absent: CollectionParams validation only checks that shard_number, replication_factor, and write_consistency_factor are non-zero (via NonZeroU32::new()). No cross-field validation enforces replication_factor <= shard_number or write_consistency_factor <= replication_factor. These semantic constraints are not checked during collection creation.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "by_design"],
+      "surviving": "Type1_IllegalSuccess - API accepts replication_factor=2 when shard_number=1, which is semantically invalid in distributed systems (replicas exist per-shard, so replication_factor cannot logically exceed shard_number)"
+    }
+  }
+}

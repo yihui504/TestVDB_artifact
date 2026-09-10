@@ -1,0 +1,68 @@
+{
+ "defect_id": "semantic_loadcycle_03",
+ "endpoint": "entities+search",
+ "defect_type": "Type4",
+ "built_by": "evidence-builder",
+ "steps": {
+  "doc_verification": {
+   "result": "DOC_VERIFIED",
+   "link_reachability": "PASS",
+   "version_match": "PASS",
+   "content_consistency": "PASS",
+   "endpoint_precision": "PASS",
+   "sdk_rest_confusion": false,
+   "detail": "state_constraint milvus_state_collections_load_002（search 未加载 => 101）与 behavioral_contract milvus_bc_load_release_001（场景 'create -> search (not loaded)' 期望 code 101）双锚定；errors.go:66 定义 101",
+   "evidence_source": "doc"
+  },
+  "execution_evidence": {
+   "grade": "A",
+   "log_pattern": "P1 search-not-loaded: 200 {\"code\":0,\"cost\":0,\"data\":[]}（期望 101）",
+   "secondary_observations": [
+    "create: 200 {\"code\":0,\"data\":{}}（前置：drop 尝试 -> create quick dim=8，无 load 调用）",
+    "脚本在 P1 判定 code!=101 后 sys.exit(1)，P2（load 后 search）与 P3（double load）未执行——log 无后续行"
+   ],
+   "claim_alignment": "aligned",
+   "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "状态违规以 200+code:0 空结果静默呈现"},
+   "reproducibility": "多脚本稳定触发",
+   "script_error": false,
+   "triggering_scripts": ["debate_logs/semantic_loadcycle_03.py", "debate_logs/boundary_load_double_021.log（同观测互证：search before load code=0）"],
+   "evidence_source": "behavior"
+  },
+  "contract_grounding": {
+   "constraint_id": "milvus_state_collections_load_002",
+   "assertion_text_quoted": "state!=Loaded AND (search|query) => code==101",
+   "api_violates_assertion": true,
+   "note": "脚本时序核对：COL='sem_load_03' 前置 drop、create 后直接 search，脚本内无 load——无 prior 时序污染；返回 code=0 违反断言。与 boundary_load_double_021 为同一观测的独立双脚本（不同集合名、独立创建路径）",
+   "evidence_source": "doc"
+  },
+  "chain_trace": {
+   "chain_links": [
+    "contract: milvus_state_collections_load_002 + milvus_bc_load_release_001",
+    "doc: errors.go:66 ErrCollectionNotLoaded=101 存在",
+    "script: semantic_loadcycle_03.py L38-46（P1）",
+    "log: P1 search-not-loaded: 200 code=0 data=[]"
+   ],
+   "chain_broken_at": null,
+   "break_detail": null,
+   "evidence_source": "doc+behavior"
+  },
+  "source_grounding": {
+   "grep_queries": ["ErrCollectionNotLoaded", "ErrCollectionLoaded", "Results.TopK == 0", "retry.Handle"],
+   "files_examined": [
+    "pkg/util/merr/errors.go (L66/L69)",
+    "internal/distributed/proxy/httpserver/handler_v2.go (search L1533 TopK==0 分支; wrapperProxyWithLimit L486-549)",
+    "internal/proxy/shardclient/lb_policy.go (L111-117 retry on NotLoaded)",
+    "internal/proxy/impl.go (L1976-1991 get_load_state 路径)",
+    "internal/querycoordv2/services.go (L230-237)"
+   ],
+   "source_excerpt": "handler_v2.go L1532-1534:\n\t\tif searchResp.Results.TopK == int64(0) {\n\t\t\tHTTPReturn(c, http.StatusOK, gin.H{HTTPReturnCode: merr.Code(nil), HTTPReturnData: []interface{}{}, HTTPReturnCost: cost})\n—— 未加载集合的 search 在 2.6.10 下到达该分支（TopK=0 空结果），HTTP 层无条件映射为 code:0；101（ErrCollectionNotLoaded）定义于 errors.go:66 且在 get_load_state/lb_policy 中使用，但 search REST 路径未将其透出。详见同观测链 boundary_load_double_021。",
+   "call_chain_traced": "同 boundary_load_double_021（同一机制的第二独立触发脚本）",
+   "verification_outcome": "by_design_in_source",
+   "evidence_source": "source"
+  },
+  "mundane_explanation": {
+   "excluded": ["env", "concurrency", "cache_delay", "prior_script_pollution（脚本前置 drop + 专属集合名 sem_load_03）"],
+   "surviving": null
+  }
+ }
+}

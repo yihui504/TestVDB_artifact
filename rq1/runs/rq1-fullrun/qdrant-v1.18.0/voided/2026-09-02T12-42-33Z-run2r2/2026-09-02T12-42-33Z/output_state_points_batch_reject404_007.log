@@ -1,0 +1,14 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['batch_update', 'get_points_by_ids']
+[CTL batch 2 ops] status=200 raw={"result":[{"operation_id":1,"status":"completed"},{"operation_id":2,"status":"completed"}],"status":"ok","time":0.008020918}
+[CTL get [611]] status=200 raw={"result":[{"id":611,"payload":{"n":611,"tag":"x"}}],"status":"ok","time":0.00022879}
+[CTL] OK: poison-free batch fully committed
+[F-fail-last batch 3 ops] status=400 raw={"status":{"error":"Wrong input: Not existing vector name error: no_such_vector"},"time":0.009463842}
+[F-readback get [612]] status=200 raw={"result":[{"id":612,"payload":{"n":612,"tag":"x"}}],"status":"ok","time":0.000198011}
+[G-fail-first batch 2 ops] status=400 raw={"status":{"error":"Wrong input: Not existing vector name error: no_such_vector"},"time":0.004102722}
+[G-readback get [611, 613]] status=200 raw={"result":[{"id":611,"payload":{"n":611,"tag":"x"}}],"status":"ok","time":0.000235731}
+[G] OK: rejected batch applied nothing
+[disposition] fail-last=400 fail-first=400
+DEFECT: (F) batch REJECTED with 400 yet the prefix ops on 612 are durably visible (payload {'n': 612, 'tag': 'x'}) — rejected request committed state (no rollback, position-dependent partial commit — run2r#1-R3 defect class) — Type4_StateLogicViolation
+VERDICT: DEFECT_FOUND

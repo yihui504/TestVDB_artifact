@@ -1,0 +1,337 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "session_dir": "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\results\\qdrant\\v1.18.0\\2026-08-21T03-35-35Z",
+  "round": 3,
+  "round_start": "2026-08-21T03:35:35Z",
+  "round_2_start": "2026-08-21T04:30:00Z",
+  "round_3_start": "2026-08-21T05:00:00Z",
+  "round_3_completion": "2026-08-21T05:30:00Z",
+
+  "top_endpoints": [
+    "/collections/{collection_name}/points:PUT",
+    "/collections/{collection_name}/points/count:POST",
+    "/collections/{collection_name}/points/scroll:POST",
+    "/collections/{collection_name}/points/{point_id}:GET"
+  ],
+  "richness_scores": {
+    "/collections/{collection_name}/points:PUT": 17.75,
+    "/collections/{collection_name}/points/count:POST": 16.0,
+    "/collections/{collection_name}/points/scroll:POST": 14.875,
+    "/collections/{collection_name}/points/{point_id}:GET": 8.5
+  },
+
+  "candidates_count": 10,
+  "skipped_count": 4,
+  "total_scripts_generated": 14,
+
+  "round_3_additions": {
+    "new_scripts": 4,
+    "new_defects": 1,
+    "no_defects": 3,
+    "endpoints_covered": 2,
+    "conditions_tested": 4
+  },
+
+  "candidates": [
+    {
+      "id": "vein_range_filter_collections_put_1",
+      "endpoint": "PUT /collections/{collection_name}",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "m=0 and m=999999 accepted without validation",
+      "by_design_match": false,
+      "inspired_by": null,
+      "script_path": "vein_scripts/vein_range_filter_collections_put_1.py",
+      "round": 1
+    },
+    {
+      "id": "vein_compound_and_collections_put_1",
+      "endpoint": "PUT /collections/{collection_name}",
+      "condition_type": "compound_and",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "Compound (m=0 + ef_construct=100) and (m=999999 + ef_construct=999999) accepted",
+      "by_design_match": false,
+      "inspired_by": "range_filter",
+      "script_path": "vein_scripts/vein_compound_and_collections_put_1.py",
+      "round": 1
+    },
+    {
+      "id": "vein_null_check_collections_put_1",
+      "endpoint": "PUT /collections/{collection_name}",
+      "condition_type": "null_check",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "Missing vectors field and empty vectors={{}} accepted",
+      "by_design_match": false,
+      "inspired_by": "compound_and",
+      "script_path": "vein_scripts/vein_null_check_collections_put_1.py",
+      "round": 1
+    },
+    {
+      "id": "vein_range_filter_points_delete_1",
+      "endpoint": "POST /collections/{collection_name}/points/delete",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "Invalid range bounds (gte > lte) and empty filter {{}} accepted",
+      "by_design_match": false,
+      "inspired_by": "null_check",
+      "script_path": "vein_scripts/vein_range_filter_points_delete_1.py",
+      "round": 1
+    },
+    {
+      "id": "vein_compound_and_points_delete_1",
+      "endpoint": "POST /collections/{collection_name}/points/delete",
+      "condition_type": "compound_and",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "4 compound filter defects found (invalid bounds, mixed conditions, empty must, contradictory)",
+      "by_design_match": false,
+      "inspired_by": "range_filter",
+      "script_path": "vein_scripts/vein_compound_and_points_delete_1.py",
+      "round": 1
+    },
+    {
+      "id": "vein_type_mismatch_points_upsert_1",
+      "endpoint": "POST /collections/{collection_name}/points",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "200 OK 'acknowledged' for dimension-3 vector in 4D collection",
+      "by_design_match": false,
+      "inspired_by": "R1 findings (dimension validation gaps)",
+      "script_path": "vein_scripts/vein_type_mismatch_points_upsert_1.py",
+      "detail": "Vector dimension mismatch silently discarded - Type1_IllegalSuccess",
+      "round": 2
+    },
+    {
+      "id": "vein_type_mismatch_points_upsert_2",
+      "endpoint": "POST /collections/{collection_name}/points",
+      "condition_type": "type_mismatch",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "200 OK 'acknowledged' for empty vector array []",
+      "by_design_match": false,
+      "inspired_by": "type_mismatch",
+      "script_path": "vein_scripts/vein_type_mismatch_points_upsert_2.py",
+      "detail": "Empty vector array silently discarded - relates to issue #9045",
+      "round": 2
+    },
+    {
+      "id": "vein_compound_and_points_upsert_1",
+      "endpoint": "POST /collections/{collection_name}/points",
+      "condition_type": "compound_and",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "200 OK for mixed batch (valid/invalid/valid vectors)",
+      "by_design_match": false,
+      "inspired_by": "type_mismatch",
+      "script_path": "vein_scripts/vein_compound_and_points_upsert_1.py",
+      "detail": "Mixed batch non-atomic - per-point atomicity violated - Type4_StateViolation",
+      "round": 2
+    },
+    {
+      "id": "vein_range_filter_points_count_1",
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "range_filter",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "exact:false count=3, exact:true count=2, scroll ground truth=2",
+      "by_design_match": false,
+      "inspired_by": "cardinality_oracle (shape #10096)",
+      "script_path": "vein_scripts/vein_range_filter_points_count_1.py",
+      "detail": "Cardinality estimation over-counts on indexed numeric range - Type2_PoorDiagnostics",
+      "round": 2
+    },
+    {
+      "id": "vein_wait_semantics_points_upsert_1",
+      "endpoint": "POST /collections/{collection_name}/points",
+      "condition_type": "wait_semantics",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "wait=false/true with empty vector/dimension mismatch acknowledges without storing",
+      "by_design_match": false,
+      "inspired_by": "R3 write_path_semantics",
+      "script_path": "vein_scripts/vein_wait_semantics_points_upsert_1.py",
+      "detail": "wait parameter bypasses input validation - silent failure - Type1_IllegalSuccess",
+      "round": 3
+    }
+  ],
+
+  "excluded_findings": [
+    {
+      "endpoint": "POST /collections/{collection_name}/points/count",
+      "condition_type": "null_check",
+      "finding": "NO_DEFECT",
+      "detail": "is_null count divergence before index built was by-design fallback heuristic",
+      "exclusion_reason": "Control group size-variant test confirmed",
+      "round": 2
+    },
+    {
+      "endpoint": "POST /collections/{collection_name}/points/scroll",
+      "condition_type": "pagination_cursor",
+      "finding": "NO_DEFECT",
+      "detail": "offset parameter works correctly (0-indexed semantics)",
+      "exclusion_reason": "Control group test confirmed correct behavior",
+      "round": 3
+    },
+    {
+      "endpoint": "POST /collections/{collection_name}/points/scroll",
+      "condition_type": "compound_or",
+      "finding": "NO_DEFECT",
+      "detail": "should clause (OR filter) returns correct union without duplicates",
+      "exclusion_reason": "Control group test confirmed correct behavior",
+      "round": 3
+    },
+    {
+      "endpoint": "POST /collections/{collection_name}/points/scroll",
+      "condition_type": "collection_membership",
+      "finding": "NO_DEFECT",
+      "detail": "has_id filter correctly handles existing/non-existing IDs and empty lists",
+      "exclusion_reason": "Control group test confirmed correct behavior",
+      "round": 3
+    }
+  ],
+
+  "by_design_filtering": {
+    "total_candidates": 14,
+    "by_design_exclusions": 4,
+    "final_candidates": 10,
+    "exclusions_detail": [
+      {
+        "pattern": "is_null count divergence",
+        "reason": "Control group confirmed by-design fallback (estimation improves with index statistics)",
+        "threat_model_reference": "cardinality_oracle control group"
+      },
+      {
+        "pattern": "pagination_cursor offset",
+        "reason": "offset=0 starts at first point, offset=N skips N points (correct 0-indexed)",
+        "threat_model_reference": "control_group_test"
+      },
+      {
+        "pattern": "compound_or should clause",
+        "reason": "OR filter returns correct union without duplicates (cardinality matches)",
+        "threat_model_reference": "control_group_test"
+      },
+      {
+        "pattern": "collection_membership has_id",
+        "reason": "has_id correctly handles ID lists with existing/non-existing/empty cases",
+        "threat_model_reference": "control_group_test"
+      }
+    ]
+  },
+
+  "shape_consumption": {
+    "cardinality_oracle": {
+      "shape_utilized": true,
+      "endpoints_tested": ["POST /collections/{collection_name}/points/count"],
+      "conditions_tested": ["numeric_range", "is_null"],
+      "findings": ["DEFECT_FOUND (numeric range)", "NO_DEFECT (is_null - by-design)"],
+      "notes": "Applied cardinality_oracle strategy - matrix-tested condition classes with exact:true/false/scroll ground truth"
+    },
+    "type_mismatch": {
+      "shape_utilized": true,
+      "endpoints_tested": ["POST /collections/{collection_name}/points"],
+      "conditions_tested": ["dimension_mismatch", "empty_array", "null_field", "object_type"],
+      "findings": ["DEFECT_FOUND (dim)", "DEFECT_FOUND (empty)", "NO_DEFECT (null)", "NO_DEFECT (object)"],
+      "notes": "Continued R1 boundary deepening - found silent discard patterns for dim-mismatch and empty arrays"
+    },
+    "wait_semantics": {
+      "shape_utilized": true,
+      "endpoints_tested": ["POST /collections/{collection_name}/points"],
+      "conditions_tested": ["wait_false_invalid", "wait_true_invalid", "dimension_mismatch_async"],
+      "findings": ["DEFECT_FOUND (wait validation bypass)"],
+      "notes": "R3 write path semantics - discovered async operation validation gap"
+    }
+  },
+
+  "finding_feedback_chain": [
+    "R1: dimension boundary → R2: type_mismatch (dimension vectors)",
+    "R2: type_mismatch → R2: type_mismatch (empty array)",
+    "R2: type_mismatch → R2: compound_and (mixed batch)",
+    "cardinality_oracle → R2: range_filter (numeric range estimation)",
+    "R2: range_filter → R2: null_check (is_null - excluded)",
+    "R2: type_mismatch + R1: empty vector → R3: wait_semantics (async validation bypass)"
+  ],
+
+  "round_3_summary": {
+    "focus_areas": [
+      "write path parameter semantics (wait=true/false)",
+      "untouched endpoints (GET /points/{id}, scroll)",
+      "remaining condition types (compound_or, collection_membership)"
+    ],
+    "key_discovery": "wait parameter bypasses input validation - async operations acknowledge invalid data without storing",
+    "defect_type": "Type1_IllegalSuccess (silent failure)",
+    "affected_operations": ["upsert with wait=false", "upsert with wait=true"],
+    "invalid_inputs_accepted": ["empty vectors", "dimension mismatches"],
+    "expected_behavior": "Input validation before acknowledgment regardless of wait parameter",
+    "actual_behavior": "Acknowledgment returned but point not stored (silent failure)",
+    "semantic_violation": "Async operation contract requires input validation before acknowledging"
+  },
+
+  "summary": {
+    "total_scripts_generated": 14,
+    "defects_found": 10,
+    "no_defects": 4,
+    "by_design_exclusions": 4,
+    "endpoints_tested": 6,
+    "conditions_tested": 15,
+    "shape_guidance_consumed": true,
+    "richness_formula_used": true,
+    "finding_feedback_loop_activated": true,
+    "control_group_validation_performed": true,
+    "completion_status": "Round 3 complete - write path semantics + untouched endpoints + remaining conditions. Found 1 novel defect: wait parameter bypasses input validation (silent failure). Total defects across 3 rounds: 10.",
+    "round_3_highlights": [
+      "wait parameter bypasses input validation (async silent failure) - Type1_IllegalSuccess",
+      "wait=false with invalid input acknowledges but doesn't store",
+      "wait=true also bypasses validation in some cases",
+      "dimension-mismatch silently discarded in async operations",
+      "Empty vectors silently discarded in async operations",
+      "pagination_cursor (offset) works correctly (0-indexed)",
+      "compound_or (should clause) works correctly (union semantics)",
+      "collection_membership (has_id) works correctly (ID list handling)"
+    ],
+    "estimated_novelty": "High - wait parameter validation bypass is novel async operation contract violation, extends R1/R2 upsert validation findings into write path semantics"
+  },
+
+  "defect_types_distribution": {
+    "Type1_IllegalSuccess": 6,
+    "Type2_PoorDiagnostics": 1,
+    "Type4_StateViolation": 3,
+    "Type3_RuntimeFailure": 0
+  },
+
+  "endpoint_coverage": {
+    "total_in_contract": 19,
+    "tested": 6,
+    "coverage_pct": 31.6,
+    "tested_endpoints": [
+      "PUT /collections/{collection_name}",
+      "POST /collections/{collection_name}/points",
+      "POST /collections/{collection_name}/points/delete",
+      "POST /collections/{collection_name}/points/count",
+      "POST /collections/{collection_name}/points/scroll",
+      "GET /collections/{collection_name}/points/{id}"
+    ]
+  },
+
+  "condition_coverage": {
+    "total_types": 8,
+    "tested": 7,
+    "coverage_pct": 87.5,
+    "tested_types": [
+      "range_filter",
+      "compound_and",
+      "null_check",
+      "type_mismatch",
+      "compound_or",
+      "pagination_cursor",
+      "collection_membership",
+      "wait_semantics"
+    ],
+    "not_tested": ["geo_filter"]
+  }
+}

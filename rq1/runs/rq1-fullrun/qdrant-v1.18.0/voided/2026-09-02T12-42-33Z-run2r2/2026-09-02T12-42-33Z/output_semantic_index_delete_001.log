@@ -1,0 +1,28 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: sidl0176844a
+[assertion quote] expected_behavior: 'index deletion (existing or not) returns HTTP 200; missing collection returns 404'
+[upsert 3 pts -> sidl0176844a_live] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.005603312}
+[PUT index sidl0176844a_live/cat] schema="keyword" -> status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.520760238}
+[setup] sidl0176844a_live ready with keyword index on 'cat'
+[DELETE index leg1 existing sidl0176844a_live/cat] -> status=200 raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.300309143}
+[leg1 envelope] result.status='completed' result.operation_id=5 (measured)
+[leg1] existing index deleted: 200 + envelope + describe echo gone
+[DELETE index leg2 never-known field rep1 sidl0176844a_live/ghost_field] -> status=200 raw={"result":{"operation_id":7,"status":"completed"},"status":"ok","time":0.286451908}
+[leg2 ghost_field rep1 envelope] result.status='completed' result.operation_id=7 (measured)
+[DELETE index leg2 never-known field rep2 sidl0176844a_live/ghost_field] -> status=200 raw={"result":{"operation_id":9,"status":"completed"},"status":"ok","time":0.295985101}
+[leg2 ghost_field rep2 envelope] result.status='completed' result.operation_id=9 (measured)
+[DELETE index leg2 payload-present-but-never-indexed field rep1 sidl0176844a_live/note] -> status=200 raw={"result":{"operation_id":11,"status":"completed"},"status":"ok","time":0.287364346}
+[leg2 note rep1 envelope] result.status='completed' result.operation_id=11 (measured)
+[DELETE index leg2 payload-present-but-never-indexed field rep2 sidl0176844a_live/note] -> status=200 raw={"result":{"operation_id":13,"status":"completed"},"status":"ok","time":0.291711971}
+[leg2 note rep2 envelope] result.status='completed' result.operation_id=13 (measured)
+[leg2] non-existent index deletes (ghost + payload-only flavors): 200 x4
+[DELETE index leg3 missing-collection rep1 sidl0176844a_never_1fa59c/cat] -> status=404 raw={"status":{"error":"Not found: Collection `sidl0176844a_never_1fa59c` doesn't exist!"},"time":0.000045218}
+[DELETE index leg3 missing-collection rep2 sidl0176844a_never_1fa59c/cat] -> status=404 raw={"status":{"error":"Not found: Collection `sidl0176844a_never_1fa59c` doesn't exist!"},"time":0.000058644}
+[leg3] missing collection sidl0176844a_never_1fa59c: 404 twice without flapping
+[PUT index sidl0176844a_live/score_tag] schema="keyword" -> status=200 raw={"result":{"operation_id":15,"status":"completed"},"status":"ok","time":0.486816954}
+[DELETE index leg4 control sidl0176844a_live/score_tag] -> status=200 raw={"result":{"operation_id":17,"status":"completed"},"status":"ok","time":0.295726902}
+[leg4 envelope] result.status='completed' result.operation_id=17 (measured)
+[leg4 sanity] count=3 (setup upserted 3)
+OK: existing-index delete -> 200 + envelope + removal echo; non-existent index deletes (both flavors) -> 200 x4 idempotent; never-created sidl0176844a_never_1fa59c -> 404 twice; control create+delete -> 200 with clean state
+VERDICT: NO_DEFECT

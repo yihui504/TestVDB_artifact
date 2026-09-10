@@ -1,0 +1,57 @@
+{
+  "defect_id": "boundary_schema_replicationFactor_negative",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url=openapi fallback；POST /schema 在 endpoint_registry 存在（v1.37.4）；contract 参数表声明 replicationFactor type=int（无 default、无范围约束），-1 合法性文档未明示",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Status: 200; Raw: {...\"replicationConfig\":{\"asyncEnabled\":false,\"deletionStrategy\":\"TimeBasedResolution\",\"factor\":1},...} → [judge] silent-normalize: factor -1 -> 1（POST factor=-1 返回 200 但回读 factor=1）",
+      "secondary_observations": [
+        "judge 判定：回读 1 != 攻击值 -1，但请求被接受 → silent-normalize → DEFECT_FOUND（Type2 信号）",
+        "回读关键事实：factor=-1 请求持久化后为 1（非 -1）——归一化成立",
+        "对照：boundary_schema_replicationFactor_gt_one（factor=2 单节点）→ 422 拒绝 NO_DEFECT（服务端有上限/节点数校验）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "非法值 factor=-1 以 HTTP 200 接受并静默改写为 1，无任何 warning/error 字段披露；客户端可见的契约与持久化值不一致（Type2 判据）"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_schema_replicationFactor_negative", "boundary_schema_replicationFactor_zero"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "contract",
+      "assertion_text_quoted": "POST /schema 参数 replicationFactor: type=int, required=false, description='Replication factor (source: go-struct)'（无范围断言）",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:POST /schema replicationFactor int（无范围约束）", "doc:openapi fallback 'Create collection' v1.37.4", "script:boundary_schema_replicationFactor_negative.py POST replicationConfig.factor=-1", "log:Status 200 + 回读 factor=1 + [judge] silent-normalize -1 -> 1"],
+      "chain_broken_at": null,
+      "break_detail": "链四环一致：请求 -1 → 200 → 持久化 1（源码 ValidateConfig 归一化确认）；断裂点是'用户意图 vs 静默改写'——归因到源码显式逻辑而非链不一致",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["replicationFactor|ReplicationFactor", "Factor =", "Factor < 1", "MinimumFactor"],
+      "files_examined": ["usecases/replica/config.go", "usecases/schema/class.go", "usecases/config/environment.go", "cluster/schema/manager.go", "usecases/sharding/state.go", "entities/models/node_shard_status.go"],
+      "source_excerpt": "usecases/replica/config.go:25-53 ValidateConfig: `if class.ReplicationConfig.Factor < 1 { class.ReplicationConfig.Factor = int64(globalCfg.MinimumFactor) }`；usecases/schema/class.go:513-515 相同逻辑；environment.go:1780 DefaultMinimumReplicationFactor = 1；class.go:503-506 仅在 0 < Factor < MinimumFactor 时报错（-1/0 不满足 >0，绕过报错分支直接落入静默归一化）",
+      "call_chain_traced": "POST /v1/schema → REST handler → ValidateConfig(class) → Factor=-1 落入 `Factor < 1` 分支 → 静默改为 MinimumFactor=1 → 200 返回并持久化 factor=1；sharding InitState 另有 replFactor<1 报错但类创建路径先被 ValidateConfig 归一化，永不触发",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "请求参数笔误"],
+      "surviving": null
+    }
+  }
+}

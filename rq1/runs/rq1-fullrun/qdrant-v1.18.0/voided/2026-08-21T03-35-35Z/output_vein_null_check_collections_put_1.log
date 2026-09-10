@@ -1,0 +1,88 @@
+[vein_null_check_collections_put_1] Testing null_check on PUT /collections/{collection}
+DB URL: http://localhost:6333
+Collection: vein_null_check_test_1
+
+[Test 1] Missing 'vectors' field (required)
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.211721497
+}
+  [DEFECT_CANDIDATE] Collection created without vectors field
+
+[Test 2] 'vectors' field is null
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 17"
+  },
+  "time": 0.0
+}
+  [EXPECTED] vectors=null rejected with 400
+
+[Test 3] Empty vectors object {}
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.20549631
+}
+  [DEFECT_CANDIDATE] vectors={{}} accepted
+
+[Test 4] hnsw_config is null (optional field)
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.22711241
+}
+  [ACCEPTED] hnsw_config=null accepted (optional field)
+
+[Test 5] vectors.size is null
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 49"
+  },
+  "time": 0.0
+}
+  [EXPECTED] size=null rejected with 400
+
+[Test 6] vectors.distance is null
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 44"
+  },
+  "time": 0.0
+}
+  [EXPECTED] distance=null rejected with 400
+
+[Test 7] Both vectors.size and vectors.distance are null
+  Status: 400
+  Response: {
+  "status": {
+    "error": "Format error in JSON body: data did not match any variant of untagged enum VectorsConfig at line 1 column 45"
+  },
+  "time": 0.0
+}
+  [EXPECTED] Both null rejected with 400
+
+[Test 8] optimizers_config is null (optional field)
+  Status: 200
+  Response: {
+  "result": true,
+  "status": "ok",
+  "time": 0.244895912
+}
+  [ACCEPTED] optimizers_config=null accepted (optional field)
+
+============================================================
+SUMMARY
+============================================================
+Findings:
+  - Missing 'vectors' field accepted - should be rejected (required field)
+  - vectors={} (empty) accepted - should reject (missing size/distance)
+
+VERDICT: DEFECT_FOUND

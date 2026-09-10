@@ -1,0 +1,104 @@
+{
+  "defect_id": "boundary_collections_update_011",
+  "endpoint": "collections+update (PATCH /collections/{collection_name})",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists in this round's contract dir (results/qdrant/v1.18.0/ contains only structured_contract.json, raw_knowledge.json, doc_coverage_report.json, contract_validation_report.json, deployment_meta.json); live WebFetch of https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection was blocked twice (and qdrant.tech once) with 'Unable to verify if domain ... is safe to fetch' -> domain_blocked -> PARTIAL (not FAIL); content was instead verified against the versioned v1.18.x OpenAPI snapshot docs/redoc/v1.18.x/openapi.json shipped inside the v1.18.0 tag itself - the exact spec material served at that versioned URL. Version: URL segment v-1-18-x matches target v1.18.0 major.minor and the snapshot lives in docs/redoc/v1.18.x of the v1.18.0 tree - PASS. Content: the v1.18.x spec contains BOTH documented default claims the constraint quotes, verbatim - OptimizersConfig.indexing_threshold.description '...Default value is 10,000, based on experiments and observations...' and OptimizersConfigDiff.indexing_threshold.description '...Default value is 20,000, based on <https://github.com/google-research/google-research/blob/master/scann/docs/algorithms.md>...' - the doc-internal conflict the assertion describes exists in the documented text; OptimizersConfigDiff (the PATCH update request schema member) carries the 20,000 claim as prose only with no machine-readable 'default' attribute - PASS. Endpoint: endpoint_registry entry path=collections+update method=PATCH source_url identical to the constraint's source_url (structured_contract.json endpoint_registry); the update-collection reference is exactly the page whose UpdateCollection request schema embeds optimizers_config: anyOf [OptimizersConfigDiff, null] - PASS. SDK/REST: both contested claims are REST schema properties of the same versioned api-reference page; the same 20,000 stale text also appears on the gRPC diff struct (lib/api/src/grpc/proto/collections.proto:288-293), which corroborates an annotation-copy origin but involves no SDK/REST confusion - false.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[record] DEFECT_FOUND (Type2_PoorDiagnostics - doc-stale) - create/readback face materializes the documented 10000; the OptimizersConfigDiff (update) prose 'Default value is 20,000' is contradicted by the single resolved default (measured indexing_threshold=10000)",
+      "secondary_observations": [
+        "[spec side] create without indexing_threshold -> readback resolves indexing_threshold=10000",
+        "[prose side] PATCH optimizers_config.indexing_threshold=null -> status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.015111695}",
+        "[prose side] after explicit null readback indexing_threshold=10000 (was 10000)",
+        "NOTE: explicit null left the value unchanged (diff null = no-change); the update-face documented default 20000 is not re-materialized by PATCH",
+        "[echo] PATCH optimizers_config.indexing_threshold=50000 -> status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.01304065}",
+        "[echo] readback after explicit 50000 -> indexing_threshold=50000",
+        "rest sibling same-unit reproduction (output_semantic_collections_update_005.log): [A1 readback] optimizer_config.indexing_threshold = 10000 (side-A doc default 10000, side-B doc default 20000); [B1 readback] optimizer_config.indexing_threshold = 10000 (must equal A1=10000: diff-omitted members preserve, no 20,000 default materialization); [D1 readback] optimizer_config.indexing_threshold = 20000 (sent explicit 20000)",
+        "rest sibling same-unit reproduction (output_state_collections_update_005.log): [leg B] V_b (after unrelated diff PATCH) = 10000 (OptimizersConfigDiff doc claim: 20000)",
+        "note: verdict label for the identical measured phenomenon differs across the three sibling scripts - boundary_collections_update_011 prints Type2_PoorDiagnostics (doc-stale), semantic_collections_update_005 prints Type4_StateLogicViolation, state_collections_update_005 prints DEFECT_FOUND with Type4_StateLogicViolation wording; all three measure the same values (default resolves 10000; 20000 never materializes as a default; explicit values echo)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No request-side-decidable error is in play: every probe (create without indexing_threshold, PATCH explicit null, PATCH explicit 50000) is legal under both documented schema faces and returned HTTP 200 with the success envelope result:true; the phenomenon is a doc-default contradiction (single resolved default 10000 vs the OptimizersConfigDiff prose 'Default value is 20,000'), not an error-classification issue."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_collections_update_011 (create/readback + PATCH-null + PATCH-50000, unit qdrant_doccons_indexing_threshold_001; verdict printed Type2_PoorDiagnostics - doc-stale; no TypeError/SCRIPT_ERROR markers; exit code 0 = this script's print-verdict protocol, no sys.exit on the defect path)",
+        "semantic_collections_update_005 (same unit; full-omit create A1=10000, partial-diff create A2=10000, partial-diff PATCH B1=10000, explicit-20000 control D1=20000; VERDICT DEFECT_FOUND Type4_StateLogicViolation)",
+        "state_collections_update_005 (same unit; legs A/B/C default and unrelated-diff readbacks all = 10000 vs OptimizersConfigDiff doc claim 20000; VERDICT DEFECT_FOUND)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_doccons_indexing_threshold_001",
+      "assertion_text_quoted": "doc-internal conflict: spec says default ten thousand (OptimizersConfig, create/readback) vs twenty thousand (OptimizersConfigDiff, update diff); either side may be violated",
+      "api_violates_assertion": true,
+      "note": "Dispatch candidates.jsonl constraint_id field was empty; the unit was recovered verbatim from the script header 'constraint_ids: qdrant_doccons_indexing_threshold_001' and the attack text, and found at structured_contract.json constraints.doc_consistency_constraints (endpoint collections+update, level system, evidence_tier explicit, source_url https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection). Violates-declaration self-check: the measured resolved default (10000) sits inside the OptimizersConfig-side documented domain but directly contradicts the OptimizersConfigDiff-side documented claim 'Default value is 20,000' that the assertion quotes - the runtime cannot satisfy both documented sides simultaneously; the constraint's own description states 'behavior follows the implementation and either documented side may be violated', and the measured side violated is the update-diff 20000 prose, so violates=true with the defect confined to the stale doc claim (doc-stale), not to any runtime rejection/acceptance behavior.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_doccons_indexing_threshold_001 present in structured_contract.json (doc_consistency_constraints; assertion and source_url as quoted above); dispatch row constraint_id empty but recovered from script header + attack text",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection (endpoint_registry-verified source_url of collections+update) - live fetch domain_blocked; the versioned v1.18.x OpenAPI snapshot in the v1.18.0 tag (docs/redoc/v1.18.x/openapi.json) contains both documented defaults verbatim: OptimizersConfig.indexing_threshold 'Default value is 10,000' and OptimizersConfigDiff.indexing_threshold 'Default value is 20,000'; PATCH update body schema UpdateCollection.optimizers_config resolves to OptimizersConfigDiff",
+        "script: boundary_collections_update_011.py - creates a fresh bcu011_* collection WITHOUT indexing_threshold (PUT), reads the resolved default back via GET describe, then PATCHes optimizers_config.indexing_threshold=null and =50000; all probes legal per both documented faces (spec-side and prose-side measurement per the docstring oracle)",
+        "log: output_boundary_collections_update_011.log (10 lines, all read) - [spec side] readback resolves indexing_threshold=10000; PATCH null -> 200 result:true with readback unchanged at 10000; PATCH 50000 -> 200 with readback 50000; [record] and final VERDICT lines both print DEFECT_FOUND (Type2_PoorDiagnostics - doc-stale) with the measured value and the contradicted side named"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "indexing_threshold (whole tree, *.rs)",
+        "struct OptimizersConfig | struct OptimizersConfigDiff",
+        "20,000 | 20000 | Default value is (whole tree incl. docs/redoc and openapi templates)",
+        "fn get_indexing_threshold_kb | DEFAULT_INDEXING_THRESHOLD_KB | const .*INDEXING",
+        "fn default.*indexing_threshold (zero hits)",
+        "OptimizersConfigDiff refs inside v1.18.x spec UpdateCollection/CreateCollection/CollectionConfig schemas"
+      ],
+      "files_examined": [
+        "lib/shard/src/optimizers/config.rs (DEFAULT_INDEXING_THRESHOLD_KB: usize = 10_000 at line 15; shared resolver get_indexing_threshold_kb at 175-182)",
+        "lib/collection/src/operations/config_diff.rs (OptimizersConfigDiff struct at 109-172 incl. the stale 'Default value is 20,000' doc comment at 148-156; DiffConfig::update impl at 251-279)",
+        "lib/collection/src/optimizers_builder.rs (OptimizersConfig struct at 31-101 incl. 'Default value is 10,000' doc comment at 75-84; get_indexing_threshold_kb delegation at 132-134)",
+        "lib/collection/src/config.rs (searched - zero indexing_threshold hits)",
+        "lib/api/src/grpc/proto/collections.proto (gRPC OptimizersConfigDiff comment at 288-293 repeats 'Default value is 20,000')",
+        "docs/redoc/v1.18.x/openapi.json (OptimizersConfig and OptimizersConfigDiff indexing_threshold property nodes; UpdateCollection.optimizers_config anyOf [OptimizersConfigDiff, null]; CreateCollection.optimizers_config same; CollectionConfig.optimizer_config -> OptimizersConfig)",
+        "docs/redoc/master/openapi.json (same 10000/20000 split persists in the master snapshot, lines 7986/10651)",
+        "openapi/openapi-main.ytt.yaml (example describe body with \"indexing_threshold\": 20000 at line 90 - template not materialized in the published v1.18.x spec: '20000' absent from docs/redoc/v1.18.x/openapi.json, so treated as non-load-bearing)"
+      ],
+      "source_excerpt": "lib/shard/src/optimizers/config.rs:14-16,175-182 (v1.18.0 clone):\n15  pub const DEFAULT_INDEXING_THRESHOLD_KB: usize = 10_000;\n175 /// Resolve indexing threshold in KB: `None` => default, `Some(0)` => disable (usize::MAX).\n176 pub fn get_indexing_threshold_kb(indexing_threshold: Option<usize>) -> usize {\n177     match indexing_threshold {\n178         None => DEFAULT_INDEXING_THRESHOLD_KB,\n179         Some(0) => usize::MAX,\n180         Some(custom) => custom,\n181     }\n182 }\n\nlib/collection/src/operations/config_diff.rs:148-156 (OptimizersConfigDiff - the PATCH diff struct):\n148  /// Maximum size (in kilobytes) of vectors allowed for plain index, exceeding this threshold will enable vector indexing\n149  ///\n150  /// Default value is 20,000, based on <https://github.com/google-research/google-research/blob/master/scann/docs/algorithms.md>.\n151  ///\n152  /// To disable vector indexing, set to `0`.\n153  ///\n154  /// Note: 1kB = 1 vector of size 256.\n155  #[serde(alias = \"indexing_threshold_kb\")]\n156  pub indexing_threshold: Option<usize>,\n\nlib/collection/src/operations/config_diff.rs:251-279 (diff application - no default is ever injected):\n272          indexing_threshold: indexing_threshold.or(self.indexing_threshold),\n\nlib/collection/src/optimizers_builder.rs:75-84 (OptimizersConfig - create/readback schema):\n77  /// Default value is 10,000, based on experiments and observations.\n82  #[serde(alias = \"indexing_threshold_kb\")]\n83  #[serde(default)]\n84  pub indexing_threshold: Option<usize>,",
+      "call_chain_traced": "PUT /collections/{name} without optimizers_config -> #[serde(default)] leaves OptimizersConfig.indexing_threshold = None (optimizers_builder.rs:83-84) -> threshold resolution deferred to OptimizersConfig::get_indexing_threshold_kb (optimizers_builder.rs:132-134) which delegates to the shared shard resolver lib/shard/src/optimizers/config.rs:176-182 -> None maps to DEFAULT_INDEXING_THRESHOLD_KB = 10_000 (config.rs:15), so the GET describe readback materializes 10000. PATCH /collections/{name} with an optimizers_config diff -> DiffConfig<OptimizersConfigDiff> for OptimizersConfig::update (config_diff.rs:251-279) applies indexing_threshold: indexing_threshold.or(self.indexing_threshold) (line 272): diff-None preserves the stored value and no code path injects any default on the update face; a whole-tree grep for 20000 hits only doc comments and proto annotations (config_diff.rs:150, collections.proto:291) plus unrelated bench/test numbers - the 20,000 'default' exists nowhere as a constant, default-fn or branch, and the value only appears in the runtime when a client sends it explicitly. The versioned spec prose is generated from these very doc comments, so the stale 20,000 sentence in the update-collection page is the verbatim child of the stale annotation at config_diff.rs:150.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (three sibling scripts against the same live sandbox measured identical values; healthz/200 envelopes show a healthy service)",
+        "concurrency (single sequential probes; the default is a compile-time constant - no race or timing dimension)",
+        "cache delay (readbacks are immediate and fresh: the explicit-50000 leg echoed 50000 on the very next describe, proving readback freshness)",
+        "request typo (probe bodies verified against the script: create body {vectors:{size:4,distance:Cosine}} only; PATCH bodies {optimizers_config:{indexing_threshold:null}} and {optimizers_config:{indexing_threshold:50000}}; unique bcu011_* ownership prefix)",
+        "by_design (no maintainer intent statement exists declaring the OptimizersConfigDiff default to be 20000 while the constant is 10000; the 20,000 sentence is a bare stale doc comment citing ScaNN research, which the v3.4 explicitness standard excludes from by-design; code and comments are mutually contradictory rather than deliberately divergent)"
+      ],
+      "surviving": "Doc-stale defect on the v-1-18-x update-collection documentation face: OptimizersConfigDiff.indexing_threshold description 'Default value is 20,000' (annotation at config_diff.rs:150, rendered verbatim in the versioned OpenAPI served at the update-collection page) contradicts the single runtime default 10000 (DEFAULT_INDEXING_THRESHOLD_KB, lib/shard/src/optimizers/config.rs:15) that the create/readback face materializes and that the diff face never replaces (diff-None preserves the stored value, config_diff.rs:272); no code path materializes 20000 as a default - the falsehood is confined to the 'default' claim itself, as the explicit-20000 control leg (echoed 20000) demonstrates."
+    }
+  },
+  "evidence_source_manifest": {
+    "doc": "docs/redoc/v1.18.x/openapi.json inside the v1.18.0 tag (<DESKTOP>/vdb_src/qdrant/v1.18.0) - versioned spec material for https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection; live WebFetch of api.qdrant.tech/qdrant.tech domain_blocked on 2026-09-03; constraint record structured_contract.json constraints.doc_consistency_constraints.qdrant_doccons_indexing_threshold_001",
+    "behavior": "output_boundary_collections_update_011.log (10 lines, all read; identical copy in debate_logs/); output_semantic_collections_update_005.log and output_state_collections_update_005.log (sibling reproductions, same unit)",
+    "source": "clone at <DESKTOP>/vdb_src/qdrant/v1.18.0 (git tag v1.18.0, commit db3fca3); 8 files examined, 6 grep queries"
+  }
+}

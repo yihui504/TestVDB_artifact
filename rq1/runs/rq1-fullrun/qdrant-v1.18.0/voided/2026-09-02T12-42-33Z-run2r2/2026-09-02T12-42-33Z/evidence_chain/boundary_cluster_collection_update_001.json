@@ -1,0 +1,107 @@
+{
+  "defect_id": "boundary_cluster_collection_update_001",
+  "endpoint": "cluster+collection+update (POST /collections/{collection_name}/cluster)",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: page https://api.qdrant.tech/v-1-18-x/api-reference/distributed/update-collection-cluster loads (WebFetch domain-blocked, but MCP web-reader fetched both the rendered page and the .md rendering, and curl fetched the OpenAPI shards). Version: URL path v-1-18-x + page header v1.18.x vs target 1.18.0 -> major.minor matched. Endpoint precision: page documents POST /collections/{collection_name}/cluster with required path param collection_name and a oneOf wrapped-variant body (MoveShardOperation | ... | CreateShardingKeyOperation | ...) — exactly matches the contract endpoint_registry entry (path=cluster+collection+update, method=POST) and the requests in the log. Content consistency FAILS on the claim-critical clauses: the v1.18.x page's Response section documents ONLY '200 successful operation' — there is no documented 404-for-missing-collection and no documented 400-on-invalid-peer/shard on this page; the underlying official OpenAPI shards (api-reference.json / api-reference-2.json, path /collections/{collection_name}/cluster post.responses) likewise declare only the 200 response. The contract's '404 for a missing collection' clause (and the 400 clause) — the exact premise of this candidate's oracle EXPECT_STATUS=(404,) — is absent from the cited documentation; raw_knowledge.json nevertheless recorded behavioral '200 ok; 400 invalid peer/shard; 404 collection' and expected_responses {200,400,404} for this endpoint, i.e. those clauses entered the chain at raw-extraction time without support on the cited page or spec (doc_quote in endpoint_registry is likewise unsupported by the page text). The 200-face and the body schema (create_sharding_key requires shard_key; no shard_id field under create_sharding_key) ARE consistent with the documentation. Aggregate DOC_PARTIAL: endpoint identity/version/200-face verified; the 404/400 disposition clauses are documentation-unsupported.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[probe unknown 'bccu1b16c0b44ghost1'] -> status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations\"},\"time\":0.0}",
+      "secondary_observations": [
+        "[control existing] POST cluster op -> status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations\"},\"time\":0.0} — CONTROL on the EXISTING collection bccu1b16c0b44c with the IDENTICAL body returned the IDENTICAL 400, proving the 400 is body-deserialization-driven and collection-name-independent",
+        "NOTE(control): existing collection -> 400 (body variant may be refused on this deployment; recorded for judge — the 404 probes below stay valid because their outcome depends only on the name) — script's own note; its inference is contradicted by the control line above (body rejection short-circuits before any name check)",
+        "[probe unknown 'bccu1b16c0b44ghost2'] -> status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations\"},\"time\":0.0}",
+        "[probe unknown 'bccu1b16c0b44ghost3'] -> status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations\"},\"time\":0.0}",
+        "cross-log rest same-endpoint well-formed-body face (output_boundary_cluster_collection_update_007.log): [POST create_sharding_key key=bccu73d9c81f6sk K=5131] -> status=400 raw={\"status\":{\"error\":\"Bad request: Distributed mode disabled\"},\"time\":4.639e-6} — a body that DOES parse (correct shard_key field) reaches the business layer and is refused 400 'Distributed mode disabled' on this single-node deployment, before any collection-existence check; 007 therefore self-verdicted SCRIPT_ERROR with 'no acceptable carrier operation on this deployment'",
+        "cross-log rest same-endpoint other-variant malformed body (output_semantic_cluster_collection_update_001.log): move_shard on never-created collection 's5cu1_1788373537_no_such_collection': status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum ClusterOperations\"},\"time\":0.0} — that script sent a FLAT body {\"operation\": \"move_shard\", \"shard_id\": 0, \"from_peer_id\": 424242, \"to_peer_id\": 424242} (not the documented wrapped-variant form), so its identical 400 is also body-construction-driven",
+        "the 400 untagged-enum format-error pattern on POST /collections/{collection_name}/cluster reproduces in 7 scripts this session: boundary_cluster_collection_update_001, boundary_cluster_collection_update_005, semantic_cluster_collection_update_001, semantic_cluster_collection_update_002, semantic_cluster_collection_update_005, semantic_cluster_collection_update_006, state_cluster_collection_update_002 — in every case the triggering body fails the documented oneOf schema",
+        "face_unavailable: the dedicated shards+create face for create_sharding_key (POST /collections/{collection_name}/shards_key cascade) was not exercised by any script in this session, so a cross-face disposition comparison on that face could not be obtained"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "A request-side-decidable error (malformed body: create_sharding_key missing required shard_key and carrying non-existent field shard_id) returned HTTP 400 with error envelope {\"status\":{\"error\":\"Format error in JSON body: ...\"}} — proper 4xx status usage, no 2xx+business-code masking. The status code is correct HTTP semantics for an unparseable body; the dispute is only whether a 404 should have won, which presupposes a parseable body."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_cluster_collection_update_001",
+        "boundary_cluster_collection_update_005",
+        "semantic_cluster_collection_update_001",
+        "semantic_cluster_collection_update_002",
+        "semantic_cluster_collection_update_005",
+        "semantic_cluster_collection_update_006",
+        "state_cluster_collection_update_002"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_collection_update_001",
+      "assertion_text_quoted": "returns 200 ok; 400 on an invalid peer/shard; 404 for a missing collection",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "violates=false reasoning (per violates-declaration self-check, one of the two honest branches chosen explicitly): the observed parameter (collection_name=bccu1b16c0b44ghost1, a never-created name) IS inside the quote's constraint domain, but the observation never exercised the 'missing collection returns 404' branch because the request failed at a prior, name-independent validation layer — the actix JSON extractor rejected the body itself (missing required shard_key / unknown field shard_id under create_sharding_key), returning 400 for the existing-collection control identically. The 400 is therefore not evidence that the API mishandles a missing collection; it is correct format-error semantics for an unparseable body. Additionally, per cross-log 007 and source, even a well-formed body cannot reach the 404 branch on this deployment (consensus_state none -> 400 'Distributed mode disabled' precedes the existence check), and the 404 clause itself is absent from the cited v1.18.x page and OpenAPI spec (only 200 documented)."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: structured_contract.json:7672-7683 qdrant_behavioral_cluster_collection_update_001 — endpoint cluster+collection+update, expected_behavior 'valid cluster operation returns HTTP 200 (accepted); invalid peer/shard returns 400; missing collection returns 404', source_url .../v-1-18-x/api-reference/distributed/update-collection-cluster — PRESENT",
+        "doc: page + .md rendering + official OpenAPI shards fetched: route/method/path-param/body-schema and the 200 face verified, version matched — but the Response section documents ONLY 200; the 404-for-missing-collection clause (and 400-on-invalid-peer/shard clause) that the constraint asserts do not appear anywhere on the cited page or in the spec shards — BROKEN (constraint over-claims its cited source; clauses originate in raw_knowledge.json's unsupported '200 ok; 400 invalid peer/shard; 404 collection' behavioral line)",
+        "script: debate_logs/boundary_cluster_collection_update_001.py:103 OP_BODY = {\"create_sharding_key\": {\"shard_id\": 4321}} — NOT a syntactically valid instance of the documented schema (create_sharding_key requires shard_key; shard_id belongs to move_shard/replicate_shard/abort_transfer/drop_replica/restart_transfer, not create_sharding_key) despite the script's docstring claim 'Syntactically valid operation body'; the control was designed to prove name-independence but in fact proved the 400 is body-driven, so the collection_name variable was never isolated — BROKEN",
+        "log: output_boundary_cluster_collection_update_001.log faithfully recorded control 400 + 3x probe 400 + the raw error bodies; but the VERDICT line's causal attribution ('rejected on the wrong documented face') is contradicted by the log's own control line (identical 400 on the existing collection) — the raw response shows the target rejected the malformed BODY at the format layer, not the unknown NAME"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Three links broken, first-in-order recorded as primary: (1) doc — the constraint's 404/400 clauses are absent from the cited v1.18.x page and its OpenAPI spec (Response documents only 200), so the oracle premise EXPECT_STATUS=(404,) has no documentation support on the cited source; (2) script — OP_BODY is schema-invalid (create_sharding_key without required shard_key, with non-member shard_id), and the in-log control (existing collection -> identical 400 'Format error in JSON body: data did not match any variant of untagged enum ClusterOperations') proves the 400 fires at JSON deserialization before any collection-name handling, so the expected-404-vs-got-400 comparison never tested the missing-collection branch; (3) log-verdict — the DEFECT_FOUND (Type2) line misattributes a body-format rejection to the collection-name face. Independently, cross-log boundary_cluster_collection_update_007 shows that even a well-formed create_sharding_key body gets 400 'Bad request: Distributed mode disabled' on this single-node deployment before the existence check, so the 404 branch is unreachable for ANY collection name in this environment.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "enum ClusterOperations",
+        "Format error in JSON",
+        "Distributed mode disabled",
+        "update_collection_cluster",
+        "collections/\\{collection_name\\}/cluster",
+        "fn resolve_name",
+        "NotFound => http::StatusCode::NOT_FOUND",
+        "ClusterOperations::CreateShardingKey"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/cluster_ops.rs (lines 14-94, 56-60: untagged enum + CreateShardingKeyOperation/CreateShardingKey schema)",
+        "src/actix/api/collections_api.rs (lines 198-234: route POST /collections/{collection_name}/cluster, handler update_collection_cluster with operation: Json<ClusterOperations> extractor at line 219)",
+        "src/common/collections.rs (lines 247-299: do_update_collection_cluster validation ordering; line 502: CreateShardingKey arm)",
+        "src/actix/mod.rs (lines 227-269: validation_error_handler — JsonPayloadError -> 'Format error in {name}' -> HttpResponse::BadRequest)",
+        "src/actix/helpers.rs (lines 242-258: StorageError::NotFound -> 404, BadRequest -> 400 mapping)",
+        "lib/storage/src/content_manager/toc/mod.rs (lines 369-420: get_collection_unchecked -> resolve_name -> validate_collection_exists -> NotFound)",
+        "src/actix/api/cluster_api.rs (checked to rule out the endpoint living there; only /cluster* routes)"
+      ],
+      "source_excerpt": "// lib/collection/src/operations/cluster_ops.rs:14-26\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone)]\n#[serde(untagged, rename_all = \"snake_case\")]\npub enum ClusterOperations {\n    /// Move shard to a different peer\n    MoveShard(MoveShardOperation),\n    /// Replicate shard to a different peer\n    ReplicateShard(ReplicateShardOperation),\n    /// Abort currently running shard moving operation\n    AbortTransfer(AbortTransferOperation),\n    /// Drop replica of a shard from a peer\n    DropReplica(DropReplicaOperation),\n    /// Create a custom shard partition for a given key\n    CreateShardingKey(CreateShardingKeyOperation),\n    ...\n}\n\n// lib/collection/src/operations/cluster_ops.rs:56-60 + 75-84\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct CreateShardingKeyOperation {\n    pub create_sharding_key: CreateShardingKey,\n}\n#[derive(Debug, Deserialize, Serialize, JsonSchema, Validate, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct CreateShardingKey {\n    pub shard_key: ShardKey,                                  // REQUIRED; no shard_id field exists in this struct\n    #[serde(alias = \"shard_number\")]\n    pub shards_number: Option<NonZeroU32>,\n    pub replication_factor: Option<NonZeroU32>,\n    pub placement: Option<Vec<PeerId>>,\n    pub initial_state: Option<ReplicaState>,\n}\n\n// src/actix/api/collections_api.rs:215-231\n#[post(\"/collections/{collection_name}/cluster\")]\nasync fn update_collection_cluster(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    operation: Json<ClusterOperations>,      // <- extractor-stage deserialization; failure returns before handler body runs\n    Query(query): Query<WaitTimeout>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Responder { ... do_update_collection_cluster(...).await ... }\n\n// src/actix/mod.rs:249-261 (validation_error_handler)\nactix_web_validator::Error::JsonPayloadError(actix_web::error::JsonPayloadError::Deserialize(err)) => {\n    format!(\"Format error in {name}: {err}\",)\n}\n...\nlet response = match &err {\n    actix_web_validator::Error::Validate(_) => HttpResponse::UnprocessableEntity(),\n    _ => HttpResponse::BadRequest(),          // <- the observed HTTP 400\n}\n\n// src/common/collections.rs:247-264 + 296-299 (do_update_collection_cluster — execution order)\nlet collection_pass = auth.check_collection_access(&collection_name, ..., \"update_collection_cluster\")?;\nif dispatcher.consensus_state().is_none() {\n    return Err(StorageError::bad_request(\"Distributed mode disabled\".to_string()));   // single-node gate -> 400 BEFORE existence check\n}\n...\nlet collection = dispatcher.toc(&auth, &pass).get_collection(&collection_pass).await?;  // <- missing collection -> NotFound -> 404 (src/actix/helpers.rs:246)\n\n// lib/storage/src/content_manager/toc/mod.rs:407-419 (resolve_name)\nfn resolve_name(collection_name: &str, collections: &Collections, aliases: &AliasPersistence) -> Result<String, StorageError> {\n    let alias_collection_name = aliases.get(collection_name);\n    let resolved_name = match alias_collection_name { None => collection_name.to_string(), Some(resolved_alias) => resolved_alias };\n    collections.validate_collection_exists(&resolved_name)?;   // <- unknown name -> StorageError::NotFound -> HTTP 404\n    Ok(resolved_name)\n}",
+      "call_chain_traced": "actix route POST /collections/{collection_name}/cluster (src/actix/api/collections_api.rs:215) -> Json<ClusterOperations> extractor (line 219): untagged-enum deserialization of the body (lib/collection/src/operations/cluster_ops.rs:14-54; each variant is a wrapper struct like CreateShardingKeyOperation{create_sharding_key: CreateShardingKey} with CreateShardingKey requiring shard_key, lines 56-94) -> on deserialization failure validation_error_handler (src/actix/mod.rs:227-269) returns HTTP 400 'Format error in JSON body: data did not match any variant of untagged enum ClusterOperations' BEFORE the handler runs -> on success do_update_collection_cluster (src/common/collections.rs:247): auth check -> consensus_state().is_none() gate returns 400 'Distributed mode disabled' on single-node deployments (lines 260-264) -> get_collection (line 296) -> get_collection_unchecked -> resolve_name -> validate_collection_exists (lib/storage/src/content_manager/toc/mod.rs:407-419) -> StorageError::NotFound -> HTTP 404 (src/actix/helpers.rs:246) -> per-op validation (e.g. CreateShardingKey arm line 502: Auto sharding method -> 400). The observed 400 originated at the FIRST layer (extractor), so neither the distributed-mode gate nor the existence check was ever reached; the collection name was never consulted.",
+      "verification_outcome": "validation_present",
+      "evidence_source": "source",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "The contract-required validation exists in source: the missing-collection 404 face is implemented (get_collection -> validate_collection_exists -> StorageError::NotFound -> 404 at src/actix/helpers.rs:246), and a body-format 400 face plus a distributed-mode 400 gate precede it in request order. The observed 400 is the body-format layer correctly rejecting the script's schema-invalid OP_BODY (create_sharding_key without required shard_key, with non-member shard_id), deterministically and name-independently — matching the in-log control (existing collection -> identical 400) and cross-log 007 (schema-valid body -> different business-layer 400 'Distributed mode disabled'). No explicit by-design annotation is involved (nothing was silently accepted or substituted)."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "concurrency race (all four requests are synchronous, sequential, and deterministic — identical 400 bodies within microseconds)",
+        "cache delay / state staleness (no state mutation is involved in a format-level rejection)",
+        "transport or environment outage (every request returned a well-formed HTTP 400 JSON envelope; /healthz never needed)",
+        "silent value substitution / default acceptance (nothing was accepted; the request was rejected — the Type2 claim itself concedes rejection)"
+      ],
+      "surviving": [
+        "request-construction error in the triggering script: OP_BODY {\"create_sharding_key\": {\"shard_id\": 4321}} is schema-invalid per both the v1.18.x documentation and the source enum (create_sharding_key requires shard_key; shard_id is not a member), so the 400 format error is attributable to the script's own body, not to the unknown collection name — proven by the in-log control on an existing collection returning the identical 400",
+        "environment limitation: single-node deployment (consensus_state none) returns 400 'Distributed mode disabled' for ANY well-formed cluster-update op before the collection-existence check, so the documented 404 branch is unreachable for any name in this environment (cross-log boundary_cluster_collection_update_007: schema-valid body -> 400 'Bad request: Distributed mode disabled'; that script self-verdicted SCRIPT_ERROR 'no acceptable carrier operation on this deployment')",
+        "contract over-claim: the 404-for-missing-collection clause (and the 400-on-invalid-peer/shard clause) asserted by qdrant_behavioral_cluster_collection_update_001 does not appear on the cited v1.18.x page or in its OpenAPI spec (Response documents only 200); the clauses originate from raw_knowledge.json's unsupported behavioral line, so the oracle premise EXPECT_STATUS=(404,) lacks documentation grounding"
+      ]
+    }
+  }
+}

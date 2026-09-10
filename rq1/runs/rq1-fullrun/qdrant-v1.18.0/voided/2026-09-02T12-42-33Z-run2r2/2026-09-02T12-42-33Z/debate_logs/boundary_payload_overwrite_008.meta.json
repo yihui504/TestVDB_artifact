@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_overwrite_008",
+ "endpoint": "payload+overwrite",
+ "param": "key",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "case A — overwrite {\"payload\":{\"new\":2},\"points\":[1],\"key\":\"nested\"} (wait=true query) returns 200 and scroll shows p1 EXACTLY {\"keep\":\"me\",\"nested\":{\"new\":2}} ('keep' gone = Type4 scope over-reach to the whole payload; nested old/sub surviving = Type4 merge-at-path); p2 deep-equal baseline. case B — key=\"brand.new.path\": 4xx = NOTE ladder (creation semantics implementation-defined); 200 requires 'keep' and nested=={\"new\":2} byte-equal AND {\"v\":1} reachable at the dotted path or under the literal key — loss of any pre-existing top-level key = Type4. case C — key=\"\": 4xx = clean reject OK; 200 requires p2 exactly {\"fresh\":1} (root assignment) or exactly baseline {\"solo\":\"top\"} (no-op), anything else = Type4; p1 byte-equal its post-B value. non-200 on A = Type1_IllegalSuccess (documented [SPEC] parameter rejected); 5xx/transport = Type3_RuntimeFailure with /healthz re-check (constraint qdrant_state_payload_overwrite_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

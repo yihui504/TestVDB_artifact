@@ -1,0 +1,98 @@
+{
+  "defect_id": "boundary_cluster_collection_info_003",
+  "endpoint": "cluster+collection+info — tested by script as GET /cluster/collection/{collection_name}; documented and implemented path in v1.18.0 is GET /collections/{collection_name}/cluster",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PARTIAL",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: WebFetch tool was domain-blocked, but the page was fetched in full via web reader (title 'Retrieve cluster details | Qdrant | API Reference'); contract build-time sidecar also recorded source_status=reachable (endpoint_registry verified_at 2026-09-02T12:34:08Z). version: page is pinned v-1-18-x, header 'v1.18.x', target 1.18.0 — major.minor match. content_consistency: page documents only the 200 branch ('200 Retrieved' with CollectionClusterInfo shape); the assertion's '404 for an unknown collection' clause exists in raw_knowledge.json expected_responses ('404': 'not found') but is NOT present as on-page prose today. endpoint_precision: the endpoint exists in registry and docs, but the documented path template is GET /collections/:collection_name/cluster — the path the script actually tested (/cluster/collection/{collection_name}) exists neither in the v1.18.0 docs page nor in the v1.18.0 source routing (src/actix has no such route; openapi/openapi-collections.ytt.yaml:321 defines /collections/{collection_name}/cluster).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "probe[dotdot-segment] -> status=200 (dot-dot as name) | raw: {\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":0.00008101}",
+      "secondary_observations": [
+        "probe[nul-byte] -> status=404 (NUL byte inside the name (JSON-escape class %00)) | OK: refused with 404 (4xx graceful refusal) — raw body EMPTY",
+        "probe[unicode] -> status=404 (unicode name 中文测试🎯 (UTF-8 percent-encoded)) | OK: refused with 404 (4xx graceful refusal) — raw body EMPTY",
+        "probe[overlong-2000] -> status=404 (overlong name, 2000 chars) | OK: refused with 404 (4xx graceful refusal) — raw body EMPTY",
+        "probe[encoded-slash] -> status=404 (encoded slash inside the name (a%2Fb)) | OK: refused with 404 (4xx graceful refusal) — raw body EMPTY",
+        "probe[dot-segment] -> status=404 (single dot as name) | OK: refused with 404 (4xx graceful refusal) — raw body EMPTY",
+        "note: probes 'encoded-traversal' (%2E%2E%2Fcollections) and 'encoded-query-suffix' (name%3Ftimeout%3D0) never executed — script returns at the first 200",
+        "comparative[rest, face=real documented route]: GET /collections/bcci32af28337_never_created_xyz/cluster -> 404 {\"status\":{\"error\":\"Not found: Collection `bcci32af28337_never_created_xyz` doesn't exist!\"},\"time\":0.000059274} — the real endpoint honors the 404 promise with a diagnostic naming the collection",
+        "comparative[rest, face=/cluster status endpoint]: GET /cluster -> 200 {\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":0.000013514} — byte-shape identical to the primary observation's body",
+        "comparative[rest, face=tested nonexistent route]: GET /cluster/collection/bcci32af28337%00nul -> 404 with EMPTY body (live re-check) — the log's five 'refused with 404' lines are bare route-miss 404s, NOT the assertion's JSON-error unknown-collection 404",
+        "wire-forensics[requests 2.32.5 / urllib3 2.6.3, same interpreter that produced the log, raw-socket capture]: url=/cluster/collection/.. is transmitted on the wire as 'GET /cluster/ HTTP/1.1'; url=/cluster/collection/. as 'GET /cluster/collection/ HTTP/1.1' — the dot segments never reach the server",
+        "live-reproduction[rest, original probe shape]: requests.get(http://127.0.0.1:6333/cluster/collection/..) -> status=200 {\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":0.000025902} — primary observation reproduced end-to-end and explained (it is the /cluster endpoint answering)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The request-side-decidable error (a '..' path segment) was dissolved client-side before transmission: urllib3 dot-segment normalization reduced /cluster/collection/.. to /cluster/, so the server only ever saw the wire-legal GET /cluster/ and answered it with a genuine success envelope. The 200 is not an error returned as 2xx — it is a different endpoint's correct response."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_cluster_collection_info_003"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_collection_info_001",
+      "assertion_text_quoted": "returns 200 with CollectionClusterInfo; 404 for an unknown collection",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check: the observed 200 originated from GET /cluster (cluster status endpoint) after client-side path collapse, i.e. outside the constraint's endpoint domain — the cluster-info endpoint was never presented the '..' name, and on its real documented face it does return the promised 404 for unknown collections (live comparative probe). The constraint citation does not match the phenomenon the probe actually exercised.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_cluster_collection_info_001 present in structured_contract.json assertions[] (endpoint cluster+collection+info; category behavioral) — link intact",
+        "doc: v-1-18-x page reachable and version-matched, documents GET /collections/:collection_name/cluster with a 200-only response section; the 404 clause is an extraction-level record (raw_knowledge expected_responses), not on-page prose — link weakened (content PARTIAL)",
+        "script: derived GET /cluster/collection/{collection_name} from the chunk label 'cluster+collection+info' although raw_knowledge.json records url '/collections/{collection_name}/cluster' for this endpoint; additionally the dotdot probe segment was collapsed client-side (urllib3 normalize) to '/cluster/' so the claimed malformed input never reached the target — link BROKEN",
+        "log: 'VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)' misattributes the cross-endpoint 200 (legitimate GET /cluster response) to the cluster-info 404 promise; the five 404 'graceful refusal' lines are bare route-miss 404s on a nonexistent route — link misattributed downstream of the script break"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "Two script-level breaks. (1) Wrong route: no /cluster/collection/{collection_name} route exists in qdrant v1.18.0 (absent from src/actix routing and from openapi/openapi-collections.ytt.yaml, which places collection cluster info at /collections/{collection_name}/cluster); every probe in this log — including all the 404s — hit a nonexistent route, so the endpoint under assertion was never exercised (corroborated: sibling scripts boundary_cluster_collection_info_001/002/004/005 all ended in SCRIPT_ERROR with 'existing collection answered 404 / assertion promises 200'). (2) Client-side input dissolution: raw-socket wire capture with the log-producing interpreter (requests 2.32.5, urllib3 2.6.3) shows /cluster/collection/.. is sent as 'GET /cluster/ HTTP/1.1'; actix NormalizePath::trim() (src/actix/mod.rs:121) strips the trailing slash and the request matches #[get(\"/cluster\")] whose handler returns dispatcher.cluster_status() = ClusterStatus::Disabled on this single-node deployment (lib/storage/src/dispatcher.rs:264-269) — producing exactly the observed body {\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":...}. The verdict's causal story ('never-creatable collection name answered 200 where the assertion documents 404') is therefore false: no collection-name lookup ever occurred.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "cluster/collection",
+        "NormalizePath",
+        "collection_cluster_info",
+        "fn cluster_status",
+        "Disabled",
+        "do_get_collection_cluster",
+        "StorageError::NotFound",
+        "Collection name"
+      ],
+      "files_examined": [
+        "src/actix/mod.rs (L19, L100-172: app wiring, NormalizePath::trim() at L121, config_cluster_api at L154)",
+        "src/actix/api/cluster_api.rs (L49-58 #[get(\"/cluster\")] cluster_status handler; exhaustive /cluster* route list — no /cluster/collection/{name} route exists)",
+        "src/actix/api/collections_api.rs (L198-213 #[get(\"/collections/{collection_name}/cluster\")] get_cluster_info -> do_get_collection_cluster; L337 service registration)",
+        "openapi/openapi-collections.ytt.yaml (L321+: path /collections/{collection_name}/cluster, GET operationId collection_cluster_info)",
+        "lib/storage/src/dispatcher.rs (L264-269 cluster_status(): consensus_state None -> ClusterStatus::Disabled)",
+        "src/common/collections.rs (L233-245 do_get_collection_cluster -> toc.get_collection -> StorageError::NotFound for unknown name)",
+        "src/actix/helpers.rs (L242-249: StorageError::NotFound -> http::StatusCode::NOT_FOUND)",
+        "src/tonic/api/collections_api.rs (L197-216 gRPC face collection_cluster_info, same do_get_collection_cluster path)"
+      ],
+      "source_excerpt": "src/actix/api/cluster_api.rs:49-58 — the endpoint that actually answered:\n    #[get(\"/cluster\")]\n    fn cluster_status(\n        dispatcher: web::Data<Dispatcher>,\n        ActixAuth(auth): ActixAuth,\n    ) -> impl Future<Output = HttpResponse> {\n        helpers::time(async move {\n            auth.check_global_access(AccessRequirements::new(), \"cluster_status\")?;\n            Ok(dispatcher.cluster_status())\n        })\n    }\n\nlib/storage/src/dispatcher.rs:264-269 — why the body says 'disabled':\n    pub fn cluster_status(&self) -> ClusterStatus {\n        match self.consensus_state.as_ref() {\n            Some(state) => state.cluster_status(),\n            None => ClusterStatus::Disabled,\n        }\n    }\n\nsrc/actix/mod.rs:121 — trailing-slash normalization that let '/cluster/' match '/cluster':\n                .wrap(NormalizePath::trim())\n\nsrc/actix/api/collections_api.rs:198-213 — the REAL v1.18.0 route for the assertion's endpoint:\n    #[get(\"/collections/{collection_name}/cluster\")]\n    async fn get_cluster_info(\n        dispatcher: web::Data<Dispatcher>,\n        collection: Path<CollectionPath>,\n        ActixAuth(auth): ActixAuth,\n    ) -> impl Responder {\n        // No request to verify\n        let pass = new_unchecked_verification_pass();\n\n        helpers::time(do_get_collection_cluster(\n            dispatcher.toc(&auth, &pass),\n            &auth,\n            &collection.collection_name,\n        ))\n        .await\n    }\n\nsrc/common/collections.rs:233-245 — unknown-collection handling on the real face:\n    pub async fn do_get_collection_cluster(\n        toc: &TableOfContent,\n        auth: &Auth,\n        name: &str,\n    ) -> Result<CollectionClusterInfo, StorageError> {\n        let collection_pass = auth.check_collection_access(\n            name,\n            AccessRequirements::new().extras(),\n            \"get_collection_cluster\",\n        )?;\n        let collection = toc.get_collection(&collection_pass).await?;\n        Ok(collection.cluster_info(toc.this_peer_id).await?)\n    }\n\nsrc/actix/helpers.rs:242-249 — NotFound maps to 404:\n    impl ResponseError for HttpError {\n        fn status_code(&self) -> http::StatusCode {\n            match &self.0 {\n                StorageError::BadInput { .. } => http::StatusCode::BAD_REQUEST,\n                StorageError::NotFound { .. } => http::StatusCode::NOT_FOUND, ...",
+      "call_chain_traced": "Observed 200: client (urllib3 2.6.3 normalize) '/cluster/collection/..' -> wire 'GET /cluster/' -> actix NormalizePath::trim() -> route #[get(\"/cluster\")] cluster_status() -> dispatcher.cluster_status() -> consensus_state None -> ClusterStatus::Disabled -> helpers::time envelope {\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":...}. Assertion's real endpoint: GET /collections/{name}/cluster -> get_cluster_info -> do_get_collection_cluster -> toc.get_collection(name) -> StorageError::NotFound ('Collection `X` doesn't exist!') -> helpers.rs ResponseError -> HTTP 404. No path in the observed 200 reaches a collection-name lookup.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "client_request_artifact — urllib3 2.6.3 client-side dot-segment normalization: '/cluster/collection/..' transmitted as 'GET /cluster/ HTTP/1.1' (raw-socket verified with the log-producing interpreter), so the claimed malformed input never reached the target",
+        "wrong_route_derivation — script synthesized '/cluster/collection/{collection_name}' from the chunk label although raw_knowledge.json records the documented url '/collections/{collection_name}/cluster' and no such route exists in v1.18.0 source or OpenAPI; corroborated by sibling scripts 001/002/004/005 SCRIPT_ERRORing on 'existing collection answered 404'"
+      ],
+      "surviving": null
+    }
+  }
+}

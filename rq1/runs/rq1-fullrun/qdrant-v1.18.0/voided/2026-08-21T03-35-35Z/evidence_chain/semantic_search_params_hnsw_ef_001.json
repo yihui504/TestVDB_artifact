@@ -1,0 +1,66 @@
+{
+  "defect_id": "semantic_search_params_hnsw_ef_001",
+  "endpoint": "/collections/{collection_name}/points/search:POST",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url reachable, version mismatch, params.hnsw_ef parameter documented but valid range not specified, error messages inconsistent",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: hnsw_ef=128 → HTTP 200 (valid); c2: hnsw_ef=16 → HTTP 200 (valid); c3: hnsw_ef=-1 → error 'Format error...expected usize' (quality 1/3)",
+      "secondary_observations": [
+        "hnsw_ef=128: HTTP 200, scored results returned",
+        "hnsw_ef=16: HTTP 200, scored results returned",
+        "hnsw_ef=-1: 'Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 692'"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "hnsw_ef=-1 rejected with generic format error, no parameter-specific hint"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_search_params_hnsw_ef_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "params.hnsw_ef must be positive integer (implied by usize type, range not documented)",
+      "api_violates_assertion": false,
+      "note": "Constraint violated (hnsw_ef=-1 rejected) but error message quality poor (Type2 diagnosis issue, not Type1 validation)",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:(none explicit - hnsw_ef inferred usize type)",
+        "doc:https://api.qdrant.tech/api-reference/points/search-points (parameter exists, range undocumented)",
+        "script:semantic_search_params_hnsw_ef_001 (test valid/invalid values)",
+        "log:hnsw_ef=-1 → 'Format error...expected usize' (generic, not parameter-specific)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["hnsw_ef", "search.*param", "ef.*construct", "hnsw.*validation"],
+      "files_examined": ["not_available_local"],
+      "source_excerpt": "",
+      "call_chain_traced": "not_available_local - v1.18.0 source not cloned",
+      "verification_outcome": "not_available_local",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "type2_poor_diagnostics"
+    }
+  }
+}

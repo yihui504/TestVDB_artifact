@@ -1,0 +1,17 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: sidl05ed56ee
+[assertion quote] expected_behavior: 'index deletion (existing or not) returns HTTP 200; missing collection returns 404'
+[DELETE index leg0 control sidl05ed56ee_live/cat] -> status=200 raw={"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.293937144}
+[leg0] control create+delete -> 200 result:object (face healthy)
+[DELETE index leg1 missing-collection sidl05ed56ee_never_a_d01dd9/field_alpha] -> status=404 raw={"status":{"error":"Not found: Collection `sidl05ed56ee_never_a_d01dd9` doesn't exist!"},"time":0.000040515}
+[leg1] 404 confirmed for sidl05ed56ee_never_a_d01dd9; scoring diagnostics
+    rubric: c1 resource-named=True c2 format/existence-hint=True c3 actionable=False -> score 2/3 (text='{"status": {"error": "not found: collection `sidl05ed56ee_never_a_d01dd9` doesn\'t exist!"}, "time": 4.0515e-05}')
+    localization: body echoes the offending name=True field mentioned=False
+[DELETE index leg2 missing-collection sidl05ed56ee_never_b_21d838/field_beta] -> status=404 raw={"status":{"error":"Not found: Collection `sidl05ed56ee_never_b_21d838` doesn't exist!"},"time":0.000053105}
+[leg2] 404 confirmed for sidl05ed56ee_never_b_21d838; scoring diagnostics
+    rubric: c1 resource-named=True c2 format/existence-hint=True c3 actionable=False -> score 2/3 (text='{"status": {"error": "not found: collection `sidl05ed56ee_never_b_21d838` doesn\'t exist!"}, "time": 5.3105e-05}')
+    localization: body echoes the offending name=True field mentioned=False
+[localization] leg1 body == leg2 body: False (distinct names should ideally produce distinct/localized bodies - measured, not scored; both scored >= 1/3 above)
+OK: control delete 200; both never-created collections (sidl05ed56ee_never_a_d01dd9, sidl05ed56ee_never_b_21d838) -> exactly 404 with diagnosable bodies (rubric >= 1/3 each)
+VERDICT: NO_DEFECT

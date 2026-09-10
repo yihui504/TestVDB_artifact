@@ -1,0 +1,90 @@
+{
+  "defect_id": "state_points_delete_002",
+  "endpoint": "points+delete (POST /collections/{collection_name}/points/delete)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS: page fetched via MCP web reader (built-in WebFetch tool was domain-blocked by this environment; the MCP reader succeeded) — title 'Delete points | Qdrant | API Reference', canonical URL https://api.qdrant.tech/v-1-18-x/api-reference/points/delete-points. Version PASS: page version selector shows v1.18.x, URL path /v-1-18-x/, matches target v1.18.0 on major.minor. Content PARTIAL: the page documents the selector as oneOf 'PointIdsList object Required OR FilterSelector object Required' with filter.should/must/must_not typed as optional condition lists ('At least one of those conditions should match' / 'All conditions must match' / 'All conditions must NOT match'), which the accepted bodies violate in shape (null clause; condition with key only and no matcher) — BUT the page's documented response list contains ONLY '200 successful operation'; the assertion's '400 on an invalid filter' disposition (and the contract's stored doc_quote '...200 ok, 404 for a missing collection, 400 for an invalid filter', verified_at 2026-09-02T12:34:08Z) is not verbatim on the current page text, so the 400 branch is anchored in the server's own sibling dispositions (m1/m4/B5 all returned exactly 400 in the same log) and the source's own validator text rather than page-verbatim prose. Endpoint precision PASS: endpoint_registry contains points+delete POST with the same source_url; the script's runtime path /collections/{name}/points/delete matches. No SDK/REST confusion: REST reference page, SDK tabs are supplementary examples.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[m2-should-null] status=200 body={\"filter\": {\"should\": null}} raw={\"result\":{\"operation_id\":4,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.003604623} ; [m2-should-null count] status=200 raw={\"result\":{\"count\":0},\"status\":\"ok\",\"time\":0.000066551} (baseline count immediately before was 3)",
+      "secondary_observations": [
+        "DEFECT: (m2-should-null) malformed filter accepted with 200 — Type1_IllegalSuccess (behavioral assertion promises 400 on invalid filter) [log line 21]",
+        "DEFECT: (m2-should-null) exact count 0 != 3 after a 200-accepted malformed filter — invalid clause silently applied — Type4_StateLogicViolation [log line 22]",
+        "[m3-cond-without-match] status=200 body={\"filter\": {\"must\": [{\"key\": \"grp\"}]}} raw={\"result\":{\"operation_id\":5,\"status\":\"completed\"},\"status\":\"ok\",\"time\":0.003657538} [log line 17, rest face; condition with key but no match/range accepted with 200]",
+        "[m3-cond-without-match count] status=200 raw={\"result\":{\"count\":0},\"status\":\"ok\",\"time\":0.000104402} [log line 18 — CONFOUND: count was already 0 after m2's wipe, so m3's own state effect is unmeasurable in this log; the script's m3 Type4 leg 'count 0 != 3' does not isolate m3's destructiveness, only its 200-acceptance stands]",
+        "[m1-must-not-a-list] status=400 body={\"filter\": {\"must\": \"not-a-list\"}} raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum PointsSelector\"},\"time\":0.0} [log line 14, rest face, same parameter family — clause as string REJECTED with 400]",
+        "[m4-match-without-key] status=400 body={\"filter\": {\"must\": [{\"match\": {\"value\": \"b\"}}]}} raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum PointsSelector\"},\"time\":0.0} [log line 19, rest face — match without key REJECTED with 400]",
+        "[B5-empty-selector] status=400 body={} raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum PointsSelector\"},\"time\":0.0} [log line 20, rest face — empty selector REJECTED with 400]",
+        "positive/negative controls all behaved as documented: [B3-missing-collection] status=404 ... \"Not found: Collection `spdel2_1788475221_34244_missingx9` doesn't exist!\" ; [B1-ids-branch] status=200 ... ; [B2-filter-branch] status=200 ... ; [baseline count] status=200 raw={\"result\":{\"count\":3} [log lines 8-13]",
+        "sibling rest-face reproduction, boundary_points_delete_invalid_filter_004.log lines 13-15: 'T2 must_not as OBJECT -> status=200 ... VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — T2 must_not as OBJECT: invalid filter ACCEPTED with status 200 (promise: 400); blast radius: DESTRUCTIVE: count moved 6 -> 0' — same endpoint, clause-as-object shape accepted with 200 and wiped all points",
+        "sibling rest-face reproduction, boundary_points_delete_selector_005.log lines 13-15: 'S2 both selectors (points [2] AND filter grp=red) -> status=200 ... count 4 -> 3' — same endpoint, ambiguous selector accepted with 200, one branch silently resolved the ambiguity",
+        "cross-face comparative probe (gRPC) unobtainable: sandbox URL not available to evidence-builder (TESTVDB_DB_URL unset) — face_unavailable recorded honestly; static source asymmetry noted in source_grounding instead"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Stronger than a business error code: the client-decidable invalid filter (explicit null clause / matcher-less condition) was returned as HTTP 200 with a full success envelope (result.status=completed, status=ok, no error field at all) and the mutation was applied — the client error was completely swallowed, not even surfaced as a business error."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": ["state_points_delete_002", "boundary_points_delete_invalid_filter_004", "boundary_points_delete_selector_005"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_delete_001",
+      "assertion_text_quoted": "returns 200 ok (UpdateResult) on success; 404 when the collection is missing; 400 on an invalid filter",
+      "api_violates_assertion": true,
+      "note": "assertion_text_quoted is the verbatim description field of qdrant_behavioral_points_delete_001 in structured_contract.json; the same assertion object also carries expected_behavior: \"valid delete returns HTTP 200; missing collection returns 404; malformed filter returns 400\" (recorded here in note, not inside the quote, to keep the quote a pure verbatim substring). The observed values (filter.should=null, and a must condition {\"key\":\"grp\"} with no matcher) sit inside the quoted constraint's own filter-clause domain and were accepted with 200+success, while the same server rejects sibling malformed filter shapes with exactly 400 (m1/m4/B5) — so violates=true is honest, not conservative drift. Caveat for the auditor: the 400 branch is not page-verbatim prose (page documents only the 200 response); its anchors are the server's own sibling dispositions and the source's own validator text (validate_field_condition). Note: the dispatch row in candidates.jsonl carried constraint_id=\"\" (mechanical truncation of the attack field); the id is declared verbatim in the script header (debate_logs/state_points_delete_002.py line 6) and present in structured_contract.json.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_delete_001 present in structured_contract.json (assertion 200/404/400 disposition matrix, source_status reachable) — link present; dispatch-row constraint_id was empty (truncation artifact) but the contract and script header both carry the id",
+        "doc: source_url reachable and version-matched (v-1-18-x page); selector oneOf and clause typing documented, but the '400 on invalid filter' disposition is not verbatim on the page (only 200 documented) — link present with a partially anchored branch, not a FAIL-level break",
+        "script: debate_logs/state_points_delete_002.py sends the exact raw bodies — m2 {\"filter\": {\"should\": null}} (line 258) and m3 {\"filter\": {\"must\": [{\"key\": \"grp\"}]}} (line 259) via POST delete_points with wait=true — matches the log verbatim",
+        "log: m2 and m3 accepted with 200 + success envelope contradicting the assertion's 400 promise; raw response bodies quoted in execution_evidence; primary and secondary observations both consistent with the claim"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["enum PointsSelector", "pub struct Filter", "MaybeOneOrMany", "pub enum Condition", "pub struct FieldCondition", "impl Validate for FieldCondition", "fn validate_field_condition", "async fn delete_points", "do_delete_points", ".validate()", "impl Validate for DeletePoints", "DeletePointsByFilter", "filter.is_empty"],
+      "files_examined": [
+        "lib/segment/src/common/utils.rs",
+        "lib/segment/src/types.rs",
+        "lib/collection/src/operations/point_ops.rs",
+        "src/actix/api/update_api.rs",
+        "src/common/update.rs",
+        "src/tonic/api/points_api.rs",
+        "src/tonic/api/update_common.rs",
+        "lib/api/src/grpc/qdrant.rs"
+      ],
+      "source_excerpt": "[1] lib/segment/src/common/utils.rs:94-107 — MaybeOneOrMany::deserialize (used by Filter.should/must/must_not via #[serde(with = \"MaybeOneOrMany\")]):\n    pub fn deserialize<D>(deserializer: D) -> Result<Option<Vec<T>>, D::Error> {\n        use serde_untagged::UntaggedEnumVisitor;\n        UntaggedEnumVisitor::new()\n            .unit(|| Ok(None))                      // <-- JSON null maps to Ok(None)\n            .seq(|x| x.deserialize().map(Some))\n            .map(|x| x.deserialize().map(|x| vec![x]).map(Some))\n            .deserialize(deserializer)\n    }\n[1b] lib/segment/src/common/utils.rs:141-163 (unit test, explicit intent evidence for null-acceptance): test_deserialize_one_or_many parses r#\"{ \"data\": null }\"# .unwrap() and asserts res.data.is_none() — a maintainer-written test locks in that an explicit null clause deserializes to None.\n[2] lib/segment/src/types.rs:3794-3825 — pub struct Filter { #[validate(nested)] #[serde(default, with = \"MaybeOneOrMany\", ...)] pub should: Option<Vec<Condition>>, ... same for must / must_not } — clauses are Option, all-None filter is structurally valid.\n[3] lib/segment/src/types.rs:3040-3067 — pub struct FieldCondition { pub key: PayloadKeyType (only required field); pub r#match: Option<Match>, pub range: Option<RangeInterface>, ... all matchers Option } — {\"key\":\"grp\"} deserializes with every matcher None.\n[4] lib/segment/src/types.rs:3232-3240 — the validator that would enforce the 400 branch EXISTS:\n    pub fn validate_field_condition(field_condition: &FieldCondition) -> Result<(), ValidationError> {\n        if field_condition.all_fields_none() {\n            Err(ValidationError::new(\"At least one field condition must be specified\"))\n        } else { Ok(()) }\n    }\n[5] src/actix/api/update_api.rs:81-111 — REST handler delete_points(.., operation: Json<PointsSelector>, ..) calls do_delete_points directly; NO .validate() call anywhere in the handler.\n[6] src/common/update.rs:412-447 — do_delete_points: check_strict_mode (read-only/strict-mode gate, not schema validation) then PointsSelector::FilterSelector(FilterSelector { filter, .. }) => PointOperations::DeletePointsByFilter(filter) — NO .validate() call on this path.\n[7] src/tonic/api/points_api.rs:91-95 — gRPC entry DOES validate first: async fn delete(..) { validate(request.get_ref())?; ... } with lib/api/src/grpc/qdrant.rs:5276-5278 #[derive(validator::Validate)] pub struct DeletePoints (collection_name length/custom-validated); note grpc FieldCondition (qdrant.rs:236-268) carries NO validator derive, so condition-level propagation on gRPC is uncertain from static reading.\n[8] lib/collection/src/operations/point_ops.rs:73-75 — DeletePointsByFilter(_) => OperationToShard::to_all(by_filter) — broadcast to all shards, NO empty-filter guard on the delete path.",
+      "call_chain_traced": "REST: actix delete_points (src/actix/api/update_api.rs:81, no validate) -> do_delete_points (src/common/update.rs:412, no validate) -> DeletePointsByFilter -> split_by_shard to_all (lib/collection/src/operations/point_ops.rs:73) -> per-shard delete with the filter evaluated per point. Deserialization: PointsSelector is #[serde(untagged)] (point_ops.rs:19-26); for m2, FilterSelector matches and Filter.should Option<Vec<Condition>> goes through MaybeOneOrMany whose .unit(|| Ok(None)) maps explicit JSON null to None (utils.rs:101-102, unit-tested at utils.rs:154-163) -> the resulting filter has every clause None, i.e. an empty filter, which matches all points -> wipe (count 3 -> 0), consistent with the contract doc_quote's documented 'whole-collection wipe if the filter matches all' semantics for delete-by-filter. For m3, Condition is untagged (types.rs:3390-3403) and Field(FieldCondition) accepts {\"key\":\"grp\"} since every matcher is Option (types.rs:3040-3067). The codebase's own validator validate_field_condition (types.rs:3232-3240, 'At least one field condition must be specified') plus Filter's #[validate(nested)] would produce exactly the promised 400 — but no .validate() is invoked anywhere on the REST delete path (checked src/actix/** and src/common/update.rs); the gRPC face does invoke request validation at entry (src/tonic/api/points_api.rs:95), a face asymmetry, though its generated FieldCondition lacks a validator derive so deep condition checking on gRPC is unproven. Live cross-face (gRPC) comparison unobtainable: TESTVDB_DB_URL not available to the builder — face_unavailable.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_detail": "Split verdict recorded honestly for the auditor: (a) m3 ({\"key\":\"grp\"}) — validation_absent on the REST path: the exact validator exists in source (validate_field_condition) but is never invoked by the actix delete_points -> do_delete_points chain, so the source does not perform the validation the contract requires on this face; no comment or maintainer marker declares the skip intentional. (b) m2 ({\"should\":null}) — the null->None normalization primitive is explicitly unit-tested intent (utils.rs test_deserialize_one_or_many asserts {\"data\": null} -> is_none()), and the subsequent wipe is empty-filter-matches-all semantics that the contract's verified doc_quote itself sanctions for delete-by-filter; this is recorded as a surviving by-design defense for the auditor to weigh rather than asserted as by_design_in_source, because no intent marker covers the delete endpoint's decision to skip validation itself. Overall verification_outcome=validation_absent refers to the tested REST face performing no post-deserialization request validation.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (all requests answered promptly with 200/400/404; no transport failures or liveness aborts anywhere in the log)",
+        "concurrency (strictly sequential single-threaded script; deterministic replay across three independent scripts in the same run)",
+        "cache/read-delay (every delete sent with wait=true and exact counts read back immediately after)",
+        "request-parameter typo (request bodies are printed verbatim in the log and match the script source character-for-character)"
+      ],
+      "surviving": "by-design defense for m2 only: unit-tested null->None normalization (MaybeOneOrMany) plus documented empty-filter-matches-all delete-by-filter semantics — a mitigating argument the judgment layer must weigh against the assertion's 400 promise; for m3 no by-design marker exists (validator present in source but unwired on the REST path)."
+    }
+  }
+}

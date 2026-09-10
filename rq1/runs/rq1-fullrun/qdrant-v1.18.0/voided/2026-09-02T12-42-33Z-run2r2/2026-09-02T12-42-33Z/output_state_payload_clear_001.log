@@ -1,0 +1,23 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['payload_clear']
+[A upsert 6] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.008114999}
+[B baseline scroll] status=200 raw={"result":{"points":[{"id":1,"payload":{"city":"c1","score":1,"tag":"t1"},"vector":[0.2581989,0.2581989,0.5163978,0.77459663]},{"id":2,"payload":{"city":"c2","s
+[C count-before count] status=200 raw={"result":{"count":6},"status":"ok","time":0.000130437}
+[D clear 1-3] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.003933808}
+[E after-clear scroll] status=200 raw={"result":{"points":[{"id":1,"payload":{},"vector":[0.2581989,0.2581989,0.5163978,0.77459663]},{"id":2,"payload":{},"vector":[0.47140455,0.23570228,0.47140455,0
+[E] OK: targeted point 1 payload empty
+[E] OK: targeted point 2 payload empty
+[E] OK: targeted point 3 payload empty
+[E] OK: non-targeted point 4 payload intact
+[E] OK: non-targeted point 5 payload intact
+[E] OK: non-targeted point 6 payload intact
+[F] vector preservation checked for all readback points
+[G count-after count] status=200 raw={"result":{"count":6},"status":"ok","time":0.000127205}
+DEFECT: (F) point 1 vector changed after payload clear: [0.2581989, 0.2581989, 0.5163978, 0.77459663] != [1.0, 1.0, 2.0, 3.0] — clear is payload-scoped — Type4_StateLogicViolation
+DEFECT: (F) point 2 vector changed after payload clear: [0.47140455, 0.23570228, 0.47140455, 0.7071068] != [2.0, 1.0, 2.0, 3.0] — clear is payload-scoped — Type4_StateLogicViolation
+DEFECT: (F) point 3 vector changed after payload clear: [0.62554324, 0.2085144, 0.4170288, 0.62554324] != [3.0, 1.0, 2.0, 3.0] — clear is payload-scoped — Type4_StateLogicViolation
+DEFECT: (F) point 4 vector changed after payload clear: [0.73029673, 0.18257418, 0.36514837, 0.5477225] != [4.0, 1.0, 2.0, 3.0] — clear is payload-scoped — Type4_StateLogicViolation
+DEFECT: (F) point 5 vector changed after payload clear: [0.80064076, 0.16012816, 0.32025632, 0.48038447] != [5.0, 1.0, 2.0, 3.0] — clear is payload-scoped — Type4_StateLogicViolation
+DEFECT: (F) point 6 vector changed after payload clear: [0.84852815, 0.14142136, 0.28284273, 0.42426407] != [6.0, 1.0, 2.0, 3.0] — clear is payload-scoped — Type4_StateLogicViolation
+VERDICT: DEFECT_FOUND

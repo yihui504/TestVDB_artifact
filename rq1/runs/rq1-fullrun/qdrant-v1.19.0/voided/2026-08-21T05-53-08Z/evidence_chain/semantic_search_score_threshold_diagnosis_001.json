@@ -1,0 +1,73 @@
+{
+  "defect_id": "semantic_search_score_threshold_diagnosis_001",
+  "endpoint": "points+search",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "score_threshold parameter documented at https://api.qdrant.tech/api-reference/points/search-points as optional number. Version 1.19.x matches target 1.19.0. Parameter is present in OpenAPI schema.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "HTTP 400 + error: 'Format error in JSON body: missing field `limit` at line 1 column 676'",
+      "secondary_observations": [
+        "Same error for both score_threshold=-0.1 and score_threshold=1.1 test cases"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx (400)",
+        "note": "Correct HTTP status for invalid request, but error message misleads - reports missing limit instead of invalid score_threshold value"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_search_score_threshold_diagnosis_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint_id - behavioral test expecting score_threshold validation",
+      "api_violates_assertion": false,
+      "note": "API correctly rejects request with HTTP 400, but error message quality is poor - diagnoses 'missing limit' instead of 'invalid score_threshold'",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "doc: score_threshold parameter documented as optional number in search API",
+        "script: sends score_threshold=-0.1 (negative, below 0.0 valid range)",
+        "log: HTTP 400 returned with error message about 'missing field `limit`'",
+        "analysis: misdiagnosis - error points to wrong parameter"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Error message misdiagnoses the problem - reports 'missing limit' when actual issue is invalid score_threshold value",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "score_threshold",
+        "check_threshold",
+        "validate.*score"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/verification/search.rs",
+        "lib/segment/src/types.rs"
+      ],
+      "source_excerpt": "lib/segment/src/types.rs:364: pub fn check_threshold(&self, score: ScoreType, threshold: ScoreType) -> bool {\n        match self.distance_order() {\n            Order::LargeBetter => score > threshold,\n            Order::SmallBetter => score < threshold,\n        }\n    }",
+      "call_chain_traced": "score_threshold validation occurs during search execution via check_threshold() which filters results but does not validate input range",
+      "verification_outcome": "validation_absent",
+      "note": "Source code lacks explicit validation of score_threshold range (should be 0.0-1.0 for normalized distances). check_threshold() only applies filtering logic, no input validation found at API boundary.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "poor_error_diagnosis"
+    }
+  }
+}

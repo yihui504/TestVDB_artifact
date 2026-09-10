@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_list_005",
+ "endpoint": "aliases+list",
+ "param": "collection_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "after delete_alias returns 200, GET /aliases returns 200 with the deleted alias absent from result.aliases (still listed = Type4_StateLogicViolation stale entry); after DELETE /collections/{c2} returns 200, GET /aliases returns 200 with no prefix-owned entry whose collection_name equals the dropped collection (dangling binding served = Type4_StateLogicViolation — a pair referencing a non-existent collection cannot be \"across all collections\"); 5xx on any legal GET = Type3; envelope nests at result.aliases per response_shape (constraint qdrant_behavioral_aliases_list_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

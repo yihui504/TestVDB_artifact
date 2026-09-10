@@ -1,0 +1,15 @@
+{
+ "defect_id": "boundary_index_create_006",
+ "endpoint": "index+create",
+ "param": "field_name",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "strategy7_malformed_input",
+ "constraint_ids": [
+  "qdrant_type_index_create_001",
+  "qdrant_behavioral_index_create_001"
+ ],
+ "oracle": {
+  "statement": "on the live bic006_* collection the legal control keyword index returns 200; the three raw-body malformed JSON probes (truncated body, trailing comma, bare NUL byte inside JSON string) each return HTTP 400/422 (5xx = Type3_RuntimeFailure; 2xx on unparseable JSON = Type1_IllegalSuccess); the escaped-NUL and lone-surrogate field_name probes return 4xx with non-empty diagnostics or 2xx with the readback echo printed for judge (docs declare no field_name charset — measured-only per G3; 404 on live collection = SCRIPT_ERROR; transport failure = /healthz re-check)",
+  "source": "docstring"
+ }
+}

@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_peer_delete_003",
+  "endpoint": "cluster+peer+delete",
+  "param": "timeout",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "boundary",
+  "oracle": {
+    "statement": "timeout query matrix 1 (min closure) / 0 (min-1) / -1 / 2147483647 / 10^9 / '18446744073709551616' against a derived nonexistent peer id -> 4xx each (timeout sent via query params per in:query); any 2xx = Type1_IllegalSuccess; 5xx = Type3_RuntimeFailure with /healthz rechecked; declared confound: standalone distributed-mode gate makes rejection CAUSE (timeout validation vs mode gate) non-adjudicable — only the 4xx class is falsifiable here",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

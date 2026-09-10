@@ -1,0 +1,82 @@
+{
+  "defect_id": "state_collections_delete_02",
+  "endpoint": "collections+delete",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Documentation reachable (domain api.qdrant.tech blocked during verification but cached in raw_knowledge.md confirms v1.19.x major.minor match with target v1.18.2). Constraint qdrant_behavioral_delete_invisibility_001 expects 'get collection returns 404, list collections does not include deleted collection' - this assertion is documented in raw_knowledge.md (lines 68-90). No specific documentation found about graceful handling of concurrent delete+access scenarios, creating expectation gap around 500 vs 404/503.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: Concurrent delete+access race → GET: status=500, raw={\"status\":{\"error\":\"Service internal error: 0 of 0 read operations failed\"}, \"time\":0.009146674}; UPSERT: status=500, raw={\"status\":{\"error\":\"Service internal error: Failed to apply operation to at least one `Active` repli\"} (×2 occurrences)",
+      "secondary_observations": [
+        "c2: Single-script sequential delete (state_collections_delete_01) → all post-delete operations return 404 (expected graceful behavior)",
+        "c3: Delete data persistence test (state_collections_delete_03) → no 500 errors observed"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 500 (Internal Server Error)",
+        "note": "Server returns 500 instead of expected 404 (collection not found) or 503 (service unavailable) during concurrent delete+access race conditions. The 500 responses contain 'Service internal error' messages indicating server-side panic rather than graceful rejection."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_collections_delete_02"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_delete_invisibility_001",
+      "assertion_text_quoted": "Deleted collection should not be visible in get collection and list collections; expected_behavior: get collection returns 404, list collections does not include deleted collection",
+      "api_violates_assertion": true,
+      "note": "Constraint expects 404 for deleted collections, but concurrent access returns 500 (internal error) - violates graceful degradation expectation",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_behavioral_delete_invisibility_001",
+        "doc:raw_knowledge.md (lines 68-90, cached from api.qdrant.tech)",
+        "script:state_collections_delete_02.py (concurrent delete+access threads, 10×20 iterations)",
+        "log:output_state_collections_delete_02.log (3× HTTP 500 errors)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "read operations failed",
+        "Failed to apply operation",
+        "Service internal error"
+      ],
+      "files_examined": [
+        "lib/collection/src/shards/replica_set/execute_read_operation.rs",
+        "lib/collection/src/shards/replica_set/update.rs",
+        "lib/storage/src/content_manager/errors.rs",
+        "src/actix/helpers.rs",
+        "src/actix/api/collections_api.rs"
+      ],
+      "source_excerpt": "源码验证完成，关键发现：\n\n**1. 错误消息抛出点（execute_read_operation.rs:343-350）：**\n```rust\nlet errors_count = errors.len();\nlet operations_count = responses.len() + errors.len();\nlet message = format!(\n    \"{errors_count} of {operations_count} read operations failed{errors_separator}\"\n);\nErr(CollectionError::service_error(message))\n```\n当所有read操作失败时，构造'0 of 0 read operations failed'错误并返回service_error。\n\n**2. 并发更新失败处理（update.rs:613-616）：**\n```rust\nreturn Err(CollectionError::service_error(format!(\n    \"Failed to apply operation to at least one `Active` replica. \\\n     Consistency of this update is not guaranteed. Please retry. {failure_error}\",\n)));\n```\n当并发更新操作未能应用到任何Active副本时，返回service_error。\n\n**3. HTTP错误映射（helpers.rs:243-259）：**\n```rust\nimpl ResponseError for HttpError {\n    fn status_code(&self) -> http::StatusCode {\n        match &self.0 {\n            StorageError::ServiceError { .. } => http::StatusCode::INTERNAL_SERVER_ERROR,\n            StorageError::NotFound { .. } => http::StatusCode::NOT_FOUND,\n            // ...\n        }\n    }\n}\n```\n所有CollectionError::ServiceError在HTTP层映射为500 Internal Server Error。\n\n**4. 错误转换链（errors.rs:195-198）：**\n```rust\nCollectionError::ServiceError { error, backtrace } => StorageError::ServiceError {\n    description: error,\n    backtrace,\n},\n```\nCollectionError::ServiceError保持为StorageError::ServiceError，最终触发HTTP 500。\n\n**链分析结论：** 源码证实HTTP 500是设计行为——当并发删除+访问竞态导致所有read操作失败或无法应用到Active副本时，系统返回service_error而非not_found。这违反了契约期望的graceful degradation（404/503），属于by-design的优雅降级缺失，可归类为Type3_RuntimeFailure。",
+      "call_chain_traced": "并发竞态→collection在access过程中被删除→read operations全部失败→execute_read_operation.rs构造service_error→CollectionError::service_error→转换为StorageError::ServiceError→helpers.rs映射为HTTP 500→返回'0 of 0 read operations failed'或'Failed to apply operation to at least one Active replica'",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "源码搜证充分：3个错误消息关键词全部命中并追踪到抛出点。HTTP 500是service_error的标准映射行为，非偶然路径。并发场景下的错误处理设计未考虑graceful degradation到404/503，证实这是设计缺陷而非实现bug。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency"
+      ],
+      "surviving": "Type3_RuntimeFailure：并发删除+访问竞态条件下，服务返回HTTP 500内部错误而非预期的graceful 404/503。源码验证证实这是by-design行为——当并发导致所有read操作失败或无法应用到Active副本时，系统设计返回service_error（映射为500），而非not_found（404）。排除环境错误（同版本其他脚本正常运行）和并发race作为误解释（实验设计故意引入并发以测试lifecycle consistency，且源码证实这是设计行为而非race condition）。基线对照（state_collections_delete_01）验证串行场景下契约成立（返回404），确认问题与并发相关且是设计缺陷。"
+    }
+  }
+}

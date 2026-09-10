@@ -1,0 +1,87 @@
+{
+  "defect_id": "boundary_aliases_collection_list_001",
+  "endpoint": "aliases+collection+list (GET /collections/{collection_name}/aliases)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: no doc_preflight.json sidecar exists for this round and WebFetch of the source_url (api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases, 2 attempts) and of qdrant.tech/documentation/concepts/aliases/ was blocked by 'Unable to verify if domain ... is safe to fetch' -> domain_blocked (recorded PARTIAL per rule, not FAIL); contract artifact itself records source_status 'reachable' with verified_at 2026-09-02T12:34:08Z (same-day contract build). version: source_url embeds v-1-18-x and assertion doc_version is '1.18.x (versioned v-1-18-x api-reference)' vs target qdrant v1.18.0 -> major.minor 1.18 matches. content: the assertion description 'returns 200 with a list of {alias, collection_name}; 404 for an unknown collection' is verbatim the doc_quote captured in the contract's endpoint_registry ('Returns 200 with a list of {alias, collection_name}; 404 for an unknown collection.') and matches raw_knowledge.api_endpoints[39] expected_responses {200: ok, 404: not found}; the observed 200 envelope {result:{aliases:[{alias_name,collection_name}]}} is exactly the promised 'list of {alias, collection_name}'. endpoint: endpoint_registry contains entry aliases+collection+list (GET /collections/{collection_name}/aliases, same source_url) and the script's request path matches it. evidence_source: doc",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "D",
+      "log_pattern": "GET /collections/bacl1c1eda4873b/aliases -> status=200 / raw: {\"result\":{\"aliases\":[{\"alias_name\":\"bacl1aleda4873b\",\"collection_name\":\"bacl1c1eda4873b\"}]},\"status\":\"ok\",\"time\":6.128e-6} -> VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — 200 without the documented result list of {alias, collection_name}",
+      "secondary_observations": [
+        "create alias status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.015315867} (setup: alias bacl1aleda4873b successfully bound to collection bacl1c1eda4873b, so the 1-alias branch was genuinely arranged)",
+        "cross-script envelope corroboration on the same endpoint, same run: state_aliases_collection_list logs show 'list aliases of s1_aclist_main_1788354847: 200 {\"result\":{\"aliases\":[{\"alias_name\":\"s1_al_b_1788354847\",\"collection_name\":\"s1_aclist_main_1788354847\"},{\"alias_name\":\"s1_al_a_1788354847\",\"collection_name\":\"s1_aclist_main_1788354847\"}]},\"status\":\"ok\",...}' and 'list aliases of alias-free s1_aclist_empty_1788354847: 200 {\"result\":{\"aliases\":[]},...}' - the result.aliases envelope is the normal 200 shape and no other script ever emits the 'result list missing' verdict",
+        "sibling boundary_aliases_collection_list_004 (unknown collection, same endpoint): 'GET /collections/bacl4missing_.../aliases -> status=200 / raw: {\"result\":{\"aliases\":[]},\"status\":\"ok\",\"time\":5.1e-6}' - same envelope parsed/interpreted without any claim of a missing result list"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The request was fully legal (existing collection c1 with one alias created via POST /collections/aliases, both setup steps returned 200); no request-side-decidable error was involved. Server returned HTTP 200 with the documented result list (result.aliases containing {alias_name, collection_name}) on the tested branch. The assertion's other half (404 for unknown collection) is exercised by sibling candidates 004/005/semantic_002 and is not in scope of this script."
+      },
+      "reproducibility": "single script",
+      "script_error": true,
+      "triggering_scripts": [
+        "boundary_aliases_collection_list_001"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_aliases_collection_list_001",
+      "assertion_text_quoted": "returns 200 with a list of {alias, collection_name}; 404 for an unknown collection",
+      "api_violates_assertion": false,
+      "detail": "For the branch this script actually tested (existing collection with exactly 1 alias), the raw response is HTTP 200 with {\"result\":{\"aliases\":[{\"alias_name\":\"bacl1aleda4873b\",\"collection_name\":\"bacl1c1eda4873b\"}]}} - i.e. the documented list of {alias, collection_name} IS present with the correct binding, so the 200-branch of the assertion is not violated and the Type4 verdict is unsupported by the observed exchange (contract_grounding self-check: the observed exchange lies inside the assertion's 200-branch domain and is genuinely compliant; violates=false is correct).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_behavioral_aliases_collection_list_001 (structured_contract.json assertions[49], endpoint aliases+collection+list, '200 with list of {alias, collection_name}; 404 unknown')",
+        "doc:https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases (endpoint_registry doc_quote; live fetch domain_blocked)",
+        "script:boundary_aliases_collection_list_001.py (PUT collections c1/c2 -> POST /collections/aliases create_alias -> GET /collections/{c1}/aliases; oracle parser _result_list() returns 'no list' unless response 'result' is a bare JSON list)",
+        "log:output_boundary_aliases_collection_list_001.log (200 + result.aliases raw, then Type4 DEFECT_FOUND verdict line)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "The DEFECT_FOUND verdict is contradicted by the raw HTTP response in the same log: the response body {\"result\":{\"aliases\":[{\"alias_name\":\"bacl1aleda4873b\",\"collection_name\":\"bacl1c1eda4873b\"}]},\"status\":\"ok\"} DOES contain the documented result list of {alias, collection_name} for the queried collection. The verdict was produced by the script's own parser: _result_list() returns (None, True) whenever result is not a bare list, but the Qdrant REST envelope (as serialized by CollectionsAliasesResponse and as shown by every sibling log on this endpoint) nests the list at result.aliases. The 0-alias branch (c2) was never reached because the script exited at the first branch. The 'log' link (verdict pattern vs. its own raw observation) is therefore broken; the 'contract', 'doc', and 'script-request' links are intact.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "get_collection_aliases|collection_aliases|AliasDescription",
+        "async fn collection_aliases|fn collection_aliases",
+        "aliases (openapi-collections.ytt.yaml)"
+      ],
+      "files_examined": [
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/actix/api/collections_api.rs (route + handler, lines 92-111, 334)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/common/collections.rs (do_list_collection_aliases, lines 167-187)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/lib/collection/src/operations/types.rs (AliasDescription + CollectionsAliasesResponse, lines 1757-1780)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/lib/storage/src/content_manager/toc/mod.rs (TableOfContent::collection_aliases, lines 434-446)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/lib/storage/src/content_manager/alias_mapping.rs (AliasMapping::collection_aliases, lines 114-122)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/openapi/openapi-collections.ytt.yaml (lines 399-415)"
+      ],
+      "source_excerpt": "src/common/collections.rs:167-187: pub async fn do_list_collection_aliases(toc: &TableOfContent, auth: &Auth, collection_name: &str) -> Result<CollectionsAliasesResponse, StorageError> { let collection_pass = auth.check_collection_access(collection_name, AccessRequirements::new(), \"list_collection_aliases\")?; let access = auth.unlogged_access(); let aliases: Vec<AliasDescription> = toc.collection_aliases(&collection_pass, access).await?.into_iter().map(|alias| AliasDescription { alias_name: alias, collection_name: collection_name.to_string() }).collect(); Ok(CollectionsAliasesResponse { aliases }) } | lib/collection/src/operations/types.rs:1767-1778: #[derive(Debug, Serialize, JsonSchema)] #[serde(rename_all = \"snake_case\")] pub struct AliasDescription { pub alias_name: String, pub collection_name: String } ... pub struct CollectionsAliasesResponse { pub aliases: Vec<AliasDescription> } | lib/storage/src/content_manager/alias_mapping.rs:114-122: pub fn collection_aliases(&self, collection_name: &str) -> Vec<String> { let mut result = vec![]; for (alias, target_collection) in self.alias_mapping.0.iter() { if collection_name == target_collection { result.push(alias.clone()); } } result } | lib/storage/src/content_manager/toc/mod.rs:434-446: TableOfContent::collection_aliases reads alias_persistence.collection_aliases(collection_pass.name()) and retains aliases passing the access check; Ok(result).",
+      "call_chain_traced": "REST route #[get(\"/collections/{collection_name}/aliases\")] -> get_collection_aliases handler (src/actix/api/collections_api.rs) -> helpers::time(do_list_collection_aliases) (src/common/collections.rs:167) -> access check -> TableOfContent::collection_aliases (toc/mod.rs:434) -> AliasMapping::collection_aliases (alias_mapping.rs:114), which scans the persisted alias->collection map for entries whose target equals the queried collection -> each hit mapped to AliasDescription{alias_name, collection_name} -> CollectionsAliasesResponse{aliases} -> HTTP 200 envelope {\"result\":{\"aliases\":[...]}}. For a collection that genuinely has the alias (the c1 case), the source therefore returns exactly the documented list entry {alias_name: <alias>, collection_name: <c1>}, matching the raw response observed in the log. No code path supports the claim that the documented result list is omitted for an existing collection with one alias.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "cache delay",
+        "request-parameter typo (setup PUT creates and POST create_alias both returned 200, alias binding verified by the 200 response)"
+      ],
+      "surviving": null,
+      "detail": "The Type4 verdict is fully explained by the script's own response-parser bug: _result_list() in boundary_aliases_collection_list_001.py treats result as a bare list and returns 'no list found' (entries=None) for the documented envelope result:{\"aliases\":[...]}, deterministically firing the '200 without the documented result list' verdict on a fully conforming response. Sibling scripts receiving byte-identical envelope shapes on the same endpoint produced no such verdict. No server-side defect candidate survives for this claim.",
+      "evidence_source": "behavior"
+    }
+  }
+}

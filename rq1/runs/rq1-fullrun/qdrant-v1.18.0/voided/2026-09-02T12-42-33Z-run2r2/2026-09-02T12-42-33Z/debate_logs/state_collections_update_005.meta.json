@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_update_005",
+ "endpoint": "collections+update",
+ "param": "optimizers_config.indexing_threshold (default materialization on the create/readback face vs the update-diff face — doc-internal 10000/20000 conflict)",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "state_readback_normalization",
+ "constraint_ids": [
+  "qdrant_doccons_indexing_threshold_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "default-config create describe reads V_c == 10000 (OptimizersConfig 'Default value is 10,000' claim satisfied); after a valid optimizers diff PATCH omitting indexing_threshold the readback V_b stays 10000, so the OptimizersConfigDiff 'Default value is 20,000' claim never materializes = DEFECT_FOUND (update-page attribution, Type4); explicit-30000 collection stays 30000 after the same diff — V_c==20000/V_b==20000 flips attribution to the other side (NO_DEFECT only when both sides hold: V_c==10000 AND V_b==20000); V_cx reset = Type4 merge-overwrite; 5xx = Type3 only with /healthz liveness",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,17 @@
+{
+  "defect_id": "semantic_index_delete_004",
+  "endpoint": "index+delete",
+  "param": "field_name",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "metamorphic",
+  "constraint_ids": [
+    "qdrant_state_index_delete_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/indexes/delete-field-index",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "both tracked filtered queries (must match cat=A -> {1,3,5}; must range score>25 -> {2,4,5}) return identical id sets at all five index lifecycle states S0 no-index / S1 indexed / S2 deleted / S3 re-created / S4 deleted-again (any drift = Type4: query semantics coupled to index presence, data-untouched promise violated through the query face); re-create at S3 must echo in describe again (create-face regression after delete = Type4, G9 cross-face); every 200 delete must remove its describe entry (200-without-removal = Type4 silent no-op); 4xx on documented-legal create/delete = Type1_IllegalRejection; 5xx with healthy /healthz = Type3 (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

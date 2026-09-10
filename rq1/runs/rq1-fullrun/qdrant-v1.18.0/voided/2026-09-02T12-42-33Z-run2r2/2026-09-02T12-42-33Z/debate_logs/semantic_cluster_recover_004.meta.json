@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_recover_004",
+  "endpoint": "cluster+recover",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract",
+  "oracle": {
+    "statement": "with POST /cluster/recover refused 4xx: /healthz poller (50ms cadence across the whole call window + 0.4s grace) sees ONLY 200 - any non-200 probe = the refused reset still restarted the peer = Type4_StateLogicViolation; describe config.vectors(size=4,distance=Cosine)+shards_number unchanged, exact count==3, scroll readback identical, GET /cluster and collection-cluster dispositions (time excluded) unchanged - drift = Type4; 5xx with /healthz alive = Type3; executed 2xx: restart blip allowed (observation) but identical data plane required, data loss = Type4 (constraint qdrant_state_cluster_recover_001)",
+    "source": "docstring"
+  }
+}

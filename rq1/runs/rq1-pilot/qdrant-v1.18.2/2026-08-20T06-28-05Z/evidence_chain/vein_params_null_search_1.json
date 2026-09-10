@@ -1,0 +1,72 @@
+{
+  "defect_id": "vein_params_null_search_1",
+  "endpoint": "points+search",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Source URL domain_blocked. Contract from structured_contract.json defines params as object type (optional). No explicit statement that params object itself prohibits null. API schema marks it Option<SearchParams> which semantically should not accept null for the object wrapper.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "c1: params=null (test_vein_params_null_search) → http=200, response={\"result\":[{\"id\":1,\"version\":1,\"score\":1.0},...],\"status\":\"ok\"}",
+      "secondary_observations": [
+        "c2: params={} (valid empty object) → http=200, response={\"result\":[...],\"status\":\"ok\"}",
+        "c3: params.hnsw_ef=128 (valid) → http=200, response={\"result\":[...],\"status\":\"ok\"}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Target returned HTTP 200 with status='ok' for null params object, treating None as equivalent to empty params rather than client error"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_params_null_search_1.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_search_points_001",
+      "assertion_text_quoted": "vector dimension must match collection vector size",
+      "api_violates_assertion": true,
+      "note": "Primary constraint does not cover params object nullability. The defect is params: Option<SearchParams> accepting null for the object wrapper itself, not just its fields.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_type_search_points_001 (incomplete - no params object null check)",
+        "doc:points+search params described as object type (no explicit null prohibition)",
+        "script:vein_params_null_search_1.py POST with params=null (object wrapper is null)",
+        "log:HTTP 200 OK with status='ok' and search results returned"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Script sends params=null (entire object is null), log shows 200 OK acceptance. Contract/docs treat params as optional object but do not explicitly distinguish between 'absent' vs 'null'. API layer deserializes null→None without validation. Chain breaks at log observation.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "SearchParams",
+        "params.*Option"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs (line 586: pub params: Option<SearchParams>)",
+        "lib/segment/src/types.rs (lines 586-599: SearchParams struct definition)",
+        "lib/collection/src/operations/verification/search.rs (lines 21-23: params extraction via Option<&SearchParams>)"
+      ],
+      "source_excerpt": "pub struct SearchRequestInternal {\n    ...\n    /// Search params for when there is no prefetch\n    #[validate(nested)]\n    pub params: Option<SearchParams>,\n    ...\n}",
+      "call_chain_traced": "API schema defines params as Option<SearchParams>. REST layer deserializes JSON null→None. #[validate(nested)] attribute exists but does not check for null at wrapper level. Runtime code treats None as 'no params' and proceeds with default search behavior. No explicit null-is-invalid guard.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "Type1_IllegalSurvival: null params object accepted due to Rust's Option<T> treating None as valid absence rather than client error. Missing explicit null validation for optional object wrappers in API layer."
+    }
+  }
+}

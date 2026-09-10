@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_points_recommend_refdelete_001",
+  "endpoint": "points+recommend",
+  "param": "positive",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "delete_consistency",
+  "oracle": {
+    "statement": "recommend positive=[deleted id 1] (and negative=[deleted id 1]) returns HTTP 4xx — 200 = ghost reference served (Type4); after re-upsert of id 1 the same request returns 200 again (still 4xx = stale state, Type4); survivor positive=[2] returns 200 non-empty; exact count drops 8->7 then returns to 8; 5xx with /healthz alive = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

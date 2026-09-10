@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_overwrite_007",
+ "endpoint": "payload+overwrite",
+ "param": "payload",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "step 1 — payload+set {\"a\":1,\"b\":2} points=[1] (wait=true) returns 200 and points+get shows exactly {\"a\":1,\"b\":2}; step 2 — payload+overwrite {\"c\":3} points=[1] (wait=true) returns 200 and points+get shows EXACTLY {\"c\":3} with BOTH {a,b} gone ({a,b,c} or any a/b residue = Type4_StateLogicViolation merge-not-replace; non-200 = Type1_IllegalSuccess promise: the documented scenario succeeds); step 3 (discriminator) — payload+set {\"d\":4} returns 200 and readback shows EXACTLY {\"c\":3,\"d\":4} ({\"d\":4} alone = Type4 set/overwrite semantics swapped); vector deep-equals the baseline readback vector and exact count stays 1 throughout; 5xx at any step = Type3_RuntimeFailure with /healthz re-check (contract qdrant_bc_payload_overwrite_replace_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

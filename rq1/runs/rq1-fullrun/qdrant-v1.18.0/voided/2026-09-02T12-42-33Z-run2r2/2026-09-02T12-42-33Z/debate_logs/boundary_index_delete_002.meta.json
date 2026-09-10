@@ -1,0 +1,14 @@
+{
+ "defect_id": "boundary_index_delete_002",
+ "endpoint": "index+delete",
+ "param": "field_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "state_data_preservation_readback",
+ "constraint_ids": [
+  "qdrant_state_index_delete_001"
+ ],
+ "oracle": {
+  "statement": "with baseline exact count=10, keyword-filtered count=5 and an id->payload scroll snapshot on a bidl2_* collection, deleting both payload indexes (wait=true) returns 200 per field, collections+get result.payload_schema contains neither field (residue = Type4), exact count stays 10, scroll snapshot deep-equal, keyword-filtered count stays 5 (drift/mutation/dark-filter = Type4_StateLogicViolation); 5xx/transport = Type3 with /healthz re-check",
+  "source": "docstring"
+ }
+}

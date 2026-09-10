@@ -1,0 +1,84 @@
+{
+  "defect_id": "boundary_schema_dynamicEfMin_zero",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Assertion inferred; github source_url blocked (PARTIAL reachability). Local clone exact v1.37.4. Source has no lower-bound guard on dynamicEfMin (would otherwise reject 0).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: dynamicEfMin=0, dynamicEfMax=500(default) -> http=200, body persists dynamicEfMin=0 (status 200, VERDICT: DEFECT_FOUND)",
+      "secondary_observations": [
+        "zero dynamicEfMin accepted and returned; no rejection"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "HTTP 200; dynamicEfMin=0 persisted as a successful create rather than rejected as an invalid (zero) EF config"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_schema_dynamicEfMin_zero",
+        "boundary_schema_dynamicEfMin_negative",
+        "boundary_schema_dynamicEfMax_negative",
+        "boundary_schema_dynamicEf_inverted",
+        "boundary_schema_dynamicEfMinOnly"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_inferred_hnsw_ef_pairing_001",
+      "assertion_text_quoted": "dynamicEfMin and dynamicEfMax represent paired EF parameters where Min <= Max",
+      "expected_behavior_quoted": "dynamicEfMin value should be less than or equal to dynamicEfMax value",
+      "api_violates_assertion": false,
+      "note": "Verbatim quotes from structured_contract.json assertions[0] (description at line 2918, expected_behavior at line 2920). value 0 is inside the quote's constraint domain but numerically satisfies Min<=Max (0<=500), so the ordering constraint is NOT violated; the observed defect is absence of positive-lower-bound validation, recorded as validation_absent in source_grounding.",
+      "evidence_source": "doc",
+      "assertion_id": "weaviate_inferred_hnsw_ef_pairing_001"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:weaviate_inferred_hnsw_ef_pairing_001 -> doc:assertion inferred, source=config.go -> script:boundary_schema_dynamicEfMin_zero POST /v1/schema with dynamicEfMin=0 -> log:http=200, body persists dynamicEfMin=0"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "Ordering (0<=500) holds; observed defect is a zero lower-bound EF value accepted+persisted with no positivity/positive-min guard. Source validate() bounds only maxConnections/efConstruction.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "DynamicEFMin consumption",
+        "validate() min checks",
+        "dynamicEfMin OptionalIntFromMap"
+      ],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go",
+        "entities/vectorindex/common/config.go",
+        "entities/vectorindex/dynamic/config.go",
+        "adapters/repos/db/vector/hnsw/config_update.go",
+        "adapters/repos/db/vector/hnsw/index.go"
+      ],
+      "source_excerpt": "config.go:189-193 OptionalIntFromMap(\"dynamicEfMin\") assigns verbatim via setFn (no min>0 check; helper common/config.go:45-76 line 74 setFn(int(asInt64)) direct assign, only guard is overflow->MaxInt64); config.go:41-44 constants MinmumMaxConnections=4/MaximumMaxConnections=2047/MinmumEFConstruction=4 exist for maxConnections/efConstruction only - no MinmumDynamicEF constant (defaults DefaultDynamicEFMin=100 at config.go:30, 92-93); validate() 260-323 never touches DynamicEFMin/Max; runtime stores efMin verbatim (index.go:366, config_update.go:104).",
+      "call_chain_traced": "POST /schema -> ParseAndValidateConfig assigns dynamicEfMin=0 (config.go:189-193 via common/config.go:74) -> validate() (260-323) has no dynamicEf check -> persisted; efMin=0 at index.go:366.",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env",
+        "concurrency",
+        "by-design"
+      ],
+      "surviving": "Zero dynamicEfMin accepted+persisted; no source constant or min-bound guards EF fields. Not a transient error; deterministic HTTP 200.",
+      "note": "ordering assertion satisfied; the zero value evinces absent positive-lower-bound validation (validation_absent), a real config-layer gap."
+    }
+  }
+}

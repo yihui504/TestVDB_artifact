@@ -1,0 +1,10 @@
+create: {"code":0,"data":{}}
+insert: {"code":0,"cost":0,"data":{"insertCount":2,"insertIds":[1,2]}}
+A ids annsField=va: {"code":0,"cost":0,"data":[{"distance":0,"pk":1},{"distance":2.5599997,"pk":2},{"distance":0,"pk":2},{"distance":2.5599997,"pk":1}],"topks":[2,2]}
+
+B ids no annsField: {"code":1100,"message":"multiple vector fields exist, please specify anns_field in search_params: invalid parameter[expected=valid anns_field in search_params][actual=missing]"}
+C data searchParams.anns_field: {"code":1801,"message":"can only accept json format request, error: search without annsField, but already found multiple vector fields: [va, vb,,,]"}
+D bogus annsField: {"code":1801,"message":"can only accept json format request, error: cannot find a vector field named: nope"}
+E ids annsField=pk: {"code":1100,"message":"field (pk) to search is not of vector data type: invalid parameter"}
+annsField injection semantics consistent
+VERDICT: NO_DEFECT

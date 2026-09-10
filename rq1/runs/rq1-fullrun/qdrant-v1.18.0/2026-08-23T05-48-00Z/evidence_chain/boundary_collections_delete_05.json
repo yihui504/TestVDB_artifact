@@ -1,0 +1,93 @@
+{
+  "defect_id": "boundary_collections_delete_05",
+  "endpoint": "collections+delete (DELETE /collections/{collection_name})",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "可达性: WebFetch 通道被网络策略拦截(domain_blocked)，改用 web_reader MCP 通道成功抓取完整页面(200)→PASS。版本: 页面明确 v1.18.x(Fern 构建 2026-08-05T12:10:54Z, og/canonical 均 api-reference/collections/delete-collection)→PASS。内容一致性: v1.18.x 文档对 delete-collection 仅声明 200 'Deleted' 一种响应，result 字段为 boolean Optional(200 示例含 result:true，schema 允许 false)，页面无任何 404 响应声明——contract assertion 的 'DELETE missing => 404' 半边在引用文档中零文字支持→FAIL('DELETE existing => 200' 半边有支持)。端点: endpoint_registry 命中 collections+delete(DELETE, source_url 一致, doc_version '1.18.x (versioned)', doc_quote 'Drop the collection and all of its data')→PASS。佐证: v1.18.0 源码自带 OpenAPI 生成源 openapi/openapi-collections.ytt.yaml:89-110 delete_collection responses#@response(type(boolean))，宏 openapi.lib.yml:1-35 只产出 200(result 类型即 boolean)+泛化 default/4XX ErrorResponse，无 404 专门声明——文档站与 spec 源一致，均不含 404 承诺。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[unicode-missing] DELETE /collections/bd05_не_существует_中文 -> 200 | {\"result\":false,\"status\":\"ok\",\"time\":0.000096047} ; [trailing-space] DELETE /collections/bd05_trailing%20 -> 200 | {\"result\":false,\"status\":\"ok\",\"time\":0.000079752} (output_boundary_collections_delete_05.log:9-10)",
+      "secondary_observations": [
+        "[plus-name] DELETE /collections/bd05+plus+name -> 200 | {\"result\":false,\"status\":\"ok\",...} (log:11)",
+        "[reserved-aliases] DELETE /collections/aliases -> 200 | {\"result\":false,\"status\":\"ok\",...} (log:12)",
+        "[nul-encoded] DELETE /collections/bd05_%00_nul -> 422 | {\"status\":{\"error\":\"Validation error in path parameters: [collection_name: collection name cannot contain \\u0000 char]\"}} (log:8 — 名字级校验存在且拒绝)",
+        "[long-1000] ... -> 422 | Validation error in path parameters: collection_name value ... (log:5)",
+        "[dot]/[dotdot]/[empty-trailing-slash]/[bare-collections] DELETE -> 404 (log:3,4,6,7)",
+        "[unicode-control] DELETE existing unicode name: 200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.008011317} (log:14 — 同端点 existing 集合返回 200+result:true，正向对照成立)",
+        "boundary_collections_delete_01.log:6: DELETE missing: status=200 raw={\"result\":false,\"status\":\"ok\",\"time\":0.000076543} (兄弟脚本同端点同模式)",
+        "boundary_collections_delete_02.log:6: second DELETE of already-deleted collection returned 200; constraint requires 404 (兄弟脚本同端点同模式)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "请求侧可判定错误(DELETE 一个不存在的资源名)以 HTTP 200 返回，未删除语义由业务层布尔字段 {\"result\":false} 而非 404 状态码表达；status 字段仍为 \"ok\"，响应体内无任何错误码。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_collections_delete_05", "boundary_collections_delete_01", "boundary_collections_delete_02"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_collections_delete_001",
+      "assertion_text_quoted": "description: \"deleting non-existent collection returns 404; deleting existing collection returns 200 (runtime verified)\"; assertion: \"DELETE existing => 200; DELETE missing => 404\" (type: state_constraint, evidence_tier: explicit, source_url: https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection)",
+      "api_violates_assertion": true,
+      "note": "观测(DELETE 不存在名 → 200+result:false)与 assertion 后半句 'DELETE missing => 404' 直接矛盾，且属约束域内(状态契约的 missing 半边)、值明确违规，故 violates=true 无歧义；但该 404 半边在 constraint 自己引用的 v1.18.x 文档页面与源码 OpenAPI 生成源中均无声明，行为与文档一致而与 contract 不一致——assertion 疑为契约构建期引入的过强断言，见 chain_trace/source_grounding。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_collections_delete_001 'DELETE existing => 200; DELETE missing => 404' (structured_contract.json state_constraints)",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection v1.18.x 页面仅声明 200 'Deleted'(result: boolean Optional)，无 404 响应声明；源码 spec 源 openapi-collections.ytt.yaml:110 + openapi.lib.yml:1-35 同样只声明 200+泛化4XX",
+        "script: debate_logs/boundary_collections_delete_05.py — DELETE /collections/{unicode-missing|trailing%20|plus|aliases 等边缘名}(URL 编码原文在 L52-63)，判定规则 L80-82: s==200 → Type1_IllegalSuccess",
+        "log: output_boundary_collections_delete_05.log:9-12 → 200 {\"result\":false,\"status\":\"ok\"} ×4；:14 existing 名 → 200 {\"result\":true} 正向对照"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "断链在 contract→doc 环: contract 引用的文档页面(及 v1.18.0 源码 OpenAPI 生成源)不包含 'DELETE missing => 404' 的任何声明，反而以 result:boolean schema 明示 false 为合法 200 结果。script→log→API 行为三环自洽且与 doc 一致(200+result:false 即文档 schema 行为)，仅与 contract assertion 的 404 半边冲突。另: contract description 自述 '(runtime verified)'，但 v1.18.0 文档+源码+本次实测三方一致显示 200，该 runtime verified 标记与目标版本矛盾(可能来自更早版本行为或构建期探测偏差)。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "fn delete_collection (21 文件命中, 读 v1.18.0 两个关键文件)",
+        "DeleteCollection (collection_meta_ops.rs:78 分派命中)",
+        "fn process_response (helpers.rs:80 命中)",
+        "NotFound (errors.rs 20/84/130 行命中, 确认 StorageError::NotFound→404 机制存在)",
+        "delete-collection (openapi yaml 无此 slug, 改按 yaml 行号读 delete: 段 89-110)",
+        "async fn do_get_collection (src/common/collections.rs:68 命中, GET 对照)"
+      ],
+      "files_examined": [
+        "v1.18.0/src/actix/api/collections_api.rs (delete_collection handler L161-178, get_collection L59-72)",
+        "v1.18.0/lib/storage/src/content_manager/toc/collection_meta_ops.rs (分派 L78-81, delete_collection L211-296, update_aliases 对照 L299-338)",
+        "v1.18.0/src/actix/helpers.rs (process_response L52-89)",
+        "v1.18.0/openapi/openapi-collections.ytt.yaml (delete: L89-110)",
+        "v1.18.0/openapi/openapi.lib.yml (response() 宏 L1-35)",
+        "v1.18.0/lib/storage/src/content_manager/errors.rs (NotFound 映射 L20/130)",
+        "v1.18.0/src/common/collections.rs (do_get_collection 对照 L68-85)"
+      ],
+      "source_excerpt": "// lib/storage/src/content_manager/toc/collection_meta_ops.rs:227-296 (v1.18.0)\n        let removed_opt = self.collections.write().await.remove(collection_name);\n        if let Some(removed) = removed_opt {\n            ... // 已加载集合: 停止/清理磁盘\n            result = true;                                   // L271\n        } else {\n            // we hold the collection_create lock to make sure no one is creating this collection\n            // otherwise we would delete its content now\n            if collection_path.exists() {                   // L275 未加载但目录残留\n                log::warn!(\"Collection {collection_name} is not loaded, but its directory still exists. Deleting it.\");\n                to_delete = Some(safe_delete_in_tmp(&collection_path, &safe_delete_path)?);\n            } else {\n                to_delete = None;\n            }\n            result = false;                                  // L284 集合不存在 → Ok(false), 非 Err(NotFound)\n        }\n        ...\n        Ok(result)                                           // L295\n\n// src/actix/helpers.rs:61-70\n    match response {\n        Ok(res) => HttpResponse::Ok().json(ApiResponse {     // L62 一切 Ok(_) 一律 HTTP 200\n            result: Some(res),                               // Some(false) → {\"result\":false,\"status\":\"ok\"}\n            status: ApiStatus::Ok,\n            time: timing.elapsed().as_secs_f64(), ... }),\n        Err(err) => process_response_error_with_inference_usage(...)  // 仅 StorageError 才走 4xx/5xx\n\n// 对照(同文件 update_aliases, L316): collection_lock.validate_collection_exists(&collection_name)?  // 存在性校验→Err 模式在同文件被用于别名操作, delete 路径明确不采用\n// 对照(GET, src/common/collections.rs:77): toc.get_collection(&collection_pass).await?  // NotFound Err 传播→404, 证明 404 机制可用而 delete 选择不用",
+      "call_chain_traced": "DELETE /collections/{name} → src/actix/api/collections_api.rs:161 delete_collection() → dispatcher.submit_collection_meta_op(CollectionMetaOperations::DeleteCollection(name)) → lib/storage/.../toc/collection_meta_ops.rs:78 分派 → :211 TableOfContent::delete_collection() → 集合不存在且磁盘无目录 ⇒ L284 result=false, L295 Ok(false) → src/actix/helpers.rs:80 process_response() → :62 Ok(res) ⇒ HttpResponse::Ok().json(result:Some(false)) ⇒ HTTP 200 + {\"result\":false,\"status\":\"ok\"}。全程无 StorageError 产生，404 分支(HttpError::from(StorageError::NotFound))在此路径不可达。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — 响应体 {\"result\":false,\"status\":\"ok\"} 与源码 helpers.rs:62-70 ApiResponse 序列化逐字段吻合，非环境异常",
+        "concurrency — 单脚本顺序请求，无竞态",
+        "request_typo — 脚本原文 L52-63 可查，URL 编码(trailing%20/%00/unicode)正确送达且 NUL/超长被同一入口 422 拒绝，证明路径参数解析正常",
+        "cache — DELETE 无缓存层参与",
+        "auth — 无鉴权错误，status 为 ok"
+      ],
+      "surviving": "contract assertion 的 'DELETE missing => 404' 半边在其 source_url 文档(v1.18.x 仅声明 200+result:boolean)、源码 OpenAPI 生成源(无 404 声明)、源码实现(else 分支显式 result=false→200)三方均无依据——唯一幸存的解释是契约断言本身过强(description 自述 runtime verified 与目标版本行为矛盾)，API 行为属 by-design 幂等删除语义；是否判 DEFECT 由 chain-auditor 依据 contract 基准裁决。"
+    }
+  }
+}

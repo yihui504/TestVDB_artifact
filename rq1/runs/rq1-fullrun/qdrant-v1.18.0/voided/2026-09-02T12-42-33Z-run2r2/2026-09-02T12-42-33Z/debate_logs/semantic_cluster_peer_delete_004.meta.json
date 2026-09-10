@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_cluster_peer_delete_004",
+  "endpoint": "cluster+peer+delete",
+  "param": "force",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "metamorphic",
+  "oracle": {
+    "statement": "three disposition-invariance relations on a ghost peer id hold: force omitted == force=false (documented default), identical repeat keeps the same class (rejection idempotency), timeout=1 vs absent keeps the same class; any class divergence = Type4_StateLogicViolation, a straight 2xx = Type1_IllegalSuccess, 5xx with /healthz alive = Type3 (assertion qdrant_behavioral_cluster_peer_delete_001)",
+    "source": "docstring"
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "defect_id": "semantic_collections_create_014",
+  "endpoint": "collections+create",
+  "defect_type": "Type3_RuntimeFailure",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No doc_preflight.json sidecar exists this round; reachability PASS cites contract-time batch records (constraint source_status='reachable' at structured_contract.json:6271 and endpoint_registry verified_at=2026-09-02T12:34:08+00:00, ~8 min before session start); two live WebFetch re-verification attempts to api.qdrant.tech were domain_blocked (network restriction, recorded honestly, not treated as FAIL per rules). Version: URL path v-1-18-x matches target v1.18.0 major.minor. Content: raw_knowledge /schema capture (doc-derived, contract-time) states 'wal_config defaults: wal_capacity_mb=32 (min 1), wal_segments_ahead=0 (min 0), wal_retain_closed=1 (min 0)', verbatim-consistent with the constraint assertion; runtime corroborates each documented minimum (wal_capacity_mb=0 -> 422 'must be 1 or larger'; negatives -> 400 'expected usize'; wal_retain_closed=0 passes the input face). Endpoint: endpoint_registry collections+create = PUT /collections/{collection_name} from the same create-collection reference, matching the script's path key create_collection (log line 3 cites raw_knowledge api_endpoints[collections+create].url).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[create scc14_1788388177_ok_minima] status=500 raw={\"status\":{\"error\":\"Service internal error: Tokio task join error: task 17006 panicked with message \\\"called `Option::unwrap()` on a `None` value\\\"},\"time\":1.169060873}",
+      "secondary_observations": [
+        "[pre-probe] /healthz status=200 raw=healthz check passed (output_semantic_collections_create_014.log:4)",
+        "[control] setup_default create OK (deployment healthy) (output_semantic_collections_create_014.log:5 — rules out deployment/env failure)",
+        "[5xx] /healthz probe status=200 raw=healthz check passed (output_semantic_collections_create_014.log:7 — server alive after the crash, not a crash-down)",
+        "same-endpoint same-family comparison (face rest, output_boundary_collections_create_011.log:5): [wal_config.wal_capacity_mb=0 (min-1, both grids)] status=422 raw={\"status\":{\"error\":\"Validation error in JSON body: [wal_config.wal_capacity_mb: value 0 invalid, must be 1 or larger]\"},\"time\":0.0}",
+        "same-endpoint same-family comparison (face rest, output_boundary_collections_create_011.log:9): [wal_config.wal_retain_closed=-1 (illegal under diff min 0 AND resolved min 1)] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: invalid value: integer `-1`, expected usize at line 1 column 85}\"},\"time\":0.0}",
+        "same-endpoint same-family comparison (face rest, output_boundary_collections_create_011.log:11-12): [positive minima combo {\"wal_capacity_mb\": 1, \"wal_segments_ahead\": 0}] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.344849842}; [readback] config.wal_config={\"wal_capacity_mb\": 1, \"wal_segments_ahead\": 0, \"wal_retain_closed\": 1} — the other two documented minima are accepted and persisted; only wal_retain_closed=0 crashes",
+        "isolated-trigger comparison (face rest, output_boundary_collections_create_011.log:15): [measured-only:wal_retain_closed=0 (diff min 0 vs resolved min 1)] status=500 raw={\"status\":{\"error\":\"Service internal error: Tokio task join error: task 16212 panicked with message \\\"called `Option::unwrap()` on a `None` value\\\"},\"time\":1.243433819}",
+        "cross-script reproduction (face rest, output_state_collections_create_011.log:3): [wal_min] status=500 raw={\"status\":{\"error\":\"Service internal error: Tokio task join error: task 17417 panicked with message \\\"called `Option::unwrap()` on a `None` value\\\"},\"time\":1.14942087}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The crashing request is in-domain (documented-legal minima), so this is a genuine server-side 5xx, not a client error swallowed into 2xx. Below-minimum sibling inputs are correctly rejected with 422 (validator range) / 400 (serde usize typing) on the same face."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_collections_create_014",
+        "boundary_collections_create_011",
+        "state_collections_create_011"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_collections_create_005",
+      "assertion_text_quoted": "wal_config (create, WalConfigDiff schema): wal_capacity_mb minimum 1; wal_segments_ahead minimum 0; wal_retain_closed minimum 0",
+      "api_violates_assertion": true,
+      "note": "violates-declaration self-check: the observed value wal_retain_closed=0 is INSIDE the quoted constraint domain (0 >= 'minimum 0', at the inclusive boundary), so the constraint's behavioral promise for in-domain values is acceptance (200 result=true); the API instead returned 500 with a task panic. Violation mode = runtime crash on a documented-legal in-domain boundary value, not a bounds violation (out-of-domain values are properly rejected 422/400). The candidates.jsonl dispatch record left constraint_id empty (mechanical truncation); the binding comes from the script header 'constraint_ids: qdrant_range_collections_create_005' and the constraint exists at structured_contract.json:6263-6274.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_range_collections_create_005 present in structured_contract.json:6263-6274 (assertion verbatim quoted above); dispatch-record constraint_id field was empty (extraction truncation) but the script header carries the binding",
+        "doc: source_url https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection recorded reachable at contract time (source_status + endpoint_registry verified_at 2026-09-02T12:34:08Z); raw_knowledge /schema capture carries 'wal_retain_closed=1 (min 0)' matching the assertion; live WebFetch re-check domain_blocked (recorded, not FAIL)",
+        "script: debate_logs/semantic_collections_create_014.py sends PUT /collections/{name} with wal_config {wal_capacity_mb:1, wal_segments_ahead:0, wal_retain_closed:0} (script lines 233-237) — exactly the documented inclusive minima",
+        "log: output_semantic_collections_create_014.log:6 carries the raw 500 panic line; verdict line 8 DEFECT_FOUND (Type3_RuntimeFailure) is consistent with the raw response (server 5xx while /healthz alive)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "wal_retain_closed",
+        "WalConfigDiff",
+        "WalOptions",
+        "retain_closed (lib/wal)",
+        "Tokio task join error",
+        "SerdeWal::new / (&config.wal_config).into()"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/config_diff.rs",
+        "lib/collection/src/config.rs",
+        "lib/storage/src/content_manager/collection_meta_ops.rs",
+        "lib/storage/src/content_manager/toc/create_collection.rs",
+        "lib/collection/src/shards/local_shard/mod.rs",
+        "lib/wal/src/lib.rs",
+        "lib/storage/src/content_manager/errors.rs"
+      ],
+      "source_excerpt": "lib/collection/src/operations/config_diff.rs:79-88 (REST diff face — note NO range validation on wal_retain_closed):\n  pub struct WalConfigDiff {\n      /// Size of a single WAL segment in MB\n      #[validate(range(min = 1))]\n      pub wal_capacity_mb: Option<usize>,\n      /// Number of WAL segments to create ahead of actually used ones\n      pub wal_segments_ahead: Option<usize>,\n      /// Number of closed WAL segments to retain\n      pub wal_retain_closed: Option<usize>,\n  }\n\nlib/collection/src/config.rs:36-64 (internal resolved face — demands minimum 1, enforced only by a panic):\n  pub struct WalConfig {\n      /// Size of a single WAL segment in MB\n      #[validate(range(min = 1))]\n      pub wal_capacity_mb: usize,\n      /// Number of WAL segments to create ahead of actually used ones\n      pub wal_segments_ahead: usize,\n      /// Number of closed WAL segments to keep\n      #[validate(range(min = 1))]\n      #[serde(default = \"default_wal_retain_closed\")]\n      pub wal_retain_closed: usize,\n  }\n  fn default_wal_retain_closed() -> usize {\n      1\n  }\n  impl From<&WalConfig> for WalOptions {\n      fn from(config: &WalConfig) -> Self {\n          let WalConfig { wal_capacity_mb, wal_segments_ahead, wal_retain_closed } = config;\n          WalOptions {\n              segment_capacity: wal_capacity_mb * 1024 * 1024,\n              segment_queue_len: *wal_segments_ahead,\n              retain_closed: NonZeroUsize::new(*wal_retain_closed).unwrap(),   // <-- PANIC on 0: \"called `Option::unwrap()` on a `None` value\"\n          }\n      }\n  }\n\nlib/collection/src/operations/config_diff.rs:281-295 (merge — Some(0) wins over resolved default 1):\n  impl DiffConfig<WalConfigDiff> for WalConfig {\n      fn update(&self, diff: &WalConfigDiff) -> Self {\n          ...\n          wal_retain_closed: wal_retain_closed.unwrap_or(self.wal_retain_closed),\n      }\n  }\n\nlib/storage/src/content_manager/toc/create_collection.rs:148 (create path — merge with NO re-validation of the merged WalConfig):\n  let wal_config = self.storage_config.wal.update_opt(wal_config_diff.as_ref());\n\nlib/collection/src/shards/local_shard/mod.rs:371-373 (consumption inside shard-creation task):\n  let wal: SerdeWal<OperationWithClockTag> =\n      SerdeWal::new(&wal_path, (&collection_config_read.wal_config).into());   // .into() hits the unwrap\n\nlib/wal/src/lib.rs:33-34 (engine domain is nonzero by type):\n  /// The number of \"closed-*\" wal files to retain. Defaults to 1.\n  pub retain_closed: NonZeroUsize,\n\nlib/storage/src/content_manager/errors.rs:332-336 (panic -> observed 500 body):\n  impl From<tokio::task::JoinError> for StorageError {\n      fn from(err: tokio::task::JoinError) -> Self {\n          Self::service_error(format!(\"Tokio task join error: {err}\"))\n      }\n  }",
+      "call_chain_traced": "REST PUT /collections/{name} body wal_config (WalConfigDiff: Option<usize>, no range attr on wal_retain_closed, so documented-legal 0 passes the validator — only wal_capacity_mb carries range(min=1), which matches the observed 422 face) -> lib/storage/src/content_manager/toc/create_collection.rs:148 storage_config.wal.update_opt(diff) -> WalConfig::update (config_diff.rs:292) resolves wal_retain_closed=Some(0), overriding default 1, with no validation of the merged config (the range(min=1) attribute on WalConfig is never invoked on this path) -> CollectionConfigInternal -> Collection::new -> LocalShard::build_shard (local_shard/mod.rs:372) SerdeWal::new(.., (&wal_config).into()) -> From<&WalConfig> for WalOptions (config.rs:62) NonZeroUsize::new(0).unwrap() panics inside the shard-creation tokio task -> JoinError -> StorageError::service_error('Tokio task join error: task N panicked ...') (errors.rs:334) -> HTTP 500 with /healthz alive. The panic message, the ~1.2s latency (storage created before the panic), and the error body all match the observed logs.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "validation_absent at the enforcement point: the input face performs NO minimum validation on wal_retain_closed (no validator attribute in WalConfigDiff) and the create-merge path performs NO re-validation of the merged WalConfig even though the internal struct itself declares range(min=1); the internal min-1 domain is instead 'enforced' by NonZeroUsize::new(..).unwrap() panicking on a documented-legal 0. by_design_in_source is NOT supportable: there is no intent marker (comment/docstring/maintainer citation) near the unwrap, and the presence of the range(min=1) attribute on the internal struct indicates the intended mechanism was input validation, not a panic; the diff face (min 0) and resolved face (min 1) are mutually inconsistent.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env/deployment failure (control create OK at log line 5; /healthz 200 before and after the 500)",
+        "concurrency race (deterministic single request; reproduced by 3 scripts with 3 distinct task ids and identical panic signature)",
+        "cache delay (fresh unique collection names per run; nothing read from cache)",
+        "request-parameter typo (script source lines 233-237 send exactly the documented inclusive minima; sibling minima accepted 200)"
+      ],
+      "surviving": "genuine unguarded invariant: documented-legal wal_retain_closed=0 on the REST diff face reaches the NonZeroUsize conversion unwrap in From<&WalConfig> for WalOptions and panics (diff-face minimum 0 vs resolved/internal minimum 1 domain inconsistency; crash instead of a 4xx rejection or acceptance)."
+    }
+  }
+}

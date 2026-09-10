@@ -1,0 +1,72 @@
+{
+  "defect_id": "boundary_stats_rowcount_016",
+  "endpoint": "v2/vectordb/collections/get_stats",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "不变式 milvus_inv_count_consistency 原文 rowCount==N；契约 endpoint v2 get_stats 'data {rowCount}' 与源码一致；source_url v2.3.22 可达",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[get_stats] http=200 body={\"code\":200,\"data\":{\"rowCount\":0}} （紧接 [insert 5] http=200 body={\"code\":200,\"data\":{\"insertCount\":5,\"insertIds\":[468539281520724799,...803]}}）",
+      "secondary_observations": [
+        "[rowCount] 0 (expect >=5; exact==5 under strong count) —— 插入 5 行（含服务器生成的大 id），统计读回 0",
+        "[describe via POST] http=404 body=404 page not found （v1 describe GET-only 契约 milvus_behavioral_describe_002 的独立复证：PASS 方向）",
+        "[describe missing] http=200 body={\"code\":100,\"message\":\"can't find collection collection not found[database=default][collection=nope]\"} （契约 milvus_behavioral_describe_001 复证：PASS 方向）",
+        "[list dbName=12345] http=200 body={\"code\":800,\"message\":\"database not found, database: 12345\"} （附带观测）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "rowCount 错值为 200+code:200 成功信封；本 log 同时 raw 复证契约信封模型（code 100/800 均在 200 信封内）"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_stats_rowcount_016.py", "vein_stats_rowcount_001.py", "semantic_visibility_04.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_inv_count_consistency",
+      "assertion_text_quoted": "insert N entities -> rowCount == N (get_stats); after inserting N rows, collections/get_stats data.rowCount == N",
+      "api_violates_assertion": true,
+      "note": "N=5（autoID 服务器生成 id 的 v1 集合插入），rowCount=0，直接违反；脚本标题 insert/flush/load/reload 后均 0（boundary 视角多状态探测）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_inv_count_consistency rowCount==N",
+        "doc: source_url handler_v2.go v2.3.22 可达（本地 clone 佐证 getCollectionStat:417）",
+        "script: boundary_stats_rowcount_016.py insert 5 -> get_stats -> describe 对照 -> 恶 dbName 对照",
+        "log: insert 5 成功(逐字 ids) + get_stats rowCount=0 逐字矛盾"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "断链在 target 环：insert 请求 200 且返回 5 个真实 insertIds，同集合 get_stats rowCount=0——不变式违反。本链为本组三链中 raw 证据最完整者（全行含 http 状态与响应体逐字）",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["getCollectionStat (handler_v2.go)", "func .*GetNumRowsOfCollection", "isSegmentHealthy", "GetCollectionStatistics (task_statistic.go/datacoord services.go)"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go (417-430)",
+        "internal/proxy/task_statistic.go (591-671)",
+        "internal/datacoord/services.go (340-360)",
+        "internal/datacoord/meta.go (253-269)"
+      ],
+      "source_excerpt": "internal/datacoord/services.go:356-357: nums := s.meta.GetNumRowsOfCollection(req.CollectionID); resp.Stats = append(resp.Stats, &commonpb.KeyValuePair{Key: \"row_count\", Value: strconv.FormatInt(nums, 10)}) || internal/datacoord/meta.go:257: if isSegmentHealthy(segment) && segment.GetCollectionID() == collectionID { ret += segment.GetNumOfRows() }",
+      "call_chain_traced": "同 vein_stats_rowcount_001 链：REST get_stats -> proxy -> datacoord meta healthy-segment NumOfRows 累加；insert 的 growing segment 未入统计则恒 0。boundary 视角在 insert/flush/load/reload 多状态后均 0，排除状态机窗口解释",
+      "verification_outcome": "by_design_in_source",
+      "note": "同根因组（rowCount 恒 0）三方独立建链之一；实现机制 by-design、契约不变式事实不成立的张力留 auditor 聚合裁量",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["data-loss(insertIds 逐字返回 5 个)", "env(同 log 内 describe/list 端点全部行为正常)", "script_error(raw http/body 逐字)", "state-window(标题含 flush/load/reload 后均 0)"],
+      "surviving": "统计源(datacoord segment 元数据)与 query path 可见性架构分歧——by_design 抗辩方向"
+    }
+  },
+  "evidence_weight": "A（raw HTTP+body 全行逐字、多状态探测、三方独立复现之首证链、源码全调用链）"
+}

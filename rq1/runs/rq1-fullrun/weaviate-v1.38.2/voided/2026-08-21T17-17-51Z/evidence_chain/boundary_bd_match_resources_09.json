@@ -1,0 +1,71 @@
+{
+  "defect_id": "boundary_bd_match_resources_09",
+  "endpoint": "DELETE /batch/objects",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint source_url go-func 本地 clone 可达；match.class required=true（class 空串即缺失）；endpoint_registry 含 DELETE /batch/objects v1.38.2。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "class empty string: 500 {\"error\":[{\"message\":\"validate: empty match.class clause\"}]}（主观测：唯一 5xx 变体）",
+      "secondary_observations": [
+        "nonexistent class: 422 {\"error\":[{\"message\":\"validate: failed to get class: NopeDoesNotExist\"}]} — 对照：PR#11497 已把 class-not-found 修正为 422，与 class-empty 的 500 形成语义断层",
+        "resources as string/array/null/empty: 200 {...\"match\":{\"class\":\"BdBdRes9\",\"where\":{...\"valueText\":\"zzz-no-match-zzz\"}}...} — 额外 resources 字段被静默忽略（200，无诊断）",
+        "where as string: 400 {\"code\":400,\"message\":\"parsing body ... cannot unmarshal string into Go struct field BatchDeleteMatch.match.where of type models.WhereFilter\"}",
+        "where as array: 400 {\"code\":400,\"message\":\"parsing body ... cannot unmarshal array ... WhereFilter\"}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "两条通道并存：(a) 未知字段 resources（string/array/null/空）→ 200 静默忽略，属请求侧可判定错误以 2xx 返回；(b) class 空串 → 500。对照 nonexistent class 422，三者语义层级不一致。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_bd_match_resources_09", "boundary_bd_match_class_02", "semantic_match_missing_01"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_type_batch_delete_match_001",
+      "assertion_text_quoted": "DELETE /batch/objects: match.class AND match.where present, else 4xx",
+      "api_violates_assertion": true,
+      "note": "class 空串 = match.class 缺失 → 500 违反 'else 4xx'；resources 未知字段静默 200 是次观测（api_endpoints 无 resources 参数，OpenAPI 未禁额外字段，by-design 嫌疑交给 auditor）。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_type_batch_delete_match_001 — match.class 缺失应 4xx",
+        "doc: api_endpoints match.class required=true (go-struct entities/models/batch_delete.go#L132-L134)",
+        "script: boundary_bd_match_resources_09.py 发送 class=\"\"、不存在类名、resources 多型、where 多型",
+        "log: 'class empty string: 500' + 对照行 nonexistent class 422 / resources* 200 / where as string 400"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["empty match.class clause", "failed to get class", "BatchDeleteMatch"],
+      "files_examined": [
+        "usecases/objects/batch_delete.go (L110-150)",
+        "adapters/handlers/rest/handlers_batch_objects.go (L170-210)",
+        "entities/models/batch_delete.go (经 grep 定位 batch_delete structs)"
+      ],
+      "source_excerpt": "usecases/objects/batch_delete.go L127-L147:\n  if len(match.Class) == 0 {\n    return nil, 0, errors.New(\"empty match.class clause\")            // 裸 error → 500\n  }\n  ...\n  vclasses, err := b.schemaManager.GetCachedClass(ctx, principal, match.Class)\n  if err != nil {\n    ...\n    return nil, 0, NewErrInvalidUserInput(\"failed to get class: %s: %v\", match.Class, err)  // → 422\n  }\n  if vclasses[match.Class].Class == nil {\n    return nil, 0, NewErrInvalidUserInput(\"failed to get class: %s\", match.Class)           // → 422（log 中 nonexistent class 422 来源）\n  }",
+      "call_chain_traced": "handler → validateBatchDelete：同函数内 class-not-found 双分支已用 NewErrInvalidUserInput→422（log 证实），class-empty 分支裸 errors.New→500——两分支语义同为调用方输入错误却分属 4xx/5xx。resources 字段：Go json 反序列化默认忽略未知字段，结构体 models.BatchDeleteMatch 无 Resources 定义 → 静默 200（by_design 嫌疑，如实记录）。",
+      "verification_outcome": "validation_present",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request_typo", "class_not_found(已由422对照排除)"],
+      "surviving": "resources 未知字段静默 200 存在 by-design 抗辩空间（Go json 默认忽略未知字段），归 auditor 裁量；class-empty 500 无平凡解释"
+    }
+  }
+}

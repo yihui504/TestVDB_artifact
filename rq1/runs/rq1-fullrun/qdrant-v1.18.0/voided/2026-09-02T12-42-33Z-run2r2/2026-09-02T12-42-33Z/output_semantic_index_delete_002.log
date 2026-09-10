@@ -1,0 +1,17 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: sidl02a9a03a
+[constraint quote] assertion: 'delete of a non-existent payload index is an idempotent success; index deletion leaves point data untouched'
+[PUT index sidl02a9a03a_live/cat] schema=keyword -> status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.51930966}
+[PUT index sidl02a9a03a_live/score] schema=integer -> status=200 raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.862459601}
+[count premise] exact=4
+[premise] sidl02a9a03a_live: 4 points + indexes on ['cat', 'score']
+[DELETE index leg1 ghost sidl02a9a03a_live/ghost_field_never_indexed] -> status=200 raw={"result":{"operation_id":7,"status":"completed"},"status":"ok","time":0.292221512}
+[snapshot baseline] 4 rows ids=[1, 2, 3, 4]
+[DELETE index leg2 real sidl02a9a03a_live/cat] -> status=200 raw={"result":{"operation_id":9,"status":"completed"},"status":"ok","time":0.289634203}
+[DELETE index leg2 real sidl02a9a03a_live/score] -> status=200 raw={"result":{"operation_id":11,"status":"completed"},"status":"ok","time":0.305364832}
+[snapshot post-delete] 4 rows ids=[1, 2, 3, 4]
+[count post-delete] exact=4
+[snapshot post-delete-re-read] 4 rows ids=[1, 2, 3, 4]
+OK: ghost delete 200 (idempotent); real deletes 200 + entries removed; all 4 rows (ids/payloads/vectors) and exact count unchanged after index deletion; re-read stable
+VERDICT: NO_DEFECT

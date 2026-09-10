@@ -1,0 +1,105 @@
+{
+  "defect_id": "boundary_cluster_recover_001",
+  "endpoint": "cluster+recover (POST /cluster/recover)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists; contract-time capture in structured_contract.json endpoint_registry records source_status=reachable, verified_at=2026-09-02T12:34:08 (8 min before session start); builder's own WebFetch re-verification of https://api.qdrant.tech/v-1-18-x/api-reference/distributed/recover-current-peer returned domain_blocked (network-restricted environment — deployment_meta.json likewise records Docker Hub unreachable from this network), so PARTIAL not FAIL. Version: URL is version-routed v-1-18-x matching target v1.18.0 (doc_version '1.18.x (versioned v-1-18-x api-reference)') — PASS. Content: contract-time captured doc_quote 'Removes cluster metadata and restarts as a single-node cluster from local data; irrecoverable for removed peers; use only when quorum is permanently lost.' matches the constraint description; raw_knowledge expected_responses for this endpoint lists ONLY {200: ok} — no 500 and no standalone-mode disposition is documented anywhere on this face; content layer judged from contract-time capture (independent re-fetch blocked). Endpoint precision: endpoint_registry has path=cluster+recover, method=POST, url=/cluster/recover; script derived its URL from raw_knowledge api_endpoints[44].url=/cluster/recover — exact match.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "output_boundary_cluster_recover_001.log:15 '[recover] status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.024100829}' — primary observation; verdict line 17 'VERDICT: DEFECT_FOUND (Type3_RuntimeFailure) — POST /cluster/recover got 500 with /healthz alive'; line 16 '[healthz attempt 1] status=200 raw=healthz check passed' establishes service alive (liveness ladder satisfied on first try)",
+      "secondary_observations": [
+        "rest:boundary_cluster_recover_001.log:9-10 '[discover GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},...}' — the deployment was ALREADY standalone (cluster disabled) before the recover call; precondition visible in-chain",
+        "rest:boundary_cluster_recover_001.log:11-13 '[create bcr14f93d5a4surv] status=200 ... [count bcr14f93d5a4surv] status=200 raw={\"result\":{\"count\":5}}' — seeded local data baseline; the 500 branch exited before the post-state check in this script (script returns at the 5xx branch)",
+        "rest:boundary_cluster_recover_002.log:27 'VERDICT: DEFECT_FOUND (Type3_RuntimeFailure) — body form 'documented no-body control' got 500 ... standalone mode' + boundary_cluster_recover_003 (truncated JSON) + boundary_cluster_recover_004 (1MB valid JSON) — the SAME 500 standalone-mode body regardless of request body form",
+        "rest:state_cluster_recover_002.log:8,10,12 '[recover #1..#3] status=500 raw={...standalone mode...}' with '[healthz] probe status=200' between each — deterministic, not intermittent; disposition families=[500,500,500]",
+        "rest:state_cluster_recover_002.log:15-17 '[post-sequence exact count] status=200 count=6' + '[post-sequence GET /cluster] status=200 {\"status\":\"disabled\"}' — after 500s: local data INTACT, cluster plane 200, no state mutation by the refused op (survives across 5xx)",
+        "COMPARATIVE (same-family face, same standalone precondition, mechanical rules 5/6): rest:boundary_cluster_peer_delete_001.log:10 '[probe peer_id='+7'] -> status=400 raw={\"status\":{\"error\":\"Bad request: Distributed mode disabled.\"}}' — DELETE /cluster/peer/{id} gates the identical precondition with HTTP 400, not 500",
+        "COMPARATIVE: rest:state_cluster_collection_update_001.log:3 '[A never-existed] status=400 raw={\"status\":{\"error\":\"Bad request: Distributed mode disabled\"}}' — POST /cluster/collection/{name} operations likewise gate with 400",
+        "COMPARATIVE: rest:boundary_cluster_collection_update_007.log:5 '[POST create_sharding_key key=bccu73d9c81f6sk K=5131] -> status=400 raw={\"status\":{\"error\":\"Bad request: Distributed mode disabled\"}}' — third family witness",
+        "face_unavailable: gRPC comparison face does not exist — grep of lib/api/src/grpc/proto/*.proto finds no recover-peer rpc (only shard-snapshot Recover); /cluster/recover is REST-only in this codebase, so no grpc face obtainable in any sandbox"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The request itself was the documented no-body form (no malformed input), yet the endpoint answered HTTP 500 for a deployment-applicability condition. The condition is deterministically decidable server-side from deployment mode, and the server's own cluster-management family (remove_peer, cluster/collection ops, cluster metadata) classifies the identical standalone precondition as BadRequest -> HTTP 400 'Distributed mode disabled'; /cluster/recover is the family outlier returning 5xx with error text 'Service internal error: Qdrant is running in standalone mode'."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_cluster_recover_001 (primary; 500)",
+        "boundary_cluster_recover_002 (500, no-body control)",
+        "boundary_cluster_recover_003 (500, truncated JSON body)",
+        "boundary_cluster_recover_004 (500, 1MB valid JSON body)",
+        "state_cluster_recover_001 (500)",
+        "state_cluster_recover_002 (500 x3, healthz alive between)",
+        "state_cluster_recover_003 (500 mid-concurrent-storm)",
+        "state_cluster_recover_004 (500 x5 during churn; script's own defect class was reader state drift -> NO_DEFECT, but the endpoint disposition 500 observed in all 5 calls)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_cluster_recover_001",
+      "assertion_text_quoted": "cluster recovery resets the peer to a single-node cluster from local data; it is destructive for cluster membership state",
+      "api_violates_assertion": false,
+      "evidence_source": "doc",
+      "note": "violates-declaration self-check (E5 improvement 2): the observed call site is OUTSIDE the quoted assertion's precondition domain. The constraint description scopes the operation to distributed deployments ('meant for permanently-lost quorum'); the sandbox is standalone (GET /cluster status='disabled', in-chain line 9-10), so the state promise (reset to single-node from local data) never came into play — the endpoint refused without any state mutation (state_cluster_recover_002 shows count intact and cluster plane 200 after repeated 500s). The surviving defect question is NOT on this state assertion's face: it is (a) the endpoint documents ONLY {200: ok} with no 5xx disposition documented, and (b) the 500-vs-400 error-class divergence from the server's own family convention for the same precondition. Those live on the behavioral/diagnostics faces (co-anchored sibling constraints qdrant_behavioral_cluster_recover_001 in candidates boundary_cluster_recover_002/003/004). Recorded honestly as violates=false on THIS constraint with domain explanation, not as vague partial."
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_cluster_recover_001 present at structured_contract.json /constraints/state_constraints[22] (type=state_constraint, level=system, evidence_tier=explicit, source_url=https://api.qdrant.tech/v-1-18-x/api-reference/distributed/recover-current-peer) — link intact",
+        "doc: contract-time capture reachable (verified_at 2026-09-02T12:34:08) with doc_quote 'Removes cluster metadata and restarts as a single-node cluster from local data; irrecoverable for removed peers; use only when quorum is permanently lost.'; builder re-fetch domain_blocked (network policy) — link carried by contract-time capture, independently unverifiable in this environment (recorded, not treated as broken)",
+        "script: debate_logs/boundary_cluster_recover_001.py — URL derived from raw_knowledge api_endpoints[44].url (/cluster/recover), documented no-body form (json={}), pre-act probe GET /cluster recorded status='disabled' (standalone known before act); oracle declares 5xx-with-healthz-alive = Type3 — link intact",
+        "log: output_boundary_cluster_recover_001.log:15 raw 500 standalone-mode body, :16 healthz 200, :17 VERDICT DEFECT_FOUND Type3 — verdict pattern matches the raw response (no summary-word drift); the raw response really is a 5xx, not a masked 4xx — link intact"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "running in standalone mode",
+        "Distributed mode disabled",
+        "fn request_snapshot\\(\\)",
+        "recover_current_peer",
+        "recover|Recover (lib/api/src/grpc/proto/*.proto)",
+        "ServiceError|InternalServerError|BadRequest (src/actix/helpers.rs)",
+        "RequestSnapshot (consensus_manager.rs)"
+      ],
+      "files_examined": [
+        "src/actix/api/cluster_api.rs (lines 49-73 cluster_status + recover_current_peer handler; 75-113 remove_peer sibling gate; 115-154 cluster metadata endpoints)",
+        "lib/storage/src/content_manager/toc/mod.rs (lines 546-551 request_snapshot; 775-779 get_consensus_proposal_sender)",
+        "lib/storage/src/content_manager/mod.rs (lines 173-175 ConsensusOperations::request_snapshot -> RequestSnapshot)",
+        "lib/storage/src/content_manager/errors.rs (lines 22-27, 58-69 StorageError variants and constructors)",
+        "src/actix/helpers.rs (lines 247-248 StorageError -> HTTP status mapping)",
+        "lib/storage/src/dispatcher.rs (lines 24-57 Dispatcher: consensus_state Option, None in standalone)",
+        "src/common/collections.rs (lines 247-264 do_update_collection_cluster standalone gate)",
+        "lib/storage/src/content_manager/consensus_manager.rs (lines 548-550 RequestSnapshot handled by raft, not applied)"
+      ],
+      "source_excerpt": "REST handler — src/actix/api/cluster_api.rs:60-73:\n    #[post(\"/cluster/recover\")]\n    fn recover_current_peer(\n        dispatcher: web::Data<Dispatcher>,\n        ActixAuth(auth): ActixAuth,\n    ) -> impl Future<Output = HttpResponse> {\n        // Not a collection level request.\n        let pass = new_unchecked_verification_pass();\n\n        helpers::time(async move {\n            auth.check_global_access(AccessRequirements::new().manage(), \"recover_current_peer\")?;\n            dispatcher.toc(&auth, &pass).request_snapshot()?;\n            Ok(true)\n        })\n    }\n[Handler takes NO body extractor — explains why every body form (empty/truncated/1MB) yields the identical 500. No comment declaring intent for the error class.]\n\nCall chain — lib/storage/src/content_manager/toc/mod.rs:546-551 and 775-779:\n    pub fn request_snapshot(&self) -> Result<(), StorageError> {\n        self.get_consensus_proposal_sender()?\n            .send(ConsensusOperations::request_snapshot())?;\n        Ok(())\n    }\n    fn get_consensus_proposal_sender(&self) -> Result<&OperationSender, StorageError> {\n        self.consensus_proposal_sender\n            .as_ref()\n            .ok_or_else(|| StorageError::service_error(\"Qdrant is running in standalone mode\"))\n    }\n\nHTTP mapping — src/actix/helpers.rs:247-248:\n            StorageError::ServiceError { .. } => http::StatusCode::INTERNAL_SERVER_ERROR,\n            StorageError::BadRequest { .. } => http::StatusCode::BAD_REQUEST,\n\nSibling comparison (same precondition, different class) — src/actix/api/cluster_api.rs:99-111:\n        match dispatcher.consensus_state() {\n            Some(consensus_state) => { ... }\n            None => Err(StorageError::bad_request(\n                \"Distributed mode disabled.\".to_string(),\n            )),\n        }\nand src/common/collections.rs:260-264:\n    if dispatcher.consensus_state().is_none() {\n        return Err(StorageError::bad_request(\n            \"Distributed mode disabled\".to_string(),\n        ));\n    }\n\nStandalone mode origin — lib/storage/src/dispatcher.rs:25-46: Dispatcher::new sets consensus_state: None; only with_consensus() sets Some. consensus_proposal_sender in ToC is likewise absent without consensus, so on any standalone deployment POST /cluster/recover deterministically reaches the service_error branch. No 'intentionally/by design' comment exists on the 500 path (bare absence of a 400 gate is not intent evidence).",
+      "call_chain_traced": "actix route POST /cluster/recover (cluster_api.rs:60 recover_current_peer) -> dispatcher.toc().request_snapshot() (toc/mod.rs:546) -> get_consensus_proposal_sender() (toc/mod.rs:775) -> consensus_proposal_sender None on standalone => StorageError::service_error('Qdrant is running in standalone mode') -> helpers.rs:247 maps ServiceError to HTTP 500. In distributed mode the same call sends ConsensusOperations::RequestSnapshot (mod.rs:173) through the proposal sender; consensus_manager.rs:548 shows RequestSnapshot is raft-handled (apply path unreachable). Comparative chain: remove_peer (cluster_api.rs:99-111), do_update_collection_cluster (collections.rs:260-264) and the cluster metadata write paths check the same None-consensus condition but select bad_request -> HTTP 400.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source",
+      "note": "The source DOES explicitly handle the standalone case — a deliberate coded check, not a panic/unwrap: the 500 is a deterministic refusal, so 'validation_absent' does not hold and no crash occurred. However, per the v3.4 tightened rule the deliberate-looking error cannot be marked by_design_in_source either: no comment/docstring/maintainer citation declares the 500 class intentional, and the same precondition is explicitly classified BadRequest(400) at three sibling sites — the divergence of error class within the server's own codebase is the recorded fact. Whether undocumented-500-for-standalone counts as a defect is the auditor's judgment."
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "concurrency (500 deterministic across 9+ calls in 8 scripts, incl. serial and churn-storm contexts; identical body and time-scale each time)",
+        "request-parameter typo (documented no-body form used; body-form variants empty/truncated/1MB all identical 500 because the handler has no body extractor)",
+        "cache delay / eventual consistency (refusal is immediate ~0.0001-0.024s; state checks immediately after show no pending effect)",
+        "service crash / restart (healthz 200 immediately after each 500; GET /cluster and counts keep returning 200)"
+      ],
+      "surviving": "deployment-mode precondition gap: the assertion's documented scope is distributed deployments with permanently-lost quorum; the sandbox is standalone (GET /cluster status='disabled'), so the documented 200 face of the recovery promise is unexercisable here — the defect question that survives is error-class consistency (undocumented 500 vs family-conventional 400 gate for the identical precondition) on a face the docs document as only {200: ok}"
+    }
+  }
+}

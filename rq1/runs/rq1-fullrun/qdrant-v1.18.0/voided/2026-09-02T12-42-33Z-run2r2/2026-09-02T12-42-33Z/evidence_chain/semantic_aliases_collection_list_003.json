@@ -1,0 +1,93 @@
+{
+  "defect_id": "semantic_aliases_collection_list_003",
+  "endpoint": "aliases+collection+list (GET /collections/{collection_name}/aliases)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No doc_preflight.json sidecar exists for this contract directory (searched plugin cache); fallback WebFetch of https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases was blocked (domain_blocked: api.qdrant.tech not fetchable from builder env). Corroborating local record: raw_knowledge.json document_sources shows the versioned api-reference page family fetched successfully 2026-09-02T11:45:00Z (version_match=matched, 29 sources) and the per-endpoint record for this exact source_url (List Collection Aliases) carries expected_responses {\"200\":\"ok\",\"404\":\"not found\"} and behavioral constraint '200 list of {alias, collection_name}; 404 unknown collection' -> reachability recorded PARTIAL (network-restricted, not FAIL). Version match: URL is versioned v-1-18-x and all same-fetch records say matched vs target 1.18.0 (server binary self-reports 1.18.0 db3fca3). Content consistency: assertion '404 for an unknown collection' matches the endpoint doc record (behavioral '404 unknown collection', expected_responses 404 not found) and the endpoint_registry doc_quote 'Returns 200 with a list of {alias, collection_name}; 404 for an unknown collection.' -- three local artifacts agree; note the published .sourcedeps openapi.json documents only '200' for all 79 operations (success-only artifact; even update-aliases which provably 404s in code lists only 200 there), so it neither confirms nor refutes the per-endpoint 404 record. Endpoint precision: 'aliases+collection+list' found in endpoint_registry (method GET, url /collections/{collection_name}/aliases, same source_url as the assertion); script's GET matches. No SDK/REST confusion: assertion and record are REST api-reference scoped.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "list aliases of unknown 's3_aclist_no_such_1788354850': status=200 | raw response: {\"result\":{\"aliases\":[]},\"status\":\"ok\",\"time\":7.397e-6} | VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)",
+      "secondary_observations": [
+        "rest (semantic_aliases_collection_list_002): list aliases of never-created collection 's2_aclist_ghost_1788354849': 200 {\"result\":{\"aliases\":[]},\"status\":\"ok\",\"time\":0.000030995} | VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) -- assertion promises HTTP 404 for unknown collection; got 200 with a silent success payload instead",
+        "rest (boundary_aliases_collection_list_004): GET /collections/bacl4missing_4f9dbd2e1eca4104baa8047e278af4b3/aliases -> status=200 | raw: {\"result\":{\"aliases\":[]},\"status\":\"ok\",\"time\":5.1e-6} | VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) -- unknown collection returned 200 with a body instead of the promised 404",
+        "rest (builder live probe, same endpoint): GET http://localhost:6333/collections/eb_cmp_missing_1788354850/aliases -> HTTP=200 {\"result\":{\"aliases\":[]},\"status\":\"ok\",\"time\":0.000054432} -- reproduced the primary observation against the live v1.18.0 server",
+        "rest (builder live probe, sibling endpoint GET /collections/{name}): GET http://localhost:6333/collections/eb_cmp_missing_1788354850 -> HTTP=404 {\"status\":{\"error\":\"Not found: Collection `eb_cmp_missing_1788354850` doesn't exist!\"},\"time\":0.00005} -- the same server DOES implement 404 with value-named + cause-stated diagnostics on the sibling collection-get endpoint, showing the reject machinery exists and the alias-list path simply never gates on collection existence",
+        "rest (semantic_aliases_collection_list_001, existing collections incl. alias-free): 200 with aliases list -> VERDICT: NO_DEFECT (positive branch works; no spurious 404)",
+        "rest (semantic_aliases_collection_list_004, existing legal-name variants): all listed aliases with HTTP 200 -> VERDICT: NO_DEFECT"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "The not-found condition (collection does not exist) that the documented protocol contract says must be HTTP 404 is returned as HTTP 200 with body {\"result\":{\"aliases\":[]},\"status\":\"ok\",...} -- no error code at all, an empty success-shaped payload (silent acceptance of the nonexistent resource); closest bucket HTTP 2xx + business payload, note that even a business error code is absent."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_aliases_collection_list_003",
+        "semantic_aliases_collection_list_002",
+        "boundary_aliases_collection_list_004"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_aliases_collection_list_001",
+      "assertion_text_quoted": "returns 200 with a list of {alias, collection_name}; 404 for an unknown collection",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_aliases_collection_list_001 exists in structured_contract.json assertions[] (level endpoint, evidence_tier explicit, source_status reachable, source_url https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases) -- note: the candidates.jsonl dispatch record carries constraint_id=\"\" (empty metadata field); the substantive constraint is pinned by the script header '# constraint_ids: qdrant_behavioral_aliases_collection_list_001' and the attack text, and it does exist",
+        "doc: raw_knowledge.json endpoint record 'List Collection Aliases' for the same source_url: expected_responses {\"200\":\"ok\",\"404\":\"not found\"}, behavioral '200 list of {alias, collection_name}; 404 unknown collection', fetched 2026-09-02T11:45:00Z version_match matched",
+        "script: semantic_aliases_collection_list_003.py sends GET /collections/s3_aclist_no_such_1788354850/aliases (name chosen so no such collection can exist; TS-unique; final post-retry version with explicit Oracle docstring; retry was oracle_missing metadata fix only)",
+        "log: output_semantic_aliases_collection_list_003.log shows status=200 with {\"result\":{\"aliases\":[]},\"status\":\"ok\",...} and VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "note": "Contract link resolved via script header/attack text because the dispatch constraint_id field is empty; no substantive link is missing or inconsistent. All four links present and consistent: contract promises 404 for unknown collection -> doc record records that 404 promise -> script queries an unknown collection -> log shows 200 empty success instead of 404. The dispatch attack labels this candidate diagnosis_quality/Type2 (oracle: 404-branch error text must name value + cause); that oracle is vacuous for the observed branch because no 4xx rejection exists on this endpoint -- the log (and claim_hint) therefore reports the branch's absence as Type1_IllegalSuccess, which is exactly the phenomenon the chain covers.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "collection_aliases",
+        "get_collection_aliases",
+        "do_list_collection_aliases",
+        "check_collection_access",
+        "list_collection_aliases"
+      ],
+      "files_examined": [
+        "src/actix/api/collections_api.rs (route #[get(\"/collections/{collection_name}/aliases\")] -> get_collection_aliases, lines 94-109)",
+        "src/common/collections.rs (do_list_collection_aliases, lines 167-188; sibling do_get_collection existence gate at line 77)",
+        "lib/storage/src/content_manager/toc/mod.rs (toc.collection_aliases, lines 434-450)",
+        "lib/storage/src/content_manager/alias_mapping.rs (collection_aliases filter, lines 114-122)",
+        "lib/storage/src/rbac/mod.rs (Access::check_collection_access, lines 138-150)",
+        "openapi/openapi-collections.ytt.yaml (get_collection_aliases operation, lines 399-412)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/alias_mapping.rs lines 114-122 (the whole existence logic of the alias-list path):\n114    pub fn collection_aliases(&self, collection_name: &str) -> Vec<String> {\n115        let mut result = vec![];\n116        for (alias, target_collection) in self.alias_mapping.0.iter() {\n117            if collection_name == target_collection {\n118                result.push(alias.clone());\n119            }\n120        }\n121        result\n122    }\n\nsrc/common/collections.rs lines 167-188 (handler body; no existence check before/after the map filter):\n167 pub async fn do_list_collection_aliases(toc: &TableOfContent, auth: &Auth, collection_name: &str) -> Result<CollectionsAliasesResponse, StorageError> {\n172     let collection_pass = auth.check_collection_access(collection_name, AccessRequirements::new(), \"list_collection_aliases\")?;\n177     let access = auth.unlogged_access();\n178     let aliases: Vec<AliasDescription> = toc.collection_aliases(&collection_pass, access).await?\n181         .into_iter().map(|alias| AliasDescription { alias_name: alias, collection_name: collection_name.to_string() }).collect();\n187     Ok(CollectionsAliasesResponse { aliases })\n188 }\n\nlib/storage/src/content_manager/toc/mod.rs lines 434-450: toc.collection_aliases only reads alias_persistence.collection_aliases(name) and retain-filters aliases by RBAC access; never queries collection existence. Sibling gate for comparison: src/common/collections.rs line 77 do_get_collection calls toc.get_collection(&collection_pass).await? which raises StorageError::NotFound -> HTTP 404 (observed live). rbac/mod.rs 138-150: Access::check_collection_access performs RBAC-mode checks only; under default no-auth access it returns CollectionPass unconditionally.",
+      "call_chain_traced": "GET /collections/{name}/aliases -> actix get_collection_aliases (collections_api.rs:94-109) -> do_list_collection_aliases (common/collections.rs:167-188): RBAC check_collection_access (no existence semantics, rbac/mod.rs:138-150) -> toc.collection_aliases (toc/mod.rs:434-450) -> alias_persistence.collection_aliases (alias_mapping.rs:114-122): pure filter over the global alias->collection map comparing target collection name; a nonexistent collection simply matches zero entries -> Ok(CollectionsAliasesResponse{aliases:[]}) -> HTTP 200. No collection-existence validation exists anywhere in this path, so the documented '404 for an unknown collection' branch cannot fire; a 404 machinery does exist in the same server on sibling GET /collections/{name} (toc.get_collection NotFound -> 404).",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env: server live and healthy at probe time (GET / -> version 1.18.0 commit db3fca3...), liveness records in session; script_errors.json verdict PASS (0 errors, 13 scripts)",
+        "concurrency/race: single deterministic read-only GET against a stable alias map; three independent scripts plus builder live probe all identical",
+        "cache delay: no caching layer involved in alias listing",
+        "request-parameter typo: collection name is TS-unique prefixed s3_aclist_no_such_ so no such collection can exist; probe2 on the same name over sibling endpoint proves the name is well-formed (404 not-found response, not a validation 422)",
+        "by-design: no explicit intent evidence in source (no comments/docstrings such as 'intentionally'/'by design' in alias_mapping.rs collection_aliases or the handler chain; the alias-list path is a plain unannotated map filter)"
+      ],
+      "surviving": "Documented 404-for-unknown-collection behavior (assertion qdrant_behavioral_aliases_collection_list_001, per the local doc records of https://api.qdrant.tech/v-1-18-x/api-reference/aliases/get-collection-aliases) is not implemented: the handler chain contains no collection-existence validation and deterministically returns HTTP 200 {\"result\":{\"aliases\":[]},\"status\":\"ok\"} for a nonexistent collection (3 independent scripts + builder live probe), while the sibling GET /collections/{name} returns 404 with value-named cause diagnostics for the same name. Doc-vs-implementation mismatch (missing validation branch) survives as the explanation; nothing mundane excludes it."
+    }
+  }
+}

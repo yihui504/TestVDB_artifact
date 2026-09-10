@@ -1,0 +1,25 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['payload_overwrite']
+[A upsert 3] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.003623448}
+[A baseline scroll] status=200 raw={"result":{"points":[{"id":1,"payload":{"a":1,"keep":"x","old":true},"vector":[0.65759593,0.65759593,0.32879797,0.16439898]},{"id":2,"payload":{"a":2,"keep":"x"
+[A baseline] BASEVEC=[0.65759593, 0.65759593, 0.32879797, 0.16439898]
+[T1 overwrite ids=[1, 2]] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.00401597}
+[T1 readback scroll] status=200 raw={"result":{"points":[{"id":1,"payload":{"b":"new","num":7,"flag":false},"vector":[0.65759593,0.65759593,0.32879797,0.16439898]},{"id":2,"payload":{"b":"new","nu
+[T1] OK: 1,2 replaced exactly; 3 untouched
+[T1 count] status=200 raw={"result":{"count":3},"status":"ok","time":0.000085913}
+[T2 overwrite ids=[3]] status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.003587237}
+[T2 readback scroll] status=200 raw={"result":{"points":[{"id":1,"payload":{"b":"new","num":7,"flag":false},"vector":[0.65759593,0.65759593,0.32879797,0.16439898]},{"id":2,"payload":{"b":"new","nu
+[T2] OK: point 3 payload is now empty (zero keys)
+[T2 count] status=200 raw={"result":{"count":3},"status":"ok","time":0.000173441}
+[T3 overwrite ids=[1, 2, 3]] status=200 raw={"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.006060541}
+[T3 readback scroll] status=200 raw={"result":{"points":[{"id":1,"payload":{"c":[1,2],"geo":{"lon":13.405,"lat":52.52}},"vector":[0.65759593,0.65759593,0.32879797,0.16439898]},{"id":2,"payload":{"
+[T3] OK: all three points carry exactly C type-strict
+[T3 count] status=200 raw={"result":{"count":3},"status":"ok","time":0.000271431}
+DEFECT: (T1) point 2 vector changed after a payload-scoped overwrite — Type4_StateLogicViolation
+DEFECT: (T1) point 3 vector changed after a payload-scoped overwrite — Type4_StateLogicViolation
+DEFECT: (T2) point 2 vector changed after a payload-scoped overwrite — Type4_StateLogicViolation
+DEFECT: (T2) point 3 vector changed after a payload-scoped overwrite — Type4_StateLogicViolation
+DEFECT: (T3) point 2 vector changed after a payload-scoped overwrite — Type4_StateLogicViolation
+DEFECT: (T3) point 3 vector changed after a payload-scoped overwrite — Type4_StateLogicViolation
+VERDICT: DEFECT_FOUND

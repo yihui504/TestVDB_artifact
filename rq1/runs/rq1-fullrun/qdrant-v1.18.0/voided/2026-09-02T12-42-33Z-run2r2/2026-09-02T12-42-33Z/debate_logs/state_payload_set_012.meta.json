@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_payload_set_012",
+  "endpoint": "payload+set",
+  "param": "payload",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "upsert_idempotence",
+  "oracle": {
+    "statement": "state-machine loop on one point: D1 set {\"a\":2,\"d\":\"new\"} -> 200 and readback exactly {\"a\":2,\"b\":\"x\",\"c\":true,\"d\":\"new\"}; D2 same body -> 200 and identical state (drift = not idempotent over own output, Type4); D3 {\"e\":false} -> exact 5-key union; D4 {\"a\":2} -> state identical to D3; D5 {\"a\":\"stro\"} -> 200 with a=\"stro\" + all D3 siblings intact OR 4xx with exact full D3 state; vector equal baseline readback (<=1e-6) and exact count 1 throughout",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

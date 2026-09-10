@@ -1,0 +1,53 @@
+{
+  "defect_id": "vein_null_check_count-exact-false_1",
+  "endpoint": "/collections/{collection_name}/points/scroll:POST",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Scroll endpoint documented at https://api.qdrant.tech/api-reference/points/scroll-points, but cardinality estimation behavior for exact=false not explicitly documented",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: exact=true count: 4 → exact=false count: 5 → scroll ground truth count: 4 → VERDICT: DEFECT_FOUND (Type2_PoorDiagnostics) — Divergence: exact=true=4, exact=false=5, scroll=4 (25.0% exceeds 20% threshold)",
+      "secondary_observations": ["c2: cardinality estimator for is_null filter on 'city' field overestimates by 1 points (25.0%)", "c3: Historical issue #10096 referenced (indexed vs unindexed path divergence on is_null)"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "All operations returned HTTP 200, but cardinality estimates diverged significantly between exact=true and exact=false paths"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_null_check_count-exact-false_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A - vein script target (not from formal constraint)",
+      "api_violates_assertion": true,
+      "evidence_source": "behavior"
+    },
+    "chain_trace": {
+      "chain_links": ["contract: (none - vein target)", "doc: scroll endpoint exists", "script: vein_null_check_count-exact-false_1", "log: Type2_PoorDiagnostics — 25% cardinality divergence"],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["is_null.*count", "cardinality.*estim", "exact.*false.*scroll"],
+      "files_examined": ["lib/segment/src/index/field_index/null_index/read_ops.rs", "lib/segment/src/index/query_estimator.rs", "lib/segment/src/payload_storage/query_checker.rs"],
+      "source_excerpt": "lib/segment/src/index/field_index/null_index/read_ops.rs (cardinality estimation via bitmap stats) vs indexed path uses different estimation heuristic; query_estimator.rs adjust_to_available_vectors shows probabilistic adjustment that may diverge from exact count",
+      "call_chain_traced": "null_index cardinality → query_estimator adjust → scroll exact path",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "index-based cardinality estimator produces incorrect estimates for is_null conditions; 25% divergence exceeds 20% threshold indicating algorithmic issue"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['count', 'delete_points', 'healthz', 'recommend', 'upsert_points']
+[upsert 8 pts] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.005402781}
+[seed count] status=200 raw={"result":{"count":8},"status":"ok","time":0.000108451}
+[pos-live-ref1 recommend] status=200 raw={"result":[{"id":2,"version":1,"score":0.9998005},{"id":3,"version":1,"score":0.99920297},{"id":4,"version":1,"score":0.99821067},{"id":5,"version":1,"score":0.99682796}],"status":"ok","time":0.000253116}
+[pos] OK: live-reference recommend returned ids=[2, 3, 4, 5]
+[del-1 delete point 1] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.006510277}
+[after-del count] status=200 raw={"result":{"count":7},"status":"ok","time":0.000272381}
+[del] OK: count 8->7 arithmetic holds
+[neg1-pos-deleted1 recommend] status=404 raw={"status":{"error":"Not found: No point with id 1 found"},"time":0.000093045}
+[neg1] OK: deleted positive reference rejected with 404
+[neg2-neg-deleted1 recommend] status=400 raw={"status":{"error":"Bad request: At least one positive vector ID required with this strategy"},"time":6.383e-6}
+[neg2] OK: deleted negative reference rejected with 400
+[upsert 1 pts] status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.00671573}
+[after-reupsert count] status=200 raw={"result":{"count":8},"status":"ok","time":0.000165037}
+[rec-recreated1 recommend] status=200 raw={"result":[{"id":8,"version":1,"score":0.99981123},{"id":7,"version":1,"score":0.9992397},{"id":6,"version":1,"score":0.9982798},{"id":5,"version":1,"score":0.99692637}],"status":"ok","time":0.000768415}
+[rec] OK: disposition flipped back to 200, ids=[8, 7, 6, 5]
+[pos2-survivor2 recommend] status=200 raw={"result":[{"id":3,"version":1,"score":0.99980104},{"id":4,"version":1,"score":0.99920607},{"id":5,"version":1,"score":0.9982191},{"id":6,"version":1,"score":0.9968455}],"status":"ok","time":0.000596788}
+[pos2] OK: survivor reference recommend returned ids=[3, 4, 5, 6]
+VERDICT: NO_DEFECT

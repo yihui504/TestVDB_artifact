@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_payload_overwrite_003",
+  "endpoint": "payload+overwrite",
+  "param": "payload",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "concurrent",
+  "oracle": {
+    "statement": "after PARTS concurrent wait=true full-payload overwrites every point payload is exactly one of the written payloads (no torn mix, no surviving pre-race key); after each overwrite-vs-set race round every point payload is one of the three legal serial outcomes; after the final deterministic overwrite every point is exactly {\"done\":1}; point ids, vectors and exact count 20 unchanged throughout",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

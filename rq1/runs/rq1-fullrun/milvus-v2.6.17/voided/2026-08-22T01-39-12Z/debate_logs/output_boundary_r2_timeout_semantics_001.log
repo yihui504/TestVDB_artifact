@@ -1,0 +1,10 @@
+setup create: 200 {"code":0,"data":{}}
+Request-Timeout='0' -> HTTP=408 code=10001 elapsed=0.00s | valid int zero seconds: ctx immediately expired? expect fast 408 OR code!=0 | {"code":10001,"message":"request timeout"}
+Request-Timeout='-1' -> HTTP=408 code=10001 elapsed=0.01s | negative int: parsed ok (strconv) -> deadline in past -> 408? or ignored | {"code":10001,"message":"request timeout"}
+Request-Timeout='1.5' -> HTTP=200 code=0 elapsed=0.03s | float: unparseable by ParseInt -> silently ignored -> normal success | {"code":0,"data":{}}
+Request-Timeout=' 2' -> HTTP=-1 code=None elapsed=0.00s | leading space: ParseInt rejects -> ignored -> normal success | EXC:Invalid leading whitespace, reserved character(s), or return character(s) in header value: ' 2'
+Request-Timeout=None -> HTTP=200 code=0 elapsed=0.03s | control: no header -> normal success | {"code":0,"data":{}}
+query Request-Timeout='1' -> HTTP=408 code=10001 elapsed=1.01s | {"code":10001,"message":"request timeout"}
+query Request-Timeout=None -> HTTP=200 code=0 elapsed=0.03s | {"code":0,"cost":0,"data":[]}
+
+VERDICT: NO_DEFECT

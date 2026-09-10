@@ -1,0 +1,8 @@
+[insert 5] http=200 body={"code":200,"data":{"insertCount":5,"insertIds":[468539281520724799,468539281520724800,468539281520724801,468539281520724802,468539281520724803]}}
+[get_stats] http=200 body={"code":200,"data":{"rowCount":0}}
+[rowCount] 0 (expect >=5; exact==5 under strong count)
+[describe via POST] http=404 body=404 page not found
+[describe missing] http=200 body={"code":100,"message":"can't find collection collection not found[database=default][collection=bnd_stat016_nope]"}
+[list dbName=12345] http=200 body={"code":800,"message":"database not found, database: 12345"}
+DEFECT: rowCount=0 after inserting 5 rows (lost data?)
+VERDICT: DEFECT_FOUND

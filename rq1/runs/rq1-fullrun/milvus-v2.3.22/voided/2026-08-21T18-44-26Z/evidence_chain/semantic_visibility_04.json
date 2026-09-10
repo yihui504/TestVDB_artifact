@@ -1,0 +1,74 @@
+{
+  "defect_id": "semantic_visibility_04",
+  "endpoint": "v2/vectordb/collections/get_stats + v2/vectordb/entities/delete",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PARTIAL",
+      "sdk_rest_confusion": false,
+      "detail": "契约 source_url 指向 github v2.3.22 handler_v2.go，本地 clone 同 tag 验证一致；rowCount 语义（insert N -> rowCount==N）为 invariant milvus_inv_count_consistency 原文；但 entities/delete 的 id 可选声称与 v2.3.22 源码不符（CollectionFilterReq.Filter binding:required，无 id 删除路径）——契约/文档在该参数上漂移",
+      "evidence_source": "doc+source"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "get_stats: 200 {\"code\":200,\"data\":{\"rowCount\":0}} （紧接 insert: 200 {\"code\":200,\"data\":{\"insertCount\":3,\"insertIds\":[1,2,3]}}）",
+      "secondary_observations": [
+        "search1: 200 返回 3 行（id 1/2/3 均可检索——数据确实存在且可查，排除'数据丢失'解释）",
+        "delete_by_id: 200 {\"code\":1802,\"message\":\"missing required parameters, error: Key: 'CollectionFilterReq.Filter' Error:Field validation for 'Filter' failed on the 'required' tag\"}",
+        "delete_by_filter: 200 {\"code\":200,\"data\":{}} （filter 删除成功）",
+        "search2: 200 仅剩 id 2/3 （删除确实生效）",
+        "get_stats2: 200 {\"code\":200,\"data\":{\"rowCount\":0}} （删 1 行后仍 0，期望 2）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "rowCount 错值为 200+code:200（错误数据静默成功）；delete-by-id 拒绝为 200+code:1802，符合 milvus_bc_error_envelope"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["semantic_visibility_04.py", "vein_stats_rowcount_001.py", "boundary_stats_rowcount_016.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_inv_count_consistency",
+      "assertion_text_quoted": "insert N entities -> rowCount == N (get_stats); after inserting N rows, collections/get_stats data.rowCount == N",
+      "api_violates_assertion": true,
+      "note": "插入 3 行后 get_stats rowCount=0，直接违反该不变式；次观测（delete by id 被拒）落点为契约 endpoint_registry 的 delete id 可选声称，是文档漂移而非违反（契约自己列 id 为可选参数，观测显示源码不收 id）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_inv_count_consistency (structured_contract.json state_invariants) 要求 insert N -> rowCount==N",
+        "doc: 契约 source_url=handler_v2.go v2.3.22（本地 clone 同 tag 存在，getCollectionStat 路由存在）",
+        "script: semantic_visibility_04.py 依次 create/insert(3)/get_stats/delete/search 复合链",
+        "log: insert 成功(3 ids)+search 证实 3 行存在，get_stats rowCount=0 —— 与契约断言矛盾"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "断链在 log/target 环：契约链四环齐备且自洽，但 v2.3.22 实际执行结果违反 count 一致性不变式（rowCount 恒 0，search 却返回全部行）。非 doc 环断裂——契约引用的源码真实存在",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["getCollectionStat|RowCount (handler_v2.go)", "func .*GetNumRowsOfCollection", "isSegmentHealthy && segment.GetCollectionID", "CollectionFilterReq (request_v2.go)"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go (417-430 getCollectionStat, 639-668 delete)",
+        "internal/distributed/proxy/httpserver/request_v2.go (92-97 CollectionFilterReq)",
+        "internal/proxy/task_statistic.go (591-671 getCollectionStatisticsTask)",
+        "internal/datacoord/services.go (340-360 GetCollectionStatistics)",
+        "internal/datacoord/meta.go (253-269 getNumRowsOfCollectionUnsafe)"
+      ],
+      "source_excerpt": "internal/datacoord/services.go:356-357: nums := s.meta.GetNumRowsOfCollection(req.CollectionID); resp.Stats = append(resp.Stats, &commonpb.KeyValuePair{Key: \"row_count\", Value: strconv.FormatInt(nums, 10)}) || internal/datacoord/meta.go:253-262: func (m *meta) getNumRowsOfCollectionUnsafe(collectionID UniqueID) int64 { var ret int64; segments := m.segments.GetSegments(); for _, segment := range segments { if isSegmentHealthy(segment) && segment.GetCollectionID() == collectionID { ret += segment.GetNumOfRows() } } return ret }",
+      "call_chain_traced": "HTTP v2 get_stats -> handler_v2.go:417 getCollectionStat -> proxy GetCollectionStatistics (task_statistic.go:645, OLD getCollectionStatisticsTask 路径) -> datacoord services.go:342 -> meta.GetNumRowsOfCollection -> 逐 healthy segment 累加 NumOfRows。rowCount 依赖 datacoord segment 元数据（仅 flushed/记录在案的 segment 计数），不反映 growing segment 与 query path 可见行——与 count(*)（query path 实时计算）产生持久分歧。REST 层无任何校验或回退逻辑（handler_v2.go:427 直接透传 wrapperReturnRowCount）",
+      "verification_outcome": "by_design_in_source",
+      "note": "by_design 指实现机制（统计源=datacoord segment 元数据）而言，非指'rowCount==N 契约被满足'；契约 invariant 在 v2.3.22 上事实上不成立。旧行为/已知架构限制，非缺校验代码——属 auditor 判定域",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env(healthz 同 session 探活正常)", "consistency-lag(同 script 内 search 已见 3 行，唯 stats 落后；且 vein_stats_rowcount_001 等 30s+release/reload 循环仍 0)", "concurrency(单线程顺序请求)", "script_error(log 为真实 HTTP 响应)"],
+      "surviving": "rowCount 统计源（datacoord segment 元数据）与 query path 行可见性架构性分歧——by-design 抗辩方向，留 auditor 裁量"
+    }
+  },
+  "evidence_weight": "A（raw HTTP 逐字 + 源码全调用链 + 三脚本独立复现；delete-by-id 部分为文档漂移佐证）"
+}

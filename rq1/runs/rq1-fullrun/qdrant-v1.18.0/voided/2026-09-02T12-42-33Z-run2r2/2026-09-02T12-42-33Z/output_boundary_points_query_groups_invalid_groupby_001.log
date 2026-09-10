@@ -1,0 +1,27 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+setup payload index on 'grp': status=200 (best-effort, non-fatal)
+
+leg Cvalid group_by='grp' -> status=200
+raw: {"result":{"groups":[{"hits":[{"id":1,"version":1,"score":0.0057622097},{"id":2,"version":1,"score":0.011524419},{"id":3,"version":1,"score":0.01728663}],"id":"a"}]},"status":"ok","time":0.000844727}
+leg Cvalid OK: 200 with 1 group(s) — face alive
+
+leg GBmiss group_by-omitted -> status=400
+raw: {"status":{"error":"Format error in JSON body: missing field `group_by` at line 1 column 79"},"time":0.0}
+leg GBmiss group_by-omitted OK: rejected with 400 (error names 'group_by': True)
+
+leg GBempty group_by='' -> status=400
+raw: {"status":{"error":"Format error in JSON body: Invalid json path: '' at line 1 column 95"},"time":0.0}
+leg GBempty group_by='' OK: rejected with 400 (error names 'group_by': False)
+
+leg GBint group_by=123 -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: integer `123`, expected a string at line 1 column 96"},"time":0.0}
+leg GBint group_by=123 OK: rejected with 400 (error names 'group_by': False)
+
+leg GBnull group_by=null -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: null, expected a string at line 1 column 97"},"time":0.0}
+leg GBnull group_by=null OK: rejected with 400 (error names 'group_by': False)
+
+leg GBabsent group_by='definitely_missing_field_xyz' -> status=200
+raw: {"result":{"groups":[]},"status":"ok","time":0.001295699}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — leg [GBabsent group_by='definitely_missing_field_xyz']: the contract maps an invalid group_by to 400, but the request was ACCEPTED with 200 (0 groups returned): {"result":{"groups":[]},"status":"ok","time":0.001295699}

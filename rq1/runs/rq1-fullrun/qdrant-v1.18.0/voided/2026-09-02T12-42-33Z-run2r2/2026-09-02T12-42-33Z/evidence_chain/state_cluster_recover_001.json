@@ -1,0 +1,105 @@
+{
+  "defect_id": "state_cluster_recover_001",
+  "endpoint": "cluster+recover (POST /cluster/recover)",
+  "defect_type": "Type3_RuntimeFailure",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS: cited page https://api.qdrant.tech/v-1-18-x/api-reference/distributed/recover-current-peer fetched live (WebFetch tool blocked on domain, MCP web_reader succeeded; page title 'Recover cluster state | Qdrant | API Reference'); contract sidecar fields also record source_status=reachable and endpoint_registry verified_at=2026-09-02T12:34:08Z. No doc_preflight.json sidecar exists anywhere in this plugin tree, so live fetch was the fallback. Version PASS: URL v-1-18-x, page header 'v1.18.x' vs target v1.18.0. Content PARTIAL: the endpoint, bodyless shape (only api-key header, no request body) and the 200 face ('successful operation', result:boolean) are documented, consistent with behavioral assertion; HOWEVER the state constraint's wording and the endpoint_registry doc_quote ('Removes cluster metadata and restarts as a single-node cluster from local data; irrecoverable for removed peers; use only when quorum is permanently lost') appear NOWHERE on the live v1.18.x page (live description: 'Attempts to restore or synchronize the node's current state with that of its peers.') and nowhere in the v1.18.0 source repo (repo OpenAPI summary 'Tries to recover current peer Raft state.', description absent, identical across redoc v1.3.x..v1.18.x). The Fern page documents only the 200 response; the repo's shipped openapi.json (docs/redoc/v1.18.x) additionally declares a 4XX error envelope plus a generic 'default: error' catch-all — no 5XX is explicitly documented. Endpoint precision PASS: endpoint_registry entry cluster+recover/POST exists with that source_url; raw_knowledge api_endpoints[] carries url=/cluster/recover; the script hit exactly that URL bodyless.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[POST /cluster/recover] status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.000488066}",
+      "secondary_observations": [
+        "[healthz] /healthz probe status=200 raw=healthz check passed (pre-fire liveness)",
+        "[probe GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.026e-6} (deployment is standalone / distributed mode disabled)",
+        "[baseline exact count] status=200 count=8 (positive control G4 passed)",
+        "[healthz] /healthz probe status=200 raw=healthz check passed (post-500 liveness re-check inside the 5xx branch — Type3 attribution precondition)",
+        "[post-recover describe] status=200 ...\"points_count\":8... (local data preserved)",
+        "[post-recover exact count] status=200 count=8 (refused op was a no-op — no Type4 on data plane)",
+        "[post-recover GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.06e-6} (cluster face unchanged)",
+        "OBSERVATION: GET /cluster body changed across recover (before={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.026e-6} after={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.06e-6}) — only the time field differs; no membership-state change",
+        "DEFECT: POST /cluster/recover returned 500 (5xx; service alive per /healthz) — Type3_RuntimeFailure — raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"},\"time\":0.000488066}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The request itself is well-formed (bodyless POST per documented params). The failure is a deployment-mode precondition (standalone, client-detectable via GET /cluster status:'disabled') surfaced as HTTP 500 + business error envelope 'Service internal error: Qdrant is running in standalone mode'. Inconsistent disposition class within the same API surface and same precondition: DELETE /cluster/peer/{peer_id} returns StorageError::bad_request('Distributed mode disabled.') -> HTTP 400 (src/actix/api/cluster_api.rs:108-111), while POST /cluster/recover and GET /cluster/metadata/keys return StorageError::service_error(...) -> HTTP 500 (cluster_api.rs:70 via toc get_consensus_proposal_sender; cluster_api.rs:125,146). Documented error face of this endpoint: 4XX envelope (repo OpenAPI) / none rendered (Fern v1.18.x page shows only 200)."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_cluster_recover_001",
+        "state_cluster_recover_002",
+        "state_cluster_recover_003",
+        "state_cluster_recover_004",
+        "boundary_cluster_recover_001",
+        "boundary_cluster_recover_002",
+        "boundary_cluster_recover_003",
+        "boundary_cluster_recover_004"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_recover_001",
+      "assertion_text_quoted": "returns 200 ok; intended for use only when quorum is permanently lost",
+      "api_violates_assertion": true,
+      "note": "Dispatch constraint_id was empty; the script header declares 'constraint_ids: qdrant_state_cluster_recover_001, qdrant_behavioral_cluster_recover_001'. Per the violates-declaration self-check the constraint citation was changed: the fired phenomenon is a disposition-face violation (documented face 200-only, observed HTTP 500 with a business error envelope), which engages the behavioral assertion (expected_behavior verbatim: 'HTTP 200 on cluster recovery (dangerous operational op)'); the state constraint qdrant_state_cluster_recover_001 (assertion verbatim: 'cluster recovery resets the peer to a single-node cluster from local data; it is destructive for cluster membership state') governs post-success state semantics and was UNEXERCISED — the op was refused, all no-op consistency legs passed (describe 200, count still 8, GET /cluster unchanged). api_violates_assertion=true is factual: a documented operation invoked per its documented parameters returned a status class outside the documented response face.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: state_constraints[22] qdrant_state_cluster_recover_001 (endpoint cluster+recover, source_url recover-current-peer) + assertions[] qdrant_behavioral_cluster_recover_001 both exist; dispatch row had empty constraint_id but the script header declares both — link present",
+        "doc: page reachable at v-1-18-x, endpoint + 200 face documented; but the state-constraint wording and endpoint_registry doc_quote ('Removes cluster metadata and restarts as a single-node cluster from local data; irrecoverable for removed peers; use only when quorum is permanently lost') are NOT present on the live page nor in the repo's shipped OpenAPI (v1.3.x..v1.18.x all say 'Tries to recover current peer Raft state.' with no description) — link PARTIAL",
+        "script: raw request = bodyless POST /cluster/recover, URL derived verbatim from raw_knowledge api_endpoints[].url (entry path 'cluster+recover', url '/cluster/recover'), registered into rt.PATHS; matches documented bodyless shape — link intact",
+        "log: verdict line DEFECT_FOUND Type3_RuntimeFailure quotes the raw response verbatim ('[POST /cluster/recover] status=500 raw={\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"}...}'); /healthz liveness 200 recorded both before and after; positive control (baseline count 8) and all post-op consistency legs faithfully logged — link intact"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "Content-consistency break at the doc link: the contract's state-constraint semantics and its doc_quote are not substantiated by the cited v1.18.x page (live wording differs substantially: 'Attempts to restore or synchronize the node's current state with that of its peers.'). The behavioral 200 face IS documented, so the link is partial rather than absent. Additionally the Fern page documents no error responses at all, leaving the observed 500 outside every rendered documented disposition.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "standalone mode",
+        "cluster/recover",
+        "permanently lost|single-node cluster|irrecoverable for removed peers",
+        "consensus_proposal_sender",
+        "recover_current_peer|RecoverCurrentPeer",
+        "fn status_code",
+        "service_error|Status|code|500|bad_request (in errors.rs)"
+      ],
+      "files_examined": [
+        "src/actix/api/cluster_api.rs (handler recover_current_peer:60-73; remove_peer standalone 400 branch:99-111; metadata-keys 500 sites:125,146)",
+        "lib/storage/src/content_manager/toc/mod.rs (request_snapshot:546-551; get_consensus_proposal_sender:775-779; consensus_proposal_sender Option field:93; is_distributed:159)",
+        "lib/storage/src/content_manager/errors.rs (StorageError variants:14-49; service_error ctor:58-63)",
+        "src/actix/helpers.rs (ResponseError::status_code ServiceError -> INTERNAL_SERVER_ERROR:242-261)",
+        "openapi/openapi-cluster.ytt.yaml (/cluster/recover operation:38-44, bodyless, response boolean)",
+        "docs/redoc/v1.18.x/openapi.json (/cluster/recover post: summary 'Tries to recover current peer Raft state.', responses 200 + 4XX + default error)",
+        "docs/redoc version sweep v1.3.x..v1.18.x openapi.json (summary stable, description always absent)"
+      ],
+      "source_excerpt": "src/actix/api/cluster_api.rs:60-73 (REST handler — the only face; no gRPC recover_current_peer exists):\n#[post(\"/cluster/recover\")]\nfn recover_current_peer(\n    dispatcher: web::Data<Dispatcher>,\n    ActixAuth(auth): ActixAuth,\n) -> impl Future<Output = HttpResponse> {\n    // Not a collection level request.\n    let pass = new_unchecked_verification_pass();\n\n    helpers::time(async move {\n        auth.check_global_access(AccessRequirements::new().manage(), \"recover_current_peer\")?;\n        dispatcher.toc(&auth, &pass).request_snapshot()?;\n        Ok(true)\n    })\n}\n\nlib/storage/src/content_manager/toc/mod.rs:546-551:\n    pub fn request_snapshot(&self) -> Result<(), StorageError> {\n        self.get_consensus_proposal_sender()?\n            .send(ConsensusOperations::request_snapshot())?;\n\n        Ok(())\n    }\n\nlib/storage/src/content_manager/toc/mod.rs:775-779:\n    fn get_consensus_proposal_sender(&self) -> Result<&OperationSender, StorageError> {\n        self.consensus_proposal_sender\n            .as_ref()\n            .ok_or_else(|| StorageError::service_error(\"Qdrant is running in standalone mode\"))\n    }\n\nsrc/actix/helpers.rs:243-248 (status mapping):\n    fn status_code(&self) -> http::StatusCode {\n        match &self.0 {\n            ...\n            StorageError::ServiceError { .. } => http::StatusCode::INTERNAL_SERVER_ERROR,\n\nCOMPARISON — src/actix/api/cluster_api.rs:99-111 (same precondition, same file, other disposition):\n        match dispatcher.consensus_state() {\n            Some(consensus_state) => { consensus_state.propose_consensus_op_with_await(...).await }\n            None => Err(StorageError::bad_request(\n                \"Distributed mode disabled.\".to_string(),\n            )),\n        }  // -> HTTP 400 for remove_peer, vs HTTP 500 for recover",
+      "call_chain_traced": "POST /cluster/recover (actix) -> recover_current_peer (src/actix/api/cluster_api.rs:60) -> auth.check_global_access(manage) passes (no api-key configured) -> dispatcher.toc().request_snapshot() (lib/storage/src/content_manager/toc/mod.rs:546) -> get_consensus_proposal_sender() (toc/mod.rs:775) -> consensus_proposal_sender is None on a standalone deployment (toc/mod.rs:93 Option<OperationSender>; is_distributed = sender.is_some() at :159) -> Err(StorageError::service_error(\"Qdrant is running in standalone mode\")) -> HttpError::from (src/actix/helpers.rs:263) -> status_code match maps ServiceError to 500 INTERNAL_SERVER_ERROR (helpers.rs:247) -> body {\"status\":{\"error\":\"Service internal error: Qdrant is running in standalone mode\"}} (display text from errors.rs:21 '#[error(\"Service internal error: {description}\")]') — matches the observed response byte-for-byte in text and class. No gRPC face exists for this operation (grep recover_current_peer/RecoverCurrentPeer: actix + OpenAPI only).",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "verification_detail": "A mode guard IS present and fires deterministically (get_consensus_proposal_sender errors when consensus is not enabled); the op is refused, never executed, and all data-plane state is preserved. The defect signal is not absent validation but the disposition class: a client-detectable deployment-mode precondition is raised as ServiceError/500 ('internal error') while the same file's remove_peer raises the identical precondition as BadRequest/400, and the cited doc page renders only a 200 face (repo OpenAPI: 200 + 4XX + default). No source comment, docstring, or maintainer note marks the 500-on-standalone as intentional (no 'by design'/'intentionally' annotation at cluster_api.rs:60-73, toc/mod.rs:546-551/775-779, or helpers.rs:247), so by_design_in_source is not available under the v3.4 tightened rule.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "concurrency race (single sequential call; deterministic sub-millisecond 500 repeated across 8 scripts)",
+        "cache delay / eventual consistency (response is an immediate guard error, not a stale read)",
+        "request-parameter typo (bodyless POST exactly per documented params; URL derived verbatim from raw_knowledge api_endpoints[].url; positive control and all read legs returned 200)",
+        "transport/environment failure (/healthz 200 before and after; error is a well-formed business envelope, not a connection failure)"
+      ],
+      "surviving": "deployment-mode precondition: the target runs standalone (GET /cluster -> status:'disabled'); recover is a distributed-mode operation ('restore or synchronize... with peers' / 'recover Raft state') and cannot apply on this deployment, so the 500 is the deterministic product answer for this default deployment mode — whether the endpoint's behavior in standalone mode is an in-scope contract violation (vs a not-applicable face) is the auditor's judgment; the intra-codebase inconsistency (remove_peer 400 vs recover 500 for the identical precondition) and the undocumented-anywhere 500 disposition are the facts that cut against a clean not-applicable dismissal. Note also: the state constraint's post-success semantics are untestable on this deployment (op always refused), so the Type4 expectations in the meta oracle can never fire here.",
+      "evidence_source": "source+behavior"
+    }
+  }
+}

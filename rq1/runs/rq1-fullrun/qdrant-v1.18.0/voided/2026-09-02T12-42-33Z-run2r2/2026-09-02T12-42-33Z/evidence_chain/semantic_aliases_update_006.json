@@ -1,0 +1,101 @@
+{
+  "defect_id": "semantic_aliases_update_006",
+  "endpoint": "aliases+update (POST /collections/aliases)",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists; WebFetch was blocked by the environment (domain safety verification failed), but the page was fetched successfully via the alternate web reader (full content, title 'Update collection aliases | Qdrant | API Reference', canonical URL .../v-1-18-x/api-reference/aliases/update-aliases) -> PASS, with the WebFetch block recorded honestly. Version: page version selector shows v1.18.x, matching target v1.18.0 on major.minor -> PASS. Content: the page documents POST /collections/aliases, request 'Alias update operations / actions list of objects Required', a 200 Successful response with result boolean, and three curl examples each carrying EXACTLY ONE discriminator per action element (create_alias / delete_alias / rename_alias); however the page prose never states per-element discriminator exclusivity, never documents extra-key disposition, and the specific 404/500 statuses in the contract's assertion text are not present in the rendered page (the published openapi.json for this path defines only 200 + generic '4XX: error' + 'default: error' responses) -> PARTIAL. Endpoint precision: aliases+update found in the contract endpoint_registry (POST, source_url matching this page, actions declared 'array[create_alias|delete_alias|rename_alias]' required, request_required_paths for the three variant branches) -> PASS. All sources are the REST API reference; no SDK/REST confusion.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "11 double discriminator create_alias+delete_alias: status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.015827218}",
+      "secondary_observations": [
+        "rest, same log: setup control aliases: status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.025245998} (positive control proves the API path works)",
+        "rest, same log: baseline scoped map: [('s2au6_1788363018_ctrl', 's2au6_1788363018_col'), ('s2au6_1788363018_victim', 's2au6_1788363018_col')]",
+        "rest, same log, same-face comparison: 10 unknown discriminator bogus_alias: status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum AliasOperations at line 1 column 112\"},\"time\":0.0} — unknown discriminator rejected while the double discriminator of probe 11 was accepted",
+        "rest, same log, same-family type comparison: 07 alias_name=123 (number as string): status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum AliasOperations at line 1 column 94\"},\"time\":0.0}",
+        "rest, same log, same-family type comparison: 12 collection_name=123 (number as string): status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum AliasOperations at line 1 column 94\"},\"time\":0.0}",
+        "rest, sibling script boundary_aliases_update_002 (independent ownership prefix, reproduction): probe[double-key-element] -> status=200 / raw: {\"result\":true,\"status\":\"ok\",\"time\":0.015951735}; its verdict line records 'prefix-owned state now: [\\'bau29c6e20d7y\\']' — the create branch executed, the delete discriminator was silently dropped, and a phantom alias persisted (direct state evidence of partial application); note: that script's process exit code is 0 because its main() returns right after printing the VERDICT line, but its log records VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)",
+        "rest, sibling script boundary_aliases_update_002: probe[unknown-action-key] -> status=400 / raw: {\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum AliasOperations at line 1 column 98\"},\"time\":0.0}",
+        "grpc face: not exercised by any script in this session (face_unavailable for behavioral comparison); source-level face fact: lib/api/src/grpc/proto/collections.proto:813-819 defines AliasOperations with oneof action {create_alias|rename_alias|delete_alias}, so a dual-discriminator element is structurally inexpressible on the grpc face — the leniency is REST-specific",
+        "state-effect caveat for the primary script: semantic_aliases_update_006 exits at the Type1 verdict before its Type4 integrity check, so which branch executed is not state-observed in THIS log; it is source-derived (serde untagged first-variant-wins) and behaviorally confirmed by the sibling script's phantom-alias observation above"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Stronger than an error wrapped in a 2xx envelope: the request-side-decidable malformed structure (two operation discriminators in one actions element, against the published '4XX: error' response family) returned HTTP 200 with NO error indication at all — {\"result\":true,\"status\":\"ok\"} — i.e. silent success, the Type1 IllegalSuccess pattern itself."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_aliases_update_006",
+        "boundary_aliases_update_002"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_aliases_update_001",
+      "assertion_text_quoted": "returns 200 ok; 404 on create_alias of a missing collection; 404/500 on delete_alias of an unknown alias",
+      "api_violates_assertion": true,
+      "note": "Dispatch constraint_id field was empty; the anchor was recovered verbatim from the attack string and the script header (# constraint_ids: qdrant_behavioral_aliases_update_001) and exists in structured_contract.json. violates=true grounding: the observed element {\"create_alias\":{...complete...},\"delete_alias\":{...complete...}} is outside the declared per-element domain array[create_alias|delete_alias|rename_alias] under the exclusive one-of reading (all three doc examples carry exactly one discriminator per element; the gRPC proto oneof structurally enforces one; the endpoint's published '4XX: error' response family covers invalid requests), and the server executed only the create while silently discarding the requested delete and reporting result:true (sibling-script state evidence). Honest counterpoints for the auditor: (1) the behavioral assertion's own status matrix does not by itself mandate a 4xx for malformed shape — the violation grounds in the registry's declared actions element type plus the documented 4XX error family; (2) the published OpenAPI schema for AliasOperations is anyOf with NO additionalProperties:false, under whose strict letter a dual-key element validates against the CreateAliasOperation branch — the auditor must weigh the exclusive reading against the permissive schema letter.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_aliases_update_001 present in structured_contract.json (line ~7595: 'returns 200 ok; 404 on create_alias of a missing collection; 404/500 on delete_alias of an unknown alias') plus endpoint_registry aliases+update entry declaring actions: array[create_alias|delete_alias|rename_alias] with per-branch request_required_paths; dispatch constraint_id field empty but anchor recoverable from attack string and script header — minor mechanical gap, not a break",
+        "doc: https://api.qdrant.tech/v-1-18-x/api-reference/aliases/update-aliases reachable and version-matched; documents the endpoint, 'actions list of objects Required', 200 result:boolean, a generic '4XX: error' family, and three examples each with exactly one discriminator per element — but never states per-element exclusivity or extra-key disposition (partial coverage of the exclusivity reading)",
+        "script: semantic_aliases_update_006.py sends the verbatim probe body {\"actions\": [{\"create_alias\": {\"collection_name\": <col>, \"alias_name\": <prefix>x11}, \"delete_alias\": {\"alias_name\": <victim>}}]} to POST /collections/aliases with oracle 'all 12 malformed bodies REJECTED with 4xx; 200 means silent coercion => Type1'; header constraint_ids matches the anchored contract",
+        "log: output_semantic_aliases_update_006.log records probe 11 -> status=200 raw={\"result\":true,...} and 11 of 12 malformed probes correctly 400-rejected; VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) matches the claim_hint exactly; raw response corroborates the verdict"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "AliasOperations (whole tree, files_with_matches)",
+        "enum AliasOperations (lib/)",
+        "struct ChangeAliasesOperation (lib/storage/src/content_manager)",
+        "ChangeAliases (lib/storage/src/content_manager/toc/)",
+        "deny_unknown_fields (lib/storage/src/content_manager) — zero hits",
+        "Format error in JSON (whole tree) — zero hits; 'JSON body' -> src/actix/mod.rs:111 validation_error_handler(\"JSON body\", err, rec)",
+        "JsonConfig|json_config (src/actix)",
+        "double.key|two discriminator|multi.?discriminator|create_alias.*delete_alias (tests/) — zero hits",
+        "message AliasOperations (lib/api/src/grpc/proto/collections.proto)",
+        "AliasOperations (docs/redoc/v1.18.x/openapi.json + lib/storage/src/content_manager/conversions.rs)"
+      ],
+      "files_examined": [
+        "lib/storage/src/content_manager/collection_meta_ops.rs (lines 1-104, 345-358: CreateAlias/DeleteAlias/RenameAlias structs, untagged enum AliasOperations, ChangeAliasesOperation{actions: Vec<AliasOperations>})",
+        "lib/storage/src/content_manager/toc/collection_meta_ops.rs (lines 75-143 dispatch, 295-338 update_aliases perform loop)",
+        "lib/storage/src/content_manager/conversions.rs (lines 265-299 grpc::AliasOperations TryFrom — oneof match, None -> invalid_argument)",
+        "src/actix/api/collections_api.rs (lines 180-196 update_aliases handler)",
+        "src/actix/mod.rs (lines 100-148 actix_web_validator JsonConfig + error_handler producing 'Format error in JSON body' 400s)",
+        "lib/api/src/grpc/proto/collections.proto (lines 805-834 oneof action)",
+        "docs/redoc/v1.18.x/openapi.json (path /collections/aliases: 200 + generic 4XX/default error; schema AliasOperations = anyOf, no additionalProperties:false)"
+      ],
+      "source_excerpt": "lib/storage/src/content_manager/collection_meta_ops.rs:32-86 —\n// *Operation wrapper structure is only required for better OpenAPI generation\n\n/// Create alternative name for a collection.\n/// Collection will be available under both names for search, retrieve,\n#[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct CreateAlias {\n    pub collection_name: String,\n    pub alias_name: String,\n}\n\n#[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct CreateAliasOperation {\n    pub create_alias: CreateAlias,\n}\n\n/// Delete alias if exists\n#[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct DeleteAlias {\n    pub alias_name: String,\n}\n\n/// Delete alias if exists\n#[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct DeleteAliasOperation {\n    pub delete_alias: DeleteAlias,\n}\n\n/// Change alias to a new one\n#[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct RenameAlias {\n    pub old_alias_name: String,\n    pub new_alias_name: String,\n}\n\n/// Change alias to a new one\n#[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\npub struct RenameAliasOperation {\n    pub rename_alias: RenameAlias,\n}\n\n/// Group of all the possible operations related to collection aliases\n#[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, Hash, Clone)]\n#[serde(rename_all = \"snake_case\")]\n#[serde(untagged)]\npub enum AliasOperations {\n    CreateAlias(CreateAliasOperation),\n    DeleteAlias(DeleteAliasOperation),\n    RenameAlias(RenameAliasOperation),\n}\n\n— and lib/storage/src/content_manager/toc/collection_meta_ops.rs:298-338 (perform loop) —\n    /// performs several alias changes in an atomic fashion\n    async fn update_aliases(&self, operation: ChangeAliasesOperation) -> Result<bool, StorageError> {\n        // Lock all collections for alias changes\n        // Prevent search on partially switched collections\n        let collection_lock = self.collections.write().await;\n        let mut alias_lock = self.alias_persistence.write().await;\n        for action in operation.actions {\n            match action {\n                AliasOperations::CreateAlias(CreateAliasOperation { create_alias: CreateAlias { collection_name, alias_name } }) => {\n                    collection_lock.validate_collection_exists(&collection_name)?;\n                    collection_lock.validate_collection_not_exists(&alias_name)?;\n                    alias_lock.insert(alias_name, collection_name)?;\n                }\n                AliasOperations::DeleteAlias(DeleteAliasOperation { delete_alias: DeleteAlias { alias_name } }) => {\n                    alias_lock.remove(&alias_name)?;\n                }\n                AliasOperations::RenameAlias(RenameAliasOperation { rename_alias: RenameAlias { old_alias_name, new_alias_name } }) => {\n                    alias_lock.rename_alias(&old_alias_name, new_alias_name)?;\n                }\n            };\n        }\n        Ok(true)\n    }",
+      "call_chain_traced": "POST /collections/aliases -> src/actix/api/collections_api.rs:180 update_aliases(operation: Json<ChangeAliasesOperation>) -> extractor configured at src/actix/mod.rs:109-111 (actix_web_validator::JsonConfig, error_handler validation_error_handler(\"JSON body\", ...)) which yields the observed 400 'Format error in JSON body: ...' for the 11 probes that fail serde -> serde deserializes ChangeAliasesOperation{actions: Vec<AliasOperations>} (collection_meta_ops.rs:349-353) -> each element through #[serde(untagged)] enum AliasOperations (collection_meta_ops.rs:79-86): variants tried in declaration order, FIRST successful variant wins, extra keys silently ignored (no deny_unknown_fields anywhere in lib/storage/src/content_manager — grep zero hits), so a {create_alias, delete_alias} element becomes CreateAlias and the delete_alias key is DISCARDED at deserialization -> dispatcher.submit_collection_meta_op(CollectionMetaOperations::ChangeAliases) -> toc/collection_meta_ops.rs:82 -> update_aliases perform loop (298-338) applies only the surviving variant (create: validate_collection_exists + validate_collection_not_exists + insert) -> Ok(true) -> HTTP 200 {\"result\":true,\"status\":\"ok\"}. No exclusivity validation exists anywhere on the path, and the perform loop cannot re-check exclusivity because the dropped discriminator is already destroyed by deserialization. gRPC face: lib/api/src/grpc/proto/collections.proto:813-819 oneof action (structurally one operation per element) -> conversions.rs:271-283 maps the oneof (None -> Status::invalid_argument).",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — positive control create returned 200 and 11 of 12 malformed probes returned well-formed 400s in the same run; no transport failures or liveness problems",
+        "concurrency — single sequential request; the acceptance is deterministic serde deserialization behavior identified in source, not a race",
+        "request-parameter typo — script source reviewed: probe 11 body is exactly the intended dual-discriminator element with both sub-objects complete",
+        "cache/staleness — POST alias mutation; sibling script's post-call state read shows the create took effect and the delete did not, i.e. a fresh authoritative write path",
+        "by_design_in_source — no explicit intent evidence found: no code comment/docstring declaring extra-discriminator tolerance intentional (the only nearby comment, collection_meta_ops.rs:32 '// *Operation wrapper structure is only required for better OpenAPI generation', concerns OpenAPI generation of the wrapper structs, not multi-discriminator acceptance); no test in tests/ exercising double-key elements (grep zero hits)"
+      ],
+      "surviving": null
+    }
+  }
+}

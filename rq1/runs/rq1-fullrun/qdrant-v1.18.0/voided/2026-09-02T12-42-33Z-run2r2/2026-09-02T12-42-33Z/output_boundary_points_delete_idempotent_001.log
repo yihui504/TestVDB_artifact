@@ -1,0 +1,23 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+I1 delete non-existent ids on empty collection -> status=200
+raw: {"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.004710587}
+I1: 200 idempotent success, count still 0 — promise kept
+seed baseline: exact count == 6 (arithmetic anchor OK)
+
+I2 delete existing ids [1,2] -> status=200
+raw: {"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.0039967}
+I2: 200, count == 4 == 4
+
+I3 re-delete ids [1,2] (already deleted) -> status=200
+raw: {"result":{"operation_id":4,"status":"completed"},"status":"ok","time":0.004606933}
+I3: 200 again, count still == 4 == 4 (idempotent)
+
+I4 delete mixed ids [999(non-existent), 3(existing)] -> status=200
+raw: {"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.004703522}
+I4: 200, count == 3 == 3
+
+cross-face scroll (no filter) -> status=200
+raw: {"result":{"points":[{"id":4},{"id":5},{"id":6}],"next_page_offset":null},"status":"ok","time":0.000327375}
+cross-face: scroll id set == [4, 5, 6] (count/scroll faces agree)
+VERDICT: NO_DEFECT

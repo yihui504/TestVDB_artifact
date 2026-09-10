@@ -1,0 +1,12 @@
+{
+  "defect_id": "vein_range_filter_schema_vi_ints_1",
+  "script": "vein_range_filter_schema_vi_ints_1",
+  "target": "weaviate",
+  "version": "v1.37.4",
+  "endpoint": "POST /v1/schema",
+  "param": "vectorIndexConfig.ef",
+  "condition_type": "range_filter",
+  "expected_defect_type": "Type1",
+  "strategy": "vein_range_filter",
+  "summary": "vectorIndexConfig int params have an inconsistent validation surface on POST /v1/schema: ef=-5/0, vectorCacheMaxObjects=-1, cleanupIntervalSeconds=-1, pq.centroids=-1 are accepted and persisted (HTTP 200, response echoes, GET read-back confirms), while maxConnections=-1 and efConstruction=-5 on the same config object are rejected 422 (min-constraint). ef is the active HNSW search-time param whose documented default sentinel is -1; -5/0 are invalid values silently persisted (R2 numeric-boundary extension of R1 type_mismatch finding on dynamicEfMin/Max/flatSearchCutoff)."
+}

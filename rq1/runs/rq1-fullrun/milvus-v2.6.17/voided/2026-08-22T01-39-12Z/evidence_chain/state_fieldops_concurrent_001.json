@@ -1,0 +1,68 @@
+{
+  "defect_id": "state_fieldops_concurrent_001",
+  "endpoint": "entities+upsert",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "契约断言 fieldOps 结构合法时应正确合并；并发正确性由 milvus_state_entities_upsert_fieldops_001 的 'no rows modified on violation / 正确合并' 语义引申；limitations.md 可达（同会话 200）。并发丢失更新无对应文档明文（如实：文档无并发承诺条目），契约层为语义引申",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "lost updates: tags len=12 expected=41; op codes=[0]（8 线程×5 ARRAY_APPEND 全部 code=0，最终 tags 仅 12 元素）",
+      "secondary_observations": [
+        "insert: {\"code\":0,...,\"insertCount\":1,\"insertIds\":[1]}（种子 ['a']）",
+        "query readback: tags=[\"a\",\"t6\",\"t4\",\"t2\",\"t7\",\"t3\",\"t4\",\"t4\",\"t5\",\"t2\",\"t1\",\"t2\"]（期望 41；丢失 29 次 append；且 t3/t4 各只出现 1-3 次 vs 各期望 5 次）",
+        "op codes=[0] — 无任何错误信号伴随丢失"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "N/A", "note": "全部 2xx+code:0；丢失更新是静默状态违规（Type4），无错误形态"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/state_fieldops_concurrent_001.py"],
+      "note": "Type4（StateViolation）按规则 grade=C；单脚本单轮运行，未做多轮复跑——auditor 注意 run-to-run 方差风险",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_state_entities_upsert_fieldops_001",
+      "assertion_text_quoted": "any(fieldOps structural violation) => code 1100, no rows modified; non-REPLACE op present => request implicitly promoted to partialUpdate=true",
+      "api_violates_assertion": true,
+      "note": "结构合法的 ARRAY_APPEND 请求（全 code:0）最终状态丢失 29/40 次追加——'no rows modified' 的反面即'成功必须正确落盘'；按语义引申 violates=true，但契约原文不含并发条款（如实标注：引申 grounding，auditor 复核）",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_state_entities_upsert_fieldops_001（合并正确性语义引申）",
+        "doc: limitations.md 可达（无并发承诺明文——弱链接，如实记录）",
+        "script: state_fieldops_concurrent_001.py 8线程×5 append",
+        "log: op codes=[0] + tags len=12 vs expected=41"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "文档环无并发语义原文，契约原文亦无并发条款；链依赖'成功必须落盘'的通用语义引申。behavior 与 source 环完整",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["queryPreExecute", "retrieveByPKs", "lock", "concurren"],
+      "files_examined": [
+        "internal/proxy/task_upsert.go (L237-330 queryPreExecute；L1065 PreExecute；L1217 调用)",
+        "internal/proxy/task_upsert_partial_op.go (applyArrayPartialOpOnRow L35-70)"
+      ],
+      "source_excerpt": "task_upsert.go L237 queryPreExecute：`// retrieve by primary key to get original field data; resp, storageCost, err := retrieveByPKs(ctx, it, upsertIDs, []string{\"*\"})` 随后在内存中 merge（task_upsert_partial_op.go applyArrayPartialOpOnRow：`merged, err := typeutil.ApplyArrayRowOp(baseRow, updateRow, op, elementType, maxCapacity); dstArr.Data[baseIdx] = merged`）再整体写回。grep 'lock|Lock|concurren' 在 task_upsert.go 零命中（sufficiency: grep_zero_hits for locking）——read-modify-write 全程无 per-pk 互斥，两个并发请求可同时 retrieve 到相同 baseRow，各自 append 后整体覆盖写回，后写者胜。",
+      "call_chain_traced": "并发 upsert -> 各自 PreExecute -> queryPreExecute retrieveByPKs（读到同一旧值）-> 内存 merge -> 各自整体写回 -> 丢失更新",
+      "verification_outcome": "validation_absent",
+      "note": "无锁 read-modify-write 是经典丢失更新模式；源码无任何乐观并发控制（无 ts 冲突检测于 merge 路径）",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env（docker 单机稳定运行，种子与读回均正常）", "request-typo（全部 code:0 确认请求被接受）"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "medium-strong（behavior 数字确凿 + source 无锁 RMW 定位；doc 环弱、单轮运行为减分项）"
+}

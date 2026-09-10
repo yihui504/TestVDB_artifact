@@ -1,0 +1,33 @@
+{
+  "defect_id": "vein_type_mismatch_filter_count_1",
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "endpoint": "POST /collections/{collection}/points/count",
+  "condition_type": "type_mismatch",
+  "strategy": "vein_type_mismatch",
+  "finding": "Type-mismatched filter value (string on integer field) is silently accepted with count=0 instead of returning 400 Bad Request",
+  "defect_type": "Type1_IllegalSuccess",
+  "severity": "P1_High",
+  "expected_behavior": "HTTP 400 Bad Request - type mismatch validation error",
+  "actual_behavior": "HTTP 200 OK with count=0 - silent acceptance of invalid filter value",
+  "endpoint_tested": "POST /collections/{collection}/points/count",
+  "test_parameters": {
+    "filter.key": "age",
+    "filter.match.value": "twenty-five",
+    "field_type": "integer",
+    "value_type": "string"
+  },
+  "control_group": {
+    "test": "Type-matched filter (integer value on integer field)",
+    "result": "count=1, HTTP 200 OK - works correctly"
+  },
+  "bug_shape": "qdrant-type-coercion-type-confusion",
+  "reference_issue": 9373,
+  "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+  "novelty": "LIKELY_NOVEL",
+  "submission_probability": "High (0.8)",
+  "script_path": "vein_scripts/vein_type_mismatch_filter_count_1.py",
+  "generated_by": "attack-vein v2.5.2",
+  "generated_at": "2026-08-20T17:50:00Z",
+  "param": "filter.match.value"
+}

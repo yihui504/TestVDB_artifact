@@ -1,0 +1,36 @@
+{
+  "auditor": "chain-auditor",
+  "target": "qdrant",
+  "version": "v1.18.0",
+  "verdicts": [
+    {
+      "defect_id": "semantic_cluster_peer_delete_002",
+      "verdict": "NOT_DEFECT",
+      "fp_evidence_source": "doc",
+      "perspective_analysis": {
+        "contract": {"verdict_A": "REFUTED", "agent_suspects_contract_wrong": false},
+        "physical": {"verdict_B": "REFUTED", "objective_constraint_class": "none"},
+        "behavioral": {"verdict_C": "CONFIRMED"},
+        "cognition": {"verdict_D": "NO_SIGNAL",
+                       "matched_pattern": "what_developers_prioritize: 'Performance optimization over diagnostic completeness' — don't-care dimension, annotation only, never decides",
+                       "developer_quote": null},
+        "aggregation_applied": "verdict_A=REFUTED (id+quote_ok, api_violates_assertion=false) -> implied_verdict=NOT_DEFECT -> final=NOT_DEFECT (mechanical, no LLM re-judgment)"
+      },
+      "chain_broken_at": "doc",
+      "root_cause_if_fp": "mundane_api_semantics",
+      "constraint_category": "other",
+      "category_no_fit_reason": "The involved contract unit is a behavioral response promise (200 / 4xx-on-invalid-peer-id) whose asserted branch was honored; the actual claim (error-message diagnostic quality) is asserted by no type/range/state/resource_bound/doc_consistency unit.",
+      "candidate_class": "rejected",
+      "exploratory": {"form": null, "signal": null, "rationale": null},
+      "rationale": "A: qdrant_behavioral_cluster_peer_delete_001, id+quote_ok (quote verbatim from expected_behavior), api_violates_assertion=false — all four invalid peer-id forms returned 4xx (three 404 'can not parse ... to a u64' + one 400 'Distributed mode disabled.'), so the asserted negative branch was literally honored and implied_verdict=NOT_DEFECT is mechanical. The Type-2 claim rests on a rubric fixed test-side: doc content_consistency=PARTIAL (page documents only the 200 'Deleted' response and the shards-error note; the '4xx on an invalid peer id' clause is extractor inference and no error-quality requirement exists in doc or contract), and http_semantics shows no 2xx masking so B's HTTP-tautology trigger fails (B=REFUTED, no violating value accepted). chain_broken_at=doc transcribed — a provenance gap only, no in-chain contradiction (break_detail itself states contract->script->log links intact); source corroborates the terse messages as structural (plain web::Path -> actix-web 4.13.0 default 404, validator::Path handler unreachable, 'can not parse' string dependency-origin) with no by-design annotation, so C=CONFIRMED (behavior genuinely not elegant, rubric best=1/3) at LOW weight — it cannot overturn the mechanical A ruling; cognition 'Performance optimization over diagnostic completeness' is an annotation-only don't-care hit (D=NO_SIGNAL).",
+      "rework_order": null
+    }
+  ],
+  "summary": {
+    "total": 1, "defect": 0, "not_defect": 1, "needs_more_evidence": 0,
+    "fp_evidence_source_distribution": {"doc": 1, "source": 0, "both": 0, "behavior": 0},
+    "root_cause_distribution": {"mundane_api_semantics": 1},
+    "constraint_category_distribution": {"other": 1},
+    "candidate_class_distribution": {"strict_defect": 0, "exploratory_candidate": 0, "rejected": 1}
+  }
+}

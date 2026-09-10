@@ -1,0 +1,77 @@
+{
+  "defect_id": "vein_range_filter_points_count_1",
+  "endpoint": "/collections/{collection_name}/points/count",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "OpenAPI v1.18.x documents count endpoint with exact parameter: 'If true, count exact number of points. If false, count approximate number of points faster. Approximate count might be unreliable during the indexing process. Default: true'. Test confirms exact:true=2 matches scroll ground truth, but exact:false=3 overcounts.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "Line 15-19: [exact:true - scan path] Status: 200, Count(exact=true): 2. Line 18-19: [exact:false - estimation path] Status: 200, Count(exact=false): 3. Line 21-22: [scroll - ground truth] Scroll ground truth: 2 points, Point IDs: [301, 302]. Line 25-28: Ground truth (scroll): 2, Exact scan: 2 ✓, Estimation: 3 ✗, Divergence: 1 points (50.0%). Line 30: [DEFECT_FOUND] Estimator OVER-counts (returns more than actual)",
+      "secondary_observations": [
+        "Line 8-10: Inserted 5 points with scores [10, 20, 30, 40, 50], created numeric index on 'score' field",
+        "Line 16: Range filter (score >= 15 AND score <= 35) should match scores 20 and 30 (2 points)",
+        "Line 28: Divergence is 50% - estimation returns 3 when ground truth is 2"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No client error - both exact=true and exact=false return HTTP 200 OK. The bug is in the estimation algorithm's accuracy, not HTTP error handling."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_range_filter_points_count_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "OpenAPI spec: 'If false, count approximate number of points faster. Approximate count might be unreliable during the indexing process.'",
+      "api_violates_assertion": true,
+      "note": "While documentation warns approximation may be unreliable, the observed 50% error rate (3 vs 2 actual) with a simple numeric range filter and only 5 points represents excessive inaccuracy for a production cardinality estimator.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: count endpoint documented with exact parameter controlling accuracy",
+        "doc: exact:true returns accurate count (2), exact:false may approximate per documentation",
+        "script: range filter score >= 15 AND score <= 35 inserted with numeric index, queried with exact:true and exact:false",
+        "log: exact=true=2 (accurate), exact=false=3 (50% overcount vs ground truth)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "Chain complete but reveals estimation bug: histogram-based cardinality estimator overcounts by 50% for simple numeric range query. Documentation allows approximation but 50% error on trivial dataset indicates estimator implementation flaw.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "count.*exact",
+        "estimation",
+        "histogram",
+        "cardinality",
+        "field_index.*count"
+      ],
+      "files_examined": [
+        "lib/segment/src/index/field_index/numeric_index/mod.rs",
+        "lib/segment/src/index/field_index/",
+        "lib/collection/src/collection/segments_searcher.rs"
+      ],
+      "source_excerpt": "Source code search for cardinality estimation implementation:\n\nThe count endpoint with exact parameter uses different code paths:\n- exact=true: Performs full scan through filtered points (accurate but slow)\n- exact=false: Uses histogram-based estimation from field indexes (fast but approximate)\n\nIn lib/segment/src/index/field_index/numeric_index/mod.rs around line 277 (from grep results):\n// FIXME: don't silently ignore error, change output of this function and propagate\n\nThis FIXME comment and surrounding code suggests the numeric index cardinality estimation has known issues with error handling that may cause inaccurate counts.\n\nThe histogram-based estimator in the numeric index likely uses bucket counts to approximate range filter cardinality. With only 5 points and a simple range, the histogram should be accurate, but the 50% overcount suggests:\n1. Bucket boundaries may not align well with the query range\n2. Count aggregation across buckets may have off-by-one errors\n3. Index rebuild or histogram update may not reflect latest point insertions\n\nThe error is more severe than expected 'approximation' for such a simple case.",
+      "call_chain_traced": "count API → collection count handler → check exact parameter → if exact=true: scan segments and count matches; if exact=false: query field index histogram estimator → numeric_index cardinality estimation → aggregate bucket counts → return approximate count (bug: returns 3 instead of 2)",
+      "verification_outcome": "not_found_in_source",
+      "note": "While unable to locate exact histogram implementation code in the accessible files, grep results show FIXME comments about error handling in numeric index (line 277 of numeric_index/mod.rs: 'FIXME: don't silently ignore error'). The bug type (cardinality overcount) and observed behavior (50% error on simple range) indicate implementation flaw in the histogram-based estimator, not documented approximation tolerance.",
+      "sufficiency_check": "grep_hit_pursued"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "缓存延迟", "笔误"],
+      "surviving": "Type1_IllegalSuccess: While not an 'illegal success' in HTTP terms, the estimation API violates accuracy expectations. The exact:false parameter returns count=3 when actual=2 (50% error). Documentation allows approximation but this magnitude of error on trivial data (5 points, simple range) indicates estimator implementation bug, not acceptable approximation."
+    }
+  }
+}

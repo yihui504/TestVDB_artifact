@@ -1,0 +1,146 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "session_dir": "<HOME>\.claude\plugins\cache\testvdb\testvdb\2.3.0\results\qdrant\v1.18.2\2026-08-20T15-41-03Z",
+  "round": 3,
+  "top_endpoints": [
+    "collections+create",
+    "points+search",
+    "points+upsert",
+    "points+query"
+  ],
+  "richness_scores": {
+    "collections+create": 8.5,
+    "points+search": 7.0,
+    "points+upsert": 6.5,
+    "points+query": 6.0
+  },
+  "candidates_count": 4,
+  "skipped_count": 0,
+  "defects_found": 4,
+  "no_defect": 6,
+  "inconclusive": 0,
+  "by_design_excluded": 0,
+  "candidates": [
+    {
+      "id": "vein_params_hnsw_ef_zero_points_search_1",
+      "endpoint": "POST /collections/{collection}/points/search",
+      "condition_type": "params_hnsw_ef",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "Search with params.hnsw_ef=0 returns 200 OK (should reject with 400)",
+      "by_design_match": false,
+      "inspired_by": null,
+      "param": "params.hnsw_ef",
+      "expected_defect_type": "Type1_IllegalSuccess",
+      "severity": "Medium",
+      "script_path": "vein_scripts/vein_params_hnsw_ef_zero_points_search_1.py"
+    },
+    {
+      "id": "vein_batch_ordering_invalid_points_batch_1",
+      "endpoint": "POST /collections/{collection}/points/batch",
+      "condition_type": "ordering_validation",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "Batch with ordering='invalid_value' returns 200 OK (should reject with 400)",
+      "by_design_match": false,
+      "inspired_by": null,
+      "param": "ordering",
+      "expected_defect_type": "Type1_IllegalSuccess",
+      "severity": "Medium",
+      "script_path": "vein_scripts/vein_batch_ordering_invalid_points_batch_1.py"
+    },
+    {
+      "id": "vein_replication_gt_shards_collections_create_1",
+      "endpoint": "PUT /collections/{collection}",
+      "condition_type": "replication_gt_shards",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "Collection with replication_factor=2, shard_number=1 returns 200 OK (semantic invalidity)",
+      "by_design_match": false,
+      "inspired_by": null,
+      "param": "replication_factor,shard_number",
+      "expected_defect_type": "Type1_IllegalSuccess",
+      "severity": "High",
+      "script_path": "vein_scripts/vein_replication_gt_shards_collections_create_1.py"
+    },
+    {
+      "id": "vein_write_consistency_gt_replication_collections_create_1",
+      "endpoint": "PUT /collections/{collection}",
+      "condition_type": "write_consistency_gt_replication",
+      "finding": "DEFECT_FOUND",
+      "http_status": 200,
+      "response_excerpt": "Collection with write_consistency_factor=3, replication_factor=2 returns 200 OK (semantic invalidity)",
+      "by_design_match": false,
+      "inspired_by": null,
+      "param": "write_consistency_factor,replication_factor",
+      "expected_defect_type": "Type1_IllegalSuccess",
+      "severity": "High",
+      "script_path": "vein_scripts/vein_write_consistency_gt_replication_collections_create_1.py"
+    }
+  ],
+  "r3_summary": {
+    "total_tests_conducted": 10,
+    "defects_found": 4,
+    "no_defect": 6,
+    "inconclusive": 0,
+    "by_design_excluded": 0,
+    "focus_areas_completed": [
+      "params_nested_objects (hnsw_ef boundary, exact flag, unknown fields)",
+      "distributed_config_params (shard_number, replication_factor, write_consistency_factor, sharding_method)",
+      "upsert_wait_ordering (wait semantics, ordering values)"
+    ],
+    "key_findings": [
+      "params.hnsw_ef=0 accepted in search (Type1_IllegalSuccess - BS04 boundary optimism)",
+      "Invalid ordering value accepted in batch (Type1_IllegalSuccess - BS01 type coercion)",
+      "replication_factor > shard_number semantic invalidity (Type1_IllegalSuccess - BS04 semantic drift)",
+      "write_consistency_factor > replication_factor semantic invalidity (Type1_IllegalSuccess - BS04 semantic drift)"
+    ],
+    "no_defect_findings": [
+      "params.exact=true works correctly",
+      "Unknown params fields silently ignored (lenient API design)",
+      "ordering='weak' and 'strong' correctly accepted",
+      "shard_number=null accepted (uses default)",
+      "sharding_method='auto' correctly accepted",
+      "Invalid sharding_method correctly rejected"
+    ],
+    "cross_endpoint_opportunities": [
+      "params.hnsw_ef validation on points+query endpoint",
+      "params.hnsw_ef validation on points+recommend endpoint",
+      "ordering validation on points+batch with different operation types",
+      "distributed params on collections+update (PATCH endpoint)"
+    ],
+    "threat_model_alignment": {
+      "BS01_Parameter_Type_Coercion": "hit - ordering='invalid' enum validation missing",
+      "BS04_Boundary_Default_Optimism": "hit - hnsw_ef=0 boundary accepted",
+      "BS04_Semantic_Drift": "hit - distributed config semantic inconsistencies"
+    }
+  },
+  "total_defects_all_rounds": 17,
+  "round_breakdown": {
+    "round1": 0,
+    "round2": 13,
+    "round3": 4
+  },
+  "novelty_assessment": {
+    "params_hnsw_ef_zero": "Novel - boundary validation on nested params object not covered in R1/R2",
+    "batch_ordering_invalid": "Novel - enum validation on ordering parameter",
+    "replication_gt_shards": "Novel - semantic consistency validation on distributed config (replication > shards is logically impossible)",
+    "write_consistency_gt_replication": "Novel - semantic consistency validation on write quorum config (consistency > replication violates quorum semantics)"
+  },
+  "completion_metrics": {
+    "r3_objectives_coverage": "100%",
+    "r3_focus_areas_tested": 3,
+    "r3_conditions_tested": 10,
+    "control_groups_used": 4,
+    "by_design_validations_performed": 6
+  },
+  "compliance": {
+    "meta_json_produced": true,
+    "safe_request_used": true,
+    "by_design_checked": true,
+    "control_groups_executed": true,
+    "shape_guidance_followed": true,
+    "scripts_generated": 4
+  }
+}

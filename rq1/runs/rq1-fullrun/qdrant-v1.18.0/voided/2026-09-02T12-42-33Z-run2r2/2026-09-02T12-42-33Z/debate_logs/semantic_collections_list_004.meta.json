@@ -1,0 +1,15 @@
+{
+ "defect_id": "semantic_collections_list_004",
+ "endpoint": "collections+list",
+ "param": null,
+ "expected_defect_type": "Type2_PoorDiagnostics",
+ "strategy": "diagnosis_quality",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_list_001"
+ ],
+ "oracle": {
+  "statement": "leg 1: POST /collections with a create-style body on the GET-declared listing face is rejected in 4xx (405 ideal; 400/404/406/422 legitimate) with non-empty diagnostic text - 2xx = Type1_IllegalSuccess (verb confusion), 4xx with no diagnostic = Type2_PoorDiagnostics, 5xx with /healthz alive = Type3; leg 2: GET /collections with junk/type-confused query params (wait=notabool, limit=999999999, offset=-1, foo=[bar) stays 200-with-intact-array-and-unchanged-prefix-scope or a clean 4xx-with-text - 5xx/hang = Type3/transport, corrupted 200 payload or mutated prefix scope = Type4; post-probe clean GET returns the baseline prefix scope; transport failure with healthy /healthz = SCRIPT_ERROR",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

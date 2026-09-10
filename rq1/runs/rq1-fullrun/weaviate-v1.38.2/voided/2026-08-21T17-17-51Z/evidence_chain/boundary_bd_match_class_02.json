@@ -1,0 +1,68 @@
+{
+  "defect_id": "boundary_bd_match_class_02",
+  "endpoint": "DELETE /batch/objects",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint source_url 为 go-func 定位，本地 clone 可达；契约 api_endlines DELETE /batch/objects 的 match.class required=true（source_url go-struct: entities/models/batch_delete.go#L132-L134）；endpoint_registry 含该端点 v1.38.2。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "ATTACK match.class missing: 500 / Body: {\"error\":[{\"message\":\"validate: empty match.class clause\"}]}",
+      "secondary_observations": [
+        "setup: 200 / insert: 200 — 前置数据就绪"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "缺 required 字段以 500 返回而非 4xx，即缺陷本身"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_bd_match_class_02", "boundary_bd_match_empty_08", "boundary_bd_match_resources_09", "semantic_match_missing_01"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_type_batch_delete_match_001",
+      "assertion_text_quoted": "DELETE /batch/objects: match.class AND match.where present, else 4xx",
+      "api_violates_assertion": true,
+      "note": "match.class 缺失 → 500，违反 'else 4xx' 分支；观测值在 constraint 约束域内（required 字段缺失）。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_type_batch_delete_match_001 要求 match.class AND match.where present, else 4xx",
+        "doc: api_endpoints match.class required=true (go-struct: entities/models/batch_delete.go#L132-L134)",
+        "script: boundary_bd_match_class_02.py 发送 match 含 where 无 class 的 DELETE /batch/objects",
+        "log: 'ATTACK match.class missing: 500' + 'validate: empty match.class clause'"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["empty match.class", "ErrInvalidUserInput"],
+      "files_examined": [
+        "usecases/objects/batch_delete.go (L110-150)",
+        "adapters/handlers/rest/handlers_batch_objects.go (L170-210)"
+      ],
+      "source_excerpt": "usecases/objects/batch_delete.go L127-L130:\n  if len(match.Class) == 0 {\n    return nil, 0, errors.New(\"empty match.class clause\")\n  }\n\nhandlers_batch_objects.go L194-L202: handler 仅映射 ErrInvalidUserInput(422)/ErrMultiTenancy(422)/Forbidden(403)，裸 errors.New 走 NewBatchObjectsDeleteInternalServerError → 500。",
+      "call_chain_traced": "handler → DeleteObjects → validateBatchDelete L127 裸 errors.New('empty match.class clause') → handler else 分支 500。同函数 L141-147 class-not-found 分支已用 NewErrInvalidUserInput（'classify other lookup failures as caller input (→ 422)'，PR#11497），class-empty 分支遗留。",
+      "verification_outcome": "validation_present",
+      "note": "校验存在但错误类型未标 ErrInvalidUserInput → 500 通道；真缺陷信号成立。",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo", "class_not_found"],
+      "surviving": null
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{"defect_id": "qdrant_014", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "包内明确无 cluster+recover 契约约束条目，standalone 下 recover 返回 500 显式报错不违反任何在包断言（doc_quote 无来源且无状态码契约）。"}
+{"defect_id": "qdrant_015", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "shard_number=2147483647 满足在包契约 shard_number>=1 属合法值，服务器却无任何 HTTP 响应（读超时）且 GET / 健康检查一并失联、两轮复现，违反在包 behavioral_001『200 on success; 4XX on invalid params』。"}
+{"defect_id": "qdrant_016", "verdict": "CONFIRMED", "confidence": 0.8, "rationale": "lookup_from.collection 指向不存在集合仍 200 静默返回源集合结果，直接违反包内同版本 OpenAPI 显式补充契约『lookup_from.collection 必须存在于集合注册表（否则 400/404）』。"}
+{"defect_id": "qdrant_017", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "日志显示 offset 0/10/20 三页结果不重不漏、分数严格递减、scroll 返回 next_page_offset，全部行为符合在包契约，无任何违反证据。"}
+{"defect_id": "qdrant_018", "verdict": "FALSE_POSITIVE", "confidence": 0.5, "rationale": "包内明确『契约中无 endpoint=points+count 的约束条目』，exact=false 少计（40 vs 24）缺乏任何在包精度断言可违反，保守判 FP。"}
+{"defect_id": "qdrant_019", "verdict": "FALSE_POSITIVE", "confidence": 0.5, "rationale": "唯一在包契约仅声明『exact=false 使用 segment statistics』的机制而非精度，is_empty 少计 35-40% 不构成对该机制性断言的违反。"}
+{"defect_id": "qdrant_020", "verdict": "FALSE_POSITIVE", "confidence": 0.5, "rationale": "approx 与 exact 在组合过滤下差 15-24%，但在包契约仅有『exact=false 使用 segment statistics』机制描述，无精度/一致性断言可依。"}
+{"defect_id": "qdrant_021", "verdict": "FALSE_POSITIVE", "confidence": 0.5, "rationale": "geo_radius approx 高估（甚至 radius=10000km 返回全量 1000 vs exact 508），但在包契约仅有机制性声明、无任何精度断言，证据不足以判违约。"}
+{"defect_id": "qdrant_022", "verdict": "FALSE_POSITIVE", "confidence": 0.5, "rationale": "match_any 值越多 approx 少计越重（至 -33%），但在包唯一契约是 exact=false 用 segment statistics 的机制描述，未承诺计数正确性。"}
+{"defect_id": "qdrant_023", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "snapshot recover 端点晚于契约抽取且包内无 priority=replica 语义断言，recover 200 且 count=3 与快照内容一致，不足以支持契约违反判断。"}
+{"defect_id": "qdrant_024", "verdict": "FALSE_POSITIVE", "confidence": 0.5, "rationale": "包内唯一契约是 strategy 枚举（本案未使用），维度不一致一处 400 一处 200 的不对称虽可疑但无在包断言可违反，保守判 FP。"}
+{"defect_id": "qdrant_025", "verdict": "FALSE_POSITIVE", "confidence": 0.5, "rationale": "包内无任何 metadata 语义契约，PATCH metadata={} 返回 200 且 GET 响应 config.params.metadata 中数据仍在，行为不违反任何在包断言。"}
+{"defect_id": "qdrant_026", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "10 次同请求组内成员集稳定（{1,3,5}/{2,4,6}）仅同分(1.0)排序抖动，未违反包内唯一约束 group_size>=1 且 limit>=1。"}
+{"defect_id": "qdrant_027", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "包内唯一契约声明索引创建为异步，PUT 后立即 GET 时 payload_schema 为空与异步未建成语义一致，不足以判违反。"}

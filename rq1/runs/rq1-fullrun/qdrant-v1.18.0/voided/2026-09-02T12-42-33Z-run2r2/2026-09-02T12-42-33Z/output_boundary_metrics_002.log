@@ -1,0 +1,19 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] metrics = /metrics (rt.PATHS == raw_knowledge api_endpoints[metrics].url ('/metrics') — fallback face reuses it verbatim)
+[boundary_metrics_002] run_token=1788452590_2676 base=http://127.0.0.1:6333
+[baseline runtime GET /metrics] status=200 bytes=66649 head='# HELP app_info information about qdrant server\n# TYPE app_info gauge\napp_info{name="qdrant",version="1.18.0"} 1\n# HELP app_status_recovery_mode features enable'
+[baseline] prometheus shape: HELP=43 TYPE=43 samples=742
+FALLBACK_TRIGGERED: metrics content-type header legs (bare, Accept: application/json, Accept: text/html, Accept: */* on GET /metrics) run via a requests face because the runtime wrapper scripts/runtime/_common.req returns only (status, raw_text) and drops response headers, while this chunk's assertion qdrant_behavioral_metrics_001 explicitly pins the 'content-type text/plain' response header
+[FALLBACK_JUSTIFIED: header capture is unreachable through rt.request — its transport layer scripts/runtime/_common.py req() discards the requests.Response object and returns (r.status_code, r.text) only, so the header half of the documented promise ('HTTP 200 with text/plain Prometheus metrics body', source_url https://api.qdrant.tech/v-1-18-x/api-reference/service/metrics) cannot be observed on the runtime face; the fallback URL is rt.PATHS['metrics'] cross-checked verbatim against raw_knowledge api_endpoints[metrics].url ('/metrics'), and the runtime face still performs the baseline liveness/format probe first — same FALLBACK precedent as R24 boundary_locks_get_003 / R25 boundary_locks_set_003 in this session]
+[H1 bare] status=200 content-type='text/plain; charset=utf-8' bytes=66649 head='# HELP app_info information about qdrant server\n# TYPE app_info gauge\napp_info{name="qdrant",version="1.18.0"} 1\n# HELP app_status_recovery_mode features enable'
+[H1 bare] prometheus shape: HELP=43 TYPE=43 samples=742
+[H2 Accept application/json] status=200 content-type='text/plain; charset=utf-8' bytes=66649 head='# HELP app_info information about qdrant server\n# TYPE app_info gauge\napp_info{name="qdrant",version="1.18.0"} 1\n# HELP app_status_recovery_mode features enable'
+[H2 Accept application/json] prometheus shape: HELP=43 TYPE=43 samples=742
+[H3 Accept text/html] status=200 content-type='text/plain; charset=utf-8' bytes=66649 head='# HELP app_info information about qdrant server\n# TYPE app_info gauge\napp_info{name="qdrant",version="1.18.0"} 1\n# HELP app_status_recovery_mode features enable'
+[H3 Accept text/html] prometheus shape: HELP=43 TYPE=43 samples=742
+[H4 Accept */*] status=200 content-type='text/plain; charset=utf-8' bytes=66649 head='# HELP app_info information about qdrant server\n# TYPE app_info gauge\napp_info{name="qdrant",version="1.18.0"} 1\n# HELP app_status_recovery_mode features enable'
+[H4 Accept */*] prometheus shape: HELP=43 TYPE=43 samples=742
+metrics content-type identity: every 200 leg carried a text/plain Content-Type and a parseable Prometheus body, and Accept-negotiation could not switch the documented format — NO_DEFECT
+[cleanup probe healthz] status=200
+VERDICT: NO_DEFECT

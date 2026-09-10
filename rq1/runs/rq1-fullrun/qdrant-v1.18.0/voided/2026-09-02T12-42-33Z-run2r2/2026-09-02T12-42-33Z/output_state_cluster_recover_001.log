@@ -1,0 +1,15 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[url-derived] cluster+recover -> /cluster/recover (raw_knowledge api_endpoints[].url)
+[healthz] /healthz probe status=200 raw=healthz check passed
+[probe GET /cluster] status=200 raw={"result":{"status":"disabled"},"status":"ok","time":2.026e-6}
+[seed upsert wait=true] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.003498855}
+[baseline exact count] status=200 count=8 raw={"result":{"count":8},"status":"ok","time":0.000149657}
+[POST /cluster/recover] status=500 raw={"status":{"error":"Service internal error: Qdrant is running in standalone mode"},"time":0.000488066}
+[healthz] /healthz probe status=200 raw=healthz check passed
+[post-recover describe] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":8,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replica
+[post-recover exact count] status=200 count=8 raw={"result":{"count":8},"status":"ok","time":0.00010924}
+[post-recover GET /cluster] status=200 raw={"result":{"status":"disabled"},"status":"ok","time":2.06e-6}
+OBSERVATION: GET /cluster body changed across recover (before={"result":{"status":"disabled"},"status":"ok","time":2.026e-6} after={"result":{"status":"disabled"},"status":"ok","time":2.06e-6}) — membership-state change on a documented-as-destructive op is expected only on the accepted face; recorded, data-plane legs carry the defect judgment
+DEFECT: POST /cluster/recover returned 500 (5xx; service alive per /healthz) — Type3_RuntimeFailure — raw={"status":{"error":"Service internal error: Qdrant is running in standalone mode"},"time":0.000488066}
+VERDICT: DEFECT_FOUND

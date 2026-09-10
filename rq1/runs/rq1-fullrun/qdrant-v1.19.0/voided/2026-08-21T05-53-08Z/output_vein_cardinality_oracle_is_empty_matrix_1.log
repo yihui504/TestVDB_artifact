@@ -1,0 +1,54 @@
+
+=== Testing collection size: 10 ===
+Distribution: MISSING=4, NULL=3, VALUE=3
+exact=true: 7
+exact=false: 4
+scroll: 7
+Expected (MISSING+NULL): 7
+Expected (MISSING only): 4
+Estimator bug (exact_f != exact_t): True
+Semantics bug: False
+
+=== Testing collection size: 50 ===
+Distribution: MISSING=17, NULL=17, VALUE=16
+exact=true: 34
+exact=false: 22
+scroll: 34
+Expected (MISSING+NULL): 34
+Expected (MISSING only): 17
+Estimator bug (exact_f != exact_t): True
+Semantics bug: False
+
+=== Testing collection size: 100 ===
+Distribution: MISSING=34, NULL=33, VALUE=33
+exact=true: 67
+exact=false: 44
+scroll: 67
+Expected (MISSING+NULL): 67
+Expected (MISSING only): 34
+Estimator bug (exact_f != exact_t): True
+Semantics bug: False
+
+=== Testing collection size: 200 ===
+Distribution: MISSING=67, NULL=67, VALUE=66
+exact=true: 134
+exact=false: 86
+scroll: 134
+Expected (MISSING+NULL): 134
+Expected (MISSING only): 67
+Estimator bug (exact_f != exact_t): True
+Semantics bug: False
+
+=== CROSS-SIZE ANALYSIS ===
+Estimator bug (exact_f != exact_t): True (4/4 sizes)
+Semantics bug (baseline wrong): False (0/4 sizes)
+Systematic bias: True
+Consistent estimator bug across sizes: True
+
+X DEFECT_FOUND: Systematic is_empty estimator bias across all sizes
+  - exact=false diverges from exact=true AND scroll ground truth
+  - Baseline (exact=true) is correct, so estimator math is wrong
+  - Consistent across collection sizes (not random noise)
+
+Results written to vein_cardinality_oracle_is_empty_matrix_1.results.json
+VERDICT: DEFECT_FOUND

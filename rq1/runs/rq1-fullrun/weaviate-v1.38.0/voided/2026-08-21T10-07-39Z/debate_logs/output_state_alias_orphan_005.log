@@ -1,0 +1,18 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+create: 200
+insert: 200
+alias-of-alias (expect 4xx): 422 {"error":[{"message":"validation: target class \"StA005_alias\" does not exist"}]}
+
+create alias: 200 {"alias":"StA005_alias","class":"StA005"}
+
+get via alias (expect 200): 200
+delete class: 200
+GET alias after target deleted: 200 {"alias":"StA005_alias","class":"StA005"}
+
+read via orphan alias: 404 
+recreate class: 200
+get via alias after recreate (expect 404): 404 
+PUT alias -> nonexistent (expect 4xx): 422 {"error":[{"message":"validation: target class \"StA005_nonexistent\" does not exist"}]}
+
+VERDICT: NO_DEFECT

@@ -1,0 +1,11 @@
+create wrong-form: {"code":0,"data":{}}
+insert omitting: {"code":1804,"message":"fail to deal the insert data, error: unable to cast \"\" of type string to int32: invalid parameter[expected=Int32][actual=]"}
+create: {"code":0,"data":{}}
+insert: {"code":0,"cost":0,"data":{"insertCount":2,"insertIds":[1,2]}}
+query: {"code":0,"cost":0,"data":[{"pk":1,"score":77,"tag":"def"},{"pk":2,"score":5,"tag":"hi"}]}
+
+upsert: {"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[1]}}
+after upsert: {"code":0,"cost":0,"data":[{"pk":1,"score":77,"tag":"def"}]}
+
+DEFECT: create accepted default_value='77' (string form) but insert omitting field fails code=1804: {"code":1804,"message":"fail to deal the insert data, error: unable to cast \"\" of type string to int32: invalid parame
+VERDICT: DEFECT_FOUND

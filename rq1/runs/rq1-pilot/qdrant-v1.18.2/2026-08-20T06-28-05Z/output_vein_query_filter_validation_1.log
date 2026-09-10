@@ -1,0 +1,329 @@
+[SETUP] Creating collection...
+
+[TEST 1] filter=null - should reject with 400
+  Response: HTTP 200
+  Points returned: 3
+  Expected: HTTP 400 Bad Request
+
+[TEST 2] filter.should=null - BS-01 confirmed bug
+  Response: HTTP 200
+  Points returned: 3
+  Expected: HTTP 400 Bad Request
+
+[TEST 3] filter.must_not=object (not array) - BS-01 bug
+  Response: HTTP 200
+  Points returned: 1
+  Expected: HTTP 400 Bad Request
+
+[TEST 4] query=null - should reject
+  Response: HTTP 200
+  Points returned: 2
+  Expected: HTTP 400 Bad Request
+
+[TEST 5] limit=0 - control group (should reject with 400)
+  Response: HTTP 422
+  Error: Validation error in JSON body: [internal.limit: value 0 invalid, must be 1 or larger]
+
+============================================================
+VERDICT: DEFECT_FOUND
+Defect Type: Type1_IllegalSuccess
+Severity: P0_Critical
+
+Finding: Query endpoint silently accepts 4 invalid filter/input combinations
+
+Critical Issues:
+  1. filter=null returns all points (should reject)
+  2. filter.should=null returns all points (BS-01 bug #9418, #9420)
+  3. filter.must_not=object returns results (BS-01 bug #9419)
+  4. query=null returns results (should reject)
+
+Bug Shape: qdrant-parameter-validation-numeric-boundary + qdrant-type-coercion-type-confusion
+Threat Model Reference: Hist 67 - Parameter Validation (88 instances)
+Reference Issues: [9418, 9419, 9420]
+============================================================
+{
+  "verdict": "DEFECT_FOUND",
+  "defect_type": "Type1_IllegalSuccess",
+  "severity": "P0_Critical",
+  "finding": "Query endpoint silently accepts 4 invalid filter/input combinations",
+  "findings": [
+    {
+      "test": "filter_null",
+      "http_status": 200,
+      "points_returned": 3,
+      "response": {
+        "result": {
+          "points": [
+            {
+              "id": 1,
+              "version": 1,
+              "score": 0.9999999
+            },
+            {
+              "id": 2,
+              "version": 1,
+              "score": 0.99088067
+            },
+            {
+              "id": 3,
+              "version": 1,
+              "score": 0.966195
+            }
+          ]
+        },
+        "status": "ok",
+        "time": 0.00180183
+      },
+      "expected": "HTTP 400 Bad Request - null filter is invalid",
+      "actual": "HTTP 200 - returns 3 points (all data)",
+      "finding": "DEFECT"
+    },
+    {
+      "test": "filter_should_null",
+      "http_status": 200,
+      "points_returned": 3,
+      "response": {
+        "result": {
+          "points": [
+            {
+              "id": 1,
+              "version": 1,
+              "score": 0.9999999
+            },
+            {
+              "id": 2,
+              "version": 1,
+              "score": 0.99088067
+            },
+            {
+              "id": 3,
+              "version": 1,
+              "score": 0.966195
+            }
+          ]
+        },
+        "status": "ok",
+        "time": 0.000322604
+      },
+      "expected": "HTTP 400 Bad Request - should must be array, not null",
+      "actual": "HTTP 200 - returns 3 points",
+      "finding": "DEFECT",
+      "reference_issues": [
+        9418,
+        9420
+      ]
+    },
+    {
+      "test": "filter_must_not_object",
+      "http_status": 200,
+      "points_returned": 1,
+      "response": {
+        "result": {
+          "points": [
+            {
+              "id": 2,
+              "version": 1,
+              "score": 0.99088067
+            }
+          ]
+        },
+        "status": "ok",
+        "time": 0.000277975
+      },
+      "expected": "HTTP 400 Bad Request - must_not must be array, not object",
+      "actual": "HTTP 200 - returns 1 points",
+      "finding": "DEFECT",
+      "reference_issue": 9419
+    },
+    {
+      "test": "query_null",
+      "http_status": 200,
+      "points_returned": 2,
+      "response": {
+        "result": {
+          "points": [
+            {
+              "id": 1,
+              "version": 0,
+              "score": 1.0
+            },
+            {
+              "id": 3,
+              "version": 0,
+              "score": 1.0
+            }
+          ]
+        },
+        "status": "ok",
+        "time": 0.000300093
+      },
+      "expected": "HTTP 400 Bad Request - null query is invalid",
+      "actual": "HTTP 200 - returns 2 points",
+      "finding": "DEFECT"
+    },
+    {
+      "test": "limit_zero_control",
+      "http_status": 422,
+      "response": {
+        "status": {
+          "error": "Validation error in JSON body: [internal.limit: value 0 invalid, must be 1 or larger]"
+        },
+        "time": 0.0
+      },
+      "expected": "HTTP 400 Bad Request - limit must be >= 1",
+      "actual": "HTTP 422",
+      "finding": "UNEXPECTED"
+    }
+  ],
+  "endpoint": "POST /collections/{collection}/points/query",
+  "critical_issues": [
+    "filter=null returns all points (should reject)",
+    "filter.should=null returns all points (BS-01 bug #9418, #9420)",
+    "filter.must_not=object returns results (BS-01 bug #9419)",
+    "query=null returns results (should reject)"
+  ],
+  "bug_shape": "qdrant-parameter-validation-numeric-boundary + qdrant-type-coercion-type-confusion",
+  "threat_model_reference": "Hist 67 - Parameter Validation (88 instances)",
+  "threat_model_blindspot": "BS-01 (Parameter Type Coercion Trust)",
+  "reference_issues": [
+    9418,
+    9419,
+    9420
+  ],
+  "evidence": {
+    "defect_count": 4,
+    "total_tests": 5,
+    "all_findings": [
+      {
+        "test": "filter_null",
+        "http_status": 200,
+        "points_returned": 3,
+        "response": {
+          "result": {
+            "points": [
+              {
+                "id": 1,
+                "version": 1,
+                "score": 0.9999999
+              },
+              {
+                "id": 2,
+                "version": 1,
+                "score": 0.99088067
+              },
+              {
+                "id": 3,
+                "version": 1,
+                "score": 0.966195
+              }
+            ]
+          },
+          "status": "ok",
+          "time": 0.00180183
+        },
+        "expected": "HTTP 400 Bad Request - null filter is invalid",
+        "actual": "HTTP 200 - returns 3 points (all data)",
+        "finding": "DEFECT"
+      },
+      {
+        "test": "filter_should_null",
+        "http_status": 200,
+        "points_returned": 3,
+        "response": {
+          "result": {
+            "points": [
+              {
+                "id": 1,
+                "version": 1,
+                "score": 0.9999999
+              },
+              {
+                "id": 2,
+                "version": 1,
+                "score": 0.99088067
+              },
+              {
+                "id": 3,
+                "version": 1,
+                "score": 0.966195
+              }
+            ]
+          },
+          "status": "ok",
+          "time": 0.000322604
+        },
+        "expected": "HTTP 400 Bad Request - should must be array, not null",
+        "actual": "HTTP 200 - returns 3 points",
+        "finding": "DEFECT",
+        "reference_issues": [
+          9418,
+          9420
+        ]
+      },
+      {
+        "test": "filter_must_not_object",
+        "http_status": 200,
+        "points_returned": 1,
+        "response": {
+          "result": {
+            "points": [
+              {
+                "id": 2,
+                "version": 1,
+                "score": 0.99088067
+              }
+            ]
+          },
+          "status": "ok",
+          "time": 0.000277975
+        },
+        "expected": "HTTP 400 Bad Request - must_not must be array, not object",
+        "actual": "HTTP 200 - returns 1 points",
+        "finding": "DEFECT",
+        "reference_issue": 9419
+      },
+      {
+        "test": "query_null",
+        "http_status": 200,
+        "points_returned": 2,
+        "response": {
+          "result": {
+            "points": [
+              {
+                "id": 1,
+                "version": 0,
+                "score": 1.0
+              },
+              {
+                "id": 3,
+                "version": 0,
+                "score": 1.0
+              }
+            ]
+          },
+          "status": "ok",
+          "time": 0.000300093
+        },
+        "expected": "HTTP 400 Bad Request - null query is invalid",
+        "actual": "HTTP 200 - returns 2 points",
+        "finding": "DEFECT"
+      },
+      {
+        "test": "limit_zero_control",
+        "http_status": 422,
+        "response": {
+          "status": {
+            "error": "Validation error in JSON body: [internal.limit: value 0 invalid, must be 1 or larger]"
+          },
+          "time": 0.0
+        },
+        "expected": "HTTP 400 Bad Request - limit must be >= 1",
+        "actual": "HTTP 422",
+        "finding": "UNEXPECTED"
+      }
+    ]
+  },
+  "expected_behavior": "API should reject null filters, invalid structures, and null queries with 400 errors",
+  "actual_behavior": "Returns 200 OK with full/unfiltered result sets, silently accepting invalid input",
+  "severity_justification": "P0_Critical because this is a top-priority endpoint in threat_model (Hist 67) with 88 historical defect instances, affects all query operations, and exposes the entire database to unauthorized data access via filter bypass."
+}

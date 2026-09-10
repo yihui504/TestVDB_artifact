@@ -1,0 +1,56 @@
+{
+  "defect_id": "boundary_schema_flatSearchCutoff_extreme",
+  "endpoint": "POST /v1/schema",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url=openapi fallback；POST /schema 在 endpoint_registry 存在（v1.37.4）；contract 声明 flatSearchCutoff int default=40000，无上限约束，1e9 是否越界文档未明示",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "Status: 200; Raw: {...\"flatSearchCutoff\":1000000000,...} (POST /v1/schema flatSearchCutoff=1e9 被接受且回读原样持久化 1000000000)",
+      "secondary_observations": [
+        "judge 判定：回读值 1000000000 == 攻击值（persist）→ DEFECT_FOUND",
+        "同 endpoint 兄弟脚本：flatSearchCutoff=0 / -1 同样 200 接受（任意 int 值无校验接受模式）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "极端资源上限值 1e9 以 HTTP 200 接受并原样持久化；无 4xx/5xx，无溢出（int64 安全）"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_schema_flatSearchCutoff_extreme", "boundary_schema_flatSearchCutoff_zero", "boundary_schema_flatSearchCutoff_negative"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "contract",
+      "assertion_text_quoted": "POST /schema 参数 flatSearchCutoff: type=int, default_value=40000（无 max 上限约束）",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:POST /schema flatSearchCutoff int default 40000（无上限）", "doc:openapi fallback 'Create collection' v1.37.4", "script:boundary_schema_flatSearchCutoff_extreme.py POST flatSearchCutoff=1000000000", "log:Status 200 + 回读 flatSearchCutoff=1000000000（persist）"],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["FlatSearchCutoff", "flatSearchCutoff", "MaximumFlatSearch|MaxFlatSearch|flatSearch.*max"],
+      "files_examined": ["entities/vectorindex/hnsw/config.go", "entities/vectorindex/hnsw/config_test.go", "adapters/repos/db/vector/hnsw/index.go", "adapters/repos/db/vector/hnsw/search.go", "adapters/repos/db/vector/hnsw/config_update.go", "entities/vectorindex/dynamic/config_test.go"],
+      "source_excerpt": "config.go:260-323 validate() 无 flatSearchCutoff 校验（仅 MaxConnections [4,2047] / EFConstruction>=4 / FilterStrategy / 压缩方法）；config.go:201-205 OptionalIntFromMap 直接赋值；index.go:340 `flatSearchCutoff: int64(uc.FlatSearchCutoff)` 存入索引；search.go:85-86 `if allowList != nil && !h.forbidFlat && allowList.Len() < flatSearchCutoff` → 1e9 时条件几乎恒 true（对象数不达 1e9 则恒 true），语义=几乎总是 flat search",
+      "call_chain_traced": "POST /v1/schema → ParseAndValidateConfig → SetDefaults(40000) → OptionalIntFromMap(1e9) 无校验覆盖 → validate() 通过 → hnsw index 持有 int64 值（无溢出）→ 运行时搜索决策阈值=1e9",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": "1e9 持久化一致、无 crash、无溢出；无文档化上限可援引，语义上等效'总是 flat search'（资源/行为漂移候选）——缺陷强度低，auditor 判定"
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_search_limit_ids_013",
+  "endpoint": "entities+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "limitations.md 原文 'topk ... | 16,384' 在页；契约 range_001/002 与 type_003 断言与文档及 65535 消息原文一致。两个主观测分别对 range_002（limit:null）与 type_003（ids 字符串）",
+      "evidence_source": "doc",
+      "doc_quote": "`topk` (number of the most similar result to return) | 16,384"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "limit null -> code=0 raw={\"code\":0,\"cost\":0,\"data\":[{\"distance\":0,\"id\":1},{\"distance\":0.08,\"id\":2}],\"topks\":[2]}；ids string '1' -> code=0 raw={\"code\":0,...,\"topks\":[2]}（命中 int64 pk）",
+      "secondary_observations": [
+        "limit 0 -> 65535 'topk [0] is invalid, it should be in range [1, 16384]'（正确）",
+        "limit -1 / 16385 -> 65535（正确）",
+        "offset -1 / offset+limit 16390 -> 65535（正确）",
+        "limit '10' string -> 1801 unmarshal 错误（Type2 候选：错误码形态不佳）",
+        "both ids+data -> 1100 互斥（正确）；neither / ids=[] -> 1802（正确）",
+        "ids fractional 1.5 -> 1100（正确）；ids null elem -> 1100（正确）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码（65535/1100/1801/1802 均 HTTP 200 返回）", "note": "合法拒绝形态统一为 2xx+code；本链主观测是非法值走 code:0"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_search_limit_ids_013.py"],
+      "note": "limit:null 由 requests json.dumps 编码为字面 null 进入 body；SearchReqV2.Limit 为 int32（Go encoding/json 将 null 解码为零值 0 而非报错）——见 source 环"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_range_entities_search_002",
+      "assertion_text_quoted": "limit omitted => effective limit == 100（limit default 100 injected by server when omitted）",
+      "api_violates_assertion": true,
+      "note": "limit:null 观测返回 2 行（全表只有 2 行 seed），无法从本次读回直接区分 effective limit 是 100 还是 0=全返回——但 null 不是 omitted，若视作 omitted 走默认 100 则与'server 注入默认'一致（violates 存疑）；若视作显式非法值则应 65535。violates=true 的依据：契约姊妹条 range_001 要求 1<=limit<=16384，null 不在域内且 'Strong'/'Foo' 同族枚举对空值同样放行是本 session 反复出现的空值旁路模式。如实声明：本链违反判定依赖 auditor 对 null 语义的二选一。ids 字符串子claim对 type_003：契约断言只覆盖 fractional/empty/unsupported，未覆盖 string-parseable——见 violates 自检",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: range_002(+range_001) / type_003",
+        "doc: limitations.md topk 16384 原文在页",
+        "script: boundary_search_limit_ids_013.py limit:null 与 ids:'1' 用例",
+        "log: limit null code=0 topks=[2]；ids string code=0 topks=[2]"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "ids string '1' 子claim：契约 type_003 断言域不含 'numeric string for int64 pk'（只断 fractional/empty/unsupported），约束引据缺失（契约未禁止字符串 id）——该子claim链断在 contract 环，违反判定不成立（源码 utils.go:200-204 显式 case string: ParseInt 成功即接受，by-design）。limit:null 子claim链完整但语义引申（见 contract_grounding note）",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["validateLimit", "TopKKey", "convertIDsToSchemapbIDs", "ParseInt"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/handler_v2.go (L1546 TopKKey 注入)",
+        "internal/proxy/search_util.go (L168-236 parseSearchInfo)",
+        "internal/proxy/util.go (L199-206 validateLimit)",
+        "internal/distributed/proxy/httpserver/utils.go (L180-215 convertIDsToSchemapbIDs)"
+      ],
+      "source_excerpt": "handler_v2.go L1546：`searchParams = append(searchParams, &commonpb.KeyValuePair{Key: common.TopKKey, Value: strconv.FormatInt(int64(httpReq.Limit), 10)})` —— limit:null 经 Go json 解码为 Limit=0，TopKKey=\"0\" 进入 parseSearchInfo；search_util.go L171-182：`topKStr, err := funcutil.GetAttrByKeyFromRepeatedKV(TopKKey, searchParamsPair); if err != nil { if externalLimit <= 0 { return ... } topK = externalLimit } else { topKInParam, err := strconv.ParseInt(topKStr, 0, 64); ... }`。关键：REST 路径 TopK 键始终存在（值\"0\"），ParseInt 成功得 topK=0，随后 L192 validateLimit(0) 应报 'topk [0] is invalid'——但观测 code:0。矛盾点：观测与该链不符，可能存在 ids 路径分支绕过 parseSearchInfo（ids 搜索走 query 而非 search plan），auditor 需注意此未闭环点。utils.go L200-204（ids 字符串）：`case string: parsed, err := strconv.ParseInt(v, 10, 64); if err != nil {...} int64ID = parsed` —— 显式接受可解析数字串，by-design。",
+      "call_chain_traced": "limit:null -> Limit=0 -> TopKKey=\"0\" -> parseSearchInfo -> validateLimit(0) [预期 65535，观测 code:0 —— 路径未完全闭环，疑走 ids/其他分支]；ids:'1' -> convertIDsToSchemapbIDs case string ParseInt -> 接受",
+      "verification_outcome": "by_design_in_source",
+      "note": "ids string: 源码显式 case string 接受（by_design_in_source），violates 判 false（约束域外）。limit null: 校验代码存在（validateLimit）且按源码应拒 0——观测却 code:0，源码与行为存在未解释缺口（searchParams 无 TopK 时的 externalLimit 回退或 ids 分支未定位）。sufficiency: grep_hit_pursued（TopKKey/validateLimit 命中并已 Read）",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request-typo（null 为显式构造）"],
+      "surviving": "limit:null 的 code:0 与源码 validateLimit(0) 应拒之间的机制缺口未在源码闭环（可能是 ids-present 查询分支绕过 topk 校验）"
+    }
+  },
+  "evidence_weight": "medium（behavior 逐字完备 + ids 子claim被源码 by-design 证伪 + limit:null 源码链未闭环——是本链最大保留项）"
+}

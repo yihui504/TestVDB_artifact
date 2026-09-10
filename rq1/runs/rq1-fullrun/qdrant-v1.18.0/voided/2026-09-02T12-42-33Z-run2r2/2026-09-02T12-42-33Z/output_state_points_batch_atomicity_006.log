@@ -1,0 +1,15 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] registration check: ['batch_update', 'get_points_by_ids']
+[seed 601] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.005774983}
+[CTL-valid-update-vectors batch 1 ops] status=200 raw={"result":[{"operation_id":2,"status":"completed"}],"status":"ok","time":0.003265754}
+[CTL get [601]] status=200 raw={"result":[{"id":601,"payload":{"n":601},"vector":[0.59344244,0.5275044,0.46156633,0.3956283]}],"status":"ok","time":0.000271563}
+[F-fail-last batch 3 ops] status=400 raw={"status":{"error":"Wrong input: Vector dimension error: expected dim: 4, got 2"},"time":0.013338077}
+[F-readback get [601, 602, 603]] status=200 raw={"result":[{"id":601,"payload":{"n":601},"vector":[0.59344244,0.5275044,0.46156633,0.3956283]},{"id":602,"payload":{"pos":"F"},"vector":[0.82956135,0.20739034,0.3110855,0.41478068]},{"id":603,"payload":{"pos":"F"},"vector":[0.9123431,0.15205719,0.22808577,0.30411437]}],"status":"ok","time":0.0001253
+[G-fail-first batch 2 ops] status=400 raw={"status":{"error":"Wrong input: Vector dimension error: expected dim: 4, got 2"},"time":0.003495613}
+[G-readback get [602, 604]] status=200 raw={"result":[{"id":602,"payload":{"pos":"F"},"vector":[0.82956135,0.20739034,0.3110855,0.41478068]}],"status":"ok","time":0.000160696}
+[G] OK: rejected batch applied nothing
+[disposition] fail-last=400 fail-first=400
+DEFECT: (CTL) valid update_vectors did not durably apply: vector [0.59344244, 0.5275044, 0.46156633, 0.3956283] != [9.0, 8.0, 7.0, 6.0] — Type4_StateLogicViolation
+DEFECT: (F) batch REJECTED with 400 yet prefix ops [602, 603] are durably visible — rejected request committed state (no rollback, position-dependent partial commit) — Type4_StateLogicViolation (qdrant_state_points_batch_001)
+VERDICT: DEFECT_FOUND

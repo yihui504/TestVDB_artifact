@@ -1,0 +1,17 @@
+{
+ "defect_id": "boundary_metrics_005",
+ "endpoint": "metrics",
+ "param": null,
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "malformed_input",
+ "constraint_ids": [
+  "qdrant_behavioral_metrics_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/metrics",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "baseline bare GET answers 200 with >=1 HELP/TYPE and >=1 Prometheus sample line; every method-volley probe (HEAD/OPTIONS/POST-empty/POST-JSON/PUT/PATCH/DELETE) and every malformed-query leg (%ZZ escape, %00 NUL, empty value, duplicate param, 64 KiB overlong, '&&&=', unknown junk param) lands OUTSIDE the 5xx band — any 5xx with /healthz alive = DEFECT Type3_RuntimeFailure, >=2 recovered transport losses with /healthz alive = DEFECT Type3 (single loss counted and face-health-checked), 2xx on a non-GET method or a 200-ignored malformed stream = legal (G9 NOTE recorded); post-volley and post-matrix bare GET re-probes must answer 200 + Prometheus text — a degraded plain-GET face (non-2xx = Type4 200-promise broken, 5xx/transport with /healthz alive = Type3, non-Prometheus 200 body = Type4 format promise broken); 401/403 = SCRIPT_ERROR, 404 + healthz 200 = NO_DEFECT endpoint-absence evidence",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

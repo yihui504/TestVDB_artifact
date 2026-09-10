@@ -1,0 +1,14 @@
+{
+ "defect_id": "boundary_index_create_007",
+ "endpoint": "index+create",
+ "param": "field_name",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "strategy6_resource_limit",
+ "constraint_ids": [
+  "qdrant_type_index_create_001"
+ ],
+ "oracle": {
+  "statement": "on the live bic007_* collection the legal control returns 200 with control key in readback; each overlong field_name probe (100_000 chars, 1_000_000 chars) yields EITHER 200-with-readback-echo OR 400/422 — both NO_DEFECT; only 5xx/panic/OOM keywords/transport-failure-with-healthz-down = Type3_RuntimeFailure; the post-attack control index must still return 200 (wedged face = Type4_StateLogicViolation)",
+  "source": "docstring"
+ }
+}

@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_collection_update_006",
+  "endpoint": "cluster+collection+update",
+  "param": "operation",
+  "expected_defect_type": "Type3_RuntimeFailure",
+  "strategy": "malformed_input",
+  "oracle": {
+    "statement": "raw malformed bodies (truncated JSON, trailing comma, single quotes, illegal escape, comment injection, bare NUL, lone-surrogate escape) via data= -> 400/422 each; any 5xx = Type3_RuntimeFailure with /healthz rechecked; any 2xx on the seven strict probes = Type1_IllegalSuccess; overlong 1MB probe: 4xx or 2xx legal, 5xx = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

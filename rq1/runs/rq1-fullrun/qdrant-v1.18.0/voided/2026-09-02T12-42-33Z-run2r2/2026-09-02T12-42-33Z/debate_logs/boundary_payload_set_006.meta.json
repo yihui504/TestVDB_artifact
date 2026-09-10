@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_set_006",
+ "endpoint": "payload+set",
+ "param": "points",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "with 3 points carrying {\"city\",\"n\",\"tag\"} each, set-payload points=[2] payload={\"city\":\"gif\",\"lang\":\"nl\"} (wait=true query) returns 200; afterwards scroll shows point 2 payload EXACTLY {\"city\":\"gif\",\"lang\":\"nl\",\"n\":2,\"tag\":\"beta\"} (merge: new key added, city updated, n+tag kept byte-equal), points 1/3 payloads deep-equal baseline, all 3 vectors deep-equal the baseline readback vectors (R27 readback-vs-readback), exact count stays 3 — dropped-old-key (merge-as-replace), value distortion, collateral change on points 1/3, vector change, or count drift each = Type4_StateLogicViolation; non-200 on the legal points-targeted set = Type1_IllegalSuccess; 5xx/transport = Type3_RuntimeFailure with /healthz re-check (constraint qdrant_state_payload_set_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

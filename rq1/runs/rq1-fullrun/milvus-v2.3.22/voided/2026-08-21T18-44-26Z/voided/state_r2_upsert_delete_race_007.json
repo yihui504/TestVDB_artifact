@@ -1,0 +1,82 @@
+{
+  "defect_id": "state_r2_upsert_delete_race_007",
+  "endpoint": "v2/vectordb/entities/delete (+ concurrent upsert/search)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "evidence_weight": "high_dual_defect",
+  "weight_note": "单一响应同时承载两类缺陷证据：Type3 运行时失败（并发 delete 中途 65535）+ Type2 诊断泄露（C++ Assert 宏原文与内部通道名透出到 REST message）；log:3-4 逐字固化",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "endpoint_registry: v2/vectordb/entities/delete -> handler_v2.go v2.3.22 'Delete entities by filter OR id'；milvus_bc_error_envelope (errors.go v2.3.22 reachable)：body code 枚举 {100,1802,1804}；版本精确匹配",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "runtime errors: [('delete', 0, 200, 65535, '{\"code\":65535,\"message\":\"failed to search/query delegator 1 for channel by-dev-rootcoord-dml_11_468539281521155193v0: Assert \\\\\"std::max(data_barrier, '}",
+      "secondary_observations": [
+        "final: rowCount=0 query_count=50 expected=50 — 并发窗口过后数据集完整（50 行可查），运行时失败未造成数据丢失",
+        "SUSPECT 行与 runtime errors 行相同（log:4 逐字复述 log:3）；VERDICT: DEFECT_FOUND",
+        "message 被日志层截断，但已透出部分含：内部 channel 名 by-dev-rootcoord-dml_11_<collectionID>v0 + delegator 节点号 1 + C++ Assert 宏的实参原文 std::max(data_barrier, —— 三段内部实现细节"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "delete 请求以 HTTP 200 + code 65535 返回；65535=errUnexpected 兜底码，不在 envelope 枚举 {100,1802,1804} 内；且 message 泄露 C++ 断言与通道名"
+      },
+      "reproducibility": "单脚本",
+      "reproducibility_note": "本 session 内仅本脚本触发 Assert 透出；相关形态（delegator+65535）亦见 output_state_partition_load_06.log:11（不同 root cause: partition not loaded），说明 delegator 65535 信封形态多场景出现，Assert 透出本身单脚本",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/state_r2_upsert_delete_race_007.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_bc_error_envelope",
+      "assertion_text_quoted": "REST error model: business errors use HTTP 200 + nonzero body code. expected_behavior: HTTP 200 with body code in {100 collection not found, 1802 missing/invalid params, 1804 invalid data}; only auth(401/403), timeout, unmatched-route(404) are non-200",
+      "api_violates_assertion": true,
+      "note": "violates=True 理由：并发 upsert/delete 下 delete 返回 65535（非枚举码）且 message 携带 C++ Assert 宏实参原文与内部 dml channel 名——envelope 既未定义 65535 语义，也未允许内部断言细节透出；观测为逐字 raw log，无域外抗辩空间",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_bc_error_envelope (errors.go v2.3.22, code 枚举 + 错误模型)",
+        "doc: endpoint_registry v2/vectordb/entities/delete 'Delete entities by filter OR id' (handler_v2.go v2.3.22)",
+        "script: state_r2_upsert_delete_race_007.py — 并发 upsert/delete/search，delete_id 驱动 (log 全文 5 行已读)",
+        "log: log:3-4 逐字 — ('delete', 0, 200, 65535, '...Assert \"std::max(data_barrier, ')"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "data_barrier (全树 .go/.cpp/.h)",
+        "std::max(data_barrier / Assert (internal/core/src/query)",
+        "failed to search/query delegator (internal/proxy)",
+        "EasyAssertInfo / FailureCStatus (internal/core/src/common/EasyAssert.h)",
+        "errUnexpected / 65535 (pkg/util/merr/errors.go)"
+      ],
+      "files_examined": [
+        "internal/core/src/query/visitors/ExecExprVisitor.cpp:305-364",
+        "internal/core/src/common/EasyAssert.h:55-133",
+        "internal/proxy/lb_policy.go:175-205",
+        "pkg/util/merr/errors.go:153"
+      ],
+      "source_excerpt": "ExecExprVisitor.cpp:322-326 (ExecDataRangeVisitorImpl):\n    auto num_chunk = upper_div(row_count_, size_per_chunk);\n    auto indexing_barrier = segment_.num_chunk_index(field_id);\n    auto data_barrier = segment_.num_chunk_data(field_id);\n    AssertInfo(std::max(data_barrier, indexing_barrier) == num_chunk,\n               \"max(data_barrier, index_barrier) not equal to num_chunk\");\nEasyAssert.h:122-133 (AssertInfo 宏): milvus::impl::EasyAssertInfo(_expr_res, #expr, __FILE__, __LINE__, fmt::format(info, ...))\nEasyAssert.h:110-118 (FailureCStatus): return CStatus{static_cast<int>(UnexpectedError), strdup(ex->what())};\nlb_policy.go:188: lastErr = errors.Wrapf(err, \"failed to search/query delegator %d for channel %s\", targetNode, workload.channel)",
+      "call_chain_traced": "并发 delete 触发 filter 表达式执行 -> segcore ExecExprVisitor.cpp:325 AssertInfo(std::max(data_barrier, indexing_barrier)==num_chunk) 在 growing segment 并发 upsert 下不成立 -> AssertInfo 宏 (EasyAssert.h:122) 将宏实参原文 #expr（即 'std::max(data_barrier, indexing_barrier)' 前缀）与 __FILE__/__LINE__ 打入异常 -> FailureCStatus (EasyAssert.h:117) strdup(ex->what()) 逐字传出 CStatus -> Go 侧 querynode 错误 -> proxy lb_policy.go:188 Wrapf 'failed to search/query delegator %d for channel %s'（channel 名=by-dev-rootcoord-dml_11_<collID>v0）-> merr.Code() 兜底 errUnexpected=65535 ((1<<16)-1, errors.go:153) -> HTTP 200 body code 65535。透出路径全链闭合，message 文案与 log 逐字吻合（'Assert \"std::max(data_barrier,' = #expr 展开 + 引号）",
+      "verification_outcome": "validation_present",
+      "verification_note": "源码级确认：(a) 断言真实存在于 segcore C++ 并在并发下可触发（Type3 运行时失败的实锤）; (b) AssertInfo 宏设计上把 #expr 原文带进异常消息并经 FailureCStatus 逐字透传到 REST —— Type2 诊断泄露是代码结构保证的，非偶然字符串。是否判 DEFECT 及分级留 auditor",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (docker v2.3.22 官方镜像)", "request_typo (delete_id 合法)", "data_loss (final query_count=50 数据完整)"],
+      "surviving": null
+    }
+  }
+}

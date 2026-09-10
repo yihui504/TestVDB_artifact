@@ -1,0 +1,17 @@
+{
+  "defect_id": "boundary_locks_set_002",
+  "endpoint": "locks+set",
+  "param": "write (state machine: write=true blocks ALL mutation APIs create/upsert/delete with the configured error_message; write=false releases and restores mutations)",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "state",
+  "constraint_ids": [
+    "qdrant_state_locks_set_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/post-locks",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "live /locks: with write=true+TOKEN engaged, each of the 3 mutation faces (create_collection COLL_B, upsert_points into COLL_A, drop_collection COLL_A) must be refused non-2xx with TOKEN in the raw body — any mutation 2xx under lock = Type4_StateLogicViolation, refusal without TOKEN = Type4 (configured-message clause broken); after write=false the release POST answers 2xx and a fresh create_collection COLL_C succeeds 2xx (refusal after release or non-2xx release = Type4); 5xx/transport with /healthz alive = Type3; if GET+POST /locks both answer concrete non-2xx (404 expected on OSS v1.18.0), NO_DEFECT with endpoint-absence evidence (state machine not actuable)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

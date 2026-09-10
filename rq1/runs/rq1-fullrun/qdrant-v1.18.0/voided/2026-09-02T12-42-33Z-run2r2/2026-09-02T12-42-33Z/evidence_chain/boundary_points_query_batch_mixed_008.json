@@ -1,0 +1,100 @@
+{
+  "defect_id": "boundary_points_query_batch_mixed_008",
+  "endpoint": "points+query+batch (POST /collections/{collection_name}/points/query/batch)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No doc_preflight.json sidecar exists; live WebFetch of api.qdrant.tech and qdrant.tech is network-blocked in this environment (domain_blocked -> PARTIAL, not FAIL). Reachability is additionally supported by the contract-embedded preflight record (endpoint_registry entry verified_at 2026-09-02T12:34:08, source_status reachable, doc_quote present). Version: URL is the versioned v-1-18-x api-reference matching target 1.18.0. Content: cross-verified against the clone's docs/redoc/v1.18.x/openapi.json:6618-6697 (the source of the served page): summary 'Query points in batch', description 'Universally query points in batch. This endpoint covers all capabilities of search, recommend, discover, filters. But also enables hybrid and multi-stage queries.', requestBody QueryRequestBatch with searches array, 200 response schema — substantively contains the assertion's batch-execution promise. Nuance: the page documents only generic '4XX'/'default' error envelopes, so the assertion's '404 for a missing collection' sub-leg is a behavioral inference, not verbatim page prose (not the leg under test here). Endpoint precision: endpoint_registry (structured_contract.json lines 5498-5503) and raw_knowledge api_endpoints (lines 1637-1654) both map points+query+batch -> POST /collections/{collection_name}/points/query/batch, exactly the path the script hit.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "M1 heterogeneous batch -> status=400 | raw: {\"status\":{\"error\":\"Wrong input: No range index for `order_by` key: `rank`. Please create one to use `order_by`. Check https://qdrant.tech/documentation/concepts/indexing/#payload-index to see which payload schemas support Range conditions\"},\"time\":0.000517661}",
+      "secondary_observations": [
+        "rest/batch sibling output_boundary_points_query_batch_positive_001.log: 'B1 3-entry batch -> status=400 | raw: {\"status\":{\"error\":\"Wrong input: No range index for `order_by` key: `rank`. Please create one to use `order_by`. Check https://qdrant.tech/documentation/concepts/indexing/#payload-index to see which payload schemas support Range conditions\"},\"time\":0.002277406}' — a VALID documented batch with NO heterogeneity failed with the byte-identical error on the same payload key 'rank': the 400 is not caused by heterogeneity",
+        "rest/single-query sibling output_boundary_points_query_variant_matrix_001.log: 'leg M5 order_by (payload key ts) (form 1) -> status=400 | raw: {\"status\":{\"error\":\"Wrong input: No range index for `order_by` key: `ts`. Please create one to use `order_by`...\"},\"time\":0.000356005}' — the same error on the single-query face (points+query, no batch container) with a different key: the check is per-query order_by validation, independent of the batch wrapper",
+        "rest/batch sibling output_semantic_points_query_batch_mixed_variant_004.log: 'mixed-variant batch [nearest A, order_by desc, nearest B] -> status=200' ... raw fragment '{\"points\":[{\"id\":878,\"version\":0,\"score\":1.0,\"order_value\":7}]}' ... 'e0/e1/e2 OK: each variant dispatched and executed per entry (fingerprints exact, no cross-entry corruption)' and 'VERDICT: NO_DEFECT' — a HETEROGENEOUS batch whose order_by precondition was satisfied executed per-entry with 200: the mixed-variant promise HOLDS when the range index exists",
+        "rest/batch sibling output_boundary_points_query_batch_resource_009.log: 'R1 400-entry batch -> status=400 in 0.0s' (same order_by/rank error) vs 'R2 single entry limit=INT_MAX -> status=200' — same script, same collection: batch succeeds exactly when no order_by entry executes without an index",
+        "rest/batch sibling output_boundary_points_query_batch_dualkey_005.log: 'D1 nearest+order_by dual-key -> status=200' — order_by was silently DISCARDED by the query oneOf wrapper (nearest won), so order_by never executed and the index precondition never fired; consistent with the precondition reading, no intermittency"
+      ],
+      "claim_alignment": "partial",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The request-side-decidable precondition violation (order_by on an unindexed payload key) returned a proper HTTP 400 with a self-descriptive body naming the offending key ('rank'), the remedy ('Please create one to use order_by') and the official documentation URL — correct status-class semantics and high diagnostic quality."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_points_query_batch_mixed_008 (primary, M1)",
+        "boundary_points_query_batch_positive_001 (B1, valid batch, same error)",
+        "boundary_points_query_batch_resource_009 (R1, same error)",
+        "boundary_points_query_batch_malformed_010 (guard leg 'valid raw body returned 400', self-reported SCRIPT_ERROR)",
+        "boundary_points_query_variant_matrix_001 (M5, single-query face, key 'ts')"
+      ],
+      "detail": "Primary-observation resolution (executor-flagged anomaly): the 400 TRACED TO THE RANGE-INDEX PRECONDITION, not to rejection of the heterogeneous/mixed batch. The triggering log contains exactly ONE request (M1); the script returns immediately after M1's 400 (script lines 218-223), so M2/M3 never ran and no other leg in this log can carry the mixed-promise violation. The script's setup() (debate_logs/boundary_points_query_batch_mixed_008.py lines 144-158) seeds payload {grp, rank} with NO payload-index creation anywhere (no PUT /collections/{coll}/index call), while M1's searches[1] is {\"query\": {\"order_by\": {\"key\": \"rank\", \"direction\": \"asc\"}}, \"limit\": 3} — a documented precondition the script never established. claim_alignment=partial: the M1 REQ/RESP is exactly the claimed observation (heterogeneous batch -> 400), but the claim's defect mechanism (unjustified rejection violating the 'execute multiple universal queries in one call' promise) is contradicted by the error body and by the comparative legs (a non-heterogeneous valid batch failed identically; a heterogeneous batch with a satisfied order_by precondition succeeded per-entry with 200). What reproduced stably across scripts is the precondition-400 pattern, not a heterogeneity rejection. Multi-script grade A reflects that mechanical reproduction, not defect strength.",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_batch_001",
+      "assertion_text_quoted": "executes multiple queries in one call; returns 200 with a list of per-query results; 404 for a missing collection",
+      "api_violates_assertion": false,
+      "note": "violates=false because the observed request falls OUTSIDE the quoted promise's domain: M1's searches[1] used order_by on payload key 'rank' with no range index created — a documented, source-enforced precondition (see source_grounding) — so the '200 with one result per search' promise never attached to this request. Within its domain the promise is honored: mixed_variant_004's heterogeneous [nearest, order_by desc, nearest] batch returned 200 with per-entry results including a working order_by entry. The constraint citation itself is the right one (it is the constraint the script declared, script line 11).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_query_batch_001 present in structured_contract.json (assertion block around lines 7332-7344; endpoint points+query+batch; source_url https://api.qdrant.tech/v-1-18-x/api-reference/query/batch-query) — link intact",
+        "doc: v-1-18-x batch-query page — live fetch domain_blocked at evidence time; contract-embedded preflight verified_at 2026-09-02T12:34:08 says reachable; content cross-verified from the clone's docs/redoc/v1.18.x/openapi.json:6618-6697 ('Universally query points in batch. This endpoint covers all capabilities of search, recommend, discover, filters. But also enables hybrid and multi-stage queries.' + QueryRequestBatch searches array + 200 response) — content consistent, reachability partial",
+        "script: debate_logs/boundary_points_query_batch_mixed_008.py — M1 raw body {\"searches\": [{\"query\": {\"nearest\": [0,1,0,0]}, \"limit\": 3}, {\"query\": {\"order_by\": {\"key\": \"rank\", \"direction\": \"asc\"}}, \"limit\": 3}, {\"filter\": {\"must\": [{\"key\": \"grp\", \"match\": {\"value\": \"red\"}}]}, \"limit\": 20}]} POSTed to /collections/{coll}/points/query/batch — the request IS heterogeneous as claimed, but setup() (lines 144-158) created payload {grp, rank} with no payload index, leaving the order_by entry's documented precondition unmet",
+        "log: M1 -> 400 with error body naming the precondition ('No range index for `order_by` key: `rank`. Please create one...') — but the VERDICT line labels it 'DEFECT_FOUND (Type1_IllegalSuccess) — M1: heterogeneous universal-queries batch REJECTED' — the raw response shows the target rejected an entry violating a documented precondition, not the mixed-batch promise"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "The log's DEFECT_FOUND verdict attributes the 400 to the heterogeneous-batch promise ('endpoint promise: execute multiple universal queries in one call'), but the raw response body attributes it to the order_by range-index precondition — a script-side fixture gap (no PUT /collections/{coll}/index anywhere in the script), mirroring the rubric's 'judged DEFECT_FOUND but the raw response shows the target already rejected [an invalid request]'. Comparative forensics prove the attribution wrong: (1) a valid non-heterogeneous documented batch failed with the byte-identical error on the same key 'rank' (positive_001 B1); (2) the single-query face failed identically on key 'ts' (variant_matrix M5) — the check is per-query, not batch-level; (3) a heterogeneous batch whose order_by entry had a satisfied precondition returned 200 with per-entry attribution (mixed_variant_004, NO_DEFECT); (4) the source hard-requires a numeric index for order_by with an explicit instructive error and the maintainer's own test creates the integer index before any order_by use (tests/consensus_tests/test_order_by.py:17-20). The primary observation is a script-precondition failure, not a defect of the endpoint.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "No range index",
+        "MissingRangeIndexForOrderBy",
+        "fn query_batch|query_batch\\(",
+        "points/query/batch",
+        "order_by.*index|index.*order_by|MissingRangeIndex (tests/)",
+        "universal quer",
+        "query/batch (raw_knowledge.json)",
+        "endpoint_registry (structured_contract.json)"
+      ],
+      "files_examined": [
+        "lib/segment/src/common/operation_error.rs (error variant definition, lines 54-70)",
+        "lib/segment/src/segment/read_view/order_by.rs (both raise sites, lines 27-45 and 100-130)",
+        "lib/collection/src/operations/types.rs (error->bad_input mapping, lines 967 and 1145-1150)",
+        "lib/collection/src/collection/query.rs (query_batch dispatch, lines 445-490 and 532-562)",
+        "src/actix/api/query_api.rs (REST batch handler, lines 109-149)",
+        "tests/consensus_tests/test_order_by.py (maintainer usage contract, lines 1-75)",
+        "tests/openapi/test_query_indexes.py (batch searches usage in maintainer tests, lines 195-249)",
+        "docs/redoc/v1.18.x/openapi.json (served doc source, lines 6618-6697)"
+      ],
+      "source_excerpt": "[lib/segment/src/common/operation_error.rs:61-64]\n    #[error(\n        \"No range index for `order_by` key: `{key}`. Please create one to use `order_by`. Check https://qdrant.tech/documentation/concepts/indexing/#payload-index to see which payload schemas support Range conditions\"\n    )]\n    MissingRangeIndexForOrderBy { key: String },\n\n[lib/segment/src/segment/read_view/order_by.rs:27-41] filtered_read_by_index_ordered\n    pub fn filtered_read_by_index_ordered(\n        &self,\n        order_by: &OrderBy,\n        limit: Option<usize>,\n        condition: &Filter,\n        is_stopped: &AtomicBool,\n        hw_counter: &HardwareCounterCell,\n        deferred_behavior: DeferredBehavior,\n    ) -> OperationResult<Vec<(OrderValue, PointIdType)>> {\n        let numeric_index = self\n            .payload_index\n            .numeric_index_for(&order_by.key)\n            .ok_or_else(|| OperationError::MissingRangeIndexForOrderBy {\n                key: order_by.key.to_string(),\n            })?;\n(identical lookup+raise in filtered_read_by_value_stream at order_by.rs:109-114 — there is NO un-indexed fallback path)\n\n[lib/collection/src/operations/types.rs:1145-1148]\n            OperationError::MissingRangeIndexForOrderBy { .. } => Self::bad_input(err.to_string()),\n            OperationError::MissingMapIndexForFacet { .. } => Self::bad_input(err.to_string()),\n            OperationError::VariableTypeError { .. } => Self::bad_input(err.to_string()),\n\n[src/actix/api/query_api.rs:110-120,145] REST batch handler — per-entry dispatch, heterogeneous entries each converted independently\n#[post(\"/collections/{collection_name}/points/query/batch\")]\nasync fn query_points_batch(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    request: Json<QueryRequestBatch>,\n    ...\n    let QueryRequestBatch { searches } = request.into_inner();\n    ...\n    for request_item in searches {\n        ...\n        convert_query_request_from_rest(internal, &inference_params).await?\n\n[tests/consensus_tests/test_order_by.py:15-20] maintainer usage contract — index created BEFORE any order_by use\n    create_collection(uri, collection=COLL_NAME, shard_number=2, replication_factor=1)\n\n    requests.put(\n        f\"{uri}/collections/{COLL_NAME}/index\",\n        json={\"field_name\": \"index\", \"field_schema\": \"integer\"},\n    ).raise_for_status()",
+      "call_chain_traced": "actix query_points_batch (src/actix/api/query_api.rs:110; destructures QueryRequestBatch{searches} and iterates entries one by one — no homogeneity constraint across entries) -> Collection::query_batch (lib/collection/src/collection/query.rs:445; takes Vec<(CollectionQueryRequest, ShardSelectorInternal)>, resolves referenced vectors, executes concurrently, returns Vec<Vec<ScoredPoint>> — one result per entry) -> shard/segment execution -> SegmentReadView::filtered_read_by_index_ordered (order_by.rs:36-41) / filtered_read_by_value_stream (order_by.rs:109-114): payload_index.numeric_index_for(&order_by.key).ok_or_else(MissingRangeIndexForOrderBy) — hard requirement, no un-indexed fallback -> OperationError::MissingRangeIndexForOrderBy (operation_error.rs:61-64; error text itself instructs 'Please create one to use `order_by`' and links the official indexing doc) -> CollectionError::bad_input (types.rs:1147) -> HTTP 400 for the whole batch (fail-fast).",
+      "verification_outcome": "by_design_in_source",
+      "detail": "The order_by range-index requirement is explicitly intentional in source: the error string itself is a maintainer instruction ('Please create one to use `order_by`. Check https://qdrant.tech/documentation/concepts/indexing/#payload-index') and the maintainer's own integration test creates the integer payload index before any order_by use (tests/consensus_tests/test_order_by.py:17-20). Batch heterogeneity itself is fully supported: the actix handler and Collection::query_batch convert and execute each searches[] entry independently, and the behavioral leg mixed_variant_004 confirms a heterogeneous [nearest, order_by desc, nearest] batch returning 200 per-entry. Therefore neither 'validation_absent' nor a promise violation holds; the observed 400 is the designed enforcement of a documented precondition that the attacking script never satisfied (its setup creates payload key 'rank' with no index).",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (server healthy and responsive; deterministic 400 with self-descriptive error, stable across 5 scripts and 2 payload keys)",
+        "concurrency race (single sequential request in the triggering log)",
+        "cache delay (no stateful/async effect involved)",
+        "request-parameter typo (request JSON well-formed and exactly as the script designed; M1 body recovered from script source)"
+      ],
+      "surviving": "by_design + script fixture gap (CONFIRMED, not merely unexcluded): order_by requires a range/numeric payload index — enforced hard in source (order_by.rs:39 and 112; operation_error.rs:61-64 with instructive error + doc link; maintainer test test_order_by.py:17-20 creates the index first) — and the script never created the index for 'rank' before issuing the order_by entry, so the whole batch was fail-fast rejected with the documented 400. This mundane explanation fully accounts for the observation; no defect signal survives for the mixed-batch promise."
+    }
+  }
+}

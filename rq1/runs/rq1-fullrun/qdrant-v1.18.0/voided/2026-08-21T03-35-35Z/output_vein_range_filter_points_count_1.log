@@ -1,0 +1,35 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+=== Vein Test: Range Filter - Cardinality Estimation Bug ===
+
+1. Creating collection...
+   Status: 200, Response: {'result': True, 'status': 'ok', 'time': 0.262019785}
+
+2. Inserting points with numeric scores (10, 20, 30, 40, 50)...
+   Status: 200, Response: {'result': {'operation_id': 1, 'status': 'acknowledged'}, 'status': 'ok', 'time': 0.000321906}
+
+3. Creating numeric index on 'score' field...
+   Status: 200, Response: {'result': {'operation_id': 3, 'status': 'acknowledged'}, 'status': 'ok', 'time': 0.017002616}
+   Waiting 3 seconds for index build...
+
+4. Testing range filter (score >= 15 AND score <= 35)...
+   [exact:true - scan path]
+   Status: 200, Count(exact=true): 2
+   [exact:false - estimation path]
+   Status: 200, Count(exact=false): 3
+   [scroll - ground truth]
+   Scroll ground truth: 2 points
+   Point IDs: [301, 302]
+
+5. Analyzing cardinality estimation accuracy...
+   Ground truth (scroll): 2
+   Exact scan: 2 ✓
+   Estimation: 3 ✗
+   Divergence: 1 points (50.0%)
+
+   [DEFECT_FOUND] Estimator OVER-counts (returns more than actual)
+   This is a cardinality oracle bug in the numeric histogram estimator
+
+6. Cleaning up collection...
+
+=== VERDICT: DEFECT_FOUND ===

@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_points_recommend_dualkey_008",
+ "endpoint": "points+recommend",
+ "param": "positive",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "type",
+ "oracle": {
+  "statement": "G read-back mirror -> stored(4) == -stored(1) exactly (else SCRIPT_ERROR); E1 positive=[1] -> {2,3} in top-3 (fpA) and E2 positive=[4] -> {5,6} in top-3 (fpB) as LIVE baselines (baseline failure = SCRIPT_ERROR); E3 positive=[1,4] / E4 positive=[1, readback(4)] -> 200 with top-3 EXACTLY {7,8,9} (avg=0 -> C cluster; both examples honored); 200 with fpA or fpB fingerprint = Type4_StateLogicViolation (one positive example silently discarded though average_vector promises ALL positives averaged; R33/R40 proven family); 4xx on the schema-legal arrays = Type1_IllegalSuccess; 5xx with /healthz alive = Type3",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

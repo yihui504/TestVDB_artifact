@@ -1,0 +1,94 @@
+{
+  "defect_id": "boundary_points_batch_ops_003",
+  "endpoint": "points+batch (POST /collections/{collection_name}/points/batch)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: both source_urls fetched successfully on 2026-09-04 via web reader (the WebFetch tool itself returned a domain-verification block for api.qdrant.tech; content was still retrieved through the alternate reader, and the contract passport records the same URL crawled at 2026-09-02T11:51:12Z; endpoint_registry verified_at 2026-09-02T12:34:08Z). The state constraint's source_status at mining time was 'degraded'; re-verification now succeeds (recovered). Version: page header/URL carry v1.18.x (v-1-18-x), loose major.minor match with target v1.18.0 = PASS; the qdrant.tech points page is unversioned site-latest (normal for concept docs, no version routing). Content: the points doc 'Batch Update' section verbatim states 'A batch update request consists of a list of operations. These are executed in order. These operations can be batched:' followed by the 8 forms (upsert / delete_points / update_vectors / delete_vectors / set_payload / overwrite_payload / delete_payload / clear_payload), and the REST schema example shows every operations element carrying exactly ONE variant key (including a bare {\"delete\": {\"points\": [1]}} element); the api-reference page declares 'operations list of objects Required' with per-op result list on 200. Caveat recorded: the exactly-one-key-per-element form is expressed by schema shape and every documented example, not by an explicit prose rejection promise. Endpoint: points+batch present in endpoint_registry (POST /collections/{collection_name}/points/batch), matching script and probes. All four layers PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "F7 two variant keys in one op -> status=200 | raw: {\"result\":[{\"operation_id\":2,\"status\":\"completed\"}],\"status\":\"ok\",\"time\":0.003374076}",
+      "secondary_observations": [
+        "log L30 (ambiguity follow-up inside verdict line): '; point+get p1 -> 200 (upsert-face intact)' — the delete half of the two-key op did NOT apply",
+        "log L24-25 (rest face, same endpoint): F6 unknown variant key -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum UpdateOperation at line 1 column 48\"},\"time\":0.0}",
+        "log L20-21 (rest face): F5 op object empty -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum UpdateOperation at line 1 column 19\"},\"time\":0.0}",
+        "log L4-5 (rest face): F1 operations missing -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: missing field `operations` at line 1 column 2\"},\"time\":0.0}",
+        "same-endpoint sibling output_boundary_points_batch_domain_006.log L4-5 (rest face, nested-domain violations): N1 id -1 (negative int) -> status=400 | raw: {\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum UpdateOperation at line 1 column 106\"},\"time\":0.0}",
+        "cross-endpoint sibling output_boundary_aliases_update_002.log L36 (rest face, aliases+update): probe[double-key-element] -> status=200 — same serde double-key acceptance family on a different endpoint",
+        "live comparative P4 (evidence-builder probe, rest face, 2026-09-04, seeded collection): seeded F7 replay {\"operations\":[{\"upsert\":{\"points\":[{\"id\":2,...}]},\"delete\":{\"points\":[1]}}]} -> batch=200 body={\"result\": [{\"operation_id\": 2, \"status\": \"completed\"}], \"status\": \"ok\"...}; point1 GET -> 200 (present); point2 GET -> 200 (present) — exact reproduction of the original observation including operation_id 2",
+        "live comparative P2 (rest face, key order swapped): {\"operations\":[{\"delete\":{\"points\":[1]},\"upsert\":{...}}]} (delete key FIRST in the JSON object) -> batch=200, 1 result entry; point1 GET -> 200 (present) — JSON key order irrelevant; the first-DECLARED variant (Upsert) always wins and the other key is silently discarded",
+        "live comparative P3 (rest face, legal decomposition of the same content): {\"operations\":[{\"upsert\":{...}},{\"delete\":{\"points\":[1]}}]} -> batch=200 result_entries=2; point1 GET -> 404 (DELETED) — the same intent in legal form applies BOTH operations, while the two-key form applies only one",
+        "grpc face: structurally unambiguous — proto 'oneof operation {...}' (points.proto:1331-1341) can hold exactly one operation per message; a live two-op grpc probe is unobtainable in this sandbox (no compiled grpc client), so the face comparison is recorded at source level (grpc_face: exactly-one enforced by type structure; rest face: accepts ambiguity)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Bucket chosen as nearest 2xx-face option, but the actual disposition is stronger: HTTP 200 with a plain success envelope (status ok, per-op result completed) and NO error code of any kind — the request-side-decidable malformed shape (two variant keys in one UpdateOperation element) was silently accepted and half-executed, while the six malformed comparator forms (F1-F6, domain_006 N1-N5) all returned clean HTTP 400s."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_points_batch_ops_003"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_points_batch_001",
+      "assertion_text_quoted": "operations are executed in order inside one batch request; batchable ops: upsert, update_vectors, delete_vectors, set_payload, overwrite_payload, delete_payload, clear_payload, delete_points [DOC points]",
+      "api_violates_assertion": true,
+      "note": "The observed operations element {\"upsert\":{...},\"delete\":{...}} is not any one of the 8 enumerated single-variant batchable forms (both keys are individually legal variant keys, but combined in one element the form lies outside the documented closed set), yet it was accepted with HTTP 200/status ok and executed as Upsert with the Delete key silently discarded — this violates the closed-set operations domain of qdrant_state_points_batch_001. The response-count promise of qdrant_behavioral_points_batch_001 itself held (1 op element -> 1 result entry), so the violation sits on the operations-domain face, not the response-count face. Dispatch note: the candidates.jsonl constraint_id for this candidate is an empty string (mechanical extraction gap); both ids were recovered from the script header (#constraint_ids line 8) and verified present in structured_contract.json (assertions list / constraints.state_constraints).",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_points_batch_001 (constraints.state_constraints) and qdrant_behavioral_points_batch_001 (assertions) both exist in structured_contract.json; dispatch constraint_id field was empty — ids recovered from script header line 8",
+        "doc: api.qdrant.tech/v-1-18-x/api-reference/points/batch-update ('operations list of objects Required'; 200 -> result list of per-op objects) + qdrant.tech/documentation/manage-data/points/ Batch Update section ('A batch update request consists of a list of operations. These are executed in order. These operations can be batched:' + the 8 forms) — every documented op element carries exactly one variant key",
+        "script: boundary_points_batch_ops_003.py F7 raw request = POST /collections/{coll}/points/batch with body {\"operations\": [{\"upsert\": {\"points\": [{\"id\": 2, \"vector\": [0.1,0.2,0.3,0.4], \"payload\": {\"k\": 1}}]}, \"delete\": {\"points\": [1]}}]} and params wait=true",
+        "log: output_boundary_points_batch_ops_003.log L28-30: F7 -> status=200, raw {\"result\":[{\"operation_id\":2,\"status\":\"completed\"}],\"status\":\"ok\",...}, VERDICT: DEFECT_FOUND (Type1_IllegalSuccess); in-line follow-up 'point+get p1 -> 200 (upsert-face intact)'"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "No four-link break; contract, doc, script and log links are present and mutually consistent (F7 raw response matches the claim verbatim; live replay P4 reproduces it including operation_id 2). Non-break gap recorded: the candidates.jsonl constraint_id for this candidate is an empty string — a mechanical extraction gap in the dispatch, not a missing contract constraint (both script-declared ids resolve in structured_contract.json).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "enum UpdateOperation",
+        "pub struct UpsertOperation",
+        "struct DeleteOperation|struct ClearPayloadOperation",
+        "points/batch",
+        "deny_unknown_fields (over src/common/update.rs)",
+        "UpdateOperation (over openapi/)",
+        "message PointsUpdateOperation (over lib/api/src/grpc/proto/points.proto)"
+      ],
+      "files_examined": [
+        "src/common/update.rs (L91-124 UpdateOperations + untagged enum UpdateOperation + Validate impl; L255-301 all 8 variant wrapper structs)",
+        "src/actix/api/update_api.rs (L327-352 update_batch handler)",
+        "openapi/openapi-points.ytt.yaml (L407-439 batch endpoint requestBody $ref UpdateOperations)",
+        "lib/api/src/grpc/proto/points.proto (L1266-1341 PointsUpdateOperation, oneof operation)"
+      ],
+      "source_excerpt": "src/common/update.rs:91-109\n#[derive(Deserialize, Serialize, JsonSchema, Validate)]\npub struct UpdateOperations {\n    #[validate(nested)]\n    pub operations: Vec<UpdateOperation>,\n}\n\n#[derive(Deserialize, Serialize, JsonSchema)]\n#[serde(rename_all = \"snake_case\")]\n#[serde(untagged)]\npub enum UpdateOperation {\n    Upsert(UpsertOperation),\n    Delete(DeleteOperation),\n    SetPayload(SetPayloadOperation),\n    OverwritePayload(OverwritePayloadOperation),\n    DeletePayload(DeletePayloadOperation),\n    ClearPayload(ClearPayloadOperation),\n    UpdateVectors(UpdateVectorsOperation),\n    DeleteVectors(DeleteVectorsOperation),\n}\n\nsrc/common/update.rs:255-265 (variant wrappers — single serde field each, NO deny_unknown_fields; grep 'deny_unknown_fields' over the whole file: 0 matches)\n#[derive(Deserialize, Serialize, JsonSchema, Validate)]\npub struct UpsertOperation {\n    #[validate(nested)]\n    upsert: PointInsertOperations,\n}\n\n#[derive(Deserialize, Serialize, JsonSchema, Validate)]\npub struct DeleteOperation {\n    #[validate(nested)]\n    delete: PointsSelector,\n}\n\nsrc/actix/api/update_api.rs:327-331\n#[post(\"/collections/{collection_name}/points/batch\")]\nasync fn update_batch(\n    dispatcher: web::Data<Dispatcher>,\n    collection: Path<CollectionPath>,\n    operations: Json<UpdateOperations>,\n\nlib/api/src/grpc/proto/points.proto:1331-1341 (gRPC face of the same domain — exactly-one enforced by type structure)\n  oneof operation {\n    PointStructList upsert = 1;\n    PointsSelector delete_deprecated = 2 [deprecated = true];\n    SetPayload set_payload = 3;\n    OverwritePayload overwrite_payload = 4;\n    DeletePayload delete_payload = 5;\n    PointsSelector clear_payload_deprecated = 6 [deprecated = true];\n    UpdateVectors update_vectors = 7;\n    DeleteVectors delete_vectors = 8;\n    DeletePoints delete_points = 9;\n    ClearPayload clear_payload = 10;\n  }",
+      "call_chain_traced": "actix Json<UpdateOperations> extractor (update_api.rs:331) -> serde deserializes Vec<UpdateOperation> -> UpdateOperation is #[serde(untagged)] (update.rs:99) so serde tries variants in DECLARATION order -> Upsert(UpsertOperation) is first (update.rs:101); UpsertOperation (update.rs:255-259) has the single field `upsert` and no #[serde(deny_unknown_fields)], so the extra `delete` key is silently ignored -> UpdateOperation::Upsert accepted -> no key-count/ambiguity validation exists anywhere downstream (the Validate impl at update.rs:111-124 only delegates to the inner-op validators; the handler passes operations straight to do_batch_update_points at update_api.rs:349). This mechanism also explains live probe P2: JSON key order is irrelevant because the winner is fixed by enum declaration order, and it explains why zero-key (F5), unknown-key (F6) and nested-type-violation forms (domain_006 N1-N5) are rejected with 'data did not match any variant of untagged enum UpdateOperation' while the two-known-keys form is not.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — live replay P4 on the same server reproduced the exact observation (200 + result [{\"operation_id\": 2, \"status\": \"completed\"}] + point1 present + point2 present)",
+        "concurrency — single sequential request with wait=true, no competing writers on the probe's own collection",
+        "cache_delay — readbacks were immediate GETs with wait=true applied, and the disposition is deterministic across P1/P2/P4",
+        "request_parameter_typo — probe bodies were constructed exactly as the original F7 body; the deliberate key-order variant (P2) produced the same acceptance, ruling out an accidental-shape explanation"
+      ],
+      "surviving": null
+    }
+  }
+}

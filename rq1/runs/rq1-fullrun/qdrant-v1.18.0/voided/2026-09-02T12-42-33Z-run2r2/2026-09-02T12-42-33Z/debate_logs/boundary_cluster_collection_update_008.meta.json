@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_collection_update_008",
+  "endpoint": "cluster+collection+update",
+  "param": "shard_id",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "state_idempotency",
+  "oracle": {
+    "statement": "duplicate create_sharding_key K (byte-identical re-issue after K is accepted and observable) -> 4xx; 2xx = Type4_StateLogicViolation (acceptance ledger double-accepted); drop_sharding_key K -> 200 then K must vanish from cluster-info shard inventory within ~12s (K still listed = Type4 ghost shard after accepted drop); 5xx = Type3 with /healthz rechecked; explicit-shard carrier refused = SCRIPT_ERROR",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

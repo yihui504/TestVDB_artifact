@@ -1,0 +1,62 @@
+# Round 3 Semantic Attack Coverage Report
+# Chunk: chunk_points+search (2 unit_refs)
+
+## Unit Ref Coverage Matrix
+
+| Unit Ref | Covered By Scripts | Coverage Status |
+|----------|-------------------|-----------------|
+| qdrant_behavioral_search_points_001 | 001, 002, 006, 009 | ✅ Full |
+| qdrant_behavioral_search_points_002 | 005 | ✅ Full |
+
+## Constraint Coverage (from contract)
+
+### Type Constraints
+- qdrant_type_search_points_001 (vector dimension match): ✅ semantic_points_search_002
+- (Limit ∈ [1,1000]): ✅ semantic_points_search_003, 007
+- (Score_threshold ∈ [0,1]): ✅ semantic_points_search_010, 011
+
+### Range Constraints  
+- qdrant_range_search_points_001 (limit ∈ [1,1000]): ✅ semantic_points_search_003, 007
+- qdrant_range_search_points_002 (score_threshold ∈ [0,1]): ✅ semantic_points_search_010, 011
+
+### Behavioral Contracts
+- Search returns 200 OK with results: ✅ semantic_points_search_001
+- Empty collection returns empty array: ✅ semantic_points_search_005
+
+## Extended Coverage (Beyond Minimum Requirements)
+
+### Search Semantics
+- Result ordering by similarity: ✅ semantic_points_search_006
+- Filter semantics: ✅ semantic_points_search_008
+- Score threshold filtering: ✅ semantic_points_search_009
+
+### Type Safety
+- Limit type coercion: ✅ semantic_points_search_004
+- Score_threshold type coercion: ✅ semantic_points_search_011
+
+### Error Quality
+- Dimension mismatch diagnostics: ✅ semantic_points_search_002
+- Limit range error diagnostics: ✅ semantic_points_search_007
+
+## Blindspot Coverage
+- BS-02 (Error Message Negligence): ✅ 2 scripts (002, 007)
+- BS-05 (Documentation Drift): ✅ 9 scripts (all others)
+
+## GT Bug Alignment (4 known bugs)
+- Target 4 bugs: 0/4 covered (collections bugs already handled in R1-R2)
+- R3 focus: points+search behavioral contracts + filter/score semantics
+
+## Script Quality Checklist
+- ✅ All scripts use safe_request() wrapper
+- ✅ All scripts use BASE_URL from environment
+- ✅ All scripts have cleanup wrapped in try/except
+- ✅ All scripts print VERDICT at end
+- ✅ All scripts have .meta.json files
+- ✅ No hardcoded ports/paths
+- ✅ Contract-derived endpoints only
+
+## Output Statistics
+- Total scripts: 11
+- Total .py + .meta.json pairs: 11 pairs (22 files)
+- Strategies used: 6 (behavioral_contract, diagnosis_quality, illegal_rejection, type_coercion, search_correctness, filter_semantics)
+- Parameters tested: 5 (vector, limit, filter, score_threshold, general behavior)

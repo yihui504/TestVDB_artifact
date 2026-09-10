@@ -1,0 +1,27 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[PATHS] index keys present=['delete_index', 'create_index', 'describe_collection', 'count', 'scroll']
+[upsert batch] status=200 raw={"result":{"operation_id":1,"status":"completed"},"status":"ok","time":0.003634685}
+[count after batch want=10] count status=200 raw={"result":{"count":10},"status":"ok","time":0.000348877}
+[upsert batch] status=200 raw={"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.003915878}
+[count after batch want=15] count status=200 raw={"result":{"count":15},"status":"ok","time":0.000193514}
+[upsert batch] status=200 raw={"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.003714177}
+[count after batch want=18] count status=200 raw={"result":{"count":18},"status":"ok","time":0.000234768}
+[count pre-index] count status=200 raw={"result":{"count":18},"status":"ok","time":0.000255948}
+[filtered pre-index] count status=200 raw={"result":{"count":4},"status":"ok","time":0.000256258}
+[scroll pre-index] scroll status=200 raw={"result":{"points":[{"id":1,"payload":{"f_val":1}},{"id":2,"payload":{"f_val":2}},{"id":3,"payload":{"f_val":3}},{"id":4,"payload":{"f_val":4}},{"id":5,"payload":{"f_val":5}},{"id":6,"payload":{"f_va
+[create f_val index] status=200 raw={"result":{"operation_id":5,"status":"completed"},"status":"ok","time":0.924894463}
+[count with-index] count status=200 raw={"result":{"count":18},"status":"ok","time":0.000189214}
+[filtered with-index] count status=200 raw={"result":{"count":4},"status":"ok","time":0.000471696}
+[delete f_val index] status=200 raw={"result":{"operation_id":7,"status":"completed"},"status":"ok","time":0.304344209}
+[count post-delete] count status=200 raw={"result":{"count":18},"status":"ok","time":0.000221931}
+[filtered post-delete] count status=200 raw={"result":{"count":4},"status":"ok","time":0.000466603}
+[scroll post-delete] scroll status=200 raw={"result":{"points":[{"id":1,"payload":{"f_val":1}},{"id":2,"payload":{"f_val":2}},{"id":3,"payload":{"f_val":3}},{"id":4,"payload":{"f_val":4}},{"id":5,"payload":{"f_val":5}},{"id":6,"payload":{"f_va
+[post-delete upsert] status=200 raw={"result":{"operation_id":8,"status":"completed"},"status":"ok","time":0.004162827}
+[idempotent re-delete] status=200 raw={"result":{"operation_id":10,"status":"completed"},"status":"ok","time":0.293366016}
+[count final] count status=200 raw={"result":{"count":20},"status":"ok","time":0.000144328}
+[filtered final] count status=200 raw={"result":{"count":6},"status":"ok","time":0.000319083}
+[summary] total=[18,18,18,20] filtered=[4,4,4,6] payload_stable=True defects=0
+CRUD-then-COUNT with index deletion as mutation: totals 10/15/18 stable across the index toggle, filtered count 4 stable, post-delete writes land (20 total, 6 filtered), idempotent re-delete 200 - NO_DEFECT
+[cleanup] dropped sidd2_1788435256_33900_col
+VERDICT: NO_DEFECT

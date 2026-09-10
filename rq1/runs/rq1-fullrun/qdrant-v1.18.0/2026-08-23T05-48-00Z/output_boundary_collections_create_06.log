@@ -1,0 +1,14 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+CASE max_resident_memory_percent=0 (below min 1): status=422 body={"status":{"error":"Validation error in JSON body: [strict_mode_config.max_resident_memory_percent: value 0 invalid, must be from 1 to 100]"},"time":0.0}
+CASE max_resident_memory_percent=1 (min, allowed): status=200 body={"result":true,"status":"ok","time":0.237472749}
+  DESCRIBE: {"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_construct":100,"full_scan_threshold":10000,"max_indexing_threads":0,"on_disk":false},"optimizer_config":{"
+CASE max_resident_memory_percent=100 (max, allowed): status=200 body={"result":true,"status":"ok","time":0.214805783}
+  DESCRIBE: {"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true},"hnsw_config":{"m":16,"ef_construct":100,"full_scan_threshold":10000,"max_indexing_threads":0,"on_disk":false},"optimizer_config":{"
+CASE max_resident_memory_percent=101 (above max): status=422 body={"status":{"error":"Validation error in JSON body: [strict_mode_config.max_resident_memory_percent: value 101 invalid, must be from 1 to 100]"},"time":0.0}
+CASE max_resident_memory_percent=-5: status=400 body={"status":{"error":"Format error in JSON body: invalid value: integer `-5`, expected u8 at line 1 column 120"},"time":0.0}
+CASE max_resident_memory_percent=1e9: status=400 body={"status":{"error":"Format error in JSON body: invalid value: integer `1000000000`, expected u8 at line 1 column 128"},"time":0.0}
+CASE max_resident_memory_percent=50.5 float: status=400 body={"status":{"error":"Format error in JSON body: invalid type: floating point `50.5`, expected u8 at line 1 column 122"},"time":0.0}
+CASE max_resident_memory_percent='50' string: status=400 body={"status":{"error":"Format error in JSON body: invalid type: string \"50\", expected u8 at line 1 column 122"},"time":0.0}
+CASE max_resident_memory_percent=null: status=200 body={"result":true,"status":"ok","time":0.239607056}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) — max_resident_memory_percent=null accepted with 200

@@ -1,0 +1,55 @@
+{
+  "defect_id": "boundary_querymode_01",
+  "endpoint": "collections+create",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint create_009 source_url points to local clone pkg/common/common.go (reachable, v2.6.16 checkout); ValidateQueryMode at common.go:513-526 produces exactly the asserted message; alter-path live behavior in same session (state_query_mode_alter_1 D line) confirms 65535 message verbatim; endpoint collections+create present in endpoint_registry. NOTE: create-path behavior itself contradicts the live-confirmed label in the assertion (assertion text says 'live-confirmed v2.6.16: bogus rejected' but log shows code 0 on create path) - that contradiction is the defect under test, recorded here as observed, not adjudicated.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "Status: 200 / Raw: {\"code\":0,\"data\":{}} / VERDICT: DEFECT_FOUND (create with properties.query_mode='bogus', schema mode, collection bnd_qm_01)",
+      "secondary_observations": ["CONTROL (cross-script, state_query_mode_alter_1 log): D alter bogus: 200 {\"code\":65535,\"message\":\"invalid query_mode value \\\"bogus\\\", valid values: [large_topk]\"} - same value IS validated on alter path", "CONTROL (vein_query_mode_maturity_1 log): CONTROL alter query_mode=bogus: 200 {\"code\":65535\",...} vs T1 create properties.query_mode=bogus: 200 {\"code\":0,\"data\":{}}"],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "invalid enum value accepted as HTTP 200 code 0 (no error at all) - strongest form: client error silently accepted as success"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["boundary_querymode_01", "boundary_querymode_03 (params carrier)", "vein_query_mode_maturity_1 (T1)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_collections_create_009",
+      "assertion_text_quoted": "properties/params.query_mode NOT IN {unset, 'large_topk'} => code 65535 message \"invalid query_mode value \\\"X\\\", valid values: [large_topk]\" (live-confirmed v2.6.16: 'bogus' rejected)",
+      "api_violates_assertion": true,
+      "note": "observed create-time query_mode='bogus' returned code 0, directly inside the constraint's domain (properties/params.query_mode enum) whose assertion demands 65535; violates=True.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:milvus_type_collections_create_009 (collections+create, query_mode enum => 65535)", "doc:pkg/common/common.go:511-526 ValidateQueryMode exact message; task.go:448-451 createCollectionTask calls it", "script:boundary_querymode_01.py POST create_collection {collectionName, schema, properties:{query_mode:'bogus'}}", "log:Raw {\"code\":0,\"data\":{}} VERDICT DEFECT_FOUND"],
+      "chain_broken_at": "script",
+      "break_detail": "raw request DID carry properties.query_mode='bogus', but REST struct CollectionReq has no Properties field and handler only forwards a whitelist of params keys, so the value never reaches the gRPC task whose ValidateQueryMode would have rejected it. Chain is behaviorally intact as evidence of the defect (contract domain matches, observation matches), but the mechanism is a transport-level drop between REST handler and the validated task - i.e. the contract's assumption that create reaches the validator is broken by the REST binding layer.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["query_mode (handler_v2.go - zero hits)", "ValidateQueryMode|query_mode (pkg/common + internal/proxy)", "CollectionReq struct (request_v2.go)", "WarmupScalarFieldKey forwarding (handler_v2.go:2037-2049)"],
+      "files_examined": ["internal/distributed/proxy/httpserver/request_v2.go:643-656", "internal/distributed/proxy/httpserver/handler_v2.go:1786-1792,1999-2049,2051-2053", "internal/proxy/task.go:443-451", "pkg/common/common.go:490-531"],
+      "source_excerpt": "request_v2.go:643-656 CollectionReq struct has NO Properties field (only DbName/CollectionName/Dimension/IDType/AutoID/MetricType/PrimaryFieldName/VectorFieldName/Schema/IndexParams/Params/Description); handler_v2.go:1786-1792 initializes req.Properties to empty; handler_v2.go:2019-2049 forwards ONLY ttlSeconds, partitionKeyIsolation, MmapEnabledKey and the four warmup.* keys from httpReq.Params into req.Properties - query_mode absent from the whitelist; task.go:448-451 'if err := common.ValidateQueryMode(t.GetProperties()...); err != nil { return err }' would reject, but is unreachable for query_mode via REST create; common.go:516-517 'if kv.Value != QueryModeLargeTopK { return fmt.Errorf(\"invalid query_mode value %q, valid values: [%s]\", kv.Value, ValidQueryModes) }'",
+      "call_chain_traced": "gin binding (properties key silently dropped - no struct field) -> handler_v2.createCollection (params whitelist forwarding, query_mode excluded) -> proxy.CreateCollection -> createCollectionTask.PreExecute task.go:449 ValidateQueryMode (dead code for this key on REST path)",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (control alter path on same server returns 65535)", "request typo (script body verified: properties key sent verbatim)", "cache/concurrency (deterministic single request)"],
+      "surviving": "possible by-design reading: REST create may deliberately not support properties (SDK/grpc-only surface); but contract create_009 explicitly claims properties/params.query_mode rejection at create, and code 0 with no warning is silent-drop semantics either way - recorded, not adjudicated"
+    },
+    "evidence_weight": "high (A-grade multi-script repro + exact source root cause + in-domain control)"
+  }
+}

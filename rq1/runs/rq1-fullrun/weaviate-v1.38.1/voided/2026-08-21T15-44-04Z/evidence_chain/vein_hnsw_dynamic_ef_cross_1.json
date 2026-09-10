@@ -1,0 +1,64 @@
+{
+  "defect_id": "vein_hnsw_dynamic_ef_cross_1",
+  "endpoint": "POST /schema (vectorIndexConfig.dynamicEfMin x dynamicEfMax)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "契约存在显式配对约束 weaviate_range_create_collection_001: assertion 'dynamicEfMin <= dynamicEfMax'，source_url=go-struct entities/vectorindex/hnsw/config.go（reachable, inferred tier）。endpoint POST /schema 已注册且参数表含 dynamicEfMin/dynamicEfMax（默认 100/500）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "attack efMin>efMax: status=200 stored min=500 max=100",
+      "secondary_observations": [
+        "control efConstruction=1: status=422 err=... invalid hnsw",
+        "control maxConnections=1: status=422 err=... invalid hnsw"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "违反配对约束的值 200 接受且 verbatim 持久化（readback stored min=500 max=100）；同一 validate() 管辖的 efConstruction/maxConnections 单字段非法值正确 422——选择性缺校验"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_hnsw_dynamic_ef_cross_1.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_range_create_collection_001",
+      "assertion_text_quoted": "structured_contract.json: {\"constraint_id\": \"weaviate_range_create_collection_001\", \"assertion\": \"dynamicEfMin <= dynamicEfMax\", \"evidence_tier\": \"inferred\", \"source_url\": \"go-struct: entities/vectorindex/hnsw/config.go\"}",
+      "api_violates_assertion": true,
+      "note": "观测 stored min=500 > max=100，直接违反 min<=max 断言，verbatim 持久化。violates=True 无歧义。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: weaviate_range_create_collection_001 dynamicEfMin <= dynamicEfMax",
+        "doc: source_url entities/vectorindex/hnsw/config.go（clone 内已核对 validate() 内容）",
+        "script: vein_hnsw_dynamic_ef_cross_1.py POST /schema {dynamicEfMin:500, dynamicEfMax:100} + 对照 efConstruction=1/maxConnections=1",
+        "log: attack status=200 stored min=500 max=100；controls 422"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["func (u *UserConfig) validate", "DynamicEF", "MaxConnections < MinmumMaxConnections", "EFConstruction < MinmumEFConstruction"],
+      "files_examined": ["entities/vectorindex/hnsw/config.go"],
+      "source_excerpt": "entities/vectorindex/hnsw/config.go:260-289 UserConfig.validate():\nfunc (u *UserConfig) validate() error {\n    var errMsgs []string\n    if u.MaxConnections < MinmumMaxConnections { errMsgs = append(errMsgs, ... \"maxConnections must be a positive integer with a minimum of %d\" ...) }\n    if u.MaxConnections > MaximumMaxConnections { ... }\n    if u.EFConstruction < MinmumEFConstruction { ... \"efConstruction must be a positive integer ...\" }\n    if u.FilterStrategy != FilterStrategySweeping && u.FilterStrategy != FilterStrategyAcorn { ... }\n    if len(errMsgs) > 0 { return fmt.Errorf(\"invalid hnsw config: %s\", ...) }\n}\n——四项校验中无任何 DynamicEFMin/DynamicEFMax/DynamicEFFactor 检查（字段定义在同文件 :54-56 DynamicEFMin/DynamicEFMax/DynamicEFFactor，默认 :91-92）。跨字段 min<=max 校验在文件中零出现。",
+      "call_chain_traced": "POST /schema → hnsw config parse (ParsePQMap...→ uc.validate()) → validate() 仅查 maxConnections/efConstruction/filterStrategy → 无 DynamicEF 校验 → verbatim 落盘 schema",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "request_typo", "by_design（同 validate() 内其他字段都拒绝，唯 DynamicEF 不查，非一致性 default 逻辑）"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "high（四层证据齐全：契约显式断言+行为对照+源码缺校验定位）"
+}

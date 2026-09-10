@@ -1,0 +1,17 @@
+{
+  "endpoint": "collections+update",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_update_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "legal PATCH on a self-created collection returns HTTP 200 with envelope result===true and echoes in describe readback (200-without-echo = Type4 silent-ignore family); PATCH on a never-created name returns 404 twice without flapping (200 = Type1 phantom success); invalid diffs (format-invalid and value-invalid) are refused 4xx - measured 400 AND 422 both spec-compliant per the versioned OpenAPI error responses, any 2xx on an invalid diff = Type1_IllegalSuccess per the assertion's defect_type_if_violated; control leg stays 200+echo; 5xx with healthy /healthz = Type3_RuntimeFailure; transport/setup failure = SCRIPT_ERROR (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  },
+  "defect_id": "semantic_collections_update_001",
+  "param": null,
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "behavioral_contract"
+}

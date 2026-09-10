@@ -1,0 +1,70 @@
+{
+  "defect_id": "boundary_search_consistency_enum_015",
+  "endpoint": "entities+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "契约断言与 1100 消息原文 'consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded' 在 live 响应中逐字出现（log 证据），源码 tier 为契约主证。limitations.md 可达（同会话）",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "consistencyLevel='' (empty) -> code=0 raw={\"code\":0,\"cost\":0,\"data\":[{\"distance\":0,\"id\":1}],\"topks\":[1]}；consistencyLevel=None (null) -> code=0 同型（空值形态绕过枚举）",
+      "secondary_observations": [
+        "consistencyLevel='Strong'/'Bounded' -> code=0（合法值对照，正确）",
+        "consistencyLevel='strong' 小写 -> code=1100 '...can only be [Strong, Session, Bounded, Eventually, Customized]...err:parameter:'strong' is incorrect'（正确拒绝）",
+        "consistencyLevel='Foo' -> code=1100（正确拒绝）",
+        "consistencyLevel=1 / {dict} -> code=1801 unmarshal 错误（Type2 候选）",
+        "searchParams nprobe -1/0/1e9/'abc'/null、ef -5、level 99 -> 全部 code=0（搜索参数完全无校验，次缺陷面）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码（1100/1801 均 HTTP 200）", "note": "非法枚举以 2xx+1100 返回；空值则 2xx+code:0 接受"},
+      "reproducibility": "单脚本（派发标注跨版本重现）",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_search_consistency_enum_015.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_entities_search_001",
+      "assertion_text_quoted": "consistencyLevel IN {Strong,Session,Bounded,Eventually,Customized} else code==1100 (message: consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded)",
+      "api_violates_assertion": true,
+      "note": "''与 null 均不在枚举域内（'Foo' 同为非成员被拒 1100），却 code:0——枚举约束对空值形态失效。violates=true；'空串=省略走默认 Bounded'的宽容解释与 'Foo 也省略不了'的不一致行为并存，留给 auditor",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_entities_search_001",
+        "doc: 枚举五值 + default Bounded（消息原文 live 复现）",
+        "script: boundary_search_consistency_enum_015.py 九个 consistencyLevel 形态 + searchParams 组",
+        "log: ''/None -> code=0 vs 'strong'/'Foo' -> 1100"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["convertConsistencyLevel", "ConsistencyLevel_value", "generateSearchParams"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/utils.go (L1739-1751 convertConsistencyLevel)",
+        "internal/distributed/proxy/httpserver/handler_v2.go (L1498 等 4 个调用点)",
+        "internal/distributed/proxy/httpserver/utils.go (L2192-2245 generateSearchParams)"
+      ],
+      "source_excerpt": "utils.go convertConsistencyLevel：`func convertConsistencyLevel(reqConsistencyLevel string) (commonpb.ConsistencyLevel, bool, error) { if reqConsistencyLevel != \"\" { level, ok := commonpb.ConsistencyLevel_value[reqConsistencyLevel]; if !ok { return 0, false, merr.WrapErrParameterInvalidMsg(...) } return commonpb.ConsistencyLevel(level), false, nil } // ConsistencyLevel_Bounded default in PyMilvus; return commonpb.ConsistencyLevel_Bounded, true, nil }` —— 空串被显式视为'省略'回退默认 Bounded（注释援引 PyMilvus 行为）；JSON null 经 Go 解码为 string 零值 \"\"，与空串同路径。generateSearchParams（searchParams 次缺陷面）：任意 key/value 仅 fmt.Sprintf 透传（L2236-2243），无 nprobe/ef 域校验。",
+      "call_chain_traced": "REST search -> convertConsistencyLevel('' → 默认 Bounded, useDefault=true) -> 无 1100 -> 执行；非法非空串走 ConsistencyLevel_value 查表失败 -> 1100",
+      "verification_outcome": "by_design_in_source",
+      "note": "空值回退默认是源码显式分支（by-design 抗辩成立）；但契约断言域为闭集且未豁免空值，contract-source 分歧如实呈现。violates=true 依据：'Foo' 同为'非成员'被拒而 ''/null 放行，行为不一致本身违反枚举契约的可判定性",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "request-typo"],
+      "surviving": "by-design 空值回退默认（源码注释明示 PyMilvus 对齐）——抗辩材料"
+    }
+  },
+  "evidence_weight": "strong（behavior 九形态对照含合法值 + 源码空串分支逐行定位；by-design 抗辩已标注）"
+}

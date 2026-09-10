@@ -1,0 +1,17 @@
+[v1 empty name=''...] http=200 body={"code":1802,"message":"missing required parameters, required parameters: [collectionName, dimension]"}
+[v2 empty name=''...] http=200 body={"code":1802,"message":"missing required parameters, error: Key: 'CollectionReq.CollectionName' Error:Field validation for 'CollectionName' failed on the 'required' tag"}
+[v1 space name=' '...] http=200 body={"code":1100,"message":"collection name should not be empty: invalid parameter"}
+[v2 space name=' '...] http=200 body={"code":1100,"message":"collection name should not be empty: invalid parameter"}
+[v1 nul name='a\x00b'...] http=200 body={"code":1100,"message":"Invalid collection name: a\u0000b. collection name can only contain numbers, letters and underscores: invalid parameter"}
+[v2 nul name='a\x00b'...] http=200 body={"code":1100,"message":"Invalid collection name: a\u0000b. collection name can only contain numbers, letters and underscores: invalid parameter"}
+[v1 unicode name='coll中文🎯'...] http=200 body={"code":1100,"message":"Invalid collection name: coll中文🎯. collection name can only contain numbers, letters and underscores: invalid parameter"}
+[v2 unicode name='coll中文🎯'...] http=200 body={"code":1100,"message":"Invalid collection name: coll中文🎯. collection name can only contain numbers, letters and underscores: invalid parameter"}
+[v1 sql name="c'; DROP TABLE--"...] http=200 body={"code":1100,"message":"Invalid collection name: c'; DROP TABLE--. collection name can only contain numbers, letters and underscores: invalid parameter"}
+[v2 sql name="c'; DROP TABLE--"...] http=200 body={"code":1100,"message":"Invalid collection name: c'; DROP TABLE--. collection name can only contain numbers, letters and underscores: invalid parameter"}
+[v1 dots name='a.b.c'...] http=200 body={"code":1100,"message":"Invalid collection name: a.b.c. collection name can only contain numbers, letters and underscores: invalid parameter"}
+[v2 dots name='a.b.c'...] http=200 body={"code":1100,"message":"Invalid collection name: a.b.c. collection name can only contain numbers, letters and underscores: invalid parameter"}
+[v1 dollar name='$gt'...] http=200 body={"code":1100,"message":"Invalid collection name: $gt. the first character of a collection name must be an underscore or letter: invalid parameter"}
+[v2 dollar name='$gt'...] http=200 body={"code":1100,"message":"Invalid collection name: $gt. the first character of a collection name must be an underscore or letter: invalid parameter"}
+[v1 300chars name='LLLLLLLLLLLLLLLLLLLL'...] http=200 body={"code":1100,"message":"Invalid collection name: LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+[v2 300chars name='LLLLLLLLLLLLLLLLLLLL'...] http=200 body={"code":1100,"message":"Invalid collection name: LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+VERDICT: NO_DEFECT

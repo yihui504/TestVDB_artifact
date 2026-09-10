@@ -1,0 +1,15 @@
+{
+ "defect_id": "boundary_index_delete_007",
+ "endpoint": "index+delete",
+ "param": null,
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "strategy7_malformed_body_bodyless_delete",
+ "constraint_ids": [
+  "qdrant_behavioral_index_delete_001",
+  "qdrant_state_index_delete_001"
+ ],
+ "oracle": {
+  "statement": "no-body control leg (never-indexed grammar-legal field, wait=true, live bidl7_* collection) returns exactly 200 (gate, else SCRIPT_ERROR); each malformed-body leg (truncated JSON / trailing comma / single quotes / illegal \\q escape / // comment / raw NUL byte in JSON string / wrong-typed {field_name:123456} / seq-form [1,2,3] / empty / whitespace / 1e5- and 1e6-byte bodies) sent via the runtime str-body raw channel returns 200 (ignored, promise honored) or any clean 4xx (rejected) — both measured-only, no claim on a face that documents no body; ANY 5xx or parser/serde/utf/decode internal-error leakage = Type3_RuntimeFailure with /healthz re-check; timeout-class transport failure while /healthz alive = server-side hang = Type3_RuntimeFailure; /healthz down = SCRIPT_ERROR; after all legs collections+get result.payload_schema is still empty (phantom entry = Type4_StateLogicViolation)",
+  "source": "docstring"
+ }
+}

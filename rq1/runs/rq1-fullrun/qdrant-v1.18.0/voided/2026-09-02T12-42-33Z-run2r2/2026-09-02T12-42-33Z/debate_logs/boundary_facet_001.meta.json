@@ -1,0 +1,11 @@
+{
+ "defect_id": "boundary_facet_001",
+ "endpoint": "facet",
+ "param": "limit",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "strategy1_boundary_below_min",
+ "oracle": {
+  "statement": "on a live bfa001_* collection with keyword-indexed genre (alpha=10, beta=8, gamma=5, delta=2 over 25 points): facet limit=0/-1/-100 each return HTTP 400/422 (any 2xx = Type1_IllegalSuccess per spec minimum 1); facet limit=1 returns 200 with exactly one result.hits entry {alpha, count 10}; limit=10 and omitted limit return 200 with 4 hits and exact counts; 4xx on legal probes = Type1_IllegalRejection, 200 with wrong shape/counts = Type4, 5xx with /healthz alive = Type3",
+  "source": "docstring"
+ }
+}

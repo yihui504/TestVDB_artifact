@@ -1,0 +1,63 @@
+{
+  "defect_id": "vein_null_check_points_query_2",
+  "endpoint": "points+query",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No specific constraint about query nullability. Test validates null handling: query=None accepted with 200 OK. Expected 400 validation error. Query parameter should be required or validated.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: query=null on POST /collections/{collection}/points/query → HTTP 200, response={'result': {'points': [...]}, 'status': 'ok'}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A (success: true)",
+        "note": "Null value for query accepted with HTTP 200. Expected 400 Bad Request with validation error. Type1_IllegalSuccess - invalid input accepted."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_null_check_points_query_2"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A (no constraint exists for query nullability; test validates general input validation)",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:N/A (no specific constraint)",
+        "doc:OpenAPI v1.18.x schema QueryRequest allows nullable query field",
+        "script:POST /collections/{collection}/points/query with query=None",
+        "log:HTTP 200 with success and points returned (null accepted without validation)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "OpenAPI schema permits nullable query field via 'anyOf' with 'nullable: true'. API accepts null query without validation error. No constraint violated, but poor input validation - query should be required object, not null.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["query.*nullable", "QueryRequest", "validate.*query"],
+      "files_examined": [
+        "docs/redoc/v1.18.x/openapi.json"
+      ],
+      "source_excerpt": "File: docs/redoc/v1.18.x/openapi.json, Lines 15823-15832\n\"query\": {\n  \"description\": \"Query to perform. If missing without prefetches, returns points ordered by their IDs.\",\n  \"anyOf\": [\n    {\"$ref\": \"#/components/schemas/QueryInterface\"},\n    {\"nullable\": true}  // Explicitly allows null\n  ]\n}\n\nSchema documentation says 'If missing... returns points ordered by IDs'. But nullable: true permits null (different from missing).\n\nAPI accepts null query, returning all points ordered by ID per fallback behavior.",
+      "call_chain_traced": "OpenAPI QueryRequest schema explicitly allows null query via 'nullable: true' in anyOf. Description says 'if missing' behavior is ordered-by-ID, but schema permits explicit null which is treated same as missing. API implements this fallback - returns all points. No validation rejects null.",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "payload_mismatch"],
+      "surviving": "query=null accepted with 200 OK, returning all points ordered by ID. Schema explicitly permits nullable: true. API follows schema with fallback behavior. Technically by-design per OpenAPI, but semantically null query should be rejected vs treated as 'missing'. Type1 but schema-compliant. May be intentional for query construction flexibility."
+    }
+  }
+}

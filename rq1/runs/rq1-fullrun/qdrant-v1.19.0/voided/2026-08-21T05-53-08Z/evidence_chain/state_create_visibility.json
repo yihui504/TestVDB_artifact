@@ -1,0 +1,76 @@
+{
+  "defect_id": "state_create_visibility",
+  "endpoint": "collections+create + collections+points+count",
+  "defect_type": "Type4_StateLogicViolation",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Create collection documented at https://api.qdrant.tech/api-reference/collections/create-collection. State contract: after create, collection should be visible to count() operations.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "D",
+      "log_pattern": "Get before create: 404, Create collection: 200, Get after create: 200, Count: 200, Count result: {'count': 1}, VERDICT: DEFECT_FOUND - Count mismatch",
+      "secondary_observations": [
+        "Log shows Expected: 1, Got: {'count': 1} - identical",
+        "Verdict message contradicts log data - no mismatch visible"
+      ],
+      "claim_alignment": "drifted",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "All operations succeed correctly (404->200->200->200). Count returns 1 as expected after upsert."
+      },
+      "reproducibility": "环境问题",
+      "script_error": false,
+      "triggering_scripts": ["state_create_visibility"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_invariant_create_visibility_001",
+      "assertion_text_quoted": "Create visibility invariant: collection created via PUT /collections/{name} should be immediately visible to subsequent operations",
+      "api_violates_assertion": false,
+      "note": "Log evidence contradicts verdict - collection created (200), visible (get after create=200), count works (200, count=1). No state inconsistency.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: created collection must be visible to subsequent ops",
+        "script: create collection returns 200",
+        "script: get collection returns 200 (visible)",
+        "script: upsert point returns 200",
+        "script: count returns 200 with count=1",
+        "verdict: claims state violation - contradicts logs"
+      ],
+      "chain_broken_at": "verdict",
+      "break_detail": "Verdict reporting defect when logs show complete success. Possible verdict parsing bug or mismatch between expected and actual comparison logic.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "create.*collection",
+        "visibility.*check",
+        "count.*after.*create"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/verification/mod.rs",
+        "lib/collection/src/collection/manager.rs"
+      ],
+      "source_excerpt": "lib/collection/src/operations/verification/search.rs:58-60: super::check_limit_opt(\n            Some(self.limit),\n            strict_mode_config.max_query_limit,\n            \"limit\",\n        )",
+      "call_chain_traced": "Create operation processed through collection manager. Count operation is separate read path. No visibility delay mechanism found - operations should see consistent state.",
+      "verification_outcome": "not_found_in_source",
+      "note": "No source code evidence for create-then-count visibility issue. Logs show all operations succeeding. This verdict appears to be false positive from test framework, not actual API defect.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["concurrency"],
+      "surviving": "verdict_bug"
+    }
+  }
+}

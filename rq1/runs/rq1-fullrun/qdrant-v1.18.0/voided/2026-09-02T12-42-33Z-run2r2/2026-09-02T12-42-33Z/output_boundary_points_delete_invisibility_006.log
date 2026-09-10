@@ -1,0 +1,30 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+seed baseline: exact count == 8 (4 alpha + 4 beta)
+
+D1 delete by ids [1,2] wait=true -> status=200
+raw: {"result":{"operation_id":2,"status":"completed"},"status":"ok","time":0.003709465}
+D1 count == 6 == 6
+D1 batch-get [1,2,3] -> status=200, ids=[3]
+D1 batch-get: ids == {3} exactly (no zombies)
+D1 single GET id 1 (deleted) -> status=404
+D1 single GET id 3 (live) -> status=200
+D1 scroll tag=alpha -> status=200, ids=[3, 4]
+D1 scroll: ids == {3, 4} exactly
+D1 search tag=alpha -> status=200, ids=[3, 4]
+D1 query tag=alpha -> status=200, ids=[3, 4]
+D1 search/query: no zombie ids, all results within {3, 4}
+
+D2 delete by filter must[tag=beta] wait=true -> status=200
+raw: {"result":{"operation_id":3,"status":"completed"},"status":"ok","time":0.005955647}
+D2 count == 2 == 2
+D2 batch-get [5,6] -> status=200, ids=[]
+D2 batch-get: ids == [] (no zombies)
+D2 single GET id 5 (filter-deleted) -> status=404
+D2 single GET id 3 (live alpha) -> status=200
+D2 scroll tag=beta -> status=200, ids=[]
+D2 scroll: ids == [] (wipe complete)
+D2 search tag=beta -> status=200, ids=[]
+D2 query tag=beta -> status=200, ids=[]
+D2 search/query: empty results (no beta zombies)
+VERDICT: NO_DEFECT

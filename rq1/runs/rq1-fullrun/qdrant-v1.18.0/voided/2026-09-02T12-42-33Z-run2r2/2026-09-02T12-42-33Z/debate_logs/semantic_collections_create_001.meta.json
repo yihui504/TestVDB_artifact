@@ -1,0 +1,11 @@
+{
+  "defect_id": "semantic_collections_create_001",
+  "endpoint": "collections+create",
+  "param": "vectors",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "type_coercion",
+  "oracle": {
+    "statement": "every wrong-typed/missing vectors shape (omitted, {}, list, string, size as string/float/-1/null/missing, distance as int/null/missing) is refused with a clean 400/422 (any 2xx acceptance = Type1_IllegalSuccess; 5xx with /healthz alive = Type3_RuntimeFailure) and both legal controls return 200 with result=true (constraint qdrant_type_collections_create_001: VectorParams.required=[size,distance], size uint64)",
+    "source": "docstring"
+  }
+}

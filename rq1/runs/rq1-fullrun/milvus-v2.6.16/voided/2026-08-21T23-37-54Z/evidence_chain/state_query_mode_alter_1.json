@@ -1,0 +1,54 @@
+{
+  "defect_id": "state_query_mode_alter_1",
+  "endpoint": "collections+alter_properties / indexes+create",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "constraint range_collections_querymode_001 (code 702 alter query_mode with existing vector index) source task.go detectQueryModeChange/alterCollectionTask - verified in clone; both endpoints in registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "B create index: 200 {\"code\":0\",\"data\":{}} / B alter (with index): 200 {\"code\":0\",\"data\":{}} ... DEFECT: ('alter query_mode on indexed collection ACCEPTED (expected 702)', '{\"code\":0\",\"data\":{}}')",
+      "secondary_observations": ["A alter (no index): code 0, A query_mode: large_topk - baseline alter works", "C drop index -> C alter (after drop): code 0 - gate respected after removal", "D alter bogus: 200 {\"code\":65535\",\"message\":\"invalid query_mode value \\\"bogus\\\", valid values: [large_topk]\"} - enum validation present", "D2 FORWARD BYPASS: create fw code 0 -> alter first code 0 -> index AFTER large_topk: 200 code 0 - index creation not blocked on large_topk collection; DEFECT: 'FORWARD BYPASS: 702 gate one-directional'", "E load: {\"code\":700\",\"message\":\"index not found[collection=st_qm_alter_1]\"} - D2 index apparently not visible to load (possible async/state artifact, noted as-is)"],
+      "claim_alignment": "partial",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "all responses HTTP 200; the claimed-missing rejection would also be 200/702 per contract convention"},
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_query_mode_alter_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_range_collections_querymode_001",
+      "assertion_text_quoted": "collection has vector index AND alter_properties sets query_mode => code 702 message \"can not alter query_mode if the collection already has a vector index. Please drop the index first: index duplicates[indexName=...]\"",
+      "api_violates_assertion": true,
+      "note": "observation B: indexed collection, alter query_mode accepted code 0 - squarely inside constraint domain (change from unset->large_topk with existing vector index). Claim ① 'same-value repeat also accepted' (A->A repeat) sits OUTSIDE this assertion's domain (702 only fires on change per detectQueryModeChange changed flag) - that sub-observation is contract-gap territory, not a violation of this assertion.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": ["contract:querymode_001 702 on alter-with-index", "doc:task.go:1515-1530 if isoChanged || queryModeChanged { checkVectorIndexExist ... return merr.WrapErrIndexDuplicate(...) }", "script:state_query_mode_alter_1.py create -> alter(large_topk) -> create index -> alter again", "log:B alter (with index): code 0 DEFECT recorded"],
+      "chain_broken_at": "log",
+      "break_detail": "two candidate micro-explanations recorded honestly: (a) B alter may have set query_mode to the SAME value already set in A (A query_mode: large_topk shown before B), making changed=false so the 702 gate legitimately does not fire per source logic - the log does not show B's requested value, so alignment is partial; (b) checkVectorIndexExist may not have seen the just-created index (async). D2 forward bypass is the cleaner observation: index creation after large_topk is not gated at all (no create-side check exists in source).",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["detectQueryModeChange (task.go:1341)", "checkVectorIndexExist (task.go:1518)", "queryMode create-index side (zero hits - no gate on indexes+create)"],
+      "files_examined": ["internal/proxy/task.go:1338-1366", "internal/proxy/task.go:1500-1530"],
+      "source_excerpt": "task.go:1515-1530: 'If partition key isolation or query_mode changed, check for existing vector index. Changing these properties requires dropping the vector index first.' if isoChanged || queryModeChanged { if vecField, err := checkVectorIndexExist(...); err != nil { return err } else if vecField != \"\" { ... if queryModeChanged { return merr.WrapErrIndexDuplicate(vecField, \"can not alter \"+common.QueryModeKey+\" if the collection already has a vector index...\") } } }. Key facts: (1) gate conditioned on CHANGED (detectQueryModeChange sets changed only when oldQueryMode != newQueryMode, task.go:1356) - same-value repeat alter bypasses 702 by source logic; (2) grep for any query_mode check in index create path returned zero hits - forward direction (index on already-large_topk collection) is ungated, matching D2.",
+      "call_chain_traced": "alter_properties -> alterCollectionTask.PreExecute -> detectQueryModeChange (changed flag) -> conditional checkVectorIndexExist -> 702 only if changed AND index visible; indexes+create -> createIndexTask (no query_mode awareness)",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (enum validation D works on same server)", "typo"],
+      "surviving": "claim ① (same-value repeat accepted) is directly explained by source changed-flag logic - by-design per source; claim ② forward bypass (D2) has no gating code anywhere in source - survives as a genuine one-directional-gate observation; E's 700 index-not-found after D2 suggests index creation state anomaly worth flagging but unadjudicated"
+    },
+    "evidence_weight": "medium (single script; primary 702 claim weakened by possible same-value repeat; forward-bypass sub-claim source-confirmed ungated)"
+  }
+}

@@ -1,0 +1,17 @@
+{
+ "endpoint": "collections+optimizations",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_optimizations_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/get-optimizations",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "GET optimizations on a self-created existing collection returns HTTP 200 with result an object carrying the published-v1.18 OptimizationsResponse shape (result.summary object present with integer counters queued_optimizations/queued_segments/queued_points/idle_segments >= 0, and result.running an array - both OpenAPI-required - while queued/completed/idle_segments are absent, null, or arrays); the same 200+shape holds on a collection under optimizer load (polled samples, every sample re-validated); a never-created unique-prefix name answers HTTP 404 twice (stability, no flapping) - non-200 on any existing legal collection = Type1_IllegalRejection, missing required keys / wrong types / negative counters = Type4_StateLogicViolation, 200-on-never-created = Type4 phantom status report, 5xx with /healthz alive = Type3_RuntimeFailure; transport failure with healthy /healthz or create/upsert setup failure = SCRIPT_ERROR (G8); no observed optimizer activity in the poll window = timing-guarded skip-note, never a defect",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ },
+ "defect_id": "semantic_collections_optimizations_001",
+ "param": "collection_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "behavioral_contract"
+}

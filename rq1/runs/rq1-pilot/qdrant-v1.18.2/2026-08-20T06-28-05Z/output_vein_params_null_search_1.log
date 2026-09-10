@@ -1,0 +1,33 @@
+======================================================================
+STRATEGY: vein_null_check
+TARGET: qdrant v1.18.2
+TEST: params object null validation
+======================================================================
+
+=== Test 1: params = null (INVALID) ===
+Status: 200
+Response: {"result":[{"id":1,"version":1,"score":1.0},{"id":2,"version":2,"score":0.98524475},{"id":3,"version":3,"score":0.9477582}],"status":"ok","time":0.000356248}
+DEFECT_FOUND: params=null returns 200 OK (should be 400)
+
+=== Test 2: params = {} (VALID - Control) ===
+Status: 200
+Response: {"result":[{"id":1,"version":1,"score":1.0},{"id":2,"version":2,"score":0.98524475},{"id":3,"version":3,"score":0.9477582}],"status":"ok","time":0.000390328}
+CONTROL_PASS: Valid empty params accepted and returns results
+
+=== Test 3: params.hnsw_ef = 128 (VALID - Control) ===
+Status: 200
+Response: {"result":[{"id":1,"version":1,"score":1.0},{"id":2,"version":2,"score":0.98524475},{"id":3,"version":3,"score":0.9477582}],"status":"ok","time":0.000302565}
+CONTROL_PASS: Valid params with hnsw_ef accepted
+
+======================================================================
+VERDICT: DEFECT_FOUND
+======================================================================
+DEFECT_FOUND: params object accepts null without validation
+Defect Type: Type1_IllegalSuccess
+Severity: P1_High
+Expected: 400 Bad Request for null params
+Actual: 200 OK, silently treating null as 'no params'
+
+Control Groups: Valid empty params {} and valid params with hnsw_ef work correctly
+
+Cleanup: Collection deleted

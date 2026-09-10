@@ -1,0 +1,77 @@
+{
+  "defect_id": "state_points_batch_order_001",
+  "endpoint": "points+batch",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists anywhere in the tree; contract harvest recorded source_status='degraded' for https://qdrant.tech/documentation/manage-data/points/ and my re-verification WebFetch failed with a network-restriction error ('Unable to verify if domain qdrant.tech is safe to fetch'; api.qdrant.tech likewise) -> domain_blocked, PARTIAL not FAIL. Version: doc_version='current (site latest; no version archive)' — no version in URL (no_version_in_url, PARTIAL; legacy concept doc without version routing). Content: live page unfetchable; contract-time harvest raw_knowledge.json:941 records 'operations executed in order; batchable ops: upsert (set_points), update_vectors, delete_vectors, set_payload, overwrite_payload, delete_payload, clear_payload, delete_points [DOC points]' — the order semantics match the assertion's first clause; NOTE the DOC-worded op name 'delete_points' (also in the api-reference parameter description, raw_knowledge.json:914) does not match the v1.18.0 REST schema key 'delete' (source: src/common/update.rs DeleteOperation{delete: PointsSelector}; 'delete_points' was the batch op key only in the v0.7.0-era OpenAPI, docs/redoc/v0.7.0/openapi.json:1260) — a doc-naming vs schema-key discrepancy, verifiable only against the harvest since the site is blocked. Endpoint precision: points+batch present in the contract endpoint registry (structured_contract.json:1121 api_endpoints, :7164 assertions registry for the sibling behavioral constraint) and the script-registered path /collections/{collection_name}/points/batch matches the source OpenAPI route (openapi/openapi-points.ytt.yaml:400) and the actix route (src/actix/api/update_api.rs:327).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "[P3-delete-points-key batch 2 ops] status=400 raw={\"status\":{\"error\":\"Format error in JSON body: data did not match any variant of untagged enum UpdateOperation at line 1 column 148\"},\"time\":0.0} / [get 502] status=404 raw={\"status\":{\"error\":\"Not found: Point with id 502 does not exists!\"},\"time\":0.000225538}",
+      "secondary_observations": [
+        "[P1-upsert-then-delete batch 2 ops] status=200 raw={\"result\":[{\"operation_id\":1,\"status\":\"completed\"},{\"operation_id\":2,\"status\":\"completed\"}],\"status\":\"ok\",...} -> [P1] OK: [upsert,delete] -> point absent; [P1 count] result count=0 (order face of the assertion PASSES)",
+        "[P2-delete-then-upsert batch 2 ops] status=200 raw={\"result\":[{\"operation_id\":3,\"status\":\"completed\"},{\"operation_id\":4,\"status\":\"completed\"}],\"status\":\"ok\",...} -> [P2] OK: [delete,upsert] -> point present with p2 payload; [P2 count] result count=1 (opposite order produced the opposite final state; per-op result count = op count; assertion PASSES)",
+        "DEFECT: (P3) 'delete_points'-key batch rejected with 400 yet earlier upsert of 502 not durable (GET 404) — rejected batch must not half-apply — Type4_StateLogicViolation",
+        "comparative same-family keys (multi-script, rest face): output_boundary_points_batch_domain_006.log 'N1 id -1 (negative int) -> status=400 / raw: Format error in JSON body: data did not match any variant of untagged enum UpdateOperation' x5 probes -> '400 clean domain rejection'; output_boundary_points_batch_ops_003.log 'F6 unknown variant key -> status=400' same error signature -> '400 clean domain rejection'; both sibling scripts judged the identical 400 whole-request rejection COMPLIANT (domain_006 VERDICT: NO_DEFECT)",
+        "comparative face: points+batch is REST-only — no tonic (gRPC) handler for batch update exists in src/tonic/api/ (face_unavailable for gRPC comparison); historical face: docs/redoc/v0.7.0/openapi.json:1260 shows 'delete_points' WAS the batch op key in the v0.7.0 API"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "The request-side-decidable error (unknown op key 'delete_points') was returned as a proper HTTP 400 with a diagnostic body naming the failing schema ('data did not match any variant of untagged enum UpdateOperation') — no 2xx masking; diagnostics quality is good."
+      },
+      "reproducibility": "single script",
+      "script_error": false,
+      "triggering_scripts": ["state_points_batch_order_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_points_batch_001",
+      "assertion_text_quoted": "batch operations are applied sequentially in the order given; each operation reports its own result",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check: the claim's phenomenon is NOT an illegal-value-silent-accept (it is a rejection with nothing applied), so violates=false means genuinely compliant, not a wrong-constraint citation: (a) the assertion's order clause is behaviorally satisfied — opposite orders produced opposite final states ([upsert,delete]->absent/count 0; [delete,upsert]->present p2/count 1) and each 200 batch returned exactly one result entry per op with string status; (b) the 'rejected batch must not half-apply' demand in the DEFECT line originates from the script docstring's own oracle extension, not from the assertion text — and even that demand was satisfied (400 whole-request rejection, GET 502 404 = nothing applied). Note: candidates.jsonl dispatched constraint_id as empty ''; the constraint was resolved from the script header (constraint_ids: qdrant_state_points_batch_001) and located verbatim in structured_contract.json:6512-6522.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_points_batch_001 (structured_contract.json:6512) assertion 'batch operations are applied sequentially in the order given; each operation reports its own result'; description adds the DOC-worded batchable-op list including 'delete_points'; source_status degraded",
+        "doc: https://qdrant.tech/documentation/manage-data/points/ unreachable now (domain_blocked); contract-time harvest (raw_knowledge.json:941) contains the order semantics ('operations executed in order') and the 'delete_points' op naming — doc prose naming vs v1.18.0 schema key 'delete' discrepancy preserved",
+        "script: debate_logs/state_points_batch_order_001.py — P1/P2 implement the order faces of the assertion and both passed; P3 (lines 293-317) probes the DOC-worded key; P3's 4xx branch is INVERTED: the no-defect path tests `st == 200` while its printed message says 'rejected ... and its upsert not applied — recorded, no defect' (condition contradicts its own message); the observed st=404 (upsert NOT applied = correct atomic rejection) fell into the else branch and produced the DEFECT",
+        "log: output_state_points_batch_order_001.log:14 — the DEFECT verdict demands 'rejected batch must not half-apply' while its own raw observations (line 12: 400 whole-request rejection; line 13: GET 502 404) show exactly the demanded outcome: nothing was applied"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "The log's DEFECT_FOUND (Type4) contradicts its own raw responses: the P3 batch was rejected as a whole (HTTP 400 at deserialization, before any operation executed) and point 502 was never created (GET 404) — i.e. NO half-apply occurred, which is precisely what the DEFECT message demands. The script's P3 oracle branch (state_points_batch_order_001.py:307-317) tests `st == 200` for the 'consistent rejection / upsert not applied / no defect' path whose message text describes the 404 case — the condition is inverted, so compliant atomic-rejection behavior was flagged as a violation. The cited assertion's actual clauses (sequential order + per-op results) were verified compliant by P1/P2 in the same log.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["enum UpdateOperation", "delete_points", "batch_update|do_batch_update_points", "pub struct (UpsertOperation|DeleteOperation|SetPayloadOperation)"],
+      "files_examined": [
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/common/update.rs (lines 91-124 UpdateOperations/UpdateOperation enum; 256-265 variant structs; 752-812 do_batch_update_points)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/actix/api/update_api.rs (lines 327-372 update_batch handler and route registration)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/openapi/openapi-points.ytt.yaml (lines 400-439 batch path definition)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/docs/redoc/v0.7.0/openapi.json (line 1260 historical 'delete_points' batch op key)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/src/tonic/api/ (grep: no batch-update face — REST-only endpoint)",
+        "<DESKTOP>/vdb_src/qdrant/v1.18.0/lib/collection/src/operations/point_ops.rs (PointsSelector untagged enum context)"
+      ],
+      "source_excerpt": "src/common/update.rs:91-109 — #[derive(Deserialize, Serialize, JsonSchema, Validate)] pub struct UpdateOperations { #[validate(nested)] pub operations: Vec<UpdateOperation>, } / #[derive(Deserialize, Serialize, JsonSchema)] #[serde(rename_all = \"snake_case\")] #[serde(untagged)] pub enum UpdateOperation { Upsert(UpsertOperation), Delete(DeleteOperation), SetPayload(SetPayloadOperation), OverwritePayload(OverwritePayloadOperation), DeletePayload(DeletePayloadOperation), ClearPayload(ClearPayloadOperation), UpdateVectors(UpdateVectorsOperation), DeleteVectors(DeleteVectorsOperation), } — there is NO 'delete_points' variant; variant structs define the JSON keys, e.g. :262-265 pub struct DeleteOperation { #[validate(nested)] delete: PointsSelector, } (JSON key 'delete'). src/actix/api/update_api.rs:327-331 — #[post(\"/collections/{collection_name}/points/batch\")] async fn update_batch(dispatcher: web::Data<Dispatcher>, collection: Path<CollectionPath>, operations: Json<UpdateOperations>, ...) — the whole request body is deserialized into Json<UpdateOperations> BEFORE the handler body runs; one failing element makes serde reject the entire request -> actix 400 'data did not match any variant of untagged enum UpdateOperation' with NO operation executed. src/common/update.rs:762-783 (do_batch_update_points) — 'let mut toc = None; for operation in &operations { toc = toc_provider.check_strict_mode(...).await?... } ... let mut results = Vec::with_capacity(operations.len()); ... for operation in operations { let current_update_result = match operation { UpdateOperation::Upsert(operation) => { do_upsert_points(...).await? ... } UpdateOperation::Delete(operation) => { do_delete_points(...).await? } ... } }' — accepted batches are applied strictly sequentially in the given order and one UpdateResult is collected per operation.",
+      "call_chain_traced": "POST /collections/{name}/points/batch (actix route, update_api.rs:327) -> Json<UpdateOperations> whole-request untagged-enum deserialization (any non-matching op key, including the DOC-worded 'delete_points', rejects the ENTIRE request atomically -> 400 before any state change) -> update_batch handler -> do_batch_update_points (update.rs:752): strict-mode precheck of ALL operations first, then sequential for-loop application, one Vec<UpdateResult> entry per operation",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "note": "validation_present: the source validates the entire operations array at deserialization — an unknown op key rejects the whole request with nothing applied (the observed 400 + GET 502 404). The claim's supposed 'half-apply' exists neither in source nor in behavior. The assertion's sequential-order and per-op-result clauses are implemented (sequential for-loop, per-op UpdateResult) and behaviorally confirmed by P1/P2. No explicit by-design marker is needed: the cited assertion is satisfied, not violated.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env (service alive: every request returned a real HTTP response, no transport failures or liveness aborts in the log)", "concurrency (single sequential script, no parallel writers)", "cache delay (wait=true on all batches; GET readbacks immediately consistent with counts)"],
+      "surviving": "script-side oracle inversion: the P3 branch of state_points_batch_order_001.py (lines 307-317) tests st==200 for the no-defect path whose message text describes the 404 case, so the DEFECT_FOUND verdict flags compliant atomic-rejection behavior — the verdict is an artifact of the test oracle, not of target behavior"
+    }
+  }
+}

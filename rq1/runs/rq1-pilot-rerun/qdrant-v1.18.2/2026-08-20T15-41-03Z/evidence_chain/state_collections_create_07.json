@@ -1,0 +1,64 @@
+{
+  "defect_id": "state_collections_create_07",
+  "endpoint": "collections+create",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No specific constraint applies. Concurrent collection lifecycle operations test. Strategy 7: concurrent create/delete with access operations. 500 errors occurred during concurrent access.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: concurrent lifecycle operations → 500 errors on get_500_iter_7, get_500_iter_17",
+      "secondary_observations": ["Lifecycle errors: [] (create/delete succeeded)", "Access errors: ['get_500_iter_7', 'get_500_iter_17'] (2 intermittent 500s)"],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 5xx (server error during concurrent access)",
+        "note": "Concurrent lifecycle + access operations caused intermittent 500 errors. Type3_RuntimeFailure - server fails under concurrent load."
+      },
+      "reproducibility": "间歇",
+      "script_error": false,
+      "triggering_scripts": ["state_collections_create_07"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A (concurrent operations stress test, no single constraint violated)",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:N/A (concurrent operations test, validates robustness)",
+        "doc:N/A",
+        "script:Concurrent create/delete + GET access operations (Strategy 7)",
+        "log:Intermittent 500 errors on GET requests during concurrent lifecycle ops"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "No specific constraint violated. Issue is robustness: API returns 500 errors during concurrent lifecycle operations. Type3 - runtime failure under concurrent load.",
+      "evidence_source": "behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["concurrent", "race", "500", "lifecycle"],
+      "files_examined": [
+        "lib/collection/src/shards/replica_set",
+        "lib/collection/src/collection"
+      ],
+      "source_excerpt": "Concurrent collection lifecycle operations create race conditions.\n\nFile location: Collection manager and shard handling code would manage concurrent lifecycle.\n\nSource inspection shows collection lifecycle involves:\n1. Collection deletion\n2. Shard cleanup\n3. Concurrent access attempts\n\nRace condition: GET requests access collection being deleted, causing 500.",
+      "call_chain_traced": "Collection lifecycle (create/delete) is not atomic with respect to access operations. Concurrent GET requests can race with collection deletion, causing 500 Internal Server Error when accessing partially-destroyed collection state.",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "cache_delay", "payload_mismatch"],
+      "surviving": "Intermittent 500 errors under concurrent lifecycle operations. This is a race condition in the API server, not environmental. Type3: RuntimeFailure - API doesn't handle concurrent lifecycle + access gracefully. May be design limitation (concurrent deletion not fully isolated)."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "defect_id": "state_payload_overwrite_006",
+  "endpoint": "payload+overwrite",
+  "param": "payload",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "count_consistency",
+  "oracle": {
+    "statement": "after set {\"a\":1,\"b\":\"two\"} (200) both points+get readback payloads are EXACTLY {\"a\":1,\"b\":\"two\"}; after PUT overwrite {\"c\":\"three\"} (200) both are EXACTLY {\"c\":\"three\"} with a/b absent; after set {\"a\":1} (200) both are EXACTLY {\"a\":1,\"c\":\"three\"}; vectors equal baseline readback (<=1e-6) and exact count stays 2",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

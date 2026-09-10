@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_set_001",
+ "endpoint": "payload+set",
+ "param": "payload",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "both set-payload calls with well-formed geo {lon,lat} doubles / RFC 3339 datetime / uuid string / same-type array literals (wait=true query) return 200; scroll readback shows p1/p2 payloads deep-equal the provided literal dicts (key loss, type drift, or number distortion = Type4); each of the four native filter channels (geo_radius, datetime range gte, uuid match, array element match) returns exactly its predicted id set — wrong set = Type4_StateLogicViolation; non-200 on the well-formed literal set = Type1_IllegalSuccess; 5xx/transport = Type3_RuntimeFailure with /healthz re-check (constraint qdrant_type_payload_set_001)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

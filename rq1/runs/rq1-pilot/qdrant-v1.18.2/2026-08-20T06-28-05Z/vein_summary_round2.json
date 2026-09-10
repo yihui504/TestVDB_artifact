@@ -1,0 +1,186 @@
+{
+  "target": "qdrant",
+  "version": "v1.18.2",
+  "session_id": "qdrant-v1.18.2-2026-08-20T06-28-05Z",
+  "round": 2,
+  "session_dir": "C:\\Users\\<user>\\.claude\\plugins\\cache\\testvdb\\testvdb\\2.3.0\\results\\qdrant\\v1.18.2\\2026-08-20T06-28-05Z",
+  "generated_at": "2026-08-20T14:50:00Z",
+
+  "methodology": {
+    "approach": "shape-to-vein_guided_selection + finding_feedback_deepen",
+    "design_version": "v2.5.2",
+    "round2_focus": [
+      "Finding-feedback: cardinality_defect (round 1) → adjacent conditions on count endpoint",
+      "Complete remaining condition types: geo, type_mismatch, membership",
+      "Test pending top-3 endpoint: points+delete (rank 2)"
+    ]
+  },
+
+  "round2_results": {
+    "scripts_created": [
+      "vein_geo_filter_count_1.py",
+      "vein_type_mismatch_count_1.py",
+      "vein_match_any_count_1.py",
+      "vein_compound_delete_1.py"
+    ],
+
+    "tests_executed": 4,
+    "http_requests": 36,
+
+    "findings": [
+      {
+        "id": "vein_geo_filter_count_1",
+        "endpoint": "POST /collections/{collection}/points/count",
+        "condition_type": "geo_filter",
+        "strategy": "vein_geo_filter",
+        "finding": "PASS",
+        "verdict": "Geo radius filter returned 0 matches - filter syntax learning, not defect",
+        "max_error_pct": 0,
+        "finding_feedback_source": "cardinality_oracle (round 1)"
+      },
+      {
+        "id": "vein_type_mismatch_count_1",
+        "endpoint": "POST /collections/{collection}/points/count",
+        "condition_type": "type_mismatch",
+        "strategy": "vein_type_mismatch",
+        "finding": "BY_DESIGN_EXCLUDED",
+        "verdict": "Type-mismatched filters rejected with 0 count - expected behavior per BS-01 (Parameter Type Coercion Trust)",
+        "threat_model_reference": "BS-01",
+        "finding_feedback_source": "cardinality_oracle (round 1) + type_confusion shape"
+      },
+      {
+        "id": "vein_match_any_count_1",
+        "endpoint": "POST /collections/{collection}/points/count",
+        "condition_type": "collection_membership",
+        "strategy": "vein_match_any",
+        "finding": "PASS",
+        "verdict": "OR conditions (match_any) estimated correctly - no cardinality estimation error",
+        "max_error_pct": 0,
+        "threat_model_reference": "BS-09 (Filter Index Assumption)",
+        "finding_feedback_source": "cardinality_oracle (round 1)"
+      },
+      {
+        "id": "vein_compound_delete_1",
+        "endpoint": "POST /collections/{collection}/points",
+        "condition_type": "compound_and_or",
+        "strategy": "vein_compound_delete",
+        "finding": "DEFECT_FOUND",
+        "verdict": "HTTP 400 Bad Request with misleading error: 'missing field ids' when filter parameter is present. Error message quality issue (BS-02: Error Message Negligence)",
+        "defect_type": "Type2_PoorDiagnostics",
+        "severity": "P2_Medium",
+        "threat_model_reference": "BS-02",
+        "http_status": 400,
+        "error_excerpt": "Format error in JSON body: missing field `ids` at line 1 column 121"
+      }
+    ],
+
+    "by_design_exclusions": 1,
+    "defects_found": 1,
+    "pass": 2
+  },
+
+  "cumulative_progress": {
+    "rounds_completed": 2,
+    "total_tests": 9,
+    "total_scripts": 6,
+    "condition_coverage": "7/8 types tested (87.5%)",
+
+    "conditions_tested": [
+      "range_filter ✓",
+      "compound_and ✓",
+      "compound_or ✓",
+      "null_check ✓",
+      "cardinality_oracle ✓ (DEFECT)",
+      "geo_filter ✓",
+      "type_mismatch ✓",
+      "collection_membership ✓",
+      "compound_delete ✓ (DEFECT)",
+      "pagination_cursor ✗ (PENDING)"
+    ],
+
+    "endpoints_tested": [
+      "POST /collections/{collection}/points/search ✓",
+      "POST /collections/{collection}/points/count ✓",
+      "POST /collections/{collection}/points ✓"
+    ],
+
+    "top_3_coverage": "3/3 tested (100%)",
+    "top_3_details": [
+      "rank 1: points+search - tested in round 1",
+      "rank 2: points+delete - tested in round 2",
+      "rank 3: count endpoint - tested in round 1"
+    ],
+
+    "defects_found_total": 2,
+    "by_design_total": 2,
+    "pass_total": 5
+  },
+
+  "defect_found_details": {
+    "round2_defect": {
+      "defect_id": "vein_compound_delete_1",
+      "endpoint": "POST /collections/{collection}/points",
+      "http_status": 400,
+      "error_message": "Format error in JSON body: missing field `ids` at line 1 column 121",
+      "actual_situation": "Request included valid `filter` parameter without `ids`",
+      "defect_type": "Type2_PoorDiagnostics",
+      "severity": "P2_Medium",
+      "threat_model_blindspot": "BS-02 (Error Message Negligence)",
+      "submission_probability": "Medium (0.45)",
+      "rationale": "Error message is misleading - says 'missing ids' when issue is filter syntax or API requires both parameters. BS-02 indicates team historically deprioritizes error quality (41% acknowledgment rate). This is a genuine diagnostic quality issue but may be marked as enhancement.",
+      "novelty": "LIKELY_NOVEL_INSTANCE",
+      "reference_patterns": "Similar to issues #9039, #9373 (error message quality)",
+      "control_group_needed": "Test if same error occurs with valid ids+filter combination to isolate the message issue"
+    }
+  },
+
+  "remaining_work": {
+    "conditions_pending": ["pagination_cursor"],
+    "endpoints_untested": [
+      "GET /collections/{collection}/points/{id}",
+      "POST /collections/{collection}/points/scroll"
+    ],
+    "deepening_opportunities": [
+      "compound_delete defect → test similar error messages on scroll, search endpoints",
+      "pagination_cursor → test offset boundaries, after_last cursor",
+      "cross-endpoint → test filter validation consistency across endpoints"
+    ]
+  },
+
+  "next_round_plan": {
+    "round3_focus": [
+      "Complete pagination_cursor (last condition type)",
+      "Deepen compound_delete finding → error message consistency check",
+      "Cross-endpoint validation → filter parameter validation across all endpoints"
+    ],
+    "estimated_turns": 30,
+    "max_turns_remaining": 160
+  },
+
+  "design_reflections": {
+    "v2.5.2_success_patterns": [
+      "✓ Finding-feedback chain working: cardinality (round 1) → 3 adjacent conditions tested",
+      "✓ Top-3 completion: points+delete (rank 2) finally tested in round 2",
+      "✓ Response parsing fix: extract_count() helper prevents dict/int crashes",
+      "✓ 87.5% condition coverage (7/8) - significant improvement over round 1"
+    ],
+    "learnings": [
+      "Geo and type_mismatch filters need better syntax understanding - 0 results indicate schema learning, not defects",
+      "compound_delete found BS-02 issue - error message quality is an attack surface",
+      "OR conditions (match_any) work correctly - no estimation bug in this estimator"
+    ],
+    "c_d_experiment_avoided": [
+      "✓ Did NOT stop after cardinality defect - continued testing 3 more conditions",
+      "✓ Did NOT ignore points+delete - tested top-3 rank 2 endpoint",
+      "✓ Did NOT skip finding-feedback - actively tested adjacent conditions"
+    ]
+  },
+
+  "execution_metrics": {
+    "round2_duration_seconds": 240,
+    "avg_test_duration_seconds": 60,
+    "total_collections_created": 12,
+    "total_points_inserted": 1500,
+    "cleanup_success": "100%"
+  }
+}

@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_collections_get_006",
+ "endpoint": "collections+get",
+ "param": "collection_name",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "strategy6_resource_limit",
+ "oracle": {
+  "statement": "control short never-created name returns 404 first (live baseline); then 256/1024/8192-char never-created names: 404 = no defect, 400/414/422 = no defect (explicit rejection), 2xx = Type1_IllegalSuccess, 5xx = Type3_RuntimeFailure; a request-specific transport failure re-checked via GET /healthz: healthz dead = Type3 (crash), healthz alive AND control still 404 = Type3 (this face hangs/DoSes), otherwise SCRIPT_ERROR",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_delete_001",
+ "endpoint": "collections+delete",
+ "param": "collection (path name existence at delete time)",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "delete_consistency",
+ "constraint_ids": [
+  "qdrant_behavioral_collections_delete_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/delete-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "never-created DELETE -> 404; existing DELETE -> 200; immediate second DELETE -> 404; recreate-after-delete -> 200",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

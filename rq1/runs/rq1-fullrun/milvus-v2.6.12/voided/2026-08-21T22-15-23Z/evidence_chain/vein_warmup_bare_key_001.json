@@ -1,0 +1,66 @@
+{
+  "defect_id": "vein_warmup_bare_key_001",
+  "endpoint": "collections+create",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "detail": "同族约束 create_007/create_008 均以本地 clone 验证（common.go 可达，ValidateWarmupPolicy 存在）；state alter_properties_001 与 A 行为一致。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "C create warmup.vectorIndex=ASYNC: {\"code\":0,\"data\":{}}（主观测之一：create 接受非法 policy ASYNC；B create bare warmup: {\"code\":0,\"data\":{}} 为主观测之二）",
+      "secondary_observations": [
+        "B create bare warmup: {\"code\":0,\"data\":{}}（裸 key create 接受）",
+        "A alter bare warmup: {\"code\":104,\"message\":\"can not alter warmup properties if collection loaded: collection already loaded[collection=vn_warm1]\"}（alter 侧存在拦截链）",
+        "D field warmup=BOGUS: {\"code\":1100,\"message\":\"invalid warmup policy for field vec: invalid warmup policy: BOGUS, must be 'disable' or 'sync': invalid parameter\"}（对照组：field 级 create 有校验）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "create 接受非法/裸 key 返回 HTTP 200 + code:0；field 级同值返回 200+1100"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_scripts/vein_warmup_bare_key_001.py", "debate_logs/state_alter_props_loaded_003.py", "debate_logs/boundary_s04_warmup_family.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_collections_create_007",
+      "assertion_text_quoted": "warmup.{scalarField|scalarIndex|vectorField|vectorIndex} value NOT IN {disable, sync} => code==1100",
+      "api_violates_assertion": true,
+      "note": "ASYNC 在 key warmup.vectorIndex 约束域内且被 create 接受（code:0 非 1100）——violates=true（对照：field 级 BOGUS 被 1100 拒，证明观测手段有效）。bare key 部分由 create_008 显式记载为 pass-through，violates 视角不适用于该半。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:create_007 warmup.vectorIndex 非法值 => 1100",
+        "doc:common.go:357 ValidateWarmupPolicy 值域 {disable,sync}",
+        "script:create properties warmup=裸 / warmup.vectorIndex=ASYNC；field 级 warmup=BOGUS 对照",
+        "log:B/C code:0；D 对照 1100"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "C 与 create_007 断言矛盾（code:0 vs 预期 1100）；B 与 create_008 一致（契约已知 pass-through）",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["ValidateWarmupPolicy", "WarmupKey", "IsFieldWarmupKey", "hasWarmupProp"],
+      "files_examined": ["pkg/common/common.go", "internal/proxy/task.go", "internal/proxy/util.go"],
+      "source_excerpt": "internal/proxy/task.go:461-465:\n\t\t\tif common.IsFieldWarmupKey(prop.GetKey()) {\n\t\t\t\treturn merr.WrapErrParameterInvalidMsg(\"warmup key '%s' is only allowed at field level, use warmup.scalarField/warmup.scalarIndex/warmup.vectorField/warmup.vectorIndex at collection level\", prop.GetKey())\n\t\t\t}\n\t\t\tif common.IsCollectionWarmupKey(prop.GetKey()) {\n\t\t\t\tif err := common.ValidateWarmupPolicy(prop.GetValue()); err != nil { ... }\n\npkg/common/common.go:268: WarmupKey = \"warmup\"；common.go:357-362: ValidateWarmupPolicy 值域 {WarmupDisable,WarmupSync}",
+      "call_chain_traced": "field 级 warmup BOGUS 在 create 被 1100 拒（D 行为）对应 proxy/util.go:635/694/709（fillFieldInfo 提取 field TypeParams warmup 时校验）。collection 级 warmup.vectorIndex=ASYNC 在 create 放行：ValidateWarmupPolicy 的 7 个调用点均不在 create 的 collection-props 路径上（详见 state_alter_props_loaded_003 链的调用点清单）。bare 'warmup' key 在 alter 请求先被 104 loaded 拦截（A），create 则完全无拦截（B）。",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "request_typo"],
+      "surviving": "create/alter 与 collection级/field级 双重校验不对称；bare key 静默丢弃部分契约已记载（create_008）"
+    }
+  }
+}

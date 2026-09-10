@@ -1,0 +1,24 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+
+F1 exact="true" (string for boolean) -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: string \"true\", expected a boolean at line 1 column 17"},"time":0.0}
+F1: rejected with 400 (clean)
+
+F2 exact=1 (integer for boolean) -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: integer `1`, expected a boolean at line 1 column 12"},"time":0.0}
+F2: rejected with 400 (clean)
+
+F3 exact=null (explicit null vs omitted default) -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: null, expected a boolean at line 1 column 15"},"time":0.0}
+F3: NOTE — 400 recorded for the judge
+
+F4 exact=false (documented approximate face) -> status=200
+raw: {"result":{"count":12},"status":"ok","time":0.000415223}
+F4: approximate count == 12 (within [0, 12])
+
+F5 exact=[] (array for boolean) -> status=400
+raw: {"status":{"error":"Format error in JSON body: invalid type: sequence, expected a boolean at line 1 column 13"},"time":0.0}
+F5: rejected with 400 (clean)
+NOTE (judge call): F3: status 400 (null exact rejected while omitted default is accepted — asymmetric, defensible strictness, judge call)
+VERDICT: NO_DEFECT

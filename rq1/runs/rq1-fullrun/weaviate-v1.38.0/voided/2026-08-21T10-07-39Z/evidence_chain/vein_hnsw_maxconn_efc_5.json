@@ -1,0 +1,69 @@
+{
+  "defect_id": "vein_hnsw_maxconn_efc_5",
+  "endpoint": "POST /v1/schema (vectorIndexConfig.maxConnections/efConstruction)",
+  "defect_type": "Type1",
+  "evidence_weight": "medium",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "domain_blocked",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "structured_contract.json 无 maxConnections/efConstruction 交叉约束；raw_knowledge.md L770-779 仅字段提取。'efConstruction >= maxConnections' 的规范性来源是 hnswlib 算法惯例（脚本头自述 'hnswlib documents efConstruction should be >= maxConnections'），docs.weaviate.io 网络受限无法核对官方是否明文承诺——缺文档锚点。注意：weaviate 源码常量 MinmumMaxConnections=4（非脚本头说的 M>=3）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "FINDING: maxConnections=1000 > efConstruction=10 accepted (200)",
+      "secondary_observations": [
+        "FINDING: control: maxConnections=1 rejected 422 ({\"allowed\":null,\"error\":[{\"message\":\"class.VectorIndexConfig can not parse: parse vector index confi) => validators exist, cross-field ratio not checked"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "倒挂对 200 接受；对照 maxConnections=1 正确 422（单字段下界校验存在）——同代码块内校验存在性与交叉缺失形成内部对照。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_hnsw_maxconn_efc_5.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "none_matching",
+      "assertion_text_quoted": "无契约断言。源码明示的不变式（entities/vectorindex/hnsw/config.go L42-44）: MinmumMaxConnections = 4, MaximumMaxConnections = 2047, MinmumEFConstruction = 4——均为单字段界，无交叉。",
+      "api_violates_assertion": true,
+      "note": "violates=true 针对 inferred 断言（hnswlib 惯例 efConstruction>=maxConnections 保图一致）；契约/文档层无明文承诺是该链主要弱点，control 422 证明校验框架在同处运行而独缺交叉检查是最强信号。"
+      ,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 无对应 constraint——链环缺失",
+        "doc: 无官方文档锚点（domain_blocked；raw_knowledge 仅字段提取）——链环缺失",
+        "script: vein_hnsw_maxconn_efc_5.py L34-36 POST {maxConnections:1000, efConstruction:10}",
+        "log: FINDING: maxConnections=1000 > efConstruction=10 accepted (200)"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "doc 与 contract 双缺失；行为环含强内部对照（同块单字段校验 422 vs 交叉接受 200）。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["MinmumMaxConnections", "efConstruction must be", "validate() error"],
+      "files_examined": [
+        "entities/vectorindex/hnsw/config.go"
+      ],
+      "source_excerpt": "entities/vectorindex/hnsw/config.go L41-45:\n\t// Fail validation if those criteria are not met\n\tMinmumMaxConnections  = 4\n\tMaximumMaxConnections = 2047\n\tMinmumEFConstruction  = 4\nL262-281 validate():\n\tif u.MaxConnections < MinmumMaxConnections { errMsgs = append(errMsgs, \"maxConnections must be a positive integer with a minimum of 4\") }\n\tif u.MaxConnections > MaximumMaxConnections { ... }\n\tif u.EFConstruction < MinmumEFConstruction { ... }\n\t// 无 u.MaxConnections vs u.EFConstruction 交叉比较——注释 'Fail validation if those criteria are not met' 列举即封闭集合。",
+      "call_chain_traced": "POST /schema → ParseAndValidateConfig → validate() 单字段界检查（4<=max<=2047, efc>=4）→ maxConnections=1000/efConstruction=10 均在单字段界内 → 通过 → 持久化。control maxConnections=1 触发 L262 下界 → 422。",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "readback_artifact"],
+      "surviving": "'by-design 宽容'抗辩：单字段界是官方显式选择，交叉比例未列入封闭校验集合可能是刻意省略——但 hnswlib 图质量语义受损风险存活"
+    }
+  }
+}

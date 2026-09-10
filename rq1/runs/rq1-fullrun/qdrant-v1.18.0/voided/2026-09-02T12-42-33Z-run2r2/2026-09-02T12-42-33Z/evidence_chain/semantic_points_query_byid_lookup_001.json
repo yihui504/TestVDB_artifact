@@ -1,0 +1,91 @@
+{
+  "defect_id": "semantic_points_query_byid_lookup_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability PASS: no doc_preflight.json sidecar exists and WebFetch is domain-blocked for qdrant.tech, but the page was fetched in full via web reader (contract's own source_status said 'degraded'; live re-verification superseded it). Version PARTIAL: concept doc is current-only ('current (site latest; no version archive)', Hugo-generated, no version routing) — normal for concept docs. Content PARTIAL: the page's 'Query by ID' section verbatim supports the assertion's core clause ('Whenever you need to use a vector as an input, you can always use a point ID instead.' / 'The above example will fetch the default vector from the point with this id, and use it as the query vector.' / lookup_from prose 'Qdrant will fetch the `image-512` vector from the specified point id in the collection another_collection'), but (a) the assertion's second clause ('does not match the using vector characteristics the request errors') does not appear anywhere on the cited page (the word 'characteristics' is absent; likely from the recommendations page, which could not be fetched — reader service network error), and (b) the page contains NO promise that the by-id query point itself must appear in the results — it is silent on self-inclusion/exclusion, so the script's oracle is not documentation-backed. Endpoint precision PASS: points+query registered in raw_knowledge api_endpoints as POST /collections/{collection_name}/points/query under versioned v-1-18-x api-reference.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "L1 by-id 301 -> status=200 | raw: {\"result\":{\"points\":[{\"id\":302,\"version\":1,\"score\":1.0},{\"id\":303,\"version\":1,\"score\":2.0},{\"id\":304,\"version\":1,\"score\":3.0},{\"id\":305,\"version\":1,\"score\":4.0}]},\"status\":\"ok\",\"time\":0.000449192} — by-id lookup (query=301, exact=true, limit=5) omits the query point 301 itself",
+      "secondary_observations": [
+        "L2 by-vector (rest face, same endpoint, query={\"nearest\":[1.0,0.0,0.0,0.0]}, exact=true, limit=5) -> status=200 | raw: {\"result\":{\"points\":[{\"id\":301,\"version\":1,\"score\":0.0},{\"id\":302,\"version\":1,\"score\":1.0},{\"id\":303,\"version\":1,\"score\":2.0},{\"id\":304,\"version\":1,\"score\":3.0},{\"id\":305,\"version\":1,\"score\":4.0}]},\"status\":\"ok\",\"time\":0.000280162} — self-match 301 PRESENT with score 0.0; in-log comparative observation: the only by-id vs by-vector difference is membership of the query point (shared ids 302-305 have identical scores 1,2,3,4 in both legs, confirming 301's stored vector was in fact used)",
+        "output_state_points_query_byid_after_delete_003.log (rest face): [pos-id2 by-id query 2] status=200 raw={\"result\":{\"points\":[{\"id\":3,\"version\":1,\"score\":0.99980104},{\"id\":1,\"version\":1,\"score\":0.9998005}]}} — by-id of 2 excludes point 2 itself; same log: [neg1-deleted-id1 by-id query 1] status=404 {\"error\":\"Not found: No point with id 1 found\"} and [neg2-never-id by-id query 777777] status=404 — by-id of missing ids errors, corroborating the stored-vector fetch machinery",
+        "output_state_points_query_byid_readback_001.log (rest face): [B-baseline by-id query 100] status=200 raw={\"result\":{\"points\":[{\"id\":201,...0.9986294},{\"id\":202,...0.99452174},{\"id\":302,...0.10453018},{\"id\":301,...0.05233997}]}} — query point 100 absent from its own by-id result set",
+        "face_unavailable: recommend-face comparison (POST /points/recommend, the same id-exclusion family) was not re-probed post-hoc — the run's service is not addressable from the builder; the only recommend-face log (boundary_points_query_variant_matrix_001 M2 'recommend (positive by-id) -> 200, 3 points') carries no self-inclusion oracle, so the recommend-face disposition for self-inclusion is unobserved"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "both legs returned 200 success envelopes; the divergence is result-set membership (query point excluded on the by-id form), not an error-disposition question, so the 2xx-vs-4xx client-error criterion does not apply"
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_points_query_byid_lookup_001",
+        "state_points_query_byid_readback_001",
+        "state_points_query_byid_after_delete_003"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_state_points_query_001",
+      "assertion_text_quoted": "by-id query uses the referenced point's stored vector; if it does not match the using vector characteristics the request errors",
+      "api_violates_assertion": false,
+      "note": "Violates-declaration self-check: the observed phenomenon (by-id result excludes the query point) lies OUTSIDE the quoted assertion's constraint domain — the assertion constrains only (a) stored-vector usage and (b) error-on-characteristics-mismatch. Clause (a) is actually CONFIRMED by the primary observation: L1's scores for 302-305 (1.0/2.0/3.0/4.0) exactly equal the graded Euclid distances from 301's stored vector and are identical to the by-vector control L2, proving the stored vector was fetched and used. Clause (b) was never exercised (the script exited at the L1 verdict; L4 mismatch leg unreached). No constraint in this contract governs by-id result membership or self-match scores — the wrong phenomenon was adjudicated against this constraint. Note also the script's secondary oracle 'first = 1.0 Euclid self-match' is contradicted by its own L2 control (self-match score observed 0.0), i.e. the score expectation is wrong against actual v1.18.0 Euclid scoring as well.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_state_points_query_001 located in structured_contract.json (state_constraint, level system, evidence_tier explicit, source_url https://qdrant.tech/documentation/search/search/, source_status degraded) — link present but mechanically under-specified in dispatch: candidates.jsonl constraint_id field was EMPTY, id recovered from the script header ('constraint_ids: qdrant_state_points_query_001') and the attack string",
+        "doc: search/search page 'Query by ID' section confirms the stored-vector clause verbatim; the characteristics-mismatch clause is absent from the page; the page makes no promise about the query point appearing in results — the script's oracle (ids == [301,302,303,304,305] incl. self-match score 1.0) is traceable to neither the contract nor the doc",
+        "script: semantic_points_query_byid_lookup_001.py L1 sends POST /collections/{A}/points/query {\"query\": 301, \"params\": {\"exact\": true}, \"limit\": 5} on a 4-dim Euclid collection seeded 301..305 and demands ids1 == [301,302,303,304,305]; L2 sends the equivalent by-vector form {\"query\": {\"nearest\": [1.0,0.0,0.0,0.0]}} — request shapes are documented and legal",
+        "log: L1 200 with [302,303,304,305] vs L2 200 with [301,302,303,304,305]; VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) fires on ids1 != EXPECTED_ORDER at the first oracle check"
+      ],
+      "chain_broken_at": "script",
+      "break_detail": "The break is at the script link: the oracle imports a metamorphic expectation — 'by-id result must equal by-vector result INCLUDING the query point, self-match score 1.0' — that exists in neither the cited contract assertion nor the cited documentation, and is contradicted by deliberate source behavior: the maintainer code intentionally excludes referenced point ids from the response (collection_query.rs:679 doc comment and :704-705 inline comment; exclude_referenced_ids at :526-535 adds a merged must_not has_id filter for every referenced id, including the bare-id nearest form at :665-667). The doc link is also weakly off (characteristics clause not on the cited page) and the dispatch link lost the constraint_id, but the load-bearing break is the ungrounded oracle.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "excluded (lib/collection/src)",
+        "excluded_ids (lib)",
+        "struct NearestQuery (lib)",
+        "lookup_from (lib, files_with_matches)",
+        "characteristics (whole clone)",
+        "enum VectorInput (lib/api/src/rest/schema.rs)",
+        "must_not|has_id|exclude|nearest (universal_query/collection_query.rs)",
+        "by_id|by-id (lib/collection/tests/integration)"
+      ],
+      "files_examined": [
+        "lib/collection/src/operations/universal_query/collection_query.rs",
+        "lib/collection/src/common/fetch_vectors.rs",
+        "lib/api/src/rest/schema.rs",
+        "lib/collection/tests/integration/lookup_test.rs"
+      ],
+      "source_excerpt": "lib/collection/src/operations/universal_query/collection_query.rs:525-535:\n/// Exclude the referenced ids by editing the filter.\nfn exclude_referenced_ids(ids: Vec<ExtendedPointId>, filter: Option<Filter>) -> Option<Filter> {\n    let ids: AHashSet<_> = ids.into_iter().collect();\n\n    if ids.is_empty() {\n        return filter;\n    }\n\n    let id_filter = Filter::new_must_not(Condition::HasId(HasIdCondition::from(ids)));\n    Some(id_filter.merge_owned(filter.unwrap_or_default()))\n}\n\nlib/collection/src/operations/universal_query/collection_query.rs:660-670 (referenced-id collection, bare-id nearest included):\n    let mut lookup_other_collection = false;\n    if let Some(lookup_collection) = self.get_lookup_collection() {\n        lookup_other_collection = lookup_collection != collection\n    };\n\n    if !lookup_other_collection && let Some(Query::Vector(vector_query)) = &self.query {\n        if let VectorQuery::Nearest(VectorInputInternal::Id(id)) = vector_query {\n            refs.push(*id);\n        }\n        refs.extend(vector_query.get_referenced_ids())\n    };\n\nlib/collection/src/operations/universal_query/collection_query.rs:679-708:\n/// Substitutes all the point ids in the request with the actual vectors, as well as editing filters so that ids are not included in the response.\npub fn try_into_shard_request(\n    self,\n    collection_name: &str,\n    ids_to_vectors: &ReferencedVectors,\n) -> CollectionResult<ShardQueryRequest> {\n    ...\n    // Edit filter to exclude all referenced point ids (root and nested) on the searched collection\n    // We do not want to exclude vector ids from different collection via lookup_from.\n    let referenced_point_ids = self.get_referenced_point_ids_on_collection(collection_name);\n\n    let filter = exclude_referenced_ids(referenced_point_ids, self.filter);\n\nlib/api/src/rest/schema.rs:539-547 (the request surface the script used):\npub enum VectorInput {\n    DenseVector(DenseVector),\n    SparseVector(SparseVector),\n    MultiDenseVector(MultiDenseVector),\n    Id(segment::types::PointIdType),\n    Document(Document),\n    Image(Image),\n    Object(InferenceObject),\n}",
+      "call_chain_traced": "REST body {\"query\": 301} deserializes to NearestQuery{nearest: VectorInput::Id(301)} (schema.rs:539-547, 656-667) -> CollectionQueryRequest::try_into_shard_request (collection_query.rs:680) first resolves ids to vectors via ReferencedVectors/resolve_reference (fetch_vectors.rs:160-176: VectorInputInternal::Id(vid) -> rec.get_vector_by_name), then get_referenced_point_ids_on_collection collects the bare-id nearest id when the lookup collection equals the searched collection (collection_query.rs:660-676) and exclude_referenced_ids merges a must_not has_id filter (collection_query.rs:526-535, applied at 704-708) -> shard search runs with that filter, so point 301 can never appear in its own by-id result, while the by-vector form (VectorInputInternal::Vector) adds no such filter and returns the 301 self-match — exactly the L1/L2 divergence observed. The 'We do not want to exclude vector ids from different collection via lookup_from' comment shows the exclusion scope is a deliberate, reasoned design decision, not an oversight.",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service healthy — both legs 200, deterministic exact=true)",
+        "concurrency (single sequential client, no races)",
+        "request_typo (request shapes are the documented Query-by-ID and nearest forms; both accepted 200)",
+        "by_design_in_source (exclude_referenced_ids with explicit maintainer comments — see source_grounding)"
+      ],
+      "surviving": null
+    }
+  }
+}

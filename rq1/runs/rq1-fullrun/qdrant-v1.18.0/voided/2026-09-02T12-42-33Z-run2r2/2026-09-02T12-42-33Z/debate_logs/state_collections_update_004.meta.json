@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_collections_update_004",
+ "endpoint": "collections+update",
+ "param": "optimizers_config.deleted_threshold / vacuum_min_vector_number / max_segment_size / memmap_threshold / indexing_threshold (update-time diff bounds closure + out-of-bound rejection)",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "count_consistency",
+ "constraint_ids": [
+  "qdrant_range_collections_update_002"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "PATCH with the inclusive OptimizersConfigDiff bounds (deleted_threshold 0.0 and 1.0, vacuum_min_vector_number 100, max_segment_size 1, memmap_threshold 0, indexing_threshold 0) -> 200 with describe echoing each value (float 1e-9); out-of-bound PATCHes (-0.01/1.01/99/0/-1/-1) -> 400/422 with readback unchanged — 2xx = Type1_IllegalSuccess, 200-without-echo on closure or changed state after rejection = Type4; 5xx = Type3 only with /healthz liveness",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

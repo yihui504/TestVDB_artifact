@@ -1,0 +1,88 @@
+{
+  "defect_id": "state_collections_create_05",
+  "endpoint": "collections+create",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Source URL https://api.qdrant.tech/api-reference/collections/create-collection is domain_blocked (network restriction), but raw_knowledge.md confirms constraints: hnsw_config.m ∈ [2, 100], hnsw_config.ef_construct ∈ [10, 1000], vectors.size > 0, vectors.distance ∈ [Cosine, Euclidean, Dot, Manhattan]. Version 1.19.x matches target v1.18.2 (major.minor). Endpoint registered in endpoint_registry.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[Valid typical] status=400, expected=200; [Invalid HNSW m=1 (below min)] status=200, expected=400; [Invalid HNSW m=101 (above max)] status=200, expected=400; [Invalid HNSW ef=9 (below min)] status=200, expected=400; [Invalid HNSW ef=1001 (above max)] status=200, expected=400",
+      "secondary_observations": [
+        "[Valid minimal] status=200, expected=200 (PASSED)",
+        "[Valid large] status=200, expected=200 (PASSED)",
+        "[Invalid size=0] status=400, expected=400 (PASSED)",
+        "[Invalid size=-1] status=400, expected=400 (PASSED)",
+        "[Invalid distance] status=400, expected=400 (PASSED)",
+        "[Valid HNSW m=2 (min)] status=200, expected=200 (PASSED)",
+        "[Valid HNSW m=100 (max)] status=200, expected=200 (PASSED)",
+        "[Valid HNSW ef=10 (min)] status=200, expected=200 (PASSED)",
+        "[Valid HNSW ef=1000 (max)] status=200, expected=200 (PASSED)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A (pure HTTP 200/400)",
+        "note": "Illegal HNSW boundary values accepted with HTTP 200 (should be 400). Valid typical config unexpectedly rejected with 400. Target returns only HTTP status codes without business error codes in response body."
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_collections_create_05",
+        "boundary_collections_create_005 (m=1, Type1)",
+        "boundary_collections_create_006 (m=101, Type1)",
+        "boundary_collections_create_007 (ef=9, Type1)",
+        "boundary_collections_create_008 (ef=1001, Type1)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_create_collection_001, qdrant_range_create_collection_002, qdrant_type_create_collection_001, qdrant_type_create_collection_002",
+      "assertion_text_quoted": "hnsw_config.m >= 2 AND hnsw_config.m <= 100 | hnsw_config.ef_construct >= 10 AND hnsw_config.ef_construct <= 1000 | vectors.size > 0 AND type(vectors.size) = integer | vectors.distance IN [Cosine, Euclidean, Dot, Manhattan]",
+      "api_violates_assertion": true,
+      "note": "Violates: m=1,101 and ef=9,1001 accepted with HTTP 200; valid typical (size=128, distance=Euclidean) rejected with HTTP 400. Four range constraints + two type constraints all implicated in Type4 state logic violations.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_range_create_collection_001 (m ∈ [2,100])",
+        "doc:raw_knowledge.md line 63 confirms 'm ∈ [2, 100], ef_construct ∈ [10, 1000]'",
+        "script:state_collections_create_05.py lines 68-77 test HNSW boundaries",
+        "log:output_state_collections_create_05.log lines 14-19 show boundary violations (m=1,101 / ef=9,1001 → 200)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "hnsw_config.*m",
+        "ef_construct",
+        "vectors.*size",
+        "vectors.*distance",
+        "create.*collection"
+      ],
+      "files_examined": [],
+      "source_excerpt": "",
+      "call_chain_traced": "not_found_in_source - TESTVDB_SRC_DIR not available in session environment",
+      "verification_outcome": "not_found_in_source",
+      "note": "No source code clone available in current session (.srcdir file not found, TESTVDB_SRC_DIR env var unset). Source grounding pending access to qdrant/qdrant@v1.18.2 repository for verification of validation logic in collections/create handler.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (target at v1.18.2 confirmed)",
+        "concurrency (single-threaded test)"
+      ],
+      "surviving": "Type4_StateLogicViolation: Inconsistent validation - illegal HNSW boundary values accepted (m=1,101; ef=9,1001 → 200) while valid typical config rejected (size=128/distance=Euclidean → 400). Validation logic either missing or misimplemented for HNSW parameters, plus a non-deterministic rejection of valid input suggesting state-dependent behavior."
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "defect_id": "boundary_insert_dimmismatch_012",
+  "endpoint": "entities/insert (unknown extra field into dynamic-enabled collection)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "round_note": "重锚链（R1 原锚 dimension/insert 约束错位——dim mismatch 观测全部被 1804 正确拒；主观测实为 ghost 动态字段静默接受）。R2 以 milvus_type_field_name_rules_001 重锚后重建。",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "新锚 milvus_type_field_name_rules_001（verified/quoted，同 01 号链）；'ghost' 是合法字段名——文档命名规则覆盖此观测域，但观测值本身合规（见 contract_grounding.note）。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "unknown extra field -> http=200 ok=True raw={\"code\":0,\"cost\":0,\"data\":{\"insertCount\":1,\"insertIds\":[107]}}（script 逐字：{\"id\": 107, \"vector\": [0.1]*DIM, \"ghost\": 1}，目标 collection enableDynamicField=true）",
+      "secondary_observations": [
+        "dim mismatch (1) -> code:1804 '[]float32 size 1 doesn't equal to vector dimension 8 of FloatVector'（正确拒）",
+        "dim mismatch (DIM-1=7) / (DIM+1=9) / (32768) -> 全 code:1804（正确拒）",
+        "no vector -> code:1804 'missing vector field: vector'",
+        "no pk / pk null -> code:1804 strconv.ParseInt 空串拒绝",
+        "pk type confusion str('not-an-int') -> code:1804 ParseInt invalid syntax",
+        "vector as string / vector scalar float -> code:1804 Mismatch type []float32",
+        "stats after illegal inserts: {\"code\":0,\"data\":{\"rowCount\":0}}——非法行均未落库，唯一落库为 ghost 行"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "所有拒绝均 HTTP 200 + code:1804；ghost 接受 HTTP 200 + code:0"},
+      "reproducibility": "多脚本稳定触发",
+      "reproducibility_note": "主观测（合法名动态字段接受）与 01 号链同根因家族（动态字段路径零校验），insert 通道稳定复现。",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_insert_dimmismatch_012.py", "debate_logs/boundary_r2_dynfield_name_insert_01.py (同动态字段路径)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_field_name_rules_001",
+      "assertion_text_quoted": "field names: ^[A-Za-z_][A-Za-z0-9_]*$, length<=255, enforced at insert-time (dynamic fields included)",
+      "api_violates_assertion": false,
+      "note": "violates 自检：观测字段名 'ghost' 为纯小写字母、长度 1——完全落在 ^[A-Za-z_][A-Za-z0-9_]*$ 合规域内，不构成命名规则违反。重锚后该观测无法定性为 milvus_type_field_name_rules_001 违反；而『未知字段应拒』无契约断言（动态字段静默收纳是 Milvus 文档化功能）。如实记 api_violates_assertion=false，重锚后大概率非违反（与派发预告一致，auditor 终判）。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_field_name_rules_001（R2 重锚）",
+        "doc: limitations.md Resource Naming Rules",
+        "script: boundary_insert_dimmismatch_012.py L102 ghost 字段 insert",
+        "log: unknown extra field -> code:0 insertIds:[107]"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "链四环齐全但观测不落入约束违反域：ghost 合法名 + 动态字段收纳为文档化行为——contract 环无法把观测定性为违反（R1 错锚纠正后，剩余现象无对应违反）。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["EnableDynamicField", "checkAndSetData", "has pass more field without dynamic schema", "serializeFloatVectors (dim 校验对照)"],
+      "files_examined": [
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go (checkAndSetData L590-621; serializeFloatVectors L1221-1235; anyToColumns L947-957, L1202-1217)",
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go (insert L1234-1252)"
+      ],
+      "source_excerpt": "utils.go L592-621（同 01 号链）：`for mapKey, mapValue := range data.Map() { if !containsString(fieldNames, mapKey) { if collSchema.EnableDynamicField { ...按 gjson cast 收纳... } else { return merr.WrapErrParameterInvalidMsg(\"has pass more field without dynamic schema, please check it\") } } }`——ghost 走 EnableDynamicField=true 分支被收纳（by-design 功能路径）；未启用 dynamic 才拒绝。dim 校验对照 serializeFloatVectors L1229-1232：`if int64(len(fp32Values)) != dimension { return ... \"dimension: %d, but length of []float: %d\" }`——与 log 1804 消息对应，证明 dim 类观测全部正确拒。",
+      "call_chain_traced": "ghost 字段 → checkAndSetData 动态分支收纳 → anyToColumns 匿名 JSON 列 → code:0（文档化 dynamic field 功能，非校验缺失型缺陷）。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error", "env", "concurrency", "request_typo"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "WEAK_AS_DEFECT",
+  "evidence_weight_rationale": "取证完备（log 全量对照逐字 + 源码 by-design 路径 + violates 自检执行），但结论方向为非违反：ghost 是合法名动态字段被文档化功能收纳，dim/pk 类对照全部正确拒。链价值在于封死 R1 误判通道，供 auditor 复核。"
+}

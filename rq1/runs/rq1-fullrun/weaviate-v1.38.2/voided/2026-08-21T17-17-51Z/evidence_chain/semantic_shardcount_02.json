@@ -1,0 +1,67 @@
+{
+  "defect_id": "semantic_shardcount_02",
+  "endpoint": "POST /schema",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "主 grounding 为 state invariant weaviate_state_collection_creation_001（source_url 'openapi (Step 6b cross-check fallback)'，本地 .weaviate-src-1382/openapi-specs/schema.json 属契约 source 列表，核验端点存在）；辅 constraint weaviate_range_sharding_desired_count_001 source_verified=true clone 可达。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "[desiredCount=-1] create status=200 body= / GET schema status=404（主观测：200 创建后读回 404 幻影成功）",
+      "secondary_observations": [
+        "[desiredCount=-5] create status=200 body= / GET schema status=404 — 负值族复现",
+        "[desiredCount=0] create status=422 body={\"allowed\":null,\"error\":[{\"message\":\"updating db: TYPE_ADD_CLASS: apply add class: create index: failed to read sharding state: invalid sharding state: physical shards unavailable\"}]} — 对照：0 被 422 拒绝"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "非法负值以 200 空响应返回且状态未落地（GET 404）——静默幻影成功，2xx+状态不一致，比单纯 200 更严重"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["semantic_shardcount_02", "boundary_bd_shardcount_03"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "weaviate_range_sharding_desired_count_001",
+      "assertion_text_quoted": "shardingConfig.desiredCount >= 1；辅 state invariant weaviate_state_collection_creation_001: 'Collection exists in GET /schema response after POST /schema'",
+      "api_violates_assertion": true,
+      "note": "-1/-5 违反 >=1 且 POST 200 后 GET 404 同时违反 collection_creation_001 不变量；观测值在两约束域内。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: range_sharding_desired_count_001 + state_collection_creation_001",
+        "doc: api_endpoints shardingConfig.desiredCount integer (config.go#L22)",
+        "script: semantic_shardcount_02.py POST /schema desiredCount -1/-5 后 GET /schema/{name}",
+        "log: '[desiredCount=-1] create status=200 / GET schema status=404'（-5 同）"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["DesiredCount", "validate()", "physical shards unavailable"],
+      "files_examined": [
+        "usecases/sharding/config/config.go (L1-80)"
+      ],
+      "source_excerpt": "usecases/sharding/config/config.go L59-L71:\n  func (c *Config) validate() error {\n    if c.Key != \"_id\" { return errors.Errorf(\"sharding only supported on key '_id' for now, got: %s\", c.Key) }\n    if c.Strategy != \"hash\" { ... }\n    if c.Function != \"murmur3\" { ... }\n    return nil\n  }  // 无 DesiredCount 下界校验",
+      "call_chain_traced": "POST /schema → sharding Config.validate()（无 desiredCount>=1）→ 下游分片创建对负数静默不产生物理分片但整个 add-class 未回滚/未报错 → 200；后续 GET 404 因 schema 状态未写入。0 值在分片读取层触发 'physical shards unavailable' 422——同为非法值，-1 绕过该层。（sufficiency_check: grep_hit_pursued）",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay(脚本为创建后即时GET，非最终一致性窗口语义——404为永久不可见，由-5复现佐证)", "request_typo"],
+      "surviving": null
+    }
+  }
+}

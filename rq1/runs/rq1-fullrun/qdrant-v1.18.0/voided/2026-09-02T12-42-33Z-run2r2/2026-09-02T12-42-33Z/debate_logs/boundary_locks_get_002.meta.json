@@ -1,0 +1,17 @@
+{
+  "defect_id": "boundary_locks_get_002",
+  "endpoint": "locks+get",
+  "param": "write / error_message (locks+get reflected current-state fields: engage currency, message re-set tracking, release reflection, repeated-read stability)",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral",
+  "constraint_ids": [
+    "qdrant_behavioral_locks_get_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/get-locks",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "live /locks: baseline GET 200; after POST {write:true,error_message:TOKEN_A} the GET (within 3 tries) reports result.write===True and result.error_message===TOKEN_A; after re-engage with TOKEN_B it tracks TOKEN_B; 5 repeated GETs stay 200/write===True/TOKEN_B; after POST {write:false} the GET (within 3 tries) reports result.write===False — wrong/stale state = Type4_StateLogicViolation, non-200 while live = Type4 (broken 200 promise), 5xx with /healthz alive = Type3_RuntimeFailure; if GET+POST /locks both answer concrete non-2xx (404 expected on OSS v1.18.0), NO_DEFECT with endpoint-absence evidence (assertion not actuable)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

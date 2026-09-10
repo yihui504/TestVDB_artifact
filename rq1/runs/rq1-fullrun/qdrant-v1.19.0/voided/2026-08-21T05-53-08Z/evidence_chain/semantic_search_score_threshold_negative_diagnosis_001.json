@@ -1,0 +1,71 @@
+{
+  "defect_id": "semantic_search_score_threshold_negative_diagnosis_001",
+  "endpoint": "points+search",
+  "defect_type": "Type2_PoorDiagnostics",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "score_threshold parameter documented at https://api.qdrant.tech/api-reference/points/search-points as optional number. Version 1.19.x matches target 1.19.0.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "C",
+      "log_pattern": "HTTP 400 + error: 'Format error in JSON body: missing field `limit` at line 1 column 677'",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx (400)",
+        "note": "Correct rejection status, but error message incorrectly blames missing limit parameter instead of negative score_threshold"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["semantic_search_score_threshold_negative_diagnosis_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "No constraint_id - diagnosis quality test for score_threshold<0 case",
+      "api_violates_assertion": false,
+      "note": "API correctly rejects with HTTP 400, but error diagnostic is misleading - points to limit instead of score_threshold",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "doc: score_threshold is optional number (implied range 0-1 for normalized distances)",
+        "script: sends score_threshold=-0.1 (negative value)",
+        "log: HTTP 400 with error 'missing field `limit`'",
+        "analysis: error misattribution - different field blamed"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "JSON parsing/validator incorrectly attributes error to missing limit field when actual issue is invalid score_threshold value",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "score_threshold",
+        "validate.*json",
+        "Format error"
+      ],
+      "files_examined": [
+        "lib/api/src/rest/schema.rs",
+        "lib/collection/src/operations/verification/search.rs"
+      ],
+      "source_excerpt": "lib/api/src/rest/schema.rs:22-42: pub(crate) fn validate_non_empty_dense(vector: &[f32]) -> Result<(), ValidationErrors> {\n    if vector.is_empty() {\n        let mut err = ValidationError::new(\"empty_vector\");\n        err.message = Some(Cow::Borrowed(\"dense vector must not be empty\"));\n        let mut errors = ValidationErrors::new();\n        errors.add(\"vector\", err);\n        return Err(errors);\n    }\n    Ok(())\n}",
+      "call_chain_traced": "JSON schema validation in rest/schema.rs handles request parsing but score_threshold range validation not enforced at API boundary",
+      "verification_outcome": "validation_absent",
+      "note": "No source code found that validates score_threshold numeric range (0-1) or rejects negative values. Error 'missing field limit' suggests JSON parsing error, not semantic validation.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency"],
+      "surviving": null
+    }
+  }
+}

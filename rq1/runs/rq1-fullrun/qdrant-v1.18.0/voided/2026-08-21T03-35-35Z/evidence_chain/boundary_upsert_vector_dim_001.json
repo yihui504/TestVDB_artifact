@@ -1,0 +1,73 @@
+{
+  "defect_id": "boundary_upsert_vector_dim_001",
+  "endpoint": "/collections/{collection_name}/points:PUT",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "source_url reachable, doc version mismatch (1.19.x vs v1.18.0), vector dimension validation implied by collection schema but not explicitly quoted for upsert endpoint",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: vector dimension mismatch (3D vector to 2D collection) → http=200, code=0 (acknowledged)",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "Target accepted vector with wrong dimension returning success"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["boundary_upsert_vector_dim_001"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_type_create_collection_001",
+      "assertion_text_quoted": "vectors.size must be positive integer (dimension fixed at collection creation)",
+      "api_violates_assertion": true,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:qdrant_type_create_collection_001 (vectors.size defines fixed dimension)",
+        "doc:https://api.qdrant.tech/api-reference/collections/create-collection (schema enforcement implied)",
+        "script:boundary_upsert_vector_dim_001 (3D vector to 2D collection)",
+        "log:HTTP 200 + acknowledged (target accepted dimension mismatch)"
+      ],
+      "chain_broken_at": "log",
+      "break_detail": "Target accepted vector with dimension (3) not matching collection schema (2), returning success instead of validation error",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "check_vector_against_config",
+        "check_named_vectors",
+        "WrongVectorDimension",
+        "upsert_point",
+        "vector.len.*dim"
+      ],
+      "files_examined": [
+        "lib/segment/src/common/mod.rs",
+        "lib/segment/src/segment/entry.rs",
+        "lib/segment/src/segment/segment_ops.rs",
+        "lib/collection/src/operations/verification/update.rs"
+      ],
+      "source_excerpt": "lib/segment/src/common/mod.rs:188-219\nfn check_vector_against_config(\n    vector: VectorRef,\n    vector_config: &VectorDataConfig,\n) -> OperationResult<()> {\n    match vector {\n        VectorRef::Dense(vector) => {\n            // Check dimensionality\n            let dim = vector_config.size;\n            if vector.len() != dim {\n                return Err(OperationError::WrongVectorDimension {\n                    expected_dim: dim,\n                    received_dim: vector.len(),\n                });\n            }\n            Ok(())\n        }\n        ...\n    }\n}\n\nlib/segment/src/segment/entry.rs:653-674\nfn upsert_point(\n    &mut self,\n    op_num: SeqNumberType,\n    point_id: PointIdType,\n    mut vectors: NamedVectors,\n    hw_counter: &HardwareCounterCell,\n) -> OperationResult<bool> {\n    debug_assert!(self.is_appendable());\n    check_named_vectors(&vectors, &self.segment_config)?;\n    ...\n}",
+      "call_chain_traced": "upsert_point (entry.rs:653) → check_named_vectors (common/mod.rs:149) → check_vector (common/mod.rs:42) → check_vector_against_config (common/mod.rs:188) → dimension check at line 196",
+      "verification_outcome": "validation_present_in_source",
+      "note": "Dimension validation EXISTS in source code at segment layer (check_vector_against_config line 196: if vector.len() != dim). The validation is invoked during upsert_point operations. The HTTP 200 response suggests either: (a) validation bypassed at API layer before reaching segment, (b) error caught and logged but not propagated, or (c) strict mode not enforcing this check. Source confirms by-design validation logic is present.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache"],
+      "surviving": "validation_present_in_source"
+    }
+  }
+}

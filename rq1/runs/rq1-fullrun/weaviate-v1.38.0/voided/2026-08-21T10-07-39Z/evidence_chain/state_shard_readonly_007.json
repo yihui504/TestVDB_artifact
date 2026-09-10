@@ -1,0 +1,75 @@
+{
+  "defect_id": "state_shard_readonly_007",
+  "endpoint": "POST /v1/objects (shard READONLY state)",
+  "defect_type": "Type3",
+  "evidence_weight": "strong",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "domain_blocked",
+      "version_match": "PARTIAL",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "raw_knowledge.md L647: 'Updates the status of a specific shard within a collection (e.g., sets it to READY or READONLY). This is typically used after resolving an underlying issue...'——确认 READONLY 状态机存在且可由用户设置；未规定 READONLY 下写入应返回的状态码。docs.weaviate.io 网络受限。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "write in READONLY: 500 {\"error\":[{\"message\":\"put object: import into index sts007: put local object: shard=\\\"Q5pPKOCQnxzC\\\": store is read-only due to: manually set by user\"",
+      "secondary_observations": [
+        "set READONLY: 200 {\"status\":\"READONLY\"}",
+        "read in READONLY (expect 200): 200",
+        "back to READY: 200 {\"status\":\"READY\"}",
+        "read after cycle (expect 200, before/[0.1,0.2]): 200",
+        "write after READY (expect 200): 200",
+        "invalid status (expect 4xx): 422 {\"error\":[{\"message\":\"updating db: TYPE_UPDATE_SHARD_STATUS: BOGUS: invalid storage status\"}]}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 4xx/5xx",
+        "note": "READONLY 写入是服务端状态拒绝，非客户端输入错误——4xx/5xx 归属本身可辩（500 是 server-side 状态拒绝的常见选择）；脚本的 'expect 4xx' 是自定预期。对照：非法状态值 BOGUS 正确 422。"
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["state_shard_readonly_007.py"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "none_matching",
+      "assertion_text_quoted": "raw_knowledge.md L647: 'Updates the status of a specific shard within a collection (e.g., sets it to `READY` or `READONLY`).'；structured_contract.json state_constraints=[] 无 shard 状态写入语义约束。",
+      "api_violates_assertion": false,
+      "note": "violates=false：无明文约束规定 READONLY 拒绝必须 4xx；错误消息本身信息充分（含 shard 名与原因），拒绝路径干净、状态可恢复（回 READY 后读写正常）。violates 判定留给 auditor——500 vs 422 是设计取舍还是缺陷。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: 无对应 constraint——链环缺失",
+        "doc: raw_knowledge.md L647 确认 READONLY 状态与设置端点",
+        "script: state_shard_readonly_007.py L55 PUT shards/{shard} {status:READONLY} → L60-63 POST /objects",
+        "log: 500 store is read-only due to: manually set by user"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "doc/script/log 三环一致；contract 环缺失（无状态码预期约束）。",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["store is read-only due to", "manually set by user", "put local object", "invalid storage status"],
+      "files_examined": [
+        "entities/storagestate/status.go",
+        "adapters/repos/db/shard_status.go",
+        "adapters/repos/db/index.go",
+        "cluster/raft_apply_endpoints.go"
+      ],
+      "source_excerpt": "entities/storagestate/status.go L28-35:\nvar ErrStatusReadOnlyWithReason = func(reason string) error {\n\treturn fmt.Errorf(\"store is read-only due to: %v\", reason)\n}\nvar (\n\tErrStatusReadOnly = errors.New(\"store is read-only\")\n\tErrInvalidStatus  = errors.New(\"invalid storage status\")\n)\nadapters/repos/db/shard_status.go L76-84:\nfunc (s *Shard) isReadOnly() error {\n\tif s.status.Status == storagestate.StatusReadOnly {\n\t\treturn storagestate.ErrStatusReadOnlyWithReason(s.status.Reason)\n\t}\n\treturn nil\n}\nadapters/repos/db/index.go L1151-1153: err = shard.PutObject(...) → fmt.Errorf(\"put local object: shard=%q: %w\", ...)",
+      "call_chain_traced": "POST /objects → db.PutObject → shard.PutObject 内 isReadOnly() 检查（shard.go L137 接口声明，写路径多处调用）→ 普通错误（无 ErrInvalidUserInput 标记）→ REST 层 default → 500。非 panic/非环境故障，是确定性校验路径的错误分类选择。",
+      "verification_outcome": "validation_present",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "caching_delay", "request_typo"],
+      "surviving": "错误通道选择：READONLY 拒绝在 usecase 层未被分类（既非 4xx 输入错也非显式 503），落到 500——surviving 的唯一候选是'500 是否为该拒绝的合理通道'"
+    }
+  }
+}

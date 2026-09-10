@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_payload_clear_006",
+ "endpoint": "payload+clear",
+ "param": "points",
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "type",
+ "oracle": {
+  "statement": "each of the five type-confused clear bodies (points=\"all\" / points=123 / points=[null] / filter=\"city=par\" / filter=[]) returns 4xx with the points or filter parameter named in the error (silent/unnamed 4xx = Type2_PoorDiagnostics); any 200 is a defect — readback shows payloads wiped = Type4_StateLogicViolation (type-confused selector executed a destructive wipe), payloads intact = Type1_IllegalSuccess (invalid target accepted); 5xx = Type3_RuntimeFailure with /healthz re-check",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

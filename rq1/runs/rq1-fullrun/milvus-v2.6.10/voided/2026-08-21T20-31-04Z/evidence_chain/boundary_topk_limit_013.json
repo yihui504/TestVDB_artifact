@@ -1,0 +1,80 @@
+{
+  "defect_id": "boundary_topk_limit_013",
+  "endpoint": "entities+search",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint source_url 指向本地源码 .milvus-src-2610/pkg/util/paramtable (component_param.go) 而非公网文档；source_status=reachable 且断言文本与源码 util.go:196-201 逐字一致；endpoint entities+search 在 endpoint_registry。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "limit=None offset=0 -> http=200 code=0 ok=True raw={\"code\":0,\"cost\":0,\"data\":[{\"distance\":1,\"id\":1}],\"topks\":[1]}",
+      "secondary_observations": [
+        "limit=0 offset=0 -> http=200 code=65535 \"topk [0] is invalid, it should be in range [1, 16384], but got 0\"",
+        "limit=-1 -> 65535 同消息；limit=16384 -> code=0（上界含）；limit=16385 -> 65535",
+        "limit=10 offset=16375 -> 65535 \"offset+topk [16385] is invalid\"；offset=1000000 单独报错",
+        "limit='100' -> code=1801 json unmarshal 错误；limit=1.5 -> 1801"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码",
+        "note": "全部非法值以 HTTP 200 + code:65535/1801 返回；主观测是显式传 null 绕过校验仍 200+code:0 成功——校验对显式提供值生效，对 None 走默认 100 注入路径。"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": [
+        "debate_logs/boundary_topk_limit_013.py",
+        "vein_scripts/vein_query_limit_semantic_drift_4.py (search 侧对照)",
+        "debate_logs/semantic_limitdefault_08.py (limit 默认语义)",
+        "debate_logs/boundary_grouping_017.log 同 topk range 消息出现"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_range_entities_search_001",
+      "assertion_text_quoted": "topK limit: limit+offset must be in [1, TopKLimit=16384] (quotaAndLimits.limits.topK default 16384); 1 <= limit + offset <= 16384 else error 'it should be in range [1, 16384], but got %d'",
+      "api_violates_assertion": true,
+      "evidence_source": "doc",
+      "note": "violates=True 判定理由：观测 (None,0)->code:0 是省略 limit 走默认 100，属契约 milvus_range_entities_search_002 允许的默认注入路径；对 '1<=limit+offset' 断言本身，显式提供的全部越界值均被拒——契约域内无违反。主观测降级为默认注入边界的再现；与 vein_query_limit_semantic_drift_4（query 侧无校验）构成同参数族 cross-endpoint 对照。断言未违反处：无显式越界值被接受。"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_range_entities_search_001 (assertion 与源码 util.go:196-201 消息模板一致)",
+        "doc: source_url 指向 paramtable component_param.go，TopKLimit 默认 16384 在源码可验",
+        "script: boundary_topk_limit_013.py 发送显式 limit/offset 矩阵 + None 对照",
+        "log: 65535 range 消息 12 处，None 处 200+code:0"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "\"is invalid, it should be in range\" in internal/",
+        "\"func validateLimit\" internal/proxy/util.go",
+        "validateLimit 调用点 internal/proxy/search_util.go"
+      ],
+      "files_examined": [
+        ".milvus-src-2610/internal/proxy/util.go:180-202 (validateMaxQueryResultWindow + validateLimit)",
+        ".milvus-src-2610/internal/proxy/search_util.go:138,192,213,221,602 (validateLimit/validateMaxQueryResultWindow 调用点，仅 search 路径)",
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go:251-254 (SearchReqV2{Limit:100} 默认注入), 1494 (TopKKey 显式 limit)"
+      ],
+      "source_excerpt": "// internal/proxy/util.go:180-201\nfunc validateMaxQueryResultWindow(offset int64, limit int64) error {\n\tif offset < 0 {\n\t\treturn fmt.Errorf(\"%s [%d] is invalid, should be gte than 0\", OffsetKey, offset)\n\t}\n\tif limit <= 0 {\n\t\treturn fmt.Errorf(\"%s [%d] is invalid, should be greater than 0\", LimitKey, limit)\n\t}\n\tdepth := offset + limit\n\tmaxQueryResultWindow := Params.QuotaConfig.MaxQueryResultWindow.GetAsInt64()\n\tif depth <= 0 || depth > maxQueryResultWindow {\n\t\treturn fmt.Errorf(\"(offset+limit) should be in range [1, %d], but got %d\", maxQueryResultWindow, depth)\n\t}\n\treturn nil\n}\n\nfunc validateLimit(limit int64) error {\n\ttopKLimit := Params.QuotaConfig.TopKLimit.GetAsInt64()\n\tif limit <= 0 || limit > topKLimit {\n\t\treturn fmt.Errorf(\"it should be in range [1, %d], but got %d\", topKLimit, limit)\n\t}\n\treturn nil\n}",
+      "call_chain_traced": "handler_v2.go search 路由注入默认 Limit=100 → SearchReqV2.limit 显式值经 search_util.go validateLimit/validateMaxQueryResultWindow（仅 search 链）→ 无 None 走默认值时的校验缺口（None 触发 Go 零值/默认路径）",
+      "verification_outcome": "validation_present",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env"],
+      "surviving": "default-injection on omitted/null limit is a documented-by-implementation behavior (契约 milvus_range_entities_search_002 limit omitted => 100)——None 观测可能落 by-design 域，留给 auditor 裁定"
+    }
+  }
+}

@@ -1,0 +1,215 @@
+【任务】vt 臂 · 完备材料列 · run2 batch1（小单元 part）。你是 TestVDB 4-judge 投票管线中的 judge-evidence 与 judge-severity（两职顺序执行）。judge-doc 已产出 stage2_doc（本批全部 DOC_PARTIAL，网络关网降级，代码直出）。judge-novelty 关网直出。
+
+工作流（对下面 7 案逐案执行，各案独立）：
+1. judge-evidence：按该案材料段的 DECISION RULES（as-shipped 逐字）判定，写 JSON（schema: defect_id/vote=is_defect|not_defect/grade/score/evidence_summary/rationale）到
+   <ARTIFACT_ROOT>/.paperpilot/phase2-rerun/arms/voting/run2_complete/judge_work/{did}/debate_logs/stage2_evidence_{did}.json
+2. judge-severity：基于你刚写的 evidence 结果 + 同案材料，按下方 SEVERITY RULES（as-shipped 逐字）判定，写 JSON（schema: defect_id/severity/confidence/rationale）到同目录 stage2_severity_{did}.json
+
+SEVERITY RULES（as-shipped 逐字，全批共用）：
+Rule 1 baseline by defect_type: Type1_IllegalSuccess=High, Type2_PoorDiagnostics=Medium, Type3_RuntimeFailure=Critical, Type4_StateViolation=High. (Vendor defect_type mapping: param_validation/boundary→Type1-ish, diagnostics/error-message→Type2, crash/runtime→Type3, state/consistency→Type4.)
+Rule 2 endpoint sensitivity: core data plane (search/insert/upsert/query/get) +1 level; management plane unchanged; ops plane -1; metadata plane -1.
+Rule 3 batch amplification: affects batch operations +1 level.
+Rule 4 evidence quality: doc_verification_result=DOC_PARTIAL → -1 level.
+Rule 4 exception: crash signals (OOM/panic/capacity overflow/SIGSEGV/SIGKILL/5xx/connection reset/container Killed) → forced Critical, no demotion.
+Rule 5 edge: unrecognizable endpoint → Medium 0.5; single script trigger → -1 level.
+Ladder: trivial < low < medium < high < critical.
+
+注意：材料段中「补充契约依据」与「维护者态度参考」段为完备材料注入（与其它输入同等地位，是否相关/采信由你判断）。全部完成后汇报逐案两行 JSON。
+
+════════════════════ 案 1/1：milvus_008 ════════════════════
+You are judge-evidence in the TestVDB 4-judge voting pipeline (as-shipped SOP). Judge-doc has already produced stage2_doc.json (this candidate: DOC_PARTIAL). Your job: review the EVIDENCE for this one candidate per the judge-evidence decision rules, and write your vote.
+
+DECISION RULES (from judge-evidence SOP, as-shipped):
+- Log contains "FAILED: Type1"/"VIOLATION" (illegal op accepted) or "FAILED: Type3"/"RuntimeFailure" (crash) → vote=is_defect, grade A, score 9
+- Log contains "FAILED: Type4"/"StateViolation" → vote=is_defect, grade B, score 7
+- PASSED with no FAILED → vote=not_defect, grade D, score 0
+- Mixed FAILED+PASSED same endpoint (intermittent) → vote=is_defect, grade C, score 5
+- Connection failure/timeout/network error → vote=not_defect (environment issue)
+- Empty log or no matching log → vote=not_defect (nothing to evaluate)
+- Log contains TypeError/AttributeError/SCRIPT_ERROR → vote=script_error
+- NOTE: this pipeline is a replay capture — logs contain raw HTTP exchanges with a neutral line "VERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)" where as-shipped attack agents would print FAILED/VERDICT assertion lines. Apply semantic matching: judge whether the observed HTTP behavior (request/response/error) constitutes reproducible evidence of the claimed defect.
+- High-evidence path (contract violation with clear success/failure signal): 1 successful reproduction + clear contract violation → is_defect
+- If only a single script with no reproducibility evidence → forced not_defect; Type2_PoorDiagnostics single-script → forced not_defect
+
+[MATERIAL SUPPLEMENT — 完备材料列注入]
+--- 补充契约依据（文档考古补全，同版本契约） ---
+{"constraint_id": "milvus_metric_cosine_range_001", "endpoint": "entities+search", "description": "COSINE distance = 1 - cosine similarity; similarity in [-1,1] so identical vectors distance=0, range [0,2]", "assertion": "metric_type == COSINE implies distance = 1 - cosine_similarity in [0, 2]; identical vectors distance == 0", "type": "state_constraint", "evidence_tier": "explicit", "source_url": "https://raw.githubusercontent.com/milvus-io/milvus-docs/ebb6de53/site/en/userGuide/search-query-get/metric.md", "_provenance": "doc-archaeology 2026-08-20: issue #49059; snapshot ebb6de53 cosine similarity [-1,1] / distance = 1 - similarity."}
+
+INPUTS:
+[stage2_doc.json result for this candidate] doc_verification_result=DOC_PARTIAL
+[candidate defect]
+{
+ "defect_id": "milvus_008",
+ "endpoint": "entities+search",
+ "defect_type": "behavior",
+ "expected": {
+  "contract_constraints": [
+   {
+    "constraint_id": "milvus_type_entities_delete_001",
+    "endpoint": "entities+delete",
+    "type": "type_constraint",
+    "description": "filter must be a valid boolean expression string",
+    "assertion": "filter is a valid boolean expression",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.6.17/internal/distributed/proxy/httpserver/constant.go",
+    "confidence": 1.0
+   },
+   {
+    "constraint_id": "milvus_type_entities_get_001",
+    "endpoint": "entities+get",
+    "type": "type_constraint",
+    "description": "id must match the collection primary key type (Int64 or VarChar)",
+    "assertion": "id type matches collection primary key type",
+    "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Get.md",
+    "confidence": 1.0
+   },
+   {
+    "constraint_id": "milvus_type_entities_search_001",
+    "endpoint": "entities+search",
+    "type": "type_constraint",
+    "description": "data must be array of float arrays, annsField must be a vector field, limit must be positive integer",
+    "assertion": "data is array[array[float]] AND annsField is a vector field AND limit > 0",
+    "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Search.md",
+    "confidence": 1.0
+   },
+   {
+    "constraint_id": "milvus_range_entities_search_001",
+    "endpoint": "entities+search",
+    "type": "range_constraint",
+    "description": "vector dimensions in data must match collection vector dimension",
+    "assertion": "vector dimension == collection dimension",
+    "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Search.md",
+    "confidence": 1.0
+   },
+   {
+    "constraint_id": "milvus_range_entities_search_002",
+    "endpoint": "entities+search",
+    "type": "range_constraint",
+    "description": "limit + offset must be < 16384",
+    "assertion": "limit + offset < 16384",
+    "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Search.md",
+    "confidence": 1.0
+   },
+   {
+    "constraint_id": "milvus_state_entities_delete_001",
+    "endpoint": "entities+delete",
+    "type": "state_constraint",
+    "description": "Deleted entities cannot be recovered",
+    "assertion": "delete is irreversible",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.6.17/internal/distributed/proxy/httpserver/constant.go",
+    "confidence": 1.0
+   },
+   {
+    "constraint_id": "milvus_state_entities_search_001",
+    "endpoint": "entities+search",
+    "type": "state_constraint",
+    "description": "Collection must be loaded; index must exist on annsField",
+    "assertion": "collection is loaded AND index exists on annsField",
+    "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Search.md",
+    "confidence": 1.0
+   },
+   {
+    "assertion_id": "milvus_behavioral_entities_search_001",
+    "endpoint": "entities+search",
+    "description": "Search returns 400 on vector dimension mismatch",
+    "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Search.md",
+    "confidence": 1.0
+   },
+   {
+    "assertion_id": "milvus_behavioral_entities_delete_001",
+    "endpoint": "entities+delete",
+    "description": "Delete returns 400 on invalid filter expression",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.6.17/internal/distributed/proxy/httpserver/constant.go",
+    "confidence": 1.0
+   },
+   {
+    "assertion_id": "milvus_behavioral_entities_get_001",
+    "endpoint": "entities+get",
+    "description": "Get entities returns 400 if id type mismatches collection schema",
+    "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Vector%20(v2)/Get.md",
+    "confidence": 1.0
+   }
+  ],
+  "keyword_matched_segment": [
+   {
+    "endpoint": "collections+create",
+    "kind": "type_constraints",
+    "description": "metricType must be L2, IP, or COSINE",
+    "assertion": "metricType in [L2, IP, COSINE]",
+    "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Create.md",
+    "confidence": 1.0
+   }
+  ],
+  "api_template": null
+ },
+ "observed": {
+  "raw_observation": [
+   "[c1] COSINE identical-vector search over 100 queries: max_distance=1.000000238418579, 11 queries with distance>1.0"
+  ],
+  "log_file": "output_milvus_008.log"
+ },
+ "metadata": {
+  "vendor": "milvus",
+  "version": "2.6.12"
+ }
+}
+[execution_results.json (session-level, your candidate is milvus_008)]
+{
+ "execution_summary": {
+  "total_scripts": 1,
+  "logs": [
+   {
+    "defect_id": "milvus_008",
+    "log_file": "output_milvus_008.log",
+    "captured_raw_http": true
+   }
+  ]
+ },
+ "log_contents": {
+  "milvus_008": "=== REQ 1 ===\nPOST http://localhost:19530/v2/vectordb/collections/create\npayload: {\"collectionName\": \"repro_<tracked>\", \"dimension\": 4, \"metricType\": \"COSINE\", \"dbName\": \"default\"}\n=== RESP 1 ===\nstatus: 200\nbody: {\"code\":0,\"data\":{}}\n\n=== REQ 2 ===\nPOST http://localhost:19530/v2/vectordb/entities/insert\npayload: {\"collectionName\": \"repro_<tracked>\", \"dbName\": \"default\", \"data\": [{\"id\": 0, \"vector\": [0.1, 0.1, 0.1, 0.1]}, {\"id\": 1, \"vector\": [0.1, 0.1, 0.1, 0.1]}, {\"id\": 2, \"vector\": [0.1, 0.1, 0.1, 0.1]}, {\"id\": 3, \"vector\": [0.1, 0.1, 0.1, 0.1]}, {\"id\": 4, \"vector\": [0.1, 0.1, 0.1, 0.1]}, {\"id\": 5, \"vector\": [0.1, 0.1, 0.1, 0.1]}, {\"id\": 6, \"vector\": [0.1, 0.1, 0.1, 0.1]}, {\"id\": 7, \"vector\": [0.1, 0.1, 0.1, 0.1]}, {\"id\": 8, \"vector\": [0.1, 0.1, 0.1, 0.1]}, {\"id\": 9, \"vector\": [0.1, 0.1, 0.1, 0.1]}]}\n=== RESP 2 ===\nstatus: 200\nbody: {\"code\":0,\"cost\":0,\"data\":{\"insertCount\":10,\"insertIds\":[0,1,2,3,4,5,6,7,8,9]}}\n\n=== REQ 3 ===\nPOST http://localhost:19530/v2/vectordb/indexes/create\npayload: {\"collectionName\": \"repro_<tracked>\", \"dbName\": \"default\", \"indexParams\": [{\"fieldName\": \"vector\", \"indexName\": \"idx_vec\", \"metricType\": \"COSINE\", \"indexType\": \"FLAT\", \"params\": {\"nlist\": 8}}]}\n=== RESP 3 ===\nstatus: 200\nbody: {\"code\":65535,\"message\":\"CreateIndex failed: creating multiple indexes on same field is not supported\"}\n\n=== REQ 4 ===\nPOST http://localhost:19530/v2/vectordb/collections/load\npayload: {\"collectionName\": \"repro_<tracked>\", \"dbName\": \"default\"}\n=== RESP 4 ===\nstatus: 200\nbody: {\"code\":0,\"data\":{}}\n\n=== REQ 5 ===\nPOST http://localhost:19530/v2/vectordb/entities/search\npayload: {\"collectionName\": \"repro_<tracked>\", \"dbName\": \"default\", \"data\": [[0.1, 0.1, 0.1, 0.1]], \"limit\": 3, \"outputFields\": [\"*\"]}\n=== RESP 5 ===\nstatus: 200\nbody: {\"code\":0,\"cost\":0,\"data\":[{\"distance\":1,\"id\":0,\"vector\":[0.1,0.1,0.1,0.1]},{\"distance\":1,\"id\":1,\"vector\":[0.1,0.1,0.1,0.1]},{\"distance\":1,\"id\":2,\"vector\":[0.1,0.1,0.1,0.1]}],\"topks\":[3]}\n\nVERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)\n"
+ }
+}
+[output log full text: output_milvus_008.log]
+=== REQ 1 ===
+POST http://localhost:19530/v2/vectordb/collections/create
+payload: {"collectionName": "repro_<tracked>", "dimension": 4, "metricType": "COSINE", "dbName": "default"}
+=== RESP 1 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 2 ===
+POST http://localhost:19530/v2/vectordb/entities/insert
+payload: {"collectionName": "repro_<tracked>", "dbName": "default", "data": [{"id": 0, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 1, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 2, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 3, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 4, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 5, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 6, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 7, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 8, "vector": [0.1, 0.1, 0.1, 0.1]}, {"id": 9, "vector": [0.1, 0.1, 0.1, 0.1]}]}
+=== RESP 2 ===
+status: 200
+body: {"code":0,"cost":0,"data":{"insertCount":10,"insertIds":[0,1,2,3,4,5,6,7,8,9]}}
+
+=== REQ 3 ===
+POST http://localhost:19530/v2/vectordb/indexes/create
+payload: {"collectionName": "repro_<tracked>", "dbName": "default", "indexParams": [{"fieldName": "vector", "indexName": "idx_vec", "metricType": "COSINE", "indexType": "FLAT", "params": {"nlist": 8}}]}
+=== RESP 3 ===
+status: 200
+body: {"code":65535,"message":"CreateIndex failed: creating multiple indexes on same field is not supported"}
+
+=== REQ 4 ===
+POST http://localhost:19530/v2/vectordb/collections/load
+payload: {"collectionName": "repro_<tracked>", "dbName": "default"}
+=== RESP 4 ===
+status: 200
+body: {"code":0,"data":{}}
+
+=== REQ 5 ===
+POST http://localhost:19530/v2/vectordb/entities/search
+payload: {"collectionName": "repro_<tracked>", "dbName": "default", "data": [[0.1, 0.1, 0.1, 0.1]], "limit": 3, "outputFields": ["*"]}
+=== RESP 5 ===
+status: 200
+body: {"code":0,"cost":0,"data":[{"distance":1,"id":0,"vector":[0.1,0.1,0.1,0.1]},{"distance":1,"id":1,"vector":[0.1,0.1,0.1,0.1]},{"distance":1,"id":2,"vector":[0.1,0.1,0.1,0.1]}],"topks":[3]}
+
+
+
+VERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)
+
+
+OUTPUT: single-line JSON only:
+{"defect_id": "milvus_008", "vote": "is_defect|not_defect|script_error", "grade": "A|B|C|D", "score": 0-9, "evidence_summary": "one sentence", "rationale": "one sentence"}
+
+

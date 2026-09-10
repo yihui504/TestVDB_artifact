@@ -1,0 +1,17 @@
+{
+  "endpoint": "collections+update",
+  "constraint_ids": [
+    "qdrant_doccons_indexing_threshold_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/collections/update-collection",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "default constructs (full-omission create A1, partial-diff create A2, partial-diff PATCH B1) all resolve to one materialized default D and B1 must not move the readback (diff-omitted members preserve); explicit PATCH indexing_threshold=20000 echoes 20000; since the two documented 'Default value' sentences (OptimizersConfig 10,000 vs OptimizersConfigDiff 20,000) contradict each other, D equals only one and the OTHER documented side is violated: D=20000 -> side A violated, D=10000 -> side B never materializes and is violated (doc-drift family, run2r #1 defects 9/11/14 precedent), D=neither -> both violated; verdict DEFECT_FOUND Type4_StateLogicViolation with the violated side named from measured D; 200-without-echo on the explicit control = Type4; 5xx with healthy /healthz = Type3_RuntimeFailure; setup/transport failure = SCRIPT_ERROR (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  },
+  "defect_id": "semantic_collections_update_005",
+  "param": "indexing_threshold",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract"
+}

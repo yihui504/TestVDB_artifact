@@ -1,0 +1,19 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: bcc139bc7c6
+[constraint quote] any spec-legal shard_number (>= 1, no documented max) must be completed, rejected with an error, or fail with a documented service error - never crash the service
+[shard_number=0] status=422 raw={"status":{"error":"Validation error in JSON body: [shard_number: value 0 invalid, must be 1 or larger]"},"time":0.0}
+[conform] 'shard_number=0' rejected with 422
+[shard_number=-1] status=400 raw={"status":{"error":"Format error in JSON body: invalid value: integer `-1`, expected u32 at line 1 column 65"},"time":0.0}
+[conform] 'shard_number=-1' rejected with 400
+[shard_number=1 (documented min, boundary closure)] status=200 raw={"result":true,"status":"ok","time":0.219960649}
+[conform] 'shard_number=1 (documented min, boundary closure)' 200; readback config.params.shard_number=1
+[shard_number=1000 (spec-legal, resource strain)] status=0 raw=HTTPConnectionPool(host='127.0.0.1', port=6333): Read timed out. (read timeout=120)
+[healthz attempt 1] status=200 raw=healthz check passed
+[shard_number=100000 (spec-legal, resource strain)] status=0 raw=HTTPConnectionPool(host='127.0.0.1', port=6333): Read timed out. (read timeout=120)
+[healthz attempt 1] status=200 raw=healthz check passed
+[shard_number=4294967295 (spec-legal, resource strain)] status=0 raw=('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+[healthz attempt 1] status=0 raw=('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+[healthz attempt 2] status=0 raw=HTTPConnectionPool(host='127.0.0.1', port=6333): Max retries exceeded with url: /healthz (Caused by NewConnectionError("
+[healthz attempt 3] status=0 raw=HTTPConnectionPool(host='127.0.0.1', port=6333): Max retries exceeded with url: /healthz (Caused by NewConnectionError("
+VERDICT: DEFECT_FOUND (Type3_RuntimeFailure(service-down) - 'shard_number=4294967295 (spec-legal, resource strain)': /healthz unreachable after 3 attempts)

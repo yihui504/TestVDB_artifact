@@ -1,0 +1,94 @@
+{
+  "defect_id": "semantic_points_query_groups_behavior_001",
+  "endpoint": "POST /collections/{collection_name}/points/query/groups (points+query+groups)",
+  "defect_type": "Type1_IllegalSuccess",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: no doc_preflight.json sidecar exists in the contract dir; the contract's own endpoint_registry record (structured_contract.json L5506-5512, verified_at 2026-09-02T12:34:08Z, source_status 'reachable') is the build-time preflight record -> PASS citing it; my live re-verification was blocked (WebFetch to api.qdrant.tech refused twice by network policy; alternate web-reader returned network error) — recorded as domain_blocked on re-verify, not treated as FAIL. version: URL is the versioned v-1-18-x api-reference for target v1.18.0 -> PASS. content: build-time verified doc_quote (L5510) 'Grouping requires payload values for the group_by field; pagination (offset) is NOT allowed with groups; returns 200 {groups: [{id, hits}]}; 404; 400 for an invalid group_by.' matches the assertion's words; raw_knowledge.json L1703-1706 group_by param description 'payload field to group by; requires payload values' and L1812-1821 expected_responses {200 ok, 400 bad request / validation error, 404 not found} corroborate; interpretive note for auditor: the doc pairs 'requires payload values' with '400 for an invalid group_by' but does not literally enumerate 'field with zero values anywhere' as a 400 case — the bridge is the doc's own precondition wording. endpoint: registry + raw_knowledge pin POST /collections/{collection_name}/points/query/groups; the script posted exactly this path.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[I1 group_by=no_such_field_zz] status=200 raw: {\"result\":{\"groups\":[]},\"status\":\"ok\",\"time\":0.000743901}",
+      "secondary_observations": [
+        "V: 5 groups, every entry carries id + non-empty hits (control leg on the SAME collection, populated field 'grp': line 3 original head '[V valid group_by=grp] status=200 raw: {\"result\":{\"groups\":[{\"hits\":[{\"id\":1100,\"version\":1,\"score\":0.0}...' — fixture proven live and populated; log line itself truncated at 400 chars by the script)",
+        "rest face, same-family group_by parameter, sibling script output_boundary_points_query_groups_invalid_groupby_001.log: 'leg GBmiss group_by-omitted -> status=400' raw: {\"status\":{\"error\":\"Format error in JSON body: missing field `group_by` at line 1 column 79\"}} — syntax/type layer DOES 400",
+        "rest face, same-family parameter: 'leg GBempty group_by='' -> status=400' raw: {\"status\":{\"error\":\"Format error in JSON body: Invalid json path: '' at line 1 column 95\"}} — empty json-path string rejected at parse layer",
+        "rest face, same-family parameter: 'leg GBint group_by=123 -> status=400' raw: {\"status\":{\"error\":\"Format error in JSON body: invalid type: integer `123`, expected a string at line 1 column 96\"}}",
+        "rest face, same-family parameter: 'leg GBnull group_by=null -> status=400' raw: {\"status\":{\"error\":\"Format error in JSON body: invalid type: null, expected a string at line 1 column 97\"}}",
+        "rest face, independent reproduction: 'leg GBabsent group_by='definitely_missing_field_xyz' -> status=200' raw: {\"result\":{\"groups\":[]},\"status\":\"ok\",\"time\":0.001295699} — same phenomenon, different script, different field name",
+        "grpc face and legacy sibling endpoints (points+search+groups, points+recommend+groups, same '400 invalid group_by' doc family per raw_knowledge L2074/L2384): no probe executed in this session — face_unavailable",
+        "script legs I2 (group_by='' -> 400) and M (missing collection -> 404) were coded but never executed: the script early-returns on the first DEFECT verdict (I1)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + business error code",
+        "note": "Stronger than 2xx-with-business-error: fully silent acceptance — HTTP 200, status 'ok', empty groups array, zero diagnostic. The contract pins 400 for this input class. Contrast: syntactically invalid group_by values ('' / int / null / omitted) DO get HTTP 400 with a Format error body (sibling log)."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "semantic_points_query_groups_behavior_001",
+        "boundary_points_query_groups_invalid_groupby_001"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_query_groups_001",
+      "assertion_text_quoted": "grouping requires payload values for the group_by field; returns 200 {groups: [{id, hits}]}; 400 on an invalid group_by; 404 for a missing collection",
+      "api_violates_assertion": true,
+      "note": "violates-declaration self-check: the claim's phenomenon is silent acceptance (200 + status ok) and the quoted assertion contains the constraint '400 on an invalid group_by' plus the precondition 'grouping requires payload values for the group_by field'. The observed value — group_by='no_such_field_zz' with zero payload values anywhere in the collection (seed points carry only keys grp/val; control leg V on 'grp' returned 5 populated groups) — falls inside the assertion's constraint domain under the doc's own pairing of the precondition with the 400 status; observed 200/ok directly contradicts the pinned 400, so api_violates_assertion=true. It is NOT the exclusion case (field present on some points, absent on a given point), which the assertion's own wording treats as by-design exclusion.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_behavioral_points_query_groups_001 exists at structured_contract.json L7346-7357 (assertion text verbatim above; source_url https://api.qdrant.tech/v-1-18-x/api-reference/query/query-points-groups; evidence_tier explicit)",
+        "doc: contract's build-time verified endpoint_registry doc_quote (L5510, verified_at 2026-09-02T12:34:08Z) carries the same words ('Grouping requires payload values for the group_by field; ... returns 200 {groups: [{id, hits}]}; 404; 400 for an invalid group_by.'); live re-verify domain_blocked (WebFetch refused; alternate reader network error)",
+        "script: semantic_points_query_groups_behavior_001.py (debate_logs) declares constraint_ids qdrant_behavioral_points_query_groups_001, seeds collection spqgV1+tag with 11 points whose payload keys are only grp/val, then posts body {query:{nearest:ANCHOR}, group_by:'no_such_field_zz', params:{exact:true}, group_size:2, limit:5} to POST /collections/{coll}/points/query/groups — the no-values-anywhere leg the assertion pins to 400",
+        "log: DEFECT_FOUND verdict line quotes the I1 original line (status=200, groups=[]); the raw response in the log contradicts the pinned 400 and the verdict is consistent with the raw evidence — no chain break"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "group_by (24 rust files hit; core: lib/collection/src/grouping/*)",
+        "payload index for.*group_by|group_by.*payload index (zero hits — no such error string exists)",
+        "check_grouping_field",
+        "AggregatorError",
+        "Invalid json path"
+      ],
+      "files_examined": [
+        "lib/collection/src/grouping/group_by.rs (whole file)",
+        "lib/collection/src/grouping/aggregator.rs (struct + add_point/add_points)",
+        "lib/collection/src/operations/verification/mod.rs (whole file)",
+        "lib/collection/src/operations/verification/query.rs (whole file)",
+        "src/actix/api/query_api.rs (query_points_groups handler L195-264)",
+        "lib/segment/src/json_path/mod.rs (Deserialize impl L510-523)",
+        "lib/collection/tests/integration/grouping_test.rs (group_by tests)"
+      ],
+      "source_excerpt": "lib/collection/src/grouping/group_by.rs L144-184 (QueryGroupRequest::r#do) — the decisive branch that makes a no-values group_by a silent empty success:\n144:    async fn r#do(\n152:        let mut request = self.source.clone();\n154:        // Adjust limit to fetch enough points to fill groups\n155:        request.limit = self.groups * self.group_size;\n160:        let key_not_empty = Filter::new_must_not(Condition::IsEmpty(self.group_by.clone().into()));\n161:        request.filter = Some(request.filter.unwrap_or_default().merge(&key_not_empty));\n163:        let with_group_by_payload = Self::group_by_to_payload_selector(&self.group_by);\n166:        request.with_payload = with_group_by_payload;\n169:        collection.query(request, ...).await   // points lacking the field are EXCLUDED here\n---\ngroup_by.rs L330-393 (group_by loop):\n332:    for _ in 0..MAX_GET_GROUPS_REQUESTS {\n372:        let points = request.r#do(collection, ...).await?;\n382:        if points.is_empty() {\n383:            break;                      // no point has values -> FIRST query returns 0 -> break immediately\n384:        }\n458:    let mut groups = aggregator.distill();   // empty aggregator -> empty vec\n494:    Ok(groups)                              // Ok(vec![]) -> handler -> HTTP 200 {\"groups\": []}\n---\nlib/collection/src/grouping/aggregator.rs L111-117 — explicit intent marker, but scoped to PER-POINT exclusion only:\n111:    /// Adds multiple points to the group that they correspond to based on the group_by field, assumes that the points always have the grouped_by field, else it just ignores them\n112:    pub(super) fn add_points(&mut self, points: &[ScoredPoint]) {\n113:        for point in points {\n114:            match self.add_point(point) {\n115:                Ok(()) | Err(AggregatorError::KeyNotFound | AggregatorError::BadKeyType) => {\n116:                    // ignore points that don't have the group_by field\n---\nlib/collection/src/operations/verification/mod.rs L372-396 — the ONLY group_by field check, gated behind opt-in strict mode:\n372:    pub fn check_grouping_field(\n377:        // check for unindexed fields targeted by group_by\n378:        if strict_mode_config.unindexed_filtering_retrieve == Some(false) {\n380:            if let Some(schema) = collection.payload_key_index_schema(group_by) {\n381:                if !schema.supports_match() { ... return Err(CollectionError::strict_mode(...)) }\n388:            } else {\n389:                return Err(CollectionError::strict_mode(\n390:                    format!(\"Index required but not found for \\\"{group_by}\\\"\"), ...));\n393:            }\n394:        }\n395:        Ok(())\n---\nlib/segment/src/json_path/mod.rs L516-523 — the parse layer that DOES produce 400 (syntax only):\n516:    impl<'de> Deserialize<'de> for JsonPath {\n518:        let string = String::deserialize(deserializer)?;\n519:        string\n520:            .parse()\n521:            .map_err(|_| serde::de::Error::custom(format!(\"Invalid json path: '{string}'\")))\n(a well-formed path like 'no_such_field_zz' parses fine — no existence/values check anywhere in the default path)",
+      "call_chain_traced": "src/actix/api/query_api.rs L199-255 query_points_groups (POST /collections/{name}/points/query/groups): serde 400 only for missing/mistyped group_by -> JsonPath::deserialize (json_path/mod.rs L516-523) validates SYNTAX only ('' -> 400 'Invalid json path') -> check_strict_mode -> check_grouping_field (verification/mod.rs L372-396) fires ONLY when strict mode unindexed_filtering_retrieve==Some(false) (opt-in, off by default) -> GroupRequest::into_query_group_request -> group_by() (grouping/group_by.rs L310): r#do L160-161 merges must_not IsEmpty(group_by) into the source filter -> zero points carry values => underlying query returns 0 points => L382-384 'if points.is_empty() { break; }' on the FIRST iteration => aggregator empty => distill()=[] => Ok(vec![]) => HTTP 200 {\"groups\": []}. NO code path in the default configuration maps a no-values group_by to 400. Aggregator comment 'ignore points that don't have the group_by field' (aggregator.rs L116) is explicit design intent for PER-POINT exclusion (the assertion's own by-design leg); no comment, docstring, or test declares intent for the whole-collection no-values -> 200-empty disposition, so by_design_in_source is not applicable to the primary observation.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env/fixture-dead: control leg V on the SAME collection returned 200 with 5 populated groups immediately before I1",
+        "concurrency-race/cache-delay: stateless read op, deterministic, reproduced identically by two independent scripts with different field names and collections",
+        "request-parameter-typo: the body is schema-valid (group_by a well-formed non-empty string path); the field name is intentionally absent from payload keys grp/val",
+        "script-error: none; verdict line present, script ran to its early-return DEFECT verdict (RequestsDependencyWarning in the log preamble is a benign client-side version warning)"
+      ],
+      "surviving": "doc-vs-implementation divergence on the 400 face: the versioned documentation (per the contract's build-time verified quote) pins '400 for an invalid group_by' with the precondition 'grouping requires payload values for the group_by field', while the v1.18.0 default implementation path resolves a zero-values group_by to a silent 200 empty-groups success (must_not-IsEmpty exclusion + empty-break). Per-point exclusion is explicitly by-design in source; the no-values-anywhere -> 200 disposition carries no explicit intent marker in source (no comment/test), so the divergence survives as a genuine defect signal for the adjudicator, who must weigh the interpretive bridge between 'requires payload values' and 'invalid group_by'."
+    }
+  }
+}

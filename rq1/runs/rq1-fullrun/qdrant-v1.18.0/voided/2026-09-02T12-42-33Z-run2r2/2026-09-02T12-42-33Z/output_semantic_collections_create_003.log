@@ -1,0 +1,21 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[path derivation] create_collection = /collections/{name} (raw_knowledge api_endpoints[collections+create].url = /collections/{collection_name})
+[pre-probe] /healthz status=200 raw=healthz check passed
+[control] setup_default create OK (deployment healthy)
+[create scc03_1788388161_ok_control] status=200 raw={"result":true,"status":"ok","time":0.290899566}
+[describe scc03_1788388161_ok_control] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true,"sparse_vectors":{"text":{}}},"hn
+[sparse control] persisted sparse_vectors = {'text': {}}
+[create scc03_1788388161_smuggle_distance] status=200 raw={"result":true,"status":"ok","time":0.350590291}
+[describe scc03_1788388161_smuggle_distance] status=200 raw={"result":{"status":"green","optimizer_status":"ok","indexed_vectors_count":0,"points_count":0,"segments_count":8,"config":{"params":{"vectors":{"size":4,"distance":"Cosine"},"shard_number":1,"replication_factor":1,"write_consistency_factor":1,"on_disk_payload":true,"sparse_vectors":{"text":{}}},"hn
+[distance smuggling] persisted sparse_vectors = {'text': {}}
+[distance smuggling] accepted with the smuggled field dropped (readback shows no user distance) - not-user-settable promise holds
+[create scc03_1788388161_bad_list] status=400 raw={"status":{"error":"Format error in JSON body: invalid type: sequence, expected a map at line 1 column 65"},"time":0.0}
+[list] cleanly rejected with 400
+[create scc03_1788388161_bad_string] status=400 raw={"status":{"error":"Format error in JSON body: invalid type: string \"text\", expected a map at line 1 column 71"},"time":0.0}
+[string] cleanly rejected with 400
+[create scc03_1788388161_bad_value_int] status=400 raw={"status":{"error":"Format error in JSON body: invalid type: integer `5`, expected struct SparseVectorParams at line 1 column 75"},"time":0.0}
+[value_int] cleanly rejected with 400
+[create scc03_1788388161_bad_value_list] status=200 raw={"result":true,"status":"ok","time":0.276824087}
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess)
+[value_list] map value [] (SparseVectorParams object required) was ACCEPTED with status 200 (expected clean 4xx per qdrant_type_collections_create_002: sparse_vectors is a map of name to SparseVectorParams); raw={"result":true,"status":"ok","time":0.276824087}

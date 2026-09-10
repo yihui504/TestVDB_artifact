@@ -1,0 +1,18 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+ownership prefix: sidl03d330ba
+[constraint quote] assertion: 'delete of a non-existent payload index is an idempotent success; index deletion leaves point data untouched'
+[scroll calibration:match_cat_A] ids=[1, 3, 5]
+[scroll calibration:range_score_gt25] ids=[2, 4, 5]
+[scroll calibration:combined_catA_score_gt15] ids=[3, 5]
+[DELETE index removal sidl03d330ba_live/cat] -> status=200 raw={"result":{"operation_id":7,"status":"completed"},"status":"ok","time":0.306640445}
+[DELETE index removal sidl03d330ba_live/score] -> status=200 raw={"result":{"operation_id":9,"status":"completed"},"status":"ok","time":0.300797082}
+[scroll post-delete:match_cat_A] ids=[1, 3, 5]
+[count post-delete:match_cat_A] exact=3
+[scroll post-delete:range_score_gt25] ids=[2, 4, 5]
+[count post-delete:range_score_gt25] exact=3
+[scroll post-delete:combined_catA_score_gt15] ids=[3, 5]
+[count post-delete:combined_catA_score_gt15] exact=2
+[count post-delete:no-filter-control] exact=5
+OK: after 200-removal of cat/score indexes, equality/range/combined filters on the de-indexed fields return exactly the seeded truth sets [1,3,5] / [2,4,5] / [3,5] with matching exact counts, and the no-filter control still counts 5 - payload filter semantics untouched
+VERDICT: NO_DEFECT

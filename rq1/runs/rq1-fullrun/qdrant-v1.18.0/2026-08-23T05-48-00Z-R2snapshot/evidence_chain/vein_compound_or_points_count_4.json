@@ -1,0 +1,79 @@
+{
+  "defect_id": "vein_compound_or_points_count_4",
+  "endpoint": "POST /collections/{collection_name}/points/count",
+  "defect_type": "Type2",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "WebFetch api.qdrant.tech blocked (domain_blocked); contract source_status=reachable per Step2 capture. OpenAPI v1.18.0 local clone (.sourcedeps/qdrant/v1.18.0/openapi.json) CountRequest.exact verbatim: 'If true, count exact number of points. If false, count approximate number of points faster. Approximate count might be unreliable during the indexing process.' Doc only promises approximate is 'faster' and unreliable during indexing; no estimation tolerance or accuracy guarantee is documented. The script's tol=max(2,0.2*e) is a script-invented standard, not a documented one. Assertion qdrant_behavioral_points_count_001 (exact=true gives exact count) is consistent with observations but covers a different branch than this claim (exact:false).",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "or(a,b,c): exact=200 approx=144 scroll=200 / within tolerance: False",
+      "secondary_observations": [
+        "or(a,b): exact=140 approx=117 scroll=140 / within tolerance: True",
+        "CONTROL match(a): exact=75 approx=75"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "No illegal request; all HTTP 200; observation is approximate count under-counting (truth 200 -> approx 144, -28%)"
+      },
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["vein_compound_or_points_count_4"],
+      "cross_script_note": "Same endpoint, same pattern (exact:false approx far off exact) also triggered in output_vein_geo_filter_points_count_5.log (radius earth: exact=35 approx=200), output_vein_range_filter_points_count_1.log (lt50+lte100: exact=96 approx=192), output_vein_null_check_points_count_3.log (is_empty nonexistent: exact=201 approx=100), output_vein_type_mismatch_points_count_2.log (num match '50' str: exact=0 approx=100) - approx imprecision is a systemic property of this endpoint across filter shapes, not unique to OR form",
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_points_count_001 (assertion; candidate carried empty constraint_id)",
+      "assertion_text_quoted": "count with exact=true gives exact count; 200 {count}; 404 collection missing",
+      "api_violates_assertion": false,
+      "note": "Candidate's constraint_id was empty string; nearest assertion attached mechanically. That assertion only constrains the exact=true branch, and the exact path observation (exact=200=scroll) satisfies it; the claim targets the exact:false estimation branch, for which neither doc nor OpenAPI makes any accuracy promise. violates=False because the observed parameters are outside this assertion's constraint domain AND no constraint exists for the exact:false branch - not because the phenomenon is compliantly explained.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: candidate constraint_id empty; nearest qdrant_behavioral_points_count_001 only covers exact=true behavior",
+        "doc: OpenAPI v1.18.0 CountRequest.exact only says approximate 'faster' + unreliable during indexing, no tolerance promise (WebFetch domain_blocked; cross-checked local OpenAPI + raw_knowledge)",
+        "script: vein_compound_or_points_count_4.py L52-76 POST /collections/vein_c4/points/count {filter:{should:[{key:'cat',match:{any:[a,b,c]}}]}, exact:true/false}, with scroll ground truth",
+        "log: 'or(a,b,c): exact=200 approx=144 scroll=200 / within tolerance: False' -> VERDICT: DEFECT_FOUND"
+      ],
+      "chain_broken_at": "contract",
+      "break_detail": "Contract link missing: candidate constraint_id is empty and structured_contract.json contains no constraint on exact:false approximation accuracy. Doc provides no such promise either. Therefore 'violates documented tolerance' has no object to violate - the phenomenon is real (approx deviates significantly from exact) but the violated tolerance is the script's own max(2,0.2*e), not a documented or contractual standard.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["estimate_cardinality", "combine_should_estimations", "expected_should_estimation", "CountRequest", "estimate_point_count", "estimate_filter"],
+      "files_examined": [
+        "lib/collection/src/shards/local_shard/shard_ops.rs (count(): L349-387)",
+        "lib/collection/src/shards/local_shard/mod.rs (estimate_cardinality(): L934-960)",
+        "lib/segment/src/segment/read_view/payload.rs (estimate_point_count(): L42-66)",
+        "lib/segment/src/index/struct_payload_index.rs (estimate_cardinality/condition_cardinality: L390-570)",
+        "lib/segment/src/index/query_estimator.rs (estimate_filter/estimate_should/combine_should_estimations/expected_should_estimation: L119-330)",
+        "lib/segment/src/index/field_index/map_index/mod.rs (estimate_cardinality MatchAny: L788-820)",
+        "openapi.json (CountRequest schema)"
+      ],
+      "source_excerpt": "// query_estimator.rs L119-131\npub fn expected_should_estimation(estimations: impl Iterator<Item = usize>, total: usize) -> usize {\n    if total == 0 { return 0; }\n    let element_not_hit_prob: f64 = estimations\n        .map(|x| 1.0 - (x as f64 / total as f64))\n        .product();\n    let element_hit_prob = 1.0 - element_not_hit_prob;\n    (element_hit_prob * (total as f64)).round() as usize\n}\n\n// map_index/mod.rs L788-811 (keyword MatchAny)\nAnyVariants::Strings(keywords) => {\n    let estimations = keywords.iter()\n        .map(|keyword| self.match_cardinality(keyword.as_str(), hw_counter))\n        .collect::<Vec<_>>();\n    let estimation = if estimations.is_empty() { CardinalityEstimation::exact(0) }\n        else { combine_should_estimations(&estimations, self.get_indexed_points()) };\n    ...\n}\n\n// shard_ops.rs L365-387 (count dispatch)\nlet result: CollectionResult<usize> = if request.exact {\n    /* read_filtered exact */\n} else {\n    self.estimate_cardinality(request.filter.as_ref(), &hw_measurement_acc).await\n        .map(|cardinality| cardinality.exp)\n};",
+      "call_chain_traced": "REST count(exact:false) -> local_shard count() (shard_ops.rs:349) -> estimate_cardinality (local_shard/mod.rs:934) -> per-segment estimate_point_count (read_view/payload.rs:42) -> StructPayloadIndex::estimate_cardinality (struct_payload_index.rs:560) -> estimate_filter (query_estimator.rs:236) -> estimate_should -> combine_should_estimations -> expected_should_estimation. Key: expected_should_estimation uses the independence-assumption union formula 1-prod(1-x_i/total) - an explicit estimation algorithm, not exact counting. Numeric check (cat in {a,b,c}, total~200, each ~66-75): independence gives ~0.96 hit prob -> ~190+ exp; observed 144 is even below that formula's theoretical output, indicating additional factors (adjust_for_deferred_points / merge_independent / map_index using get_indexed_points() instead of available_point_count as denominator - during indexing the denominator is smaller and skews the estimate low) participate.",
+      "verification_outcome": "by_design_in_source",
+      "by_design_detail": "The approximate nature of exact:false is documented design intent ('count approximate number of points faster. Approximate count might be unreliable during the indexing process'), and the source estimate path (probabilistic union formula + denominator distortion during indexing) is the implementation of exactly that documented statement. The script used indexing_threshold=1 and only slept 8s for 200 points, so the query lands squarely in the documented 'unreliable during indexing' window. Source promises no tolerance, so there is no 'contract-required validation missing'. Note: this does not rule out a stronger claim (systematic under-count after indexing completes) - but this run's log contains no post-indexing re-measurement, so that evidence is not in the chain.",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (CONTROL match(a) exact=75=approx single-value path exact agreement)",
+        "request_param_typo (exact path 200=scroll proves setup correct)"
+      ],
+      "surviving": "by-design estimation semantics + unreliable-during-indexing window (documented); tolerance criterion is script-invented, not documented - claim's 'under-counts' half is true, its 'beyond documented estimation tolerance' half has no documented tolerance to exceed"
+    }
+  }
+}

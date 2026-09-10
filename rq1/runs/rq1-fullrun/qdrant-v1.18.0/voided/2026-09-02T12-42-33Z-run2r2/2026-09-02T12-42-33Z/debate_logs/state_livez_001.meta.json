@@ -1,0 +1,17 @@
+{
+ "defect_id": "state_livez_001",
+ "endpoint": "livez",
+ "param": null,
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "concurrent",
+ "constraint_ids": [
+  "qdrant_behavioral_livez_001"
+ ],
+ "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/service/livez",
+ "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+ "oracle": {
+  "statement": "every probe on the healthy instance returns HTTP 200 (0 anomalies); a non-{200,503} status or transport loss followed by >=1 immediate 200 re-probe (livez or healthz) = DEFECT (1+ non-503 spec-violating status = Type3_RuntimeFailure; >=2 recovered transport losses = Type3; livez persistently non-200 across 3 re-probes while healthz answers 200 = Type4 false liveness); persistent non-200 with NO aliveness proof on either face = SCRIPT_ERROR (dead/unadjudicable service, read-only face); sole 503-with-recovery samples = NO_DEFECT with observations printed (recorded with the doc-set NOTE that the livez OpenAPI shard documents only 200)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

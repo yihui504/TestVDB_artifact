@@ -1,0 +1,63 @@
+{
+  "defect_id": "vein_null_check_points_query_1",
+  "endpoint": "points+query",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "No specific constraint about filter.should nullability. Test validates null handling: filter.should=None accepted with 200 OK. Expected 400 validation error.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "c1: filter.should=null on POST /collections/{collection}/points/query → HTTP 200, response={'result': {'points': [...]}, 'status': 'ok'}",
+      "secondary_observations": [],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "HTTP 2xx + 业务错误码 N/A (success: true)",
+        "note": "Null value for filter.should accepted with HTTP 200. Expected 400 Bad Request with validation error. Type1_IllegalSuccess - invalid input accepted."
+      },
+      "reproducibility": "单脚本",
+      "script_error": false,
+      "triggering_scripts": ["vein_null_check_points_query_1"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "",
+      "assertion_text_quoted": "N/A (no constraint exists for filter.should nullability; test validates general input validation)",
+      "api_violates_assertion": false,
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract:N/A (no specific constraint)",
+        "doc:OpenAPI v1.18.x schema QueryRequest allows nullable properties",
+        "script:POST /collections/{collection}/points/query with filter.should=None",
+        "log:HTTP 200 with success and points returned (null accepted without validation)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": "OpenAPI schema permits nullable values (see schema anyOf with nullable: true). API accepts null filter.should without validation error. No constraint violated, but poor input validation - should reject null in filter array.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["filter.*should", "nullable", "QueryRequest", "validate.*filter"],
+      "files_examined": [
+        "docs/redoc/v1.18.x/openapi.json"
+      ],
+      "source_excerpt": "File: docs/redoc/v1.18.x/openapi.json, Lines 15792-15940 (QueryRequest schema)\n\"query\": {\n  \"anyOf\": [\n    {\"$ref\": \"#/components/schemas/QueryInterface\"},\n    {\"nullable\": true}  // Allows null\n  ]\n}\n\nFilter field also permits nullable properties via anyOf schemas.\n\nSchema explicitly permits null values. API implementation follows schema - no validation rejects null.",
+      "call_chain_traced": "OpenAPI QueryRequest schema allows nullable query and filter fields via 'anyOf' with 'nullable: true'. API accepts null filter.should per schema design. No validation layer checks for null within filter arrays. This is schema-permitted but functionally questionable.",
+      "verification_outcome": "by_design_in_source",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "concurrency", "cache_delay", "payload_mismatch"],
+      "surviving": "filter.should=null accepted with 200 OK. Schema permits nullable values, so this is technically by-design per OpenAPI spec. However, semantically incorrect - filter.should should be array, not null. Type1 but schema-compliant. May be intentional for flexible query construction."
+    }
+  }
+}

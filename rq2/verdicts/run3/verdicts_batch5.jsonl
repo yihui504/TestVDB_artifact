@@ -1,0 +1,14 @@
+{"defect_id": "qdrant_014", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "包内该 endpoint 无任何契约约束条目(仅 doc_quote 模板'Recover current peer Raft state')，standalone 下返回 500 未违反包内任何文档断言"}
+{"defect_id": "qdrant_015", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "INT_MAX 满足契约唯一约束 shard_number>=1 且契约无时限/上界声明，read timeout(无响应)不足以证明违约，摘要显示健康检查 200、控制组正常返回 422"}
+{"defect_id": "qdrant_016", "verdict": "CONFIRMED", "confidence": 0.85, "rationale": "补充契约明文 lookup_from.collection 必须引用已存在集合(不存在应 400/404)，observed 对 nonexistent_collection_xyz 返回 200 并静默返回源集合 3 条结果"}
+{"defect_id": "qdrant_017", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "三页搜索结果按分数降序且分页无重复、scroll 返回 next_page_offset=10，全部符合 behavioral_008/009，无任何违约"}
+{"defect_id": "qdrant_018", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约仅声明 exact=false 使用 segment statistics(近似)而无精度保证，approx 24 与 exact 40 的偏差符合近似语义，behavioral_010(200+count 字段)已满足"}
+{"defect_id": "qdrant_019", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约未承诺 exact=false 与 exact=true 一致，三组规模下 approx 偏差(-35%~-40%)符合 segment statistics 近似口径，无文档违约"}
+{"defect_id": "qdrant_020", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约无 exact=false 精度断言，单字段 130/130 一致而复合过滤下 approx 偏差(99 vs 130、62 vs 73)属近似口径允许范围"}
+{"defect_id": "qdrant_021", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "契约仅声明 exact=false 走 segment statistics，geo radius 过滤下 approx 偏差极大(+535%)虽异常但包内无任何精度承诺被违反"}
+{"defect_id": "qdrant_022", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "match_any 多值过滤 approx 随值数增加低估(-11%~-33%)，契约未承诺 exact=false 准确，200+count 结构符合 behavioral_010"}
+{"defect_id": "qdrant_023", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "快照恢复后 count=3 与恢复到快照时点(3 点)的回滚语义一致，包内无 snapshot recover/priority 的文档断言可判违反"}
+{"defect_id": "qdrant_024", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "首例 400 带明确维度错误属正确 4XX 诊断，包内无 lookup_from 跨集合维度处理的契约断言，第二例 200 无法对证任何包内声明"}
+{"defect_id": "qdrant_025", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "包内无 collection metadata 语义/PATCH 清空行为的契约条目，PATCH metadata={} 返回 200 且 metadata 未变不违反任何包内文档断言"}
+{"defect_id": "qdrant_026", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "各点向量全同导致分数并列(均 1.0)，并列时组内排序无文档化确定性承诺，组员集合({1,3,5}/{2,4,6})稳定，不违反降序断言"}
+{"defect_id": "qdrant_027", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "契约明文 Index creation is asynchronous，acknowledged 后立即 GET 见 payload_schema={} 与异步语义一致，无违约"}

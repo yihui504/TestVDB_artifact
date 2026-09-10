@@ -1,0 +1,17 @@
+{
+  "defect_id": "semantic_index_delete_002",
+  "endpoint": "index+delete",
+  "param": null,
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "behavioral_contract",
+  "constraint_ids": [
+    "qdrant_state_index_delete_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/indexes/delete-field-index",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "DELETE of a never-indexed ghost field returns 200 (idempotent-success promise, 4xx = Type1_IllegalRejection); DELETE of the two real indexes (cat keyword, score integer) returns 200 and removes both from describe result.payload_schema (200-without-removal = Type4 silent no-op); post-delete scroll snapshot (4 rows: ids, payloads, vectors sorted by id) is byte-identical to baseline and POST count exact == 4 (any lost row/payload key/vector or count drift = Type4, 'index deletion leaves point data untouched'); second re-read identical; 5xx with healthy /healthz = Type3; transport/setup = SCRIPT_ERROR (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "defect_id": "boundary_cluster_peer_delete_002",
+  "endpoint": "cluster+peer+delete",
+  "param": "peer_id",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "boundary",
+  "oracle": {
+    "statement": "peer_id numeric boundary values 0 / 1 / u64 max / u64 max+1 / 2^65 -> DELETE /cluster/peer/{peer_id} returns 4xx each (in-range = nonexistent peer per assertion; overflow = u64 parse failure); 2xx on any (sharpest: overflow 18446744073709551616 silently truncated and removal declared success) = Type1_IllegalSuccess; 5xx = Type3_RuntimeFailure with /healthz rechecked",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

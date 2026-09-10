@@ -1,0 +1,26 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+face A stored UUID -> status=200
+raw: {"result":{"id":"8c5b1773-f6b7-42fb-8ec5-cbcee406315b","payload":{"n":"uuid"},"vector":[0.18257418,0.36514837,0.5477226,0.73029673]},"status":"ok","time":0.000129707}
+face A OK: 200 with Record result.id == stored UUID
+
+face B other random UUID -> status=404
+raw: {"status":{"error":"Not found: Point with id 962594f4-0a3f-4743-a1f6-4d569c602968 does not exists!"},"time":0.000054281}
+face B other UUID: 404 — promise kept
+
+face C malformed UUID (hex Z) -> status=400
+raw: {"status":{"error":"Wrong input: Can not recognize \"8c5b1773-f6b7-42fb-8ec5-cbcee406315Z\" as point id"},"time":2.83e-6}
+face C malformed UUID: 400 clean domain rejection (error-naming NOTE only, R29)
+
+face D near-miss UUID -> status=400
+raw: {"status":{"error":"Wrong input: Can not recognize \"8c5b1773-f6b7-42fb-8ec5-cbcee40631512\" as point id"},"time":2.222e-6}
+face D near-miss UUID: 400 strict-validation NOTE (error-naming NOTE only, R29)
+
+face E uppercase UUID -> status=200
+raw: {"result":{"id":"8c5b1773-f6b7-42fb-8ec5-cbcee406315b","payload":{"n":"uuid"},"vector":[0.18257418,0.36514837,0.5477226,0.73029673]},"status":"ok","time":0.000296675}
+NOTE: face E: 200 with matching Record — tolerant case-normalization of the UUID string branch (RFC 4122 case-insensitivity; no documented case contract — for the judge)
+
+control Z integer id 9 -> status=200
+raw: {"result":{"id":9,"payload":{"n":9},"vector":[0.2721655,0.4082483,0.544331,0.6804138]},"status":"ok","time":0.000561997}
+control Z OK: 200 with Record result.id == 9
+VERDICT: NO_DEFECT

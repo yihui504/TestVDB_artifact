@@ -1,0 +1,95 @@
+{
+  "defect_id": "boundary_points_query_offset_001",
+  "endpoint": "points+query (POST /collections/{collection_name}/points/query)",
+  "defect_type": "Type4",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_MISMATCH",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "FAIL",
+      "endpoint_precision": "PARTIAL",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: domain_blocked — no doc_preflight.json sidecar exists in the session or version dirs; WebFetch to api.qdrant.tech and qdrant.tech both blocked by network restriction, web_reader returned 500 network error; content was instead verified against the repo-shipped artifact docs/redoc/v1.18.x/openapi.json (the ReDoc deployment the versioned source_url serves; docs/redoc/default_version.js = 'v1.18.x'); the contract's cached source_status is 'reachable' (mined 2026-09-02). Version: v-1-18-x versioned URL matches the v1.18.x spec artifact shipped in the v1.18.0 clone (verified via local artifact). Content: the cited constraint's input-bounds text matches the spec verbatim (limit 'Max number of points to return. Default is 10.' minimum 1; offset 'Offset of the result. Skip this many points. Default is 0' minimum 0), but the claim's oracle — next_page_offset continuation on the query response — is absent from the same spec: QueryResponse = {points: [ScoredPoint]} only, and next_page_offset appears solely in ScrollResult; the contract-layer prose 'QueryResponse {result: [ScoredPoint], next_page_offset?}' (raw_knowledge api_endpoints[20], endpoint_registry doc_quote, qdrant_behavioral_points_query_001 — which itself says 'optional next_page_offset') conflates the scroll-face response shape. Endpoint precision: registry entry points+query exists with correct method/path/source_url and verified_at 2026-09-02T12:34:08Z, but its doc_quote misdescribes the shipped QueryResponse schema. No SDK/REST confusion — the conflation is REST scroll-face vs REST query-face.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "leg Of0 offset=0 -> status=200 | raw: {\"result\":{\"points\":[{\"id\":1,\"version\":1,\"score\":0.0057622097},{\"id\":2,\"version\":1,\"score\":0.011524419},{\"id\":3,\"version\":1,\"score\":0.01728663},{\"id\":4,\"version\":1,\"score\":0.023048839},{\"id\":5,\"version\":1,\"score\":0.028811049}]},\"status\":\"ok\",\"time\":0.000252237}  [next_page_offset key not present in body]",
+      "secondary_observations": [
+        "VERDICT line (log line 6, the script's claim): VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — leg [Of0 offset=0]: next_page_offset must be 5 (5 shown from offset 0), got None: {\"result\":{\"points\":[{\"id\":1,...},\"id\":5,...}]},\"status\":\"ok\",\"time\":0.000252237}",
+        "reproduction, output_boundary_points_query_limit_001.log:6 — VERDICT: DEFECT_FOUND (Type4_StateLogicViolation) — leg [L1 limit=1]: with 12 seeded points and offset default 0, next_page_offset must be 1, got None: {\"result\":{\"points\":[{\"id\":1,\"version\":1,\"score\":0.0057622097}]},\"status\":\"ok\",\"time\":0.000565217}",
+        "reproduction, output_state_points_query_exact_pagination_005.log:17-29 — [E3] next_page_offset log: [None, None, None, None, None, None]; WARN: (E3) non-final page 0 lacked next_page_offset (likewise pages 1-4)",
+        "comparative [rest query face, live probe on same deployment v1.18.0 commit db3fca3, 12-point collection]: offset=0 limit=5 -> http=200 points=5 next_page_offset key ABSENT; offset=5 limit=5 -> http=200 points=5 next_page_offset key ABSENT",
+        "comparative [rest scroll face, live probe]: limit=5 -> http=200 points=5 next_page_offset=6 — PRESENT and non-null, and the value 6 is the next point's ID-cursor, not the arithmetic offset+limit=5",
+        "comparative [rest legacy search face, live probe, same-family limit/offset parameters]: offset=0 limit=5 -> http=200 points=5, next_page_offset key ABSENT in body (behaves like the query face)",
+        "control [final pages], output_boundary_points_query_offset_huge_001.log:10-22 — legs H1-H4 'OK: 200 with 0 points, no next_page_offset' (absence at exhaustion is the expected disposition)"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "request-side parameters (offset=0, limit=5 over 12 stored points) are inside the documented domain; no client-error disposition is involved in this observation"
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_points_query_offset_001",
+        "boundary_points_query_limit_001",
+        "state_points_query_exact_pagination_005"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_range_points_query_001",
+      "assertion_text_quoted": "limit minimum 1 (default 10); offset minimum 0 (default 0)",
+      "api_violates_assertion": false,
+      "note": "violates-declaration self-check, option 'value genuinely compliant': the observed request (offset=0, limit=5) is inside the assertion's domain (offset>=0, limit>=1) and the documented success disposition (HTTP 200 + points) was returned — the cited assertion is not violated. The failed oracle (next_page_offset=5) is not part of this assertion's text and has no basis in the v1.18.x spec, where QueryResponse={points} and next_page_offset exists only on the scroll face (as an id-cursor, not offset+limit arithmetic). Note also: candidates.jsonl's constraint_id field was empty; the id was recovered verbatim from the attack string.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_range_points_query_001 present in structured_contract.json constraints.range_constraints (assertion: input bounds only); candidates.jsonl constraint_id field EMPTY — id recovered from the attack string (mechanical dispatch gap, not a semantic break)",
+        "doc: the constraint's input-bounds text matches the shipped v1.18.x spec verbatim, but the claim's response oracle (next_page_offset on the query face) is not in that spec — QueryResponse={points:[ScoredPoint]}, next_page_offset exists only in ScrollResult",
+        "script: boundary_points_query_offset_001 sent {query:{nearest:V}, limit:5, offset:0} per its declared strategy1 attack; its docstring oracle 'next_page_offset == 5' is arithmetic-derived from scroll-face pagination semantics and exceeds the cited constraint",
+        "log: verdict line consistent with the raw response (200, exactly 5 points, no next_page_offset key serialized) — the observation is genuine and reproduced across scripts and a live re-probe"
+      ],
+      "chain_broken_at": "doc",
+      "break_detail": "The documentation link does not carry the claimed promise: the v1.18.x OpenAPI served at the source_url defines QueryResponse={points:[ScoredPoint]} with no next_page_offset (the only schema carrying it is ScrollResult), so the DEFECT verdict's required behavior (next_page_offset=5 on a non-final query page) has no documented basis. The contract-layer prose mentioning 'next_page_offset?' on the query response (raw_knowledge api_endpoints[20], endpoint_registry doc_quote, qdrant_behavioral_points_query_001 — which itself says 'optional') conflates the scroll-face response shape.",
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "next_page_offset",
+        "pub struct QueryResponse",
+        "message QueryResponse",
+        "Skip this many",
+        "paginat"
+      ],
+      "files_examined": [
+        "src/actix/api/query_api.rs",
+        "lib/api/src/rest/schema.rs",
+        "lib/api/src/grpc/proto/points.proto",
+        "src/tonic/api/query_common.rs",
+        "lib/collection/src/collection/point_ops.rs",
+        "lib/collection/src/operations/types.rs",
+        "lib/collection/src/collection/query.rs",
+        "docs/redoc/v1.18.x/openapi.json"
+      ],
+      "source_excerpt": "lib/api/src/rest/schema.rs:575-612 (QueryRequestInternal + QueryResponse):\n    /// Max number of points to return. Default is 10.\n    #[validate(range(min = 1))]\n    pub limit: Option<usize>,\n\n    /// Offset of the result. Skip this many points. Default is 0\n    pub offset: Option<usize>,\n...\n#[derive(Debug, Serialize, JsonSchema)]\npub struct QueryResponse {\n    pub points: Vec<ScoredPoint>,\n}\n\nsrc/actix/api/query_api.rs:30,78-97 (REST query handler):\n#[post(\"/collections/{collection_name}/points/query\")]\n...\n        let points = dispatcher.toc(&auth, &pass).query_batch(...).await?...pop()...into_iter()\n            .map(api::rest::ScoredPoint::from)\n            .collect_vec();\n        Ok(QueryResponse { points })   // response carries ONLY points — no continuation field exists to populate\n\nlib/api/src/grpc/proto/points.proto:1445-1450 (gRPC query face):\nmessage QueryResponse {\n  repeated ScoredPoint result = 1;\n  double time = 2;\n  optional Usage usage = 3;\n}                                  // no next_page_offset on the gRPC query face either\n\nsrc/tonic/api/query_common.rs:818-822 (gRPC handler fills result/time/usage only):\n    let response = QueryResponse { result: ..., time: ..., usage: ... };\n\nlib/collection/src/collection/point_ops.rs:394-403 (scroll face — the ONLY path computing next_page_offset):\n        let next_page_offset = if points.len() < limit || order_by.is_some() {\n            // This was the last page\n            None\n        } else {\n            // remove extra point, it would be a first point of the next page\n            Some(points.pop().unwrap().id)   // id-cursor (a point ID), not an arithmetic offset\n        };\n        Ok(ScrollResult { points, next_page_offset })\n\ndocs/redoc/v1.18.x/openapi.json (artifact served at the source_url; default_version.js='v1.18.x'):\n  QueryResponse: { type: object, required: [points], properties: { points: { type: array, items: ScoredPoint } } }  # no next_page_offset\n  QueryRequest.offset: { description: \"Offset of the result. Skip this many points. Default is 0\", type: integer, format: uint, minimum: 0 }\n  QueryRequest.limit: { description: \"Max number of points to return. Default is 10.\", type: integer, format: uint, minimum: 1 }\n  # the ONLY schema in the whole spec containing next_page_offset is ScrollResult",
+      "call_chain_traced": "REST: actix query_points (src/actix/api/query_api.rs:30) -> dispatcher.toc().query_batch -> Collection::query_batch (lib/collection/src/collection/query.rs; offset consumed as skip inside the take arithmetic, e.g. line 107 'req.limit + req.offset', line 138 'new_request.offset = 0; // Offset is handled on the collection level') -> results mapped to api::rest::ScoredPoint -> Ok(QueryResponse { points }) (query_api.rs:97): the response type carries only points at every layer. gRPC: tonic query (src/tonic/api/query_common.rs:774) -> QueryResponse {result,time,usage} (line 818). Only the scroll path computes a continuation: lib/collection/src/collection/point_ops.rs:394-400 sets next_page_offset to the popped extra point's ID (id-cursor), surfaced via ScrollResult (lib/collection/src/operations/types.rs:524-530). No intent annotation (comment/docstring/maintainer note) about deliberately omitting a continuation token from the query face was found, so by_design_in_source is not claimed; the field is structurally absent from both response types and the published spec matches that absence.",
+      "verification_outcome": "validation_present",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env (service alive at probe time, self-reports version 1.18.0 commit db3fca3; live comparative probe reproduces deterministically)",
+        "concurrency (sequential single requests on a private freshly-created collection)",
+        "cache_delay (stateless read path; fresh upsert then immediate query reproduces identically)",
+        "request_typo (disposition echoes the request: exactly 5 points from offset 0 as asked)"
+      ],
+      "surviving": "structural, not interference: the query-face response types (REST QueryResponse, gRPC QueryResponse) define no continuation field and the shipped v1.18.x spec matches — the observed absence is the API's declared response shape; the failed expectation is the script's arithmetic oracle, which is grounded in scroll-face semantics (id-cursor) that were never contracted for the query face"
+    }
+  }
+}

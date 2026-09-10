@@ -1,0 +1,144 @@
+【任务】vt 臂 · 完备材料列 · run3 batch1（小单元 part）。你是 TestVDB 4-judge 投票管线中的 judge-evidence 与 judge-severity（两职顺序执行）。judge-doc 已产出 stage2_doc（本批全部 DOC_PARTIAL，网络关网降级，代码直出）。judge-novelty 关网直出。
+
+工作流（对下面 7 案逐案执行，各案独立）：
+1. judge-evidence：按该案材料段的 DECISION RULES（as-shipped 逐字）判定，写 JSON（schema: defect_id/vote=is_defect|not_defect/grade/score/evidence_summary/rationale）到
+   <ARTIFACT_ROOT>/.paperpilot/phase2-rerun/arms/voting/run3_complete/judge_work/{did}/debate_logs/stage2_evidence_{did}.json
+2. judge-severity：基于你刚写的 evidence 结果 + 同案材料，按下方 SEVERITY RULES（as-shipped 逐字）判定，写 JSON（schema: defect_id/severity/confidence/rationale）到同目录 stage2_severity_{did}.json
+
+SEVERITY RULES（as-shipped 逐字，全批共用）：
+Rule 1 baseline by defect_type: Type1_IllegalSuccess=High, Type2_PoorDiagnostics=Medium, Type3_RuntimeFailure=Critical, Type4_StateViolation=High. (Vendor defect_type mapping: param_validation/boundary→Type1-ish, diagnostics/error-message→Type2, crash/runtime→Type3, state/consistency→Type4.)
+Rule 2 endpoint sensitivity: core data plane (search/insert/upsert/query/get) +1 level; management plane unchanged; ops plane -1; metadata plane -1.
+Rule 3 batch amplification: affects batch operations +1 level.
+Rule 4 evidence quality: doc_verification_result=DOC_PARTIAL → -1 level.
+Rule 4 exception: crash signals (OOM/panic/capacity overflow/SIGSEGV/SIGKILL/5xx/connection reset/container Killed) → forced Critical, no demotion.
+Rule 5 edge: unrecognizable endpoint → Medium 0.5; single script trigger → -1 level.
+Ladder: trivial < low < medium < high < critical.
+
+注意：材料段中「补充契约依据」与「维护者态度参考」段为完备材料注入（与其它输入同等地位，是否相关/采信由你判断）。全部完成后汇报逐案两行 JSON。
+
+════════════════════ 案 1/1：milvus_013 ════════════════════
+You are judge-evidence in the TestVDB 4-judge voting pipeline (as-shipped SOP). Judge-doc has already produced stage2_doc.json (this candidate: DOC_PARTIAL). Your job: review the EVIDENCE for this one candidate per the judge-evidence decision rules, and write your vote.
+
+DECISION RULES (from judge-evidence SOP, as-shipped):
+- Log contains "FAILED: Type1"/"VIOLATION" (illegal op accepted) or "FAILED: Type3"/"RuntimeFailure" (crash) → vote=is_defect, grade A, score 9
+- Log contains "FAILED: Type4"/"StateViolation" → vote=is_defect, grade B, score 7
+- PASSED with no FAILED → vote=not_defect, grade D, score 0
+- Mixed FAILED+PASSED same endpoint (intermittent) → vote=is_defect, grade C, score 5
+- Connection failure/timeout/network error → vote=not_defect (environment issue)
+- Empty log or no matching log → vote=not_defect (nothing to evaluate)
+- Log contains TypeError/AttributeError/SCRIPT_ERROR → vote=script_error
+- NOTE: this pipeline is a replay capture — logs contain raw HTTP exchanges with a neutral line "VERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)" where as-shipped attack agents would print FAILED/VERDICT assertion lines. Apply semantic matching: judge whether the observed HTTP behavior (request/response/error) constitutes reproducible evidence of the claimed defect.
+- High-evidence path (contract violation with clear success/failure signal): 1 successful reproduction + clear contract violation → is_defect
+- If only a single script with no reproducibility evidence → forced not_defect; Type2_PoorDiagnostics single-script → forced not_defect
+
+[MATERIAL SUPPLEMENT — 完备材料列注入]
+--- 补充契约依据（文档考古补全，同版本契约） ---
+{"constraint_id": "milvus_type_request_timeout_001", "endpoint": "entities+query", "description": "Request-Timeout header must be an integer", "assertion": "header Request-Timeout matches ^[0-9]+$ (non-integer rejected)", "type": "state_constraint", "evidence_tier": "explicit", "source_url": "https://milvus.io/api-reference/restful/v2.3.x/v2/Vector%20(v2)/Query.md", "_provenance": "doc-archaeology 2026-08-20: issue #49890 (2026-05-18) — API reference documents Request-Timeout as integer type; float 3.5 silently truncated, string \"abc\" silently ignored."}
+
+INPUTS:
+[stage2_doc.json result for this candidate] doc_verification_result=DOC_PARTIAL
+[candidate defect]
+{
+ "defect_id": "milvus_013",
+ "endpoint": "collections+list",
+ "defect_type": "param_validation",
+ "expected": {
+  "contract_constraints": [],
+  "keyword_matched_segment": [
+   {
+    "endpoint": "collections+drop",
+    "kind": "type_constraints",
+    "description": "collectionName must be a non-empty string",
+    "assertion": "collectionName is non-empty string",
+    "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Drop.md",
+    "confidence": 1.0
+   },
+   {
+    "endpoint": "collections+load",
+    "kind": "type_constraints",
+    "description": "collectionName must be a non-empty string for load",
+    "assertion": "collectionName is non-empty string",
+    "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Load.md",
+    "confidence": 1.0
+   },
+   {
+    "endpoint": "collections+rename",
+    "kind": "type_constraints",
+    "description": "collectionName and newCollectionName must be non-empty strings",
+    "assertion": "collectionName is non-empty string AND newCollectionName is non-empty string",
+    "source_url": "https://milvus.io/api-reference/restful/v2.6.x/v2/Collection%20(v2)/Rename.md",
+    "confidence": 1.0
+   },
+   {
+    "endpoint": "partitions+create",
+    "kind": "type_constraints",
+    "description": "partitionName must be a non-empty string",
+    "assertion": "partitionName is non-empty string",
+    "source_url": "https://github.com/milvus-io/milvus/blob/v2.6.17/internal/distributed/proxy/httpserver/constant.go",
+    "confidence": 1.0
+   }
+  ],
+  "api_template": null
+ },
+ "observed": {
+  "raw_observation": [
+   "[c1] Request-Timeout=3.5 (float) header -> http=200, code=0",
+   "[c2] Request-Timeout=abc (string) header -> http=200, code=0",
+   "[c3] control: Request-Timeout=10 (integer) -> http=200, code=0"
+  ],
+  "log_file": "output_milvus_013.log"
+ },
+ "metadata": {
+  "vendor": "milvus",
+  "version": "2.6.16"
+ }
+}
+[execution_results.json (session-level, your candidate is milvus_013)]
+{
+ "execution_summary": {
+  "total_scripts": 1,
+  "logs": [
+   {
+    "defect_id": "milvus_013",
+    "log_file": "output_milvus_013.log",
+    "captured_raw_http": true
+   }
+  ]
+ },
+ "log_contents": {
+  "milvus_013": "=== REQ 1 ===\nPOST http://localhost:19530/v2/vectordb/collections/list\nheaders: {\"Request-Timeout\": \"3.5\"}\npayload: {}\n=== RESP 1 ===\nstatus: 200\nbody: {\"code\":0,\"data\":[]}\n\n=== REQ 2 ===\nPOST http://localhost:19530/v2/vectordb/collections/list\nheaders: {\"Request-Timeout\": \"abc\"}\npayload: {}\n=== RESP 2 ===\nstatus: 200\nbody: {\"code\":0,\"data\":[]}\n\n=== REQ 3 ===\nPOST http://localhost:19530/v2/vectordb/collections/list\nheaders: {\"Request-Timeout\": \"10\"}\npayload: {}\n=== RESP 3 ===\nstatus: 200\nbody: {\"code\":0,\"data\":[]}\n\nVERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)\n"
+ }
+}
+[output log full text: output_milvus_013.log]
+=== REQ 1 ===
+POST http://localhost:19530/v2/vectordb/collections/list
+headers: {"Request-Timeout": "3.5"}
+payload: {}
+=== RESP 1 ===
+status: 200
+body: {"code":0,"data":[]}
+
+=== REQ 2 ===
+POST http://localhost:19530/v2/vectordb/collections/list
+headers: {"Request-Timeout": "abc"}
+payload: {}
+=== RESP 2 ===
+status: 200
+body: {"code":0,"data":[]}
+
+=== REQ 3 ===
+POST http://localhost:19530/v2/vectordb/collections/list
+headers: {"Request-Timeout": "10"}
+payload: {}
+=== RESP 3 ===
+status: 200
+body: {"code":0,"data":[]}
+
+
+VERDICT: UNKNOWN (replay capture — no attack-agent assertion output; raw HTTP only)
+
+
+OUTPUT: single-line JSON only:
+{"defect_id": "milvus_013", "vote": "is_defect|not_defect|script_error", "grade": "A|B|C|D", "score": 0-9, "evidence_summary": "one sentence", "rationale": "one sentence"}
+
+

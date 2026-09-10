@@ -1,0 +1,19 @@
+setup: ready
+delete filter='' -> http=200 code=1802 ok=False raw={"code":1802,"message":"missing required parameters, error: Key: 'CollectionFilterReq.Filter' Error:Field validation for 'Filter' failed on the 'required' tag"}
+delete filter='   ' -> http=200 code=1100 ok=False raw={"code":1100,"message":"delete plan can't be empty or always true : : invalid parameter"}
+delete filter='id >' -> http=200 code=1100 ok=False raw={"code":1100,"message":"failed to create delete plan: cannot parse expression: id \u003e, error: line 1:4 no viable alternative at input '\u003e': invalid parameter"}
+delete filter='id >< 5' -> http=200 code=1100 ok=False raw={"code":1100,"message":"failed to create delete plan: cannot parse expression: id \u003e\u003c 5, error: line 1:4 no viable alternative at input '\u003e\u003c': invalid parameter"}
+delete filter='id == ' -> http=200 code=1100 ok=False raw={"code":1100,"message":"failed to create delete plan: cannot parse expression: id == , error: line 1:6 mismatched input '\u003cEOF\u003e' expecting {'(', '[', '{', EXISTS, TEXTMATC
+delete filter='not a boolean expr' -> http=200 code=1100 ok=False raw={"code":1100,"message":"failed to create delete plan: cannot parse expression: not a boolean expr, error: invalid expression: not a boolean expr: invalid parameter"}
+delete filter='id == 1; DROP' -> http=200 code=1100 ok=False raw={"code":1100,"message":"failed to create delete plan: cannot parse expression: id == 1; DROP, error: line 1:7 token recognition error at: ';': invalid parameter"}
+delete filter='id == 1 OR' -> http=200 code=1100 ok=False raw={"code":1100,"message":"failed to create delete plan: cannot parse expression: id == 1 OR, error: line 1:10 mismatched input '\u003cEOF\u003e' expecting {'(', '[', '{', EXISTS, TEX
+delete filter='()' -> http=200 code=1100 ok=False raw={"code":1100,"message":"failed to create delete plan: cannot parse expression: (), error: line 1:1 mismatched input ')' expecting {'(', '[', '{', EXISTS, TEXTMATCH, PHRASEMATCH, RA
+delete filter='id in []' -> http=200 code=0 ok=True raw={"code":0,"data":{"deleteCount":0}}
+delete filter='id == null' -> http=200 code=1100 ok=False raw={"code":1100,"message":"failed to create delete plan: cannot parse expression: id == null, error: two column comparison with JSON type is not supported: invalid parameter"}
+delete filter='vector == [1]' -> http=200 code=1100 ok=False raw={"code":1100,"message":"failed to create delete plan: cannot parse expression: vector == [1], error: comparisons between FloatVector and Array[Int64] are not supported: invalid par
+delete filter='1 == 1' -> http=200 code=65535 ok=False raw={"code":65535,"message":"failed to search/query delegator 1 for channel by-dev-rootcoord-dml_4_468541070444597929v0: N6milvus21ExecOperatorExceptionE :Operator::GetOutput failed fo
+delete filter='id == 1 AND ghost == 2' -> http=200 code=0 ok=True raw={"code":0,"data":{"deleteCount":0}}
+delete filter='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' -> http=200 code=1100 ok=False raw={"code":1100,"message":"failed to create delete plan: predicate is not a boolean expression: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+post-fuzz query id==1: {"code":0,"cost":0,"data":[{"id":1}]}
+
+VERDICT: NO_DEFECT

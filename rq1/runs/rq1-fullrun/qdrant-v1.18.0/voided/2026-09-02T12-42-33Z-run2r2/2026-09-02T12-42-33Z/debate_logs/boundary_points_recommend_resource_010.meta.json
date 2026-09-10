@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_points_recommend_resource_010",
+ "endpoint": "points+recommend",
+ "param": "limit",
+ "expected_defect_type": "Type3_RuntimeFailure",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "noise guard /healthz 200 BEFORE extreme legs (down = SCRIPT_ERROR); G limit=3 -> 200 with <= 3 points; R1 limit=999999999 / R2 hnsw_ef=1000000 / R3 product limit=10000 x hnsw_ef=10000 -> each 200 with <= 12 points or clean 400/422; 5xx with /healthz alive, OOM/panic/capacity tokens, transport-fail with /healthz alive (hang), or transport death with /healthz DOWN post-leg = Type3_RuntimeFailure (R11 framing); 200 returning > 12 points = Type4",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

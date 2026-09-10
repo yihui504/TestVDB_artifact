@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_update_010",
+ "endpoint": "aliases+update",
+ "param": "actions[].rename_alias.old_alias_name",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "positive rename 200 leaves exactly one entry new_name->target in GET /aliases and zero entries for old_name on the global face AND the per-collection face of the target (dangling old name on any face = Type4_StateLogicViolation — the rename was not applied atomically across observation faces); rename-unknown returns 404 or 500 per the assertion (200 = Type1_IllegalSuccess; other 4xx accepted-with-note; 502/503 healthz-rechecked); any 404/422 with empty diagnostic body = Type2_PoorDiagnostics (constraint qdrant_behavioral_aliases_update_001 \"delete/rename of an unknown alias returns 404 or 500\" + qdrant_bc_alias_switch_atomic_001 rename variant)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

@@ -1,0 +1,13 @@
+create sm_ltk_normal : 200 {"code":0,"data":{}}
+mk alter qm sm_ltk_large : 200 {"code":0,"data":{}}
+create sm_ltk_large : 200 {"code":0,"data":{}}
+F create with properties: 200 {"code":0,"data":{}}
+F query_mode persisted via create-time properties: False [{'key': 'timezone', 'value': 'UTC'}]
+A normal limit=20000: 200 {"code":65535,"message":"topk [20000] is invalid, it should be in range [1, 16384], but got 20000"}
+A large limit=20000: 200 {"code":0,"cost":0,"data":[{"distance":0.292064,"id":4},{"distance":0.292064,"id":9},{"distance":0.292064,"id":14},{"distance":0.292064,"id":19},{"distance":0.292064,"id":24},{"distance":0.292064,"id"
+B normal ids[:10]: [4, 9, 14, 19, 24, 29, 34, 39, 44, 49] | large ids[:10]: [4, 9, 14, 19, 24, 29, 34, 39, 44, 49]
+C page1/page2 overlap: 0
+D offset+limit==1000000: 200 {"code":0,"cost":0,"data":[]}
+D offset==1000000: 200 {"code":65535,"message":"offset+topk [1000001] is invalid, it should be in range [1, 1000000], but got 1000001"}
+DEFECT: ('create-time properties.query_mode silently discarded (code 0, no effect, no warning) � violates create_009/inv_query_mode_001', "[{'key': 'timezone', 'value': 'UTC'}]")
+VERDICT: DEFECT_FOUND

@@ -1,0 +1,47 @@
+services:
+  qdrant-node-1:
+    container_name: qdrant-cluster-node1
+    image: qdrant/qdrant:${QDRANT_VERSION:-v1.18.3}
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    environment:
+      QDRANT__CLUSTER__ENABLED: "true"
+      QDRANT__LOG_LEVEL: "INFO"
+    command: ["./qdrant", "--uri", "http://qdrant-node-1:6334"]
+    mem_limit: 2g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+    networks:
+      - qdrant-cluster-net
+
+  qdrant-node-2:
+    container_name: qdrant-cluster-node2
+    image: qdrant/qdrant:${QDRANT_VERSION:-v1.18.3}
+    ports:
+      - "6335:6333"
+    environment:
+      QDRANT__CLUSTER__ENABLED: "true"
+      QDRANT__LOG_LEVEL: "INFO"
+    command: ["./qdrant", "--uri", "http://qdrant-node-2:6334", "--bootstrap", "http://qdrant-node-1:6334"]
+    mem_limit: 2g
+    restart: unless-stopped
+    depends_on:
+      qdrant-node-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+    networks:
+      - qdrant-cluster-net
+
+networks:
+  qdrant-cluster-net:

@@ -1,0 +1,12 @@
+{
+ "defect_id": "semantic_aliases_update_007",
+ "endpoint": "aliases+update",
+ "param": null,
+ "strategy": "metamorphic",
+ "expected_defect_type": "Type4_StateLogicViolation",
+ "oracle": {
+  "statement": "starting from identical prefix states, encoding R = single-action batch [rename_alias A0->A1] and encoding D = two-action batch [delete_alias B0 + create_alias B1->CA] BOTH return HTTP 200 with result=true and leave the SAME observable-state signature: (i) old name absent from the scoped alias map, (ii) new name present and owned by CA, (iii) scroll through the new name returns exactly the id set {1..5}; divergence in status or in ANY signature component between the two encodings => Type4_StateLogicViolation (and a non-200 on either encoding => Type1_IllegalRejection)",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

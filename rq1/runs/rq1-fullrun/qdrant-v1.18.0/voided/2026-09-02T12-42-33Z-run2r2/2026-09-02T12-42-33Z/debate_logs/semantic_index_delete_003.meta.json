@@ -1,0 +1,17 @@
+{
+  "defect_id": "semantic_index_delete_003",
+  "endpoint": "index+delete",
+  "param": "field_name",
+  "expected_defect_type": "Type4_StateLogicViolation",
+  "strategy": "filter_semantics",
+  "constraint_ids": [
+    "qdrant_state_index_delete_001"
+  ],
+  "source_url": "https://api.qdrant.tech/v-1-18-x/api-reference/indexes/delete-field-index",
+  "doc_version": "1.18.x (versioned v-1-18-x api-reference)",
+  "oracle": {
+    "statement": "after both indexes (cat keyword, score integer) are deleted with 200 and their describe result.payload_schema entries are gone, filters on the de-indexed fields return exactly the seeded truth sets: must match cat=A -> ids {1,3,5} count 3; must range score>25 -> ids {2,4,5} count 3; combined must [cat=A, score>15] -> ids {3,5} count 2; no-filter control count 5; whole-table hit, empty set, wrong subset, or count/filter disagreement = Type4 (data-untouched promise violated through the filter face); pre-delete calibration mismatch = SCRIPT_ERROR (setup fault, never a defect); 5xx with healthy /healthz = Type3 (G8)",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

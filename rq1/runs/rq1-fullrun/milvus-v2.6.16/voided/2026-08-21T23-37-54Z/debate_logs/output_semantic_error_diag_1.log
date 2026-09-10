@@ -1,0 +1,16 @@
+describe nonexistent                       http=200 code=100 msg=can't find collection[database=default][collection=no_such]
+has nonexistent (expect has:false)         http=200 code=0 msg=None
+get_stats nonexistent                      http=200 code=100 msg=collection not found[database=default][collection=no_such]
+search nonexistent                         http=200 code=100 msg=can't find collection[database=default][collection=no_such]
+insert nonexistent                         http=200 code=100 msg=can't find collection[database=default][collection=no_such]
+drop nonexistent                           http=200 code=0 msg=None
+load nonexistent                           http=200 code=100 msg=collection not found[database=default][collection=no_such]
+describe missing param                     http=200 code=1802 msg=missing required parameters, error: Key: 'CollectionNameReq.CollectionName' Error:Field validation for 'Collec
+create dbName nonexistent                  http=200 code=800 msg=database not found[database=no_such_db]
+search bad consistencyLevel                http=200 code=1100 msg=consistencyLevel can only be [Strong, Session, Bounded, Eventually, Customized], default: Bounded, err:paramet
+insert wrong dim                           http=200 code=1804 msg=fail to deal the insert data, error: []float32 size 2 doesn't equal to vector dimension 4 of FloatVector
+index describe nonexistent                 http=200 code=700 msg=index not found[indexName=no_idx]
+alias alter nonexistent alias              http=200 code=1600 msg=alias not found[database=default][alias=no_alias_zz]
+malformed json                             http=200 code=1801 msg=can only accept json format request, error: invalid character 'n' looking for beginning of object key string
+DEFECT: ('drop nonexistent: code 0 expected 100', '')
+VERDICT: DEFECT_FOUND

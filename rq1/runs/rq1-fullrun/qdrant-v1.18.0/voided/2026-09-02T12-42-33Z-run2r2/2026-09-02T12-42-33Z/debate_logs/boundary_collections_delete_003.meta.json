@@ -1,0 +1,15 @@
+{
+  "defect_id": "boundary_collections_delete_003",
+  "endpoint": "collections+delete",
+  "param": "collection_name",
+  "expected_defect_type": "Type1_IllegalSuccess",
+  "strategy": "boundary",
+  "constraint_ids": [
+    "qdrant_behavioral_collections_delete_001"
+  ],
+  "oracle": {
+    "statement": "create -> DELETE #1 -> 200 result:true -> immediate identical DELETE #2 -> exactly 404; 2xx on the replay = Type1_IllegalSuccess; 5xx = Type3",
+    "source": "docstring",
+    "preverify_version": "D3b-R4.0"
+  }
+}

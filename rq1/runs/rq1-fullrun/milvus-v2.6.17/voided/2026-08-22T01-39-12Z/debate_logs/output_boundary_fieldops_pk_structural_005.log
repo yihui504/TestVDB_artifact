@@ -1,0 +1,11 @@
+op on pk field -> code=0 raw={"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[1]}}
+empty fieldName -> code=1100 raw={"code":1100,"message":"FieldPartialUpdateOp.field_name is required: invalid parameter"}
+field absent from schema -> code=0 raw={"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[1]}}
+duplicate ops same field -> code=1100 raw={"code":1100,"message":"duplicate partial-update op for field \"title\": invalid parameter"}
+fieldOps no partialUpdate -> code=0 raw={"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[1]}}
+row not in data -> code=1100 raw={"code":1100,"message":"fieldSchema(vec) has no corresponding fieldData pass in: invalid parameter"}
+fieldOps empty array -> code=0 raw={"code":0,"cost":0,"data":{"upsertCount":1,"upsertIds":[1]}}
+DEFECT: op on pk field accepted (code 0), contract requires 1100
+DEFECT: field absent from schema accepted (code 0), contract requires 1100
+DEFECT: state leak: title changed to 'x' despite rejected op (row not in data)
+VERDICT: DEFECT_FOUND (Type1_IllegalSuccess) - fieldOps structural violation accepted

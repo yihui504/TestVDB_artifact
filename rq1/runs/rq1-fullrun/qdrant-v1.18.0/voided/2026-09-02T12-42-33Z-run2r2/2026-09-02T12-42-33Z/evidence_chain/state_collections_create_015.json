@@ -1,0 +1,98 @@
+{
+  "defect_id": "state_collections_create_015",
+  "endpoint": "collections+create (PUT /collections/{collection_name})",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "Reachability: no doc_preflight.json sidecar exists anywhere in the plugin tree; primary WebFetch was blocked at the domain-safety layer, but the alternate reader channel fetched https://api.qdrant.tech/v-1-18-x/api-reference/collections/create-collection live (title 'Create a collection | Qdrant | API Reference') -> PASS. Version: URL route v-1-18-x is the versioned 1.18.x reference matching target v1.18.0 -> PASS. Content: the page documents shard_number verbatim as 'uint or null Optional ... Default is 1 ... Minimum is 1' with NO documented maximum and NO large-shard warning, which grounds the constraint's spec-domain premise exactly; however the assertion's survival clause ('never crash the service') is contract-inferred (constraint evidence_tier=inferred, level=system) and is not doc prose -> PARTIAL. Endpoint: contract endpoint_registry entry 'collections+create' (method PUT, same source_url, doc_quote about 200/400/409 dispositions) matches the page (path param collection_name, query timeout>=1) and the runtime mapping create_collection -> PUT /collections/{name} -> PASS.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[B create shard=4294967295] status=0 raw=('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+      "secondary_observations": [
+        "same-log liveness: [liveness B-transport] healthz status=0 raw=HTTPConnectionPool(host='127.0.0.1', port=6333): Max retries exceeded with url: /healthz (Caused by NewConnectionError(\"",
+        "same-log liveness retry: [liveness B-transport-retry] healthz status=0 raw=HTTPConnectionPool(host='127.0.0.1', port=6333): Max retries exceeded with url: /healthz (Caused by NewConnectionError(\"",
+        "same-log positive control: [A create shard=1] status=200 raw={\"result\":true,\"status\":\"ok\",\"time\":0.328442826} ; [A readback] status=200 params={\"vectors\": {\"size\": 4, \"distance\": \"Euclid\"}, \"shard_number\": 1, ...} ; [A upsert] status=200 ; [A count] status=200 count=1",
+        "cross-script reproduction 1 (boundary_collections_create_013.log:15-18, rest): [shard_number=4294967295 (spec-legal, resource strain)] status=0 raw=('Connection aborted.', RemoteDisconnected(...)) ; [healthz attempt 1..3] status=0 -> VERDICT: DEFECT_FOUND (Type3_RuntimeFailure(service-down))",
+        "cross-script value gradient (boundary_collections_create_013.log:5-13, rest): [shard_number=0] status=422 raw={\"status\":{\"error\":\"Validation error in JSON body: [shard_number: value 0 invalid, must be 1 or larger]\"},...} ; [shard_number=-1] status=400 ... expected u32 ; [shard_number=1] status=200 readback shard_number=1 ; [shard_number=1000] status=0 Read timed out (read timeout=120) with [healthz attempt 1] status=200 ; [shard_number=100000] status=0 Read timed out with healthz 200",
+        "cross-script reproduction 2 (semantic_collections_create_024.log:5-14, rest): [create ..._legal_1 shard_number=1] status=200 elapsed=0.3s ; [create ..._legal_8 shard_number=8] status=200 elapsed=2.2s (segments_count 64) ; [create ..._ext_uint32max shard_number=4294967295] status=0 elapsed=3.2s raw=('Connection aborted.', RemoteDisconnected(...)) ; [transport-extremeA_uint32max] /healthz probe status=0 -> extremeA_uint32max: shard_number=4294967295 ... made the service UNREACHABLE - /healthz dead after the request",
+        "live comparative probe, same-type sibling param on same endpoint (rest): [rest-live-cmp1-replication_factor] PUT /collections/eb015cmp_rf_1788393990 {\"replication_factor\": 4294967295} -> http=200 elapsed=0.3s body={\"result\":true,\"status\":\"ok\",\"time\":0.328113023} ; healthz -> http=200 ; cleanup DELETE -> http=200",
+        "live comparative probe, same-type sibling param on same endpoint (rest): [rest-live-cmp2-write_consistency_factor] PUT /collections/eb015cmp_wcf_1788393990 {\"write_consistency_factor\": 4294967295} -> http=200 elapsed=0.3s body={\"result\":true,\"status\":\"ok\",\"time\":0.313689719} ; healthz -> http=200 ; cleanup DELETE -> http=200",
+        "grpc/sdk face: face_unavailable — the sandbox scripts exercise the REST face only; no gRPC (port 6334) or SDK client was exercised in-chain, so the cross-face disposition could not be observed"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "The triggering request produced NO HTTP response at any status level: the server closed the connection mid-request (requests raises RemoteDisconnected -> runtime status=0) and the process was then unreachable on /healthz for two retries. This is not a 2xx-with-business-code case; the failure sits below the HTTP semantics layer (process death), which is itself the constraint's forbidden outcome."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "state_collections_create_015",
+        "boundary_collections_create_013",
+        "semantic_collections_create_024"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_resource_shard_number_001",
+      "assertion_text_quoted": "inferred: any spec-legal shard_number (>= 1, no documented max) must be completed, rejected with an error, or fail with a documented service error - never crash the service",
+      "api_violates_assertion": true,
+      "note": "violates-declaration self-check: 4294967295 is inside the quoted constraint domain (>= 1, no documented max; representable in the doc-declared 'uint' = u32, and serde demonstrably accepts it as u32 while rejecting -1 with 400 'expected u32'), and the observed outcome (process death, no HTTP response, /healthz dead) is none of the three permitted dispositions -> violation true with the correct constraint cited; no citation change needed. The candidates.jsonl dispatch row carried constraint_id:\"\" (mechanical truncation); the constraint is uniquely recoverable and consistent across script header (state_collections_create_015.py line 6), debate meta.json constraint_ids[0], chunks.json unit constraints::qdrant_resource_shard_number_001, and the log DEFECT line.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: qdrant_resource_shard_number_001 exists in structured_contract.json (type=resource_bound, level=system, evidence_tier=inferred, endpoint=collections+create) — present; note the candidates.jsonl dispatch field constraint_id was empty, recovered from script/meta/log",
+        "doc: source_url live-fetched; page prose grounds the domain premise verbatim ('Minimum is 1', uint or null, no maximum, no warning); the survival clause is inferred-tier, not doc prose — link present but partially grounded",
+        "script: state_collections_create_015.py sends PUT /collections/{name} via runtime path create_collection with body {\"vectors\": {\"size\": 4, \"distance\": \"Euclid\"}, \"shard_number\": 4294967295} — raw request matches the constraint's parameter and documented type",
+        "log: DEFECT line names qdrant_resource_shard_number_001 and Type3_RuntimeFailure, and matches the raw observations (B status=0 RemoteDisconnected; /healthz 0 twice) — no summary-word drift"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "must be 1 or larger",
+        "pub shard_number",
+        "ShardDistributionProposal::new",
+        "0..shard_number",
+        "too many shards|max_shard|upper bound (case-insensitive)"
+      ],
+      "files_examined": [
+        "lib/storage/src/content_manager/collection_meta_ops.rs (CreateCollection request struct, lines 110-160)",
+        "lib/storage/src/content_manager/toc/create_collection.rs (lines 55-185)",
+        "lib/storage/src/content_manager/toc/mod.rs (lines 500-520)",
+        "lib/storage/src/content_manager/shard_distribution.rs (lines 55-103)",
+        "lib/collection/src/shards/shard_holder/mod.rs (lines 835-880)",
+        "lib/collection/src/config.rs (lines 90-125, internal NonZeroU32 types)",
+        "src/actix/api/collections_api.rs (lines 107-127, REST handler)",
+        "lib/collection/src/operations/validation.rs (validator error rendering)"
+      ],
+      "source_excerpt": "(1) lib/storage/src/content_manager/collection_meta_ops.rs:116-144 — request struct, minimum-only validation, no max:\n    /// Number of shards in collection.\n    ///  - Default is 1 for standalone, otherwise equal to the number of nodes\n    ///  - Minimum is 1\n    ///\n    /// For custom sharding:\n    /// Number of shards in collection per shard group.\n    ///  - Default is 1, meaning that each shard key will be mapped to a single shard\n    ///  - Minimum is 1\n    #[serde(default)]\n    #[validate(range(min = 1))]\n    pub shard_number: Option<u32>,\n    ...\n    /// Number of shards replicas.\n    /// Default is 1\n    /// Minimum is 1\n    #[serde(default)]\n    #[validate(range(min = 1))]\n    pub replication_factor: Option<u32>,\n    ...\n    #[serde(default)]\n    #[validate(range(min = 1))]\n    pub write_consistency_factor: Option<u32>,\n(2) lib/storage/src/content_manager/toc/create_collection.rs:83-103 + 132-136 — pass-through with zero-check only:\n        let shard_number = match sharding_method.unwrap_or_default() {\n            ShardingMethod::Auto => {\n                if let Some(shard_number) = shard_number {\n                    debug_assert_eq!(...);\n                    shard_number\n                } else { ... }\n            }\n            ShardingMethod::Custom => { ... }\n        };\n        ...\n        let collection_params = CollectionParams {\n            vectors,\n            sparse_vectors,\n            shard_number: NonZeroU32::new(shard_number)\n                .ok_or_else(|| StorageError::bad_input(\"`shard_number` cannot be 0\"))?,\n(3) lib/storage/src/content_manager/toc/mod.rs:512-513 — unclamped consumption:\n        let shard_distribution =\n            ShardDistributionProposal::new(shard_number, replication_factor, &known_peers);\n(4) lib/storage/src/content_manager/shard_distribution.rs:87-99 — the sibling param IS clamped, shard_number is NOT, then an unbounded 4.29-billion-element collect:\n        // There should not be more than 1 replica per peer\n        let replica_number = cmp::min(replication_factor.get() as usize, known_peers.len());\n\n        // Get fair distribution of shards on peers\n        let distribution = (0..shard_number.get())\n            .map(|shard_id| {\n                let replicas =\n                    repeat_with(|| min_heap.peek_mut().unwrap().0.get_and_inc_shard_count())\n                        .take(replica_number)\n                        .collect();\n                (shard_id, replicas)\n            })\n            .collect();\n(5) lib/collection/src/shards/shard_holder/mod.rs:857-861 — second unbounded collect on the same path:\n        let shard_number = collection_config.read().await.params.shard_number.get();\n        let (shard_ids_list, shard_id_to_key_mapping) = match self.sharding_method {\n            ShardingMethod::Auto => {\n                let ids_list = (0..shard_number).collect::<Vec<_>>();",
+      "call_chain_traced": "REST entry src/actix/api/collections_api.rs:111 #[put(\"/collections/{collection_name}\")] create_collection -> Json<CreateCollection> deserialized (serde u32 strictness: -1 -> 400 'expected u32') + validator range(min = 1) (0 -> 422 'must be 1 or larger'; the only validation on this field, and it demonstrably fires) -> CreateCollectionOperation::new -> dispatcher -> TableOfContents perform_collection_meta_op -> toc/create_collection.rs execute (only a NonZeroU32 zero-check at line 135; no upper bound, no resource-feasibility guard) -> toc/mod.rs:513 ShardDistributionProposal::new -> shard_distribution.rs:91 (0..4294967295).collect() building Vec<(ShardId, Vec<PeerId>)> (multi-tens-of-GB allocation with a per-element Vec) -> process death within ~3.2s (matches RemoteDisconnected + /healthz dead); shard_holder/mod.rs:861 has a second (0..shard_number) unbounded collect. Grep for 'too many shards|max_shard|upper bound' across the clone: the only hit is a test-file comment (lib/collection/tests/integration/common/mod.rs:18 'Test collections for this upper bound of shards.') — no production guard exists. Contrast: replication_factor is explicitly clamped to known peers at shard_distribution.rs:88 (cmp::min), which is why the live probes with replication_factor=4294967295 and write_consistency_factor=4294967295 returned 200 with the service alive.",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env — death is value-specific and reproduced by three independent scripts at different times while every other leg of the same scripts succeeded moments earlier; the runner restarts the service between scripts and it died again only on this input; the graded outcomes (1000/100000 -> client timeout with /healthz still 200; u32::MAX -> death in ~3s) show resource consumption scaling with the value, the signature of the in-process allocation path, not an external kill",
+        "concurrency — state_collections_create_015 runs strictly sequential legs in one thread; no concurrent operations in the log",
+        "cache/state residue — each leg uses a freshly generated uniquely-prefixed collection name; no prior-state interference",
+        "request-parameter typo — field name and type verified against the runtime mapping (create_collection -> PUT /collections/{name}) and the documented body schema; serde accepted the value as u32 (the -1 probe 400s with 'expected u32', proving deserialization is strict), so the request is well-formed",
+        "by_design — no code comment, docstring, or documented warning in the v1.18.0 clone or the live API reference declares extreme shard counts exempt from graceful handling; the only related comment is a test-fixture note"
+      ],
+      "surviving": null
+    }
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "defect_id": "boundary_cluster_telemetry_004",
+  "endpoint": "GET /cluster/telemetry (cluster+telemetry)",
+  "defect_type": "Type3",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PASS",
+      "version_match": "PASS",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "reachability: WebFetch to api.qdrant.tech domain-blocked in this environment; page retrieved live via web-reader fallback (full markdown, title 'Collect cluster telemetry data | Qdrant | API Reference') - no doc_preflight.json sidecar exists for this contract. version: page selector 'v1.18.x' and URL /v-1-18-x/, major.minor matches target 1.18.0. content: PARTIAL - the load-bearing promise 'GET /cluster/telemetry -> 200 Retrieved' IS doc-native (page shows a 200 example envelope {usage,time:0.002,status:'ok',result:{collections:{},cluster:{enabled:true,number_of_peers:1,peers:{}}}} with params details_level (integer, no min/max) and timeout (integer >=1, default 60); no standalone/cluster-enabled restriction is stated and no 4xx/5xx disposition is documented), but the assertion's parenthetical field list (id, app, requests, memory, hardware, search_pool, quota) belongs to the SERVICE /telemetry TelemetryData schema, not this page's DistributedTelemetryData (result.collections + result.cluster) - an over-borrowed enumeration propagated from raw_knowledge's behavioral note into the contract; the script pre-registered this divergence (R8-lesson cross-check) and claimed only the doubly-corroborated grid (200 disposition + envelope + result.collections), so the Type3 claim does not rest on the parenthetical. endpoint precision: endpoint_registry entry path=cluster+telemetry method=GET with this exact source_url (verified_at 2026-09-02T12:34:08Z); raw_knowledge api_endpoints[cluster+telemetry].url=/cluster/telemetry is what the script sent. sdk_rest_confusion: false - both faces are REST; the mismatch is between two REST endpoints' schemas.",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "A",
+      "log_pattern": "[documented no-param call] params=None status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000164451}",
+      "secondary_observations": [
+        "[documented details_level=0 call form] params={'details_level': 0} status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000362525} (own log, second leg - same 500)",
+        "[healthz attempt 1] status=200 raw=healthz check passed (own log - server alive at the moment of both 500s)",
+        "sibling bct1 same endpoint: [timeout omitted (default-60 form)] params=None status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.003408097} (output_boundary_cluster_telemetry_001.log)",
+        "sibling bct1 param-validation control: [timeout=0 (min-1)] params={'timeout': 0} status=422 raw={\"status\":{\"error\":\"Validation error in query parameters: [timeout: value 0 invalid, must be 1 or larger]\"},\"time\":0.0} - routing and query-param validation layer functional; failure isolated to the telemetry-collection path, not to input handling",
+        "comparative rest face, same cluster/* family, same standalone deployment: [documented GET /cluster] status=200 raw={\"result\":{\"status\":\"disabled\"},\"status\":\"ok\",\"time\":2.433e-6} (output_boundary_cluster_status_001.log) - sibling cluster endpoint degrades gracefully with 200 + status:'disabled' where /cluster/telemetry returns 500",
+        "semantic control same endpoint: [control GET /cluster/telemetry] status=500 raw={\"status\":{\"error\":\"Service internal error: Could not get telemetry from cluster\"},\"time\":0.000238317} (output_semantic_cluster_telemetry_001.log)",
+        "face_unavailable: service-face GET /telemetry comparison not obtainable - no session log records its status (semantic_cluster_telemetry_001.py has a sibling-probe line but it never printed), and the sandbox container is down at evidence-build time (live probe of localhost:6333 returns HTTP_CODE=000); no comparison fabricated"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {
+        "client_error_returned_as": "N/A",
+        "note": "Inverse direction: a legal, documented, parameter-free GET returned HTTP 500 + business error envelope (\"Service internal error: ...\") while /healthz stayed 200. No client-decidable error was involved, so the 2xx-client-error criterion does not apply; the 5xx-on-legal-request disposition is itself the primary violation observation."
+      },
+      "reproducibility": "stable multi-script trigger",
+      "script_error": false,
+      "triggering_scripts": [
+        "boundary_cluster_telemetry_004 (primary; exit code 0, no SCRIPT_ERROR markers)",
+        "boundary_cluster_telemetry_001 (default-60 form, timeout=1/2/60 legs all 500)",
+        "boundary_cluster_telemetry_002 (timeout='+1' got 500)",
+        "boundary_cluster_telemetry_003 (timeout=1000000 got 500)",
+        "boundary_cluster_telemetry_005 (details_level=0/1/10/11 all 500)",
+        "semantic_cluster_telemetry_001/002/003/004 (control GETs all 500; 002-004 self-reported SCRIPT_ERROR-no-param-conclusion because their control 5xx'd, independently corroborating the same server state)"
+      ],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "qdrant_behavioral_cluster_telemetry_001",
+      "assertion_text_quoted": "HTTP 200 with telemetry payload (id, app, collections, cluster, requests, memory, hardware, search_pool, quota)",
+      "api_violates_assertion": true,
+      "note": "Violates-declaration self-check: the observed phenomenon is a documented no-param GET returning 500 with the server alive, which directly contradicts the assertion's 'HTTP 200' disposition promise on the very face the assertion describes; the observed request carries no parameter value at all, so no constraint-domain or value-compliance reading can rescue violates=false. Caveat recorded for the auditor: the parenthetical field list is borrowed from the service /telemetry schema (see doc_verification.content_consistency PARTIAL), but the Type3 claim rests only on the doc-native 200-disposition promise, which was violated.",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: assertion qdrant_behavioral_cluster_telemetry_001 exists in structured_contract.json assertions[] (endpoint cluster+telemetry, evidence_tier explicit, source_url https://api.qdrant.tech/v-1-18-x/api-reference/distributed/cluster-telemetry); NOTE the candidates.jsonl constraint_id field was dispatched mechanically empty - the anchor is recoverable and was recovered from the script header (line 47 'Constraint: qdrant_behavioral_cluster_telemetry_001') and from the log's verbatim expected_behavior quote, so the link is intact",
+        "doc: source_url fetched live (web reader; WebFetch domain-blocked): GET /cluster/telemetry documented with '200 Retrieved' example envelope {usage,time,status,result:{collections,cluster:{enabled:true,number_of_peers:1,peers:{}}}}, query params details_level (integer) and timeout (>=1, default 60); no standalone-mode restriction and no documented 4xx/5xx for this endpoint",
+        "script: boundary_cluster_telemetry_004.py sends GET {BASE_URL}/cluster/telemetry (URL derived from raw_knowledge api_endpoints[cluster+telemetry].url) in two documented forms - params=None and params={'details_level': 0} - with a declare-first oracle that the documented forms must return 200 with envelope+result.collections",
+        "log: output_boundary_cluster_telemetry_004.log line 7 (primary) and line 9 (second leg) both status=500 with body \"Service internal error: Could not get telemetry from cluster\", healthz 200 both times, VERDICT DEFECT_FOUND Type3 - the verdict pattern is consistent with the raw response (the 500 itself is the violation; no self-contradiction between verdict and raw HTTP evidence)"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": [
+        "Could not get telemetry from cluster",
+        "cluster/telemetry",
+        "id_to_address",
+        "struct ClusterTelemetryParams|MIN_CLUSTER_TELEMETRY_DETAILS_LEVEL|DEFAULT_GRPC_TIMEOUT",
+        "fn service_error",
+        "ServiceError => |StatusCode::INTERNAL_SERVER_ERROR"
+      ],
+      "files_examined": [
+        "src/common/telemetry_ops/distributed_telemetry.rs (L150-200, L552-560)",
+        "src/actix/api/cluster_api.rs (L1-60, L203-302)",
+        "src/main.rs (L282-319)",
+        "lib/collection/src/shards/channel_service.rs (L1-120)",
+        "lib/storage/src/content_manager/errors.rs (L56-66)",
+        "src/actix/helpers.rs (L247 via grep)"
+      ],
+      "source_excerpt": "src/actix/api/cluster_api.rs L203-260 (handler head):\n  #[get(\"/cluster/telemetry\")]\n  async fn get_cluster_telemetry(...) -> HttpResponse {\n      ...\n      let all_peers: Vec<_> = channel_service\n          .id_to_address\n          .read()\n          .keys()\n          .copied()\n          .collect();\n      let mut futures = all_peers\n          .into_iter()\n          .map(|peer_id| { channel_service.with_qdrant_client(peer_id, |mut client| { ... client.get_telemetry(request).await }) ... })\n          .collect::<FuturesUnordered<_>>();\n      let mut telemetries = Vec::with_capacity(futures.len());\n\nsrc/common/telemetry_ops/distributed_telemetry.rs L150-158 (the 500 origin):\n  impl DistributedTelemetryData {\n      pub fn resolve_telemetries(access: &Access, telemetries: Vec<TelemetryData>, missing_peers: Vec<PeerId>) -> StorageResult<Self> {\n          // Use the telemetry from node with highest term/commit\n          let base_telemetry = newest_telemetry(&telemetries)\n              .ok_or_else(|| StorageError::service_error(\"Could not get telemetry from cluster\"))?;\n\nsrc/common/telemetry_ops/distributed_telemetry.rs L552-560:\n  fn newest_telemetry(telemetries: &[TelemetryData]) -> Option<&TelemetryData> {\n      telemetries.iter().max_by_key(|telemetry| ... (status.term, status.commit) ...) )   // max_by_key over an empty slice -> None\n\nsrc/main.rs L282-316 (why the peer set is empty on the tested deployment):\n  /// Create and configure the channel service used to manage connections between peers.\n  /// In single-node mode a default-configured service is returned. In distributed mode\n  /// the service is populated with a TLS-aware channel pool and peer metadata loaded\n  /// from the persisted consensus state.\n  fn init_channel_service(...) -> anyhow::Result<ChannelService> {\n      let mut channel_service = ChannelService::new(...);          // ChannelService::new sets id_to_address: Default::default() (empty map)\n      if is_distributed_deployment {\n          ...\n          channel_service.id_to_address = persistent_consensus_state.peer_address_by_id.clone();\n          channel_service.id_to_metadata = persistent_consensus_state.peer_metadata_by_id.clone();\n      }                                                          // standalone: map stays EMPTY\n      Ok(channel_service)\n  }\n\nlib/collection/src/shards/channel_service.rs L22+L46-47:\n  pub id_to_address: Arc<parking_lot::RwLock<HashMap<PeerId, Uri>>>,\n  ...  id_to_address: Default::default(),\n\nsrc/actix/api/cluster_api.rs L23-25 + L42-47 (adjacent maintainer acknowledgment, context):\n  /// For now, we only handle details_level >= 2\n  // TODO(cluster telemetry): Handle lower levels\n  const MIN_CLUSTER_TELEMETRY_DETAILS_LEVEL: u32 = 2;\n  ...\n  pub struct ClusterTelemetryParams {\n      details_level: Option<u32>,\n      #[validate(range(min = 1))]\n      timeout: Option<u64>,\n  }\n\nsrc/actix/helpers.rs L247 (error -> HTTP mapping):\n  StorageError::ServiceError { .. } => http::StatusCode::INTERNAL_SERVER_ERROR,",
+      "call_chain_traced": "Full deterministic chain for a standalone (cluster-disabled) deployment, which is the tested sandbox (container testvdb-qdrant-standalone, image qdrant/qdrant:v1.18.0; clone HEAD db3fca3 == server self-reported commit db3fca327851e360c521065649e0f65a57fe7d3c per deployment_meta.json): (1) main.rs init_channel_service leaves id_to_address empty when !is_distributed_deployment; (2) cluster_api.rs get_cluster_telemetry derives all_peers from id_to_address keys -> empty -> FuturesUnordered empty -> telemetries=[]; (3) distributed_telemetry.rs resolve_telemetries: newest_telemetry(&[]) returns None -> StorageError::service_error(\"Could not get telemetry from cluster\") (the exact body string observed); (4) actix/helpers.rs:247 maps ServiceError -> HTTP 500. Query-param validation is present and functional (ClusterTelemetryParams range(min=1) -> the 422/400 responses in sibling logs), so the 500 is NOT an input-handling artifact - it is the missing local/standalone telemetry-collection path: the code treats 'zero telemetries collected' as an unconditional service error instead of degrading to local telemetry or a mode-appropriate response. No by-design comment marks this 500 as intended (the main.rs doc-comment documents the empty-map mechanism, not an intent for the endpoint to fail; the nearest maintainer annotation is the TODO at cluster_api.rs L23-25 acknowledging incomplete handling in this very endpoint).",
+      "verification_outcome": "validation_absent",
+      "sufficiency_check": "grep_hit_pursued",
+      "outcome_note": "validation_absent means: the source contains no handling required to satisfy the documented 200 disposition on a default (standalone) deployment - no local-telemetry fallback, no mode-appropriate 4xx, no guarded early return; the unguarded empty-set -> service_error path at distributed_telemetry.rs:158 is the precise gap. by_design_in_source was considered and rejected: no explicit intent evidence (no 'intentionally'/'by design'/'we don't guarantee' comment covers this behavior). Clone is a single-commit checkout (git log shows only db3fca3 'tq renormalization for l2 (#8989)'), so no blame history was available for intent archaeology.",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": [
+        "env-health: /healthz returned 200 immediately after each 500 (both legs, all scripts); server was up and serving",
+        "env-misconfiguration: deployment is the official image with default standalone mode (deployment_meta.json: testvdb-qdrant-standalone, qdrant/qdrant:v1.18.0, self-reported v1.18.0) - the documented default install path, and the doc page's own example targets http://localhost:6333; the 500 is deterministic traced code behavior for this mode, not a sandbox flake",
+        "concurrency: sequential single GETs, no racing requests",
+        "request_typo: params=None is the documented no-param form; the second leg used the documented details_level=0 form; URL taken verbatim from raw_knowledge, not hand-built"
+      ],
+      "surviving": "deployment-mode dependence: the 500 is only reachable when the cluster is disabled (standalone default); with a cluster-enabled deployment id_to_address is non-empty and the endpoint returns 200 (the doc example itself shows number_of_peers:1). The documentation places no cluster-enabled restriction on the endpoint and documents no error disposition for it, while the same family's GET /cluster degrades gracefully (200, result.status:'disabled') in the identical mode. Whether 'documented 200 unmet on the default standalone deployment' is adjudicated as a product defect or an implicit distributed-only contract is left to the chain-auditor; the evidence here establishes the behavior is deterministic, mode-triggered, and unannotated in both doc and source."
+    }
+  }
+}

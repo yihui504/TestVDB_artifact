@@ -1,0 +1,16 @@
+quick dim 0 -> code=1100 raw={"code":1100,"message":"dimension is required for quickly create collection(default metric type: COSINE): invalid parameter[expected=collectionName \u0026 dimension][actual=collect
+quick dim -1 -> code=65535 raw={"code":65535,"message":"invalid dimension: -1. should be in range 2 ~ 32768"}
+quick dim 32768 (max) -> code=0 raw={"code":0,"data":{}}
+quick dim 32769 (max+1) -> code=65535 raw={"code":65535,"message":"invalid dimension: 32769 of field vector. float vector dimension should be in range 2 ~ 32768"}
+quick dim 1e6 -> code=65535 raw={"code":65535,"message":"invalid dimension: 1000000 of field vector. float vector dimension should be in range 2 ~ 32768"}
+quick dim 'abc' -> code=1801 raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field CollectionReq.dimension of type int32"}
+quick dim null -> code=1100 raw={"code":1100,"message":"dimension is required for quickly create collection(default metric type: COSINE): invalid parameter[expected=collectionName \u0026 dimension][actual=collect
+quick dim 7.5 -> code=1801 raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number 7.5 into Go struct field CollectionReq.dimension of type int32"}
+quick dim '8' str -> code=1801 raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal string into Go struct field CollectionReq.dimension of type int32"}
+quick dim 2147483648 (int32+1) -> code=1801 raw={"code":1801,"message":"can only accept json format request, error: json: cannot unmarshal number 2147483648 into Go struct field CollectionReq.dimension of type int32"}
+full dim 0 -> code=65535 raw={"code":65535,"message":"invalid dimension: 0. should be in range 2 ~ 32768"}
+full dim -1 -> code=65535 raw={"code":65535,"message":"invalid dimension: -1. should be in range 2 ~ 32768"}
+full dim 32769 -> code=65535 raw={"code":65535,"message":"invalid dimension: 32769 of field vec. float vector dimension should be in range 2 ~ 32768"}
+full dim 'abc' -> code=65535 raw={"code":65535,"message":"strconv.ParseInt: parsing \"abc\": invalid syntax"}
+full dim empty str -> code=65535 raw={"code":65535,"message":"strconv.ParseInt: parsing \"\": invalid syntax"}
+VERDICT: NO_DEFECT

@@ -1,0 +1,71 @@
+{
+  "defect_id": "boundary_r2_dynfield_name_insert_01",
+  "endpoint": "entities/insert + entities/query (dynamic field names)",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_VERIFIED",
+      "link_reachability": "PARTIAL",
+      "version_match": "PASS",
+      "content_consistency": "PASS",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "constraint source_url https://milvus.io/docs/limitations.md Resource Naming Rules 未单独抓取（domain 访问由上游 R2 补锚时已核，evidence_tier=verified/quoted）；规则内容（字母或下划线开头、仅字母数字下划线）与 Milvus 官方 limitations 一致，无版本特异表述；endpoint 契约 endpoint registry 覆盖 entities/insert 与 entities/query。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "insert dyn field '123field' -> http=200 ok=True raw={\"code\":0,\"cost\":0,\"data\":{\"insertCount\":1,\"insertIds\":[100]}} / query outputFields=['123field'] -> ok=False raw={\"code\":65535,\"message\":\"parse output field name failed: 123field\"}",
+      "secondary_observations": [
+        "insert dyn field '@field' -> http=200 ok=True raw={\"code\":0,...,\"insertIds\":[101]}}；query -> code:65535 parse output field name failed: @field",
+        "insert dyn field 'my-field' -> http=200 ok=True insertIds:[102]；query -> code:65535 parse output field name failed: my-field",
+        "insert dyn field 'field name'(含空格) -> http=200 ok=True insertIds:[103]；query -> code:65535 parse output field name failed: field name",
+        "insert dyn field 'f$eld'(含$) -> http=200 ok=True insertIds:[104]；query -> code:65535 parse output field name failed: f$eld",
+        "insert 255-char valid name -> ok=True（合法边界内对照，通过）"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "insert 侧 HTTP 200 + code:0 接受非法名（客户端错误被静默吞掉）；query 侧拒绝也以 HTTP 200 + code:65535 返回"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2_dynfield_name_insert_01.py", "debate_logs/boundary_r2_dynfield_name_upsert_03.py (upsert 通道同模式)"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_field_name_rules_001",
+      "assertion_text_quoted": "field names: ^[A-Za-z_][A-Za-z0-9_]*$, length<=255, enforced at insert-time (dynamic fields included)",
+      "api_violates_assertion": true,
+      "note": "5 类非法动态字段名（123field/@field/my-field/含空格/含$）均违反 ^[A-Za-z_][A-Za-z0-9_]*$ 且被 insert 以 code:0 接受——violates=True 直接成立；且写入后 query 无法回读（数据可访问性断裂），是约束明确要求 insert/query 一致校验的反面。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_field_name_rules_001 (verified tier, limitations.md)",
+        "doc: Resource Naming Rules——字段名仅字母数字下划线、字母/下划线开头",
+        "script: boundary_r2_dynfield_name_insert_01.py 向 enableDynamicField=true collection insert 5 类非法名动态字段并 query 回读",
+        "log: insert http=200 code:0 ×5；query code:65535 'parse output field name failed: <name>' ×5"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["parse output field name failed", "appendInsertFieldData", "EnableDynamicField (httpserver/utils.go)", "validateFieldName"],
+      "files_examined": [
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/utils.go (checkAndSetData 动态字段填充段 L590-621; anyToColumns L746-758, L947-957, L1202-1217)",
+        ".milvus-src-2610/internal/proxy/util.go (validateFieldName L356-388; query 侧 getOutputVectorField/parse output 段 L1637-1671)",
+        ".milvus-src-2610/internal/distributed/proxy/httpserver/handler_v2.go (insert 处理 L1234-1252)"
+      ],
+      "source_excerpt": "httpserver/utils.go checkAndSetData 动态字段路径（L590-621，写入侧）:\n```go\n// fill dynamic schema\nfor mapKey, mapValue := range data.Map() {\n    if !containsString(fieldNames, mapKey) {\n        if collSchema.EnableDynamicField {\n            if mapKey == common.MetaFieldName {\n                return merr.WrapErrParameterInvalidMsg(...)\n            }\n            mapValueStr := mapValue.String()\n            switch mapValue.Type {\n            case gjson.True, gjson.False: reallyData[mapKey] = cast.ToBool(mapValueStr)\n            case gjson.String:             reallyData[mapKey] = mapValueStr\n            case gjson.Number: ...cast.ToInt64/ToFloat64...\n            case gjson.JSON:  reallyData[mapKey] = mapValue.Value()\n            }\n        } else { return merr.WrapErrParameterInvalidMsg(\"has pass more field without dynamic schema...\") }\n    }\n}\n```\n——对动态字段名 mapKey 无任何 validateFieldName 调用。对照 internal/proxy/util.go validateFieldName（L356-388，字段名规则 ^[A-Za-z_][A-Za-z0-9_]*$ 的完整实现，create-schema/fields-add 通道使用，错误码 1701）在 insert 动态路径未被调用。query 侧拒绝点 internal/proxy/util.go L1637-1665（EnableDynamicField 时经 planparserv2.ParseIdentifier 解析 outputFieldName，失败即 `parse output field name failed: %s`，code 65535）——同一规则在 query 侧通过 parser 间接执行，insert 侧缺失，非对称校验。",
+      "call_chain_traced": "REST insert → handler_v2.insert (L1234 checkAndSetData) → utils.go L592-621 动态字段仅做 gjson 类型转换、无字段名校验 → anyToColumns L947-957 序列化为匿名 JSON 列（FieldName=\"\", IsDynamic=true, L1202-1217）→ 静默接受。query → getOutputVectorField 路径 L1637-1664 → ParseIdentifier 按标识符语法解析 → 非法名解析失败 → 65535 拒绝 → 写入数据不可回读。",
+      "verification_outcome": "validation_absent",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["script_error", "env", "concurrency", "request_typo"],
+      "surviving": null
+    }
+  },
+  "evidence_weight": "STRONG",
+  "evidence_weight_rationale": "四环齐全（verified 契约 + 官方命名规则文档 + raw log 逐字 code:0/65535 + 源码定位到未调用的 validateFieldName 与 query 侧拒绝点），且产生数据可访问性断裂的持久后果；insert/upsert 双脚本稳定复现。"
+}

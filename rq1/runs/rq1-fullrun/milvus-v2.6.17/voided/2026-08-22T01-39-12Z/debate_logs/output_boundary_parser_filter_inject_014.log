@@ -1,0 +1,18 @@
+empty filter -> http=200 code=0 raw={"code":0,"cost":0,"data":[{"id":1,"vector":[0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1]}]}
+
+NUL in filter -> http=200 code=1100 raw={"code":1100,"message":"failed to create query plan: cannot parse expression: id \u0000== 1, error: line 1:3 token recognition error at: '\u0000': invalid parameter"}
+lone surrogate -> http=200 code=1100 raw={"code":1100,"message":"failed to create query plan: cannot parse expression: id == '�', error: comparisons between Int64 and VarChar are not supported: invalid parameter"}
+unbalanced parens -> http=200 code=1100 raw={"code":1100,"message":"failed to create query plan: cannot parse expression: ((id == 1), error: line 1:10 missing ')' at '\u003cEOF\u003e': invalid parameter"}
+or-true injection -> http=200 code=1100 raw={"code":1100,"message":"failed to create query plan: cannot parse expression: id == 1 or true, error: 'or' can only be used between boolean expressions: invalid parameter"}
+comment -> http=200 code=1100 raw={"code":1100,"message":"failed to create query plan: cannot parse expression: id == 1 // comment, error: line 1:9 extraneous input '/' expecting {'(', '[', '{', EXISTS, TEXTMATCH, 
+deep nesting 500 -> http=200 code=0 raw={"code":0,"cost":0,"data":[{"id":1,"vector":[0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1]}]}
+
+overlong 100KB -> http=408 code=10001 raw={"code":10001,"message":"request timeout"}
+[malformed] truncated json -> http=200 code=1801 raw={"code":1801,"message":"can only accept json format request, error: unexpected EOF"}
+[malformed] trailing comma -> http=200 code=1801 raw={"code":1801,"message":"can only accept json format request, error: invalid character '}' looking for beginning of object key string"}
+[malformed] single quotes -> http=200 code=1801 raw={"code":1801,"message":"can only accept json format request, error: invalid character '\\'' looking for beginning of object key string"}
+[malformed] lone surrogate in name -> http=200 code=0 raw={"code":0,"cost":0,"data":[{"id":1,"vector":[0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1]}]}
+
+[malformed] NUL in body -> http=200 code=1801 raw={"code":1801,"message":"can only accept json format request, error: invalid character '\\x00' in string literal"}
+[malformed] bad escape -> http=200 code=1801 raw={"code":1801,"message":"can only accept json format request, error: invalid character 'q' in string escape code"}
+VERDICT: NO_DEFECT

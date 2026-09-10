@@ -1,0 +1,12 @@
+{
+ "defect_id": "boundary_aliases_update_004",
+ "endpoint": "aliases+update",
+ "param": null,
+ "expected_defect_type": "Type1_IllegalSuccess",
+ "strategy": "boundary",
+ "oracle": {
+  "statement": "positive multi-action batch returns 200 with result:boolean=true and BOTH aliases observable in GET /aliases (under-application = Type4_StateLogicViolation); create_alias on missing collection returns 404 (400/422 accepted-with-note; 200 = Type1_IllegalSuccess with dangling-binding check; 502/503 = Type3 healthz-rechecked); delete/rename of unknown alias returns 404 or 500 per the assertion (200 = Type1_IllegalSuccess; other 4xx accepted-with-note); any 404/422 with an EMPTY diagnostic body = Type2_PoorDiagnostics (constraint qdrant_behavioral_aliases_update_001: \"valid alias batch returns HTTP 200; create_alias on a missing collection returns 404; delete/rename of an unknown alias returns 404 or 500\")",
+  "source": "docstring",
+  "preverify_version": "D3b-R4.0"
+ }
+}

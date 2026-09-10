@@ -1,0 +1,18 @@
+<HOME>\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (3.4.6) doesn't match a supported version!
+  warnings.warn(
+[probe deleted_threshold=1.5 (max+0.5)] PATCH optimizers_config.deleted_threshold=1.5 -> status=422
+OK(reject): 'deleted_threshold=1.5 (max+0.5)' -> 422: {"status":{"error":"Validation error in JSON body: [optimizers_config.deleted_threshold: value 1.5 invalid, must be from 0.0 to 1.0]"},"time":0.0}
+[probe deleted_threshold=2 (max+1)] PATCH optimizers_config.deleted_threshold=2 -> status=422
+OK(reject): 'deleted_threshold=2 (max+1)' -> 422: {"status":{"error":"Validation error in JSON body: [optimizers_config.deleted_threshold: value 2.0 invalid, must be from 0.0 to 1.0]"},"time":0.0}
+[probe deleted_threshold=-0.1 (min-0.1)] PATCH optimizers_config.deleted_threshold=-0.1 -> status=422
+OK(reject): 'deleted_threshold=-0.1 (min-0.1)' -> 422: {"status":{"error":"Validation error in JSON body: [optimizers_config.deleted_threshold: value -0.1 invalid, must be from 0.0 to 1.0]"},"time":0.0}
+[probe deleted_threshold=-1 (min-1)] PATCH optimizers_config.deleted_threshold=-1 -> status=422
+OK(reject): 'deleted_threshold=-1 (min-1)' -> 422: {"status":{"error":"Validation error in JSON body: [optimizers_config.deleted_threshold: value -1.0 invalid, must be from 0.0 to 1.0]"},"time":0.0}
+[probe deleted_threshold=0 (at-min)] PATCH optimizers_config.deleted_threshold=0 -> status=200 raw={"result":true,"status":"ok","time":0.013341353}
+OK(echo): after 'deleted_threshold=0 (at-min)' readback optimizer_config.deleted_threshold=0.0 (present=True)
+[probe deleted_threshold=0.5 (midpoint)] PATCH optimizers_config.deleted_threshold=0.5 -> status=200 raw={"result":true,"status":"ok","time":0.013569541}
+OK(echo): after 'deleted_threshold=0.5 (midpoint)' readback optimizer_config.deleted_threshold=0.5 (present=True)
+[probe deleted_threshold=1 (at-max)] PATCH optimizers_config.deleted_threshold=1 -> status=200 raw={"result":true,"status":"ok","time":0.01557955}
+OK(echo): after 'deleted_threshold=1 (at-max)' readback optimizer_config.deleted_threshold=1.0 (present=True)
+OK: deleted_threshold 1.5/2/-0.1/-1 rejected (400/422); 0/0.5/1 accepted with result true
+VERDICT: NO_DEFECT

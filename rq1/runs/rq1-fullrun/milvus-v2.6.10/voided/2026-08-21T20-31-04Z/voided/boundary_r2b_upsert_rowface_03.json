@@ -1,0 +1,72 @@
+{
+  "defect_id": "boundary_r2b_upsert_rowface_03",
+  "endpoint": "entities+upsert",
+  "defect_type": "Type1",
+  "built_by": "evidence-builder",
+  "steps": {
+    "doc_verification": {
+      "result": "DOC_PARTIAL",
+      "link_reachability": "PARTIAL",
+      "version_match": "PARTIAL",
+      "content_consistency": "PARTIAL",
+      "endpoint_precision": "PASS",
+      "sdk_rest_confusion": false,
+      "detail": "最近约束 milvus_type_entities_insert_001（each row has pk field AND vector field with dim == schema dim, else error）endpoint=entities+insert；upsert 面复用 insert 语义（assertion 未显式含 upsert，但 source 同为 handler_v2.go 数据面）。文档不可达，以 clone 为准。",
+      "evidence_source": "doc"
+    },
+    "execution_evidence": {
+      "grade": "B",
+      "log_pattern": "upsert Int64 pk as string -> http=200 ok=True raw={\"code\":0,\"cost\":0,\"data\":{\"upsertCount\":1,\"upsertIds\":[1]}}",
+      "secondary_observations": [
+        "upsert Int64 field as string -> http=200 ok=True code:0 (upsertIds 2)",
+        "upsert VarChar field as int -> http=200 ok=True code:0 (upsertIds 3)",
+        "upsert vector as string -> ok=False {\"code\":1804,\"message\":\"fail to deal the insert data, error: \\\"Syntax error at index 1: invalid char...invalid parameter[expected=FloatVector][actual=not-a-vector\"}",
+        "upsert unknown extra key -> ok=False {\"code\":1804,\"message\":\"fail to deal the insert data, error: has pass more field without dynamic schema, please check it: invalid parameter\"}",
+        "upsert null pk -> ok=False {\"code\":1804,\"message\":\"...strconv.ParseInt: parsing \\\"\\\": invalid syntax: invalid parameter[expected=Int64][actual=]\"}"
+      ],
+      "claim_alignment": "aligned",
+      "http_semantics": {"client_error_returned_as": "HTTP 2xx + 业务错误码", "note": "对照组错误（1804）同样以 HTTP 200 返回——同信封内可分辨；本链主观测是 2xx+code:0 的静默强转"},
+      "reproducibility": "多脚本稳定触发",
+      "script_error": false,
+      "triggering_scripts": ["debate_logs/boundary_r2b_upsert_rowface_03.py", "R2 轮 vein_insert_type_coercion_2 / boundary_r2_* 同域"],
+      "evidence_source": "behavior"
+    },
+    "contract_grounding": {
+      "constraint_id": "milvus_type_entities_insert_001",
+      "assertion_text_quoted": "\"each row has pk field AND vector field with dim == schema dim, else error\"",
+      "api_violates_assertion": true,
+      "note": "判定理由：约束要求行数据类型与 schema 一致否则报错；观测显示 Int64 pk 传字符串、Int64 字段传字符串、VarChar 传 int 均 code:0（隐式强转成功），而 vector/extra/null pk 的确报 1804——校验存在但不覆盖标量类型的字符串化输入。观测参数（标量强转）在 quote 约束域内（row 数据 vs schema 类型），violates=True 成立。",
+      "evidence_source": "doc"
+    },
+    "chain_trace": {
+      "chain_links": [
+        "contract: milvus_type_entities_insert_001（行数据须匹配 schema 否则 error，endpoint 标 insert、upsert 同数据面）",
+        "doc: 契约 source_url 指向本地 clone handler_v2.go（clone 核对通过，见 source_grounding）",
+        "script: boundary_r2b_upsert_rowface_03.py 传 id:\"1\"/num:\"5\"/vc:123 及对照组 vector-as-string/extra/null pk",
+        "log: 标量强转 3 例 code:0；对照组 3 例正确 1804"
+      ],
+      "chain_broken_at": null,
+      "break_detail": null,
+      "evidence_source": "doc+behavior"
+    },
+    "source_grounding": {
+      "grep_queries": ["DataType_Int64 cast/json.Number (httpserver/utils.go)", "DataType_VarChar dataString", "checkUpsertPrimaryFieldData"],
+      "files_examined": [
+        "internal/distributed/proxy/httpserver/utils.go (418-447 Bool/Int8-32/Int64 标量转换)",
+        "internal/distributed/proxy/httpserver/utils.go (481-486 VarChar/String/Timestamptz 直收)",
+        "internal/proxy/util.go (2070-2109 checkUpsertPrimaryFieldData)"
+      ],
+      "source_excerpt": "internal/distributed/proxy/httpserver/utils.go 标量行填充：\n442:  case schemapb.DataType_Int64:\n443:      result, err := json.Number(dataString).Int64()\n444:      if err != nil { return merr.WrapErrParameterInvalid(...) }\n447:      reallyData[fieldName] = result\n481-484:  case schemapb.DataType_VarChar: reallyData[fieldName] = dataString\n           case schemapb.DataType_String:  reallyData[fieldName] = dataString\n关键点：所有标量值先被字符串化（dataString）再 cast——\"5\" 经 json.Number().Int64() 成功转 Int64；数字 123 到 VarChar 分支直接作为字符串收下。即 REST 层对标量做 permissive 字符串往返强转，类型不匹配仅在 cast 失败时才报错。",
+      "call_chain_traced": "REST upsert -> handler_v2 -> httpserver/utils.go 行填充（标量统一 dataString 化 + cast 容忍字符串形式）-> proxy checkUpsertPrimaryFieldData（只查 pk 存在性/autoID，不查输入类型）-> code:0。vector 路径走独立解析（Syntax error，见 1804 对照）。标量字符串强转接受 = validation 部分存在但 permissive（by-design 倾向的宽松 cast，非缺失）。",
+      "verification_outcome": "by_design_in_source",
+      "sufficiency_check": "grep_hit_pursued",
+      "evidence_source": "source"
+    },
+    "mundane_explanation": {
+      "excluded": ["env", "request typo (log 逐字)", "concurrency"],
+      "surviving": "by_design 抗辩：REST JSON 层对标量做字符串容忍 cast 是显式实现（json.Number/cast 调用链），官方测试未断言拒绝——是否算缺陷取决于契约立场（严格类型 vs permissive cast），链如实呈交"
+    }
+  },
+  "cross_reference": "与 boundary_r2b_insert_param_confusion_04 为不同层：本链=数据行字段值强转（utils.go 标量 cast）；彼链=请求级参数类型混淆（request struct 绑定）。",
+  "evidence_weight": "B（主观测+对照组双侧逐字证据，1804 对照强化非对称性；源码定位显式 cast 链；by_design 抗辩未排除）"
+}

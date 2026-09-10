@@ -1,0 +1,28 @@
+======================================================================
+STRATEGY: vein_null_check
+TARGET: qdrant v1.18.2
+TEST: hnsw_ef parameter null validation
+======================================================================
+
+=== Test 1: hnsw_ef = null (INVALID) ===
+Status: 200
+Response: {"result":[{"id":1,"version":1,"score":1.0},{"id":2,"version":2,"score":0.98524475},{"id":3,"version":3,"score":0.9477582}],"status":"ok","time":0.001071918}
+DEFECT_FOUND: hnsw_ef=null returns 200 OK (should be 400)
+
+=== Test 2: hnsw_ef = 128 (VALID - Control) ===
+Status: 200
+Response: {"result":[{"id":1,"version":1,"score":1.0},{"id":2,"version":2,"score":0.98524475},{"id":3,"version":3,"score":0.9477582}],"status":"ok","time":0.000399925}
+CONTROL_PASS: Valid value accepted and returns results
+
+======================================================================
+VERDICT: DEFECT_FOUND
+======================================================================
+DEFECT_FOUND: hnsw_ef parameter accepts null without validation
+Defect Type: Type1_IllegalSuccess
+Severity: P1_High
+Expected: 400 Bad Request for null value
+Actual: 200 OK, silently accepting null
+
+Control Group: Valid value (128) works correctly
+
+Cleanup: Collection deleted
