@@ -1,0 +1,14 @@
+{"defect_id": "milvus_043", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "源码 request_v2.go 的 SearchReqV2 无 groupParams 嵌套字段（仅顶层 groupingField/groupSize/strictGroupSize），probe 把分组参数包在未知键里被 Go 静默忽略，返回的 15 条按距离单调递减且 cat 交错，正是未分组的普通 top-15 正确结果，属探针请求形状错误而非服务端缺陷。"}
+{"defect_id": "qdrant_001", "verdict": "CONFIRMED", "confidence": 0.85, "rationale": "同一非法向量（dim 0 vs 4）wait=true 返回 400 校验错误，去掉 wait 却 200 acknowledged 且 points_count 恒为 0，违反契约'200 on success; 4XX on validation error'，构成对校验失败的非法成功与静默丢数据。"}
+{"defect_id": "qdrant_002", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "hnsw_ef 在材料契约中无显式取值范围约束，源码中 ef 被 max(ef, top) 下限钳制且本例集合走全扫描，hnsw_ef=0 未产生任何可观察的错误结果。"}
+{"defect_id": "qdrant_003", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "score_threshold=2.0 滤掉唯一 score=1.0 的点、-0.5 保留该点，两次响应均符合'仅返回得分不低于阈值的点'的语义，无任何违约。"}
+{"defect_id": "qdrant_004", "verdict": "CONFIRMED", "confidence": 0.85, "rationale": "同一 dim=3 的非法点 wait=true 得 400 校验错误，无 wait 得 200 acknowledged 且 points_count 保持 0，契约 behavioral_005（4XX on validation error）被违反，属非法成功+静默丢弃。"}
+{"defect_id": "qdrant_005", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "shard_number=0 与 -1 均被拒绝（422/400 都属契约'4XX on invalid params'），完全符合 shard_number>=1 的范围约束，仅状态码风格不同不构成缺陷。"}
+{"defect_id": "qdrant_006", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "filter color=red 恰好返回 4 条带 color=red payload 的点（ids 2/4/8/10），无 payload 点被正确排除，行为与契约完全一致。"}
+{"defect_id": "qdrant_007", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "batch 内含非法点时返回 400 且 count 保持 3（一条都没写入），'none applied' 在契约明示允许非原子的语义空间内，属合规的拒绝行为。"}
+{"defect_id": "qdrant_008", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "scroll 过滤 cat_a 恰好返回全部 25 条匹配点且 next_page_offset=null（limit=100 远大于匹配数），分页与过滤行为完全正确。"}
+{"defect_id": "qdrant_009", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "契约明确允许无向量配置的集合存在（payload-only 使用，向量错误在首次向量操作时暴露），观测到的 200 建库+400 'Not existing vector name' 正是该条款的字面实现。"}
+{"defect_id": "qdrant_010", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "与 qdrant_009 同一契约条款：无 vectors 配置建库 200 合法，插入时 400 报向量名不存在属于契约明示的'首次向量操作报错'路径。"}
+{"defect_id": "qdrant_011", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "源码 MaybeOneOrMany 反序列化器显式接受 null（unit→None），should:null 等价于无过滤条件并返回全部点，是刻意实现的宽松输入形态且语义正确。"}
+{"defect_id": "qdrant_012", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "Filter 的 must_not 带 #[serde(with=MaybeOneOrMany)]，单对象被有意包装为单元素列表执行，结果语义正确（排除 tag=x 返回 id 2），属实现的合法输入形态而非类型强转缺陷。"}
+{"defect_id": "qdrant_013", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "query:null 返回存储点按分排序是 Query API 的默认行为（省略 query 即返回 points，score 1.0），version=0 也属于未 wait 写入明示允许的最终一致性范畴。"}

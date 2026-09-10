@@ -50,6 +50,7 @@ Each line of a `verdicts_*.jsonl` file is one case judged once:
 | contract core (contract assertion only) | `run1`, `run2`, `run3` |
 | full stage (contract + cognition + source, priority rule) | `run_full1`, `run_full2`, `run_full3` |
 | source-only arm, run as an independent configuration | `run_donly1`, `run_donly2`, `run_donly3` |
+| flat single-prompt judge (same inputs as the source-only arm; no perspectives, chain, or rule) | `run_flat1`, `run_flat2`, `run_flat3` |
 | re-adjudication after the cognition-corpus leakage audit | `run_fullc1`, `run_fullc2`, `run_fullc3` |
 | runs voided during the study, retained for process transparency | `*_voided_*` |
 

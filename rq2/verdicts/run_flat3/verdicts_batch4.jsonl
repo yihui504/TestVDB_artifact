@@ -1,0 +1,14 @@
+{"defect_id": "milvus_043", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "源码证实 v3.0.0 REST SearchReqV2 只有顶层 groupingField/groupSize/strictGroupSize 字段且全仓无 groupParams 处理，probe 的嵌套 groupParams 被 JSON 反序列化静默忽略，搜索退化为普通 top-15 检索，分组语义从未被执行，故'违反 strictGroupSize'不成立。"}
+{"defect_id": "qdrant_001", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "同一非法向量(空向量 vs dim=4)在 wait=true 时返回 400 维度错误，wait=false 时返回 200 acknowledged 且点被静默丢弃(points_count 保持 0)，契约'4XX on validation error'被违反，构成 Type1 非法成功+静默数据丢失。"}
+{"defect_id": "qdrant_002", "verdict": "FALSE_POSITIVE", "confidence": 0.72, "rationale": "hnsw_ef=0 被接受并返回正确结果，材料契约中没有 hnsw_ef>=1 的范围约束(仅'hints applicable when exact=false'且未被违反)，不构成文档-实现缺陷。"}
+{"defect_id": "qdrant_003", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "score_threshold 行为与文档语义完全一致：2.0 过滤掉 score=1.0 的全部结果，-0.5 保留该点，属于正确的阈值过滤而非缺陷。"}
+{"defect_id": "qdrant_004", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "3 维向量写入 4 维集合在 wait=true 时 400 报维度错误，wait=false 时 200 acknowledged 且点静默丢弃(update_queue 空、count 不变)，同一请求仅因 wait 标志差异即绕过校验，违反'4XX on validation error'契约。"}
+{"defect_id": "qdrant_005", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "shard_number=0 得 422'must be 1 or larger'、-1 得 400 格式错误，shard_number>=1 的范围约束被准确执行，行为与契约一致。"}
+{"defect_id": "qdrant_006", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "color=red 过滤恰好返回 4 个带 red payload 的点并正确排除无 payload 点，过滤语义完全正确。"}
+{"defect_id": "qdrant_007", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "含一个坏点的 batch 返回 400 且 count 保持 3(零应用)，同时满足材料包中'原子执行'与'失败可全不应用'两条契约，无任何违反。"}
+{"defect_id": "qdrant_008", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "集合中恰有 25 个 cat_a 点，limit=100 下全部返回且 next_page_offset=null，分页契约('200 with points list and next_page_offset')完全满足。"}
+{"defect_id": "qdrant_009", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "{'vectors':{}} 创建的集合正是契约明文允许的 payload-only 集合(qdrant_state_create_collection_001: 向量错误在首次向量操作时暴露)，观察行为与该契约逐字吻合。"}
+{"defect_id": "qdrant_010", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "不带 vectors 配置创建集合后向量插入在使用时报错，与契约明文'collections without vector config support payload-only operations (vector insert returns an error at use time)'完全一致。"}
+{"defect_id": "qdrant_011", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "Filter.should 为 #[serde(default, with=\"MaybeOneOrMany\")] 的 Option 字段，null 等价于缺省子句，未过滤返回全部点是正确语义，且无任何文档承诺拒绝 null。"}
+{"defect_id": "qdrant_012", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "Filter.must_not 标注 #[serde(with=\"MaybeOneOrMany\")]，单对象形式是 schema 显式支持的输入，排除语义(tag=x 被剔除)执行正确。"}
+{"defect_id": "qdrant_013", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "QueryRequestInternal.query 字段自带文档'If missing without prefetches, returns points ordered by their IDs'，query:null 返回按 ID 排序的全量点(score=1.0)正是文档化内建行为。"}

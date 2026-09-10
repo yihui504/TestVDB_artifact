@@ -1,0 +1,14 @@
+{"defect_id": "milvus_015", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "集合因缺 dimension 从未创建成功，对不存在集合建索引被以 code=100 collection not found 正确拒绝，恰符合契约\"集合必须存在\"状态约束，无任何承诺被违反。"}
+{"defect_id": "milvus_016", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "两次索引创建均因快速建已自动建索引而失败，集合上根本不存在 HNSW/IVF 索引，ef=-1/0、nprobe=0 从未进入真实索引路径，且该案契约中并无任何 ef/nprobe 取值范围条目。"}
+{"defect_id": "milvus_017", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "aliases+list 在契约中没有任何约束条目，空 collectionName 返回空列表而库中确无别名（alias 创建因键名不符从未成功），200+空列表不违反任何文档承诺。"}
+{"defect_id": "milvus_018", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "原始日志显示 rename 实际返回 65535 失败（与摘要所称 code=0 直接矛盾），该结果与并发 create(dst) 先落地的竞态一致且符合\"新名不得已存在\"契约，维护者亦明确此类并发语义为 by design（issue 50192）。"}
+{"defect_id": "milvus_019", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "rowCount 仅统计已 flush 数据是维护者对同一现象的明确 by-design 表态（issue 50193），契约只承诺返回统计而未承诺未 flush 行计入 rowCount。"}
+{"defect_id": "milvus_020", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "删除后亚秒级搜索仍见已删 id 可由默认 Bounded 一致性的滞后窗口解释，该案契约仅承诺删除不可恢复（deleteCount=5 已确认），并无任何\"删除后搜索须即时排除\"的契约条目被违反。"}
+{"defect_id": "milvus_021", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "源码证实 REST v2 快速建在自动 CreateIndex 后随即自动 LoadCollection（handler_v2.go:2121），集合实际已加载且带自动索引，\"必须已加载且存在索引\"前置条件实质满足。"}
+{"defect_id": "milvus_022", "verdict": "FALSE_POSITIVE", "confidence": 0.95, "rationale": "同 schema 重复创建集合按 2.6.17 契约明文（state_001 与 behavioral_002）就是幂等 no-op 返回 200，观察行为与契约完全一致。"}
+{"defect_id": "milvus_023", "verdict": "FALSE_POSITIVE", "confidence": 0.95, "rationale": "该案契约明文规定 drop 不存在集合按幂等成功处理（200 空数据），观察行为即契约本身。"}
+{"defect_id": "milvus_024", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "22 条契约条目中无任何 filter 与 ids 互斥的约束，同时传入二者被接受且 deleteCount=1 与库中实际仅 1 条数据一致，无文档承诺被违反。"}
+{"defect_id": "milvus_025", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "源码证实 v2 REST insert 处理链路无任何 100 行上限校验（Limit:100 仅为 query/search 默认返回条数），且该案 2.6.17 契约本条即写明\"无固定行数上限，仅受请求体大小约束\"，101 行成功与契约一致。"}
+{"defect_id": "milvus_026", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "该案契约集合中不存在禁止下划线开头命名的任何约束条目，下划线开头的合法命名被接受不构成文档-实现缺陷。"}
+{"defect_id": "milvus_027", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "源码证实 CollectionReq 无顶层 shardsNum 字段、仅 params.shardsNum 被消费（handler_v2.go:2000-2006），顶层非法值被静默忽略正是维护者明确的 by-design 行为（issue 50351）。"}
+{"defect_id": "milvus_028", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "空 metricType 被源码显式默认为 COSINE（handler_v2.go:2067-2068），顶层 consistencyLevel 为未消费字段（params.consistencyLevel 才校验且 \"None\" 会被拒），dimension=32769 被正确拒绝，三个观察均无真实契约违反。"}

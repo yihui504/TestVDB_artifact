@@ -1,0 +1,14 @@
+{"defect_id": "milvus_001", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "观察记录完全缺失（raw 为空且 log 未捕获），无任何 observed 证据可与契约对照，不能证实存在真实缺陷。"}
+{"defect_id": "milvus_002", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "契约中没有 nprobe 合法范围的约束条目，且集合索引创建失败仅剩 quick-create 默认索引，nprobe=0 属于对该索引不适用的参数被静默忽略，搜索返回正确结果，无文档-实现冲突。"}
+{"defect_id": "milvus_003", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "契约同样没有 ef 范围约束，HNSW 索引实际未建成（CreateIndex 失败），ef=0 被忽略且搜索返回正确结果，不构成契约违背。"}
+{"defect_id": "milvus_004", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "IN 列表 [10,5] 是合法集合语义（无顺序要求），deleteCount=1 恰好删除存在的 age=10 行为完全正确。"}
+{"defect_id": "milvus_005", "verdict": "CONFIRMED", "confidence": 0.85, "rationale": "insert 以 code 0 接受违反字段命名规则的动态字段名 '123field'/'@field'，随后 query 报 'parse output field name failed: 123field' 无法读回，写入成功但数据不可查的不一致构成真实缺陷。"}
+{"defect_id": "milvus_006", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "text_field 是动态字段，动态字段本质为 JSON 键值无声明类型，int 与 string 混合并原样读回（12345 仍为数字）是合法行为，不违反 data 类型匹配契约。"}
+{"defect_id": "milvus_007", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "空向量 [[]] 被服务端正确拒绝（code 1801 指出 dimension 8 与长度 0 不符的参数错误），参数校验语义成立，仅报错文案前缀 'can only accept json format request' 有误导性，不构成文档-实现功能缺陷。"}
+{"defect_id": "milvus_008", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "源码证实 Milvus 将 COSINE 视为正向相似度（PositivelyRelated(COSINE)，越大越相似），同向量 distance=1.0 是正确语义，个别 >1.0（最大 1.0000002）是 float32 舍入噪声而非契约违背。"}
+{"defect_id": "milvus_009", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "契约未定义 nprobe 合法范围，集合为 dimension-only 快速创建、无 IVF 索引，nprobe=0 被忽略且结果正确，而 limit=0 被拒说明服务端 topk 校验本身正常，无契约违背。"}
+{"defect_id": "milvus_010", "verdict": "CONFIRMED", "confidence": 0.9, "rationale": "契约明示 ttlSeconds >= 0，create 对 collection.ttl.seconds=-100 返回 code 0（且 describe 显示属性未生效），而同一值经 alter_properties 被以 'expect [-1, 3155760000]' 范围错误拒绝，create 侧参数校验缺失构成非法成功。"}
+{"defect_id": "milvus_011", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "源码 QueryReqV2.Filter 未加 binding:\"required\"（request_v2.go），空/缺失 filter 的全量查询是设计内行为，契约也仅约束 filter 给定时的表达式合法性，不要求必须提供。"}
+{"defect_id": "milvus_012", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "契约中 collections+list 无任何约束条目，dbName 本为可选参数，空值回退 default 库并列出集合属正常宽容行为，无契约可违反。"}
+{"defect_id": "milvus_013", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "非法 Request-Timeout 头被静默忽略并回退默认值是常见的宽容式头部解析，请求行为完全正确，且所引考古约束来自另一端点/版本，无可观察的功能性契约违背。"}
+{"defect_id": "milvus_014", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "dim=32768 恰为契约上限被接受、dim=32769 被明确拒绝并给出 'range 2 ~ 32768' 报错，边界行为与契约完全一致。"}

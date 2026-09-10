@@ -1,0 +1,14 @@
+{"defect_id": "qdrant_014", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约对 cluster+recover 无任何约束条目，standalone 下返回带明确说明的固定错误不构成文档-实现承诺的违背。"}
+{"defect_id": "qdrant_015", "verdict": "CONFIRMED", "confidence": 0.78, "rationale": "源码 shard_number 为 Option<u32> 仅校验下限无上限，INT_MAX 属文档合法值却两次复现创建请求挂起超时（控制组 rep=0 正常 422），违背成功应 200/非法应 4XX 的承诺。"}
+{"defect_id": "qdrant_016", "verdict": "CONFIRMED", "confidence": 0.82, "rationale": "lookup_from 指向不存在集合时静默返回 200 并用本地集合出结果，直接违反契约明确条目'非存在引用应 400/404'。"}
+{"defect_id": "qdrant_017", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "日志显示 offset 0/10/20 三页结果互不重叠且 next_page_offset 正常，未观察到任何契约违约。"}
+{"defect_id": "qdrant_018", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "exact=false 本被契约定义为 segment statistics 近似统计，24 vs 40 的偏差不违反任何已文档化约束。"}
+{"defect_id": "qdrant_019", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "approx/exact 差距可复现，但契约仅承诺 exact=false 使用近似统计，无任何精度承诺被违背。"}
+{"defect_id": "qdrant_020", "verdict": "FALSE_POSITIVE", "confidence": 0.62, "rationale": "must_not/跨字段近似计数偏差同样落在契约明示的'exact=false 用 segment statistics'近似语义之内。"}
+{"defect_id": "qdrant_021", "verdict": "FALSE_POSITIVE", "confidence": 0.58, "rationale": "geo radius 近似计数偏差幅度虽大，但契约未给出任何精度界，实现行为与文档化统计近似一致。"}
+{"defect_id": "qdrant_022", "verdict": "FALSE_POSITIVE", "confidence": 0.62, "rationale": "match_any 多值近似计数偏差属于文档化近似路径的表现，无已文档化承诺被违反。"}
+{"defect_id": "qdrant_023", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "快照恢复将集合还原到快照时点（3 点，后加的 id50 被移除）正是快照恢复语义的预期行为。"}
+{"defect_id": "qdrant_024", "verdict": "CONFIRMED", "confidence": 0.62, "rationale": "lookup_from 取到的 negative 向量维度 8≠4 被静默接受返回 200 且分数被污染（源码 avg_vectors 无维度校验），而 positive 同样情形返回 400，校验不对称并静默产出错误结果。"}
+{"defect_id": "qdrant_025", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "源码注释明示 PATCH metadata 为合并语义且 update_metadata 实现确实 merge（空对象=no-op），逐字 GET 显示 metadata 完整保留，探针'null'摘要与其自身逐字记录矛盾属解析路径错误。"}
+{"defect_id": "qdrant_026", "verdict": "FALSE_POSITIVE", "confidence": 0.72, "rationale": "全部得分并列 1.0，契约仅要求按分数降序，并列项排序不稳定未违反任何文档化约束。"}
+{"defect_id": "qdrant_027", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "PayloadFieldSchema 为 untagged 枚举，[\"keyword\"] 经 serde 位置式反序列化为合法 KeywordIndexParams(type=keyword 其余默认) 故 200 acknowledged 是合法接受；payload_schema 为空只是异步索引未落盘（update_queue=1），与文档'索引创建为异步'一致。"}

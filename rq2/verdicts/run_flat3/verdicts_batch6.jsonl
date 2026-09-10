@@ -1,0 +1,11 @@
+{"defect_id": "qdrant_028", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "strict_mode max_query_limit=10 下 scroll limit=100 返回 400、limit=5 返回 200，完全符合 strict mode 文档语义，未观察到任何违背 limit default=10(可调) 契约的行为。"}
+{"defect_id": "weaviate_001", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "dynamicEfMin=500>dynamicEfMax=10 被原样接受属实，但材料包契约中没有任何针对 dynamicEf* 字段的约束条目，不构成文档-实现缺陷。"}
+{"defect_id": "weaviate_002", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "flatSearchCutoff=-100 被原样接受，但材料包契约中不存在 flatSearchCutoff 的取值范围约束，无文档承诺被违背。"}
+{"defect_id": "weaviate_003", "verdict": "CONFIRMED", "confidence": 0.6, "rationale": "契约明确 replicationConfig.factor>=1，但创建时提交 -1 返回 200 并被静默钳位为 1（源码 class.go 创建路径有意钳位而更新路径却报错拒绝），文档化下限未被强制执行。"}
+{"defect_id": "weaviate_004", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "ef=-1 正是 weaviate 自身的默认哨兵值（默认配置响应即 ef:-1），提交默认值不构成任何缺陷。"}
+{"defect_id": "weaviate_005", "verdict": "CONFIRMED", "confidence": 0.75, "rationale": "shardingConfig validate() 不检查 desiredCount 下限：-1 返回 200（且响应体为空、内部 Physical 分片为零/negative makeslice 路径），而 0 却以无关内部错误 422 拒绝，缺失下限校验且失败模式不一致。"}
+{"defect_id": "weaviate_006", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "契约(显式,0.95)要求 tokenization 必须为合法枚举值，提交空串返回 200 并被静默改为 word，源码 class.go 中根本不存在 tokenization 枚举校验。"}
+{"defect_id": "weaviate_007", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "distance 为可选字段，提交 null 等价于未提供并落入默认值 cosine，属标准可选字段缺省语义，无契约被违背。"}
+{"defect_id": "weaviate_008", "verdict": "CONFIRMED", "confidence": 0.65, "rationale": "契约(显式,0.95)规定创建租户 activityStatus 必须为 ACTIVE/INACTIVE，提交空串返回 200 且响应省略该字段，文档化枚举约束未被强制执行。"}
+{"defect_id": "weaviate_009", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "空数组在形式上满足 vector 为 float 数组的契约，且单条 POST 对照同样 200，vectorizer=none 下无向量对象本就合法，批/单行为一致无文档-实现矛盾。"}
+{"defect_id": "weaviate_010", "verdict": "CONFIRMED", "confidence": 0.85, "rationale": "缺 where/class 的纯客户端输入校验失败以 500 返回而非文档化的 422，源码证实 validateBatchDelete 用裸 errors.New 且未被归类为 ErrInvalidUserInput，落入处理器 500 分支，属错误分级实现缺陷。"}

@@ -1,0 +1,14 @@
+{"defect_id": "qdrant_014", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约中无 cluster+recover 的任何约束条目，standalone 下报错虽为 500 但错误信息明确诊断出 standalone 模式，无被违背的文档承诺。"}
+{"defect_id": "qdrant_015", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "契约明文 shard_number>=1 且无上限，合法值 2147483647 被接受后使整个服务（含 GET /）连续多请求超时无响应，构成合法输入下的服务级阻断缺陷。"}
+{"defect_id": "qdrant_016", "verdict": "CONFIRMED", "confidence": 0.85, "rationale": "同版本 OpenAPI 契约明确 lookup_from.collection 必须引用已存在集合（不存在应 400/404），实测不存在的集合静默返回 200 并用源集合出结果，源码证实无引用 ID 时跳过存在性校验。"}
+{"defect_id": "qdrant_017", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "三页 offset 分页结果互不重叠无重复无缺失、分数严格降序、scroll 正确返回 next_page_offset=10，观察未违反任何契约条目。"}
+{"defect_id": "qdrant_018", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "exact=true=40 与 exact=false=24 的差异正是契约明文约定的 segment statistics 近似语义，文档未对近似计数承诺任何精度界限。"}
+{"defect_id": "qdrant_019", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "三个规模下 exact=false 的低估仍属契约明示的近似统计语义，exact=true 结果正确，无文档承诺被违背。"}
+{"defect_id": "qdrant_020", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "must_not 与跨字段过滤下 exact=false 的低估（最高 -26%）仍在文档明示的近似统计范围内，无精度承诺可违背。"}
+{"defect_id": "qdrant_021", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "geo_radius 下 exact=false 高估最高 +535% 虽大，但契约明示 exact=false 使用 segment statistics 近似，文档未承诺近似精度。"}
+{"defect_id": "qdrant_022", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "match_any 多值组合下 exact=false 低估随值数增长至 -33%，仍属契约明示的近似语义而非契约违背。"}
+{"defect_id": "qdrant_023", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "从快照文件恢复后 count=3 恰为快照时刻状态，恢复前新写入的 id50 被回滚正是快照恢复的应有语义，全程 200 无异常。"}
+{"defect_id": "qdrant_024", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "同类 lookup_from 维度不匹配引用在 positive 上返回 400，在 negative 上却静默 zip 截断为 4 维并以 200 返回未按请求语义计算的结果，行为不一致且未文档化。"}
+{"defect_id": "qdrant_025", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "PATCH metadata={} 按合并/部分更新语义为 no-op，返回 200 且元数据保持不变，契约中无任何条目承诺空对象应清空元数据。"}
+{"defect_id": "qdrant_026", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "十次相同请求中两组的成员集合始终不变，变化的仅是全同向量下 score 全为 1.0 的平局内排序与组序，契约未承诺平局确定性。"}
+{"defect_id": "qdrant_027", "verdict": "CONFIRMED", "confidence": 0.6, "rationale": "field_schema 传数组形式（契约仅定义字符串或参数对象，非法类型应 4XX）被 200 acknowledged 接受且 payload_schema 保持为空未注册索引，属非法成功/静默无操作。"}

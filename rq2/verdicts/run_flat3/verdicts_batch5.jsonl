@@ -1,0 +1,14 @@
+{"defect_id": "qdrant_014", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约对 cluster/recover 在 standalone 模式下的行为无任何约束条目，仅模板描述 Raft 恢复；确定性返回带明确原因的 500 且无状态破坏，不构成文档-实现缺陷。"}
+{"defect_id": "qdrant_015", "verdict": "CONFIRMED", "confidence": 0.75, "rationale": "shard_number=INT_MAX 满足契约 shard_number>=1，却导致创建请求读超时并使 GET / 等后续请求全部超时（服务整体不可用），而对照 rep0 正确返回 422，说明合法值绕过校验引发挂起。"}
+{"defect_id": "qdrant_016", "verdict": "CONFIRMED", "confidence": 0.9, "rationale": "补充契约明确 lookup_from.collection 必须引用已存在集合（非存在引用应 400/404），实测对不存在的集合静默返回 200 并给出源集合结果，属文档化契约违反。"}
+{"defect_id": "qdrant_017", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "日志显示 offset 分页三页结果互不重复且分数严格降序、scroll 正常返回 next_page_offset，无任何契约违反证据。"}
+{"defect_id": "qdrant_018", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约仅承诺 exact=false 使用分段统计的近似口径，40 与 24 的偏差未违反任何明示精度承诺。"}
+{"defect_id": "qdrant_019", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "exact=false 在契约中为分段统计近似口径，三个规模下约 -35% 的系统性低估不构成对明示契约的违反。"}
+{"defect_id": "qdrant_020", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "same-field must_not 与 cross-field 组合的近似低估（130/99、73/62）仍在 exact=false 的文档化近似语义内。"}
+{"defect_id": "qdrant_021", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "geo_radius 近似计数偏差虽大（127 恒定、10000km 时返回全量），但 exact=false 契约未承诺任何精度，属近似口径内行为。"}
+{"defect_id": "qdrant_022", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "match_any 值数增多导致的 -11%~-33% 低估发生在 exact=false 的分段统计近似口径下，无精度契约被违反。"}
+{"defect_id": "qdrant_023", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "源码（recover.rs）显示 standalone 下无其他活跃副本时无条件以快照覆盖本地数据，priority=replica 被静默忽略，快照后新增的 point 50 丢失，违背 priority 作为恢复真值来源的语义。"}
+{"defect_id": "qdrant_024", "verdict": "CONFIRMED", "confidence": 0.65, "rationale": "维度不匹配的 negative（8 维 lookup）静默 200 并参与打分（id1 分数恰等于截断 neg 向量的欧氏距离），而同构 positive 请求返回 400，验证不对称导致 recommend 语义错误且误导成功。"}
+{"defect_id": "qdrant_025", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "PATCH metadata={} 按 PATCH 合并语义是合法空操作，GET 显示元数据保持不变属预期，stdout 的 null 与响应体矛盾不可作为缺陷证据。"}
+{"defect_id": "qdrant_026", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "全部向量相同导致得分全为 1.0 平局，契约只承诺按分数降序，平局内命中与分组的顺序不稳定未违反任何文档化约束。"}
+{"defect_id": "qdrant_027", "verdict": "CONFIRMED", "confidence": 0.65, "rationale": "源码中 field_schema 为 string|object 的 untagged 枚举，数组 [\"keyword\"] 非法输入却被 200 acknowledged 接受且 payload_schema 始终为空，属非法参数静默成功。"}

@@ -1,0 +1,14 @@
+{"defect_id": "milvus_001", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "材料包无任何观察记录（raw 为空且 log 未捕获），没有任何可证实文档-实现不一致的行为证据。"}
+{"defect_id": "milvus_002", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "IVF_FLAT 索引创建实际失败(65535)，搜索运行在自动索引/未索引数据路径上，nprobe 参数很可能未被消费，无法确立'nprobe=0 在 IVF 索引上被接受'这一契约违反。"}
+{"defect_id": "milvus_003", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "HNSW 索引创建同样失败(65535)，ef=0 被接受可由未索引/增长段暴力搜索路径合理解释，材料未能证明 ef 在实际使用的 HNSW 索引上被静默放过。"}
+{"defect_id": "milvus_004", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "filter 'age in [10, 5]' 是合法布尔表达式且精确删除了唯一匹配行(deleteCount=1)，IN 列表顺序无关，未违反任何契约。"}
+{"defect_id": "milvus_005", "verdict": "CONFIRMED", "confidence": 0.65, "rationale": "insert 接受 '123field'/'@field' 这类违反字段命名规则的动态字段并返回成功，随后 query 用同名 outputFields 报 'parse output field name failed'，写入-读取校验不一致导致已写入数据无法按标准方式取回。"}
+{"defect_id": "milvus_006", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "text_field 是动态字段(JSON 语义，无声明 VARCHAR 类型)，存入整数并原样返回与动态字段行为一致，'data 类型须匹配 schema'约束不适用于未声明类型的动态字段。"}
+{"defect_id": "milvus_007", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "空向量请求被拒绝并返回明确的 invalid parameter 错误(code 1801)，与'data 须为非空 float 数组且维度匹配'的契约一致，属正确拒绝而非缺陷。"}
+{"defect_id": "milvus_008", "verdict": "CONFIRMED", "confidence": 0.75, "rationale": "COSINE 度量下同向量搜索返回 distance≈1.0（100 次中 11 次>1.0，日志单次=1），而文档语义要求相同向量 distance=0(=1-similarity)，度量语义被实质违反。"}
+{"defect_id": "milvus_009", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "集合为 quick-create 自动索引(未证实为 IVF 族)，nprobe=0 被接受更可能因参数未被实际索引/增长段消费，文档化的 nprobe 范围约束只绑定 IVF 族索引，违反未成立。"}
+{"defect_id": "milvus_010", "verdict": "CONFIRMED", "confidence": 0.85, "rationale": "create 接受 collection.ttl.seconds=-100 返回 code 0，而同一系统的 alter_properties 拒绝同一值并明示合法范围 [-1, 3155760000]，且文档约束 ttlSeconds>=0，create 路径校验缺失确凿。"}
+{"defect_id": "milvus_011", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "REST v2 query 支持 filter 缺省的查询全部语义，filter=null/''/缺省返回全表属受支持行为，'filter 须为有效布尔表达式'仅约束显式提供的 filter。"}
+{"defect_id": "milvus_012", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "契约中 collections+list 无任何约束条目，dbName='' 落回默认库不违反任何已文档化的承诺，缺少可依据的契约违反。"}
+{"defect_id": "milvus_013", "verdict": "CONFIRMED", "confidence": 0.6, "rationale": "API 参考将 Request-Timeout 明确为 integer 类型，而 float '3.5' 与非数字 'abc' 均被静默接受，文档类型约定与实现校验不一致。"}
+{"defect_id": "milvus_014", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "dim=32768 在文档化范围 1-32768 内被接受、32769 被正确拒绝，边界行为与契约完全一致，无缺陷。"}

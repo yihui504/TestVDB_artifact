@@ -1,0 +1,11 @@
+{"defect_id": "qdrant_028", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "strict_mode max_query_limit=10 下 limit=100 被拒且提示明确、limit=5 对照 200 正常，是 strict mode 特性按配置精确生效，契约\"limit default=10 (adjustable)\"未被违反。"}
+{"defect_id": "weaviate_001", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "源码注释明言 vectorIndexConfig\"not further specified in the API\"，dynamicEfMin/dynamicEfMax 无任何文档化顺序约束，接受 min>max 不违反任何文档承诺。"}
+{"defect_id": "weaviate_002", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "flatSearchCutoff 同属规范外自由字段（ParseAndValidateConfig 仅赋值不校验），负值被接受没有违反任何已文档化的约束。"}
+{"defect_id": "weaviate_003", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "class.go:513-514 对 factor<1 显式归一化为 MinimumFactor=1，属有意防御行为，最终存储状态满足文档\"factor>=1 (default 1)\"。"}
+{"defect_id": "weaviate_004", "verdict": "FALSE_POSITIVE", "confidence": 0.95, "rationale": "DefaultEF=-1 即 weaviate\"let Weaviate pick\"的默认哨兵值，送入 ef=-1 与默认配置等价，不构成缺陷。"}
+{"defect_id": "weaviate_005", "verdict": "CONFIRMED", "confidence": 0.75, "rationale": "desiredCount=0 被 422\"invalid sharding state\"拒绝而 -1 被 200 静默接受建类，ParseConfig 对 desiredCount 无下界校验，负分片数直接落库，校验自相矛盾构成真实参数校验缺陷。"}
+{"defect_id": "weaviate_006", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "项目自身单测显式断言\"empty tokenization accepted\"（空串=未设置→默认 word，\"unknown\" 才被拒），终态为合法枚举值，属有意宽松设计而非文档违约。"}
+{"defect_id": "weaviate_007", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "distance 为可选字段且默认 cosine，null 视同未设置回落默认值，是标准可选字段处理。"}
+{"defect_id": "weaviate_008", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "activityStatus 为 omitempty 可选字段，空串被 swagger 校验按未设置跳过并按默认 HOT 建租户（项目验收测试 createTenants(...,\"\") 即依赖该默认路径）。"}
+{"defect_id": "weaviate_009", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "空数组[]仍是\"array of floats\"的合法形态，单条控制组同样 200，批量与单条行为一致，契约未承诺非空向量校验。"}
+{"defect_id": "weaviate_010", "verdict": "CONFIRMED", "confidence": 0.8, "rationale": "缺 where/class 是客户端输入校验失败，validateBatchDelete 中相邻同类错误均被有意归为 ErrInvalidUserInput→422，这三条却以裸 error 漏成 500，与规范定义的 400/422 输入错误响应契约相悖。"}

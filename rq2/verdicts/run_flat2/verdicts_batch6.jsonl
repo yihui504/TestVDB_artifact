@@ -1,0 +1,11 @@
+{"defect_id": "qdrant_028", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "limit=100 被 400 是显式开启 strict_mode max_query_limit=10 的正确执行，limit=5 正常返回 200，契约'limit 默认 10 且可调'未被违背（源码 verification/mod.rs 的 check_request_query_limit 即严格模式文档化行为）。"}
+{"defect_id": "weaviate_001", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "dynamicEfMin/dynamicEfMax 在冻结契约与该版本 OpenAPI 规范中均无任何取值或次序约束（规范中 0 次出现），min>max 被接受不违背任何文档承诺。"}
+{"defect_id": "weaviate_002", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "flatSearchCutoff 在契约与 OpenAPI 规范中均无 minimum/非负约束（规范中 0 次出现），接受 -100 属实现宽松但无文档可背离。"}
+{"defect_id": "weaviate_003", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "源码 usecases/schema/class.go 显式将 factor<1 归一化为默认最小值，最终存储 factor=1 满足契约 factor>=1，且契约未承诺对越界输入返回错误。"}
+{"defect_id": "weaviate_004", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "ef=-1 即官方文档的默认哨兵值（动态 ef，所有默认响应中 ef 均为 -1），观察行为与文档默认完全一致，非缺陷。"}
+{"defect_id": "weaviate_005", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "desiredCount 在冻结契约与 OpenAPI 规范（无 ShardingConfig 定义）中均无任何约束承诺，-1 被接受虽属实现健壮性瑕疵，但不构成文档-实现缺陷。"}
+{"defect_id": "weaviate_006", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "源码 setPropertyDefaultTokenization 显式把空串视为未设置并回填文档默认值 word，终态落在契约枚举域内，契约亦未承诺空串必须被拒绝。"}
+{"defect_id": "weaviate_007", "verdict": "FALSE_POSITIVE", "confidence": 0.9, "rationale": "distance=null 按标准缺省语义视为未提供并应用文档默认 cosine，存储结果与契约完全一致，无任何违背。"}
+{"defect_id": "weaviate_008", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "源码 tenant.go validateActivityStatuses 对建租户显式 allowEmpty=true（空串=未提供走默认 ACTIVE/HOT），非空非法值会被拒绝，终态符合契约枚举域，契约未承诺对空串返回 4xx。"}
+{"defect_id": "weaviate_009", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "vector=[] 在类型上仍是浮点数组、满足契约'vector 为浮点数组'，契约无非空向量断言，且单条 POST 控制组行为与 batch 完全一致。"}
+{"defect_id": "weaviate_010", "verdict": "CONFIRMED", "confidence": 0.65, "rationale": "OpenAPI 规范为 DELETE /batch/objects 明确文档化 400（Malformed request）/422（invalid filter）处理此类非法输入，而缺 where/空 match 的客户端校验错误（源码 usecases/objects/batch_delete.go 显式校验）实际返回 500，违背文档化错误码契约。"}

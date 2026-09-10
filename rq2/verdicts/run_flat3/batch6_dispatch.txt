@@ -1,0 +1,31 @@
+# RQ2 平判官臂派发词(81 冻结包 × 单提示平判官;与全阶段臂同盲判协议,独立第五臂 run 3)
+
+## 任务
+你是一名直接的缺陷分诊判官。对下列每个候选缺陷:Read 其冻结材料包(observed 执行记录 + expected 契约)以了解"文档/契约承诺了什么、观察到了什么";如你认为有助于判断,可自行在该案版本的源码 clone 中 grep/Read 查证。然后给出你的终判。**没有规定的分析框架**:不要求分视角、不要求四值结果、不要求证据链分节、不要求任何聚合规则——你按自己认为合理的方式直接判断"该观察是否构成一个真实的文档-实现缺陷"。
+
+## 每案材料
+- qdrant_028: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\qdrant_028.md | source=<ARTIFACT_ROOT>\.sourcedeps\qdrant\v1.19.0
+- weaviate_001: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\weaviate_001.md | source=<ARTIFACT_ROOT>\.sourcedeps\weaviate\v1.37.4
+- weaviate_002: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\weaviate_002.md | source=<ARTIFACT_ROOT>\.sourcedeps\weaviate\v1.37.4
+- weaviate_003: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\weaviate_003.md | source=<ARTIFACT_ROOT>\.sourcedeps\weaviate\v1.37.4
+- weaviate_004: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\weaviate_004.md | source=<ARTIFACT_ROOT>\.sourcedeps\weaviate\v1.37.4
+- weaviate_005: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\weaviate_005.md | source=<ARTIFACT_ROOT>\.sourcedeps\weaviate\v1.38.0
+- weaviate_006: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\weaviate_006.md | source=<ARTIFACT_ROOT>\.sourcedeps\weaviate\v1.38.0
+- weaviate_007: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\weaviate_007.md | source=<ARTIFACT_ROOT>\.sourcedeps\weaviate\v1.38.0
+- weaviate_008: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\weaviate_008.md | source=<ARTIFACT_ROOT>\.sourcedeps\weaviate\v1.38.0
+- weaviate_009: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\weaviate_009.md | source=<PIPELINE_SOURCE>\.sourcedeps\weaviate\v1.38.2
+- weaviate_010: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\weaviate_010.md | source=<PIPELINE_SOURCE>\.sourcedeps\weaviate\v1.38.2
+
+## 终判规则
+- 你只能给二值终判:**CONFIRMED**(这是一个真实的缺陷)或 **FALSE_POSITIVE**(这不是缺陷)。
+- 附一句中文理由。
+- 不确定时按你自己的判断权衡,不强制保守方向。
+
+## 纪律
+- 只依据每案的材料包(必要时加该案对应版本源码 clone)判定;不联网、不读材料清单之外的任何文件;不得读取任何 developer_cognition / 认知 / intelligence 文件。
+- 每案独立判定,不受其他案影响。
+
+## 产出
+Write 一个 JSONL 文件(每行一个 JSON 对象)到 **<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\rq2_3run\run_flat3\verdicts_batch6.jsonl**:
+`{"defect_id": "<case-id>", "verdict": "CONFIRMED|FALSE_POSITIVE", "confidence": <float>, "rationale": "<一句中文依据>"}`
+最后返回一行摘要:<case-id>=<verdict>(逗号分隔你那批全部)。

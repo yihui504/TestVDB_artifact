@@ -1,0 +1,14 @@
+{"defect_id": "milvus_043", "verdict": "FALSE_POSITIVE", "confidence": 0.55, "rationale": "请求使用了该版本 API 不存在的 groupParams 嵌套字段（全仓 grep 零处支持，自带测试用顶层 groupingField/groupSize/strictGroupSize），参数被 Go JSON 解析静默忽略属探针请求形态错误而非实现缺陷，且材料包契约中无任何 group 约束条目。"}
+{"defect_id": "qdrant_001", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "wait=false 时返回 status=acknowledged 是 qdrant 文档化的异步写入语义（变更在未来时间应用），wait=true 时空向量维度错误被正确拒绝为 400，且日志中并无任何 crash 发生。"}
+{"defect_id": "qdrant_002", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "契约对 hnsw_ef 只有 applicability 约束（exact=false 时适用）而无下界断言，源码中 SearchParams.hnsw_ef 为 Option<usize> 无任何校验，ef=0 被接受且小集合全扫描下结果正确。"}
+{"defect_id": "qdrant_003", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "score_threshold=2.0 时 score=1.0 的点被过滤为空结果、-0.5 时正常返回，与文档定义的最低分数阈值过滤语义完全一致，观察到的正是契约要求的行为。"}
+{"defect_id": "qdrant_004", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "与 qdrant_001 同族：wait=false 的 acknowledged 属文档化异步语义（并未声称已完成），wait=true 时 3 维向量对 4 维集合正确返回 400 维度错误。"}
+{"defect_id": "qdrant_005", "verdict": "FALSE_POSITIVE", "confidence": 0.8, "rationale": "shard_number=0 被拒为 422（must be 1 or larger）、-1 被拒为 400（u32 解析错误），完全符合契约 shard_number >= 1 的范围约束。"}
+{"defect_id": "qdrant_006", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "filter color=red 精确返回集合中全部 4 个红点（id 2/4/8/10）且 payload 完整无缺失，过滤行为与契约语义一致。"}
+{"defect_id": "qdrant_007", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "batch 内含错误维度点时返回 400 且前后 count 均为 3（零应用），恰好落在契约明文的'batch 不保证原子、失败时可不部分或全部应用'许可范围内。"}
+{"defect_id": "qdrant_008", "verdict": "FALSE_POSITIVE", "confidence": 0.85, "rationale": "scroll 过滤 cat_a 在 limit=100 下返回恰好全部 25 个匹配点并给出 next_page_offset=null，分页与过滤语义均正确。"}
+{"defect_id": "qdrant_009", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "vectors:{} 建集合返回 200、首次向量插入报 400 'Not existing vector name'，正是契约 qdrant_state_create_collection_001 明文允许的'无向量配置集合可用于 payload-only、向量错误在使用时暴露'行为。"}
+{"defect_id": "qdrant_010", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "与 qdrant_009 同族：仅 shard_number 建集合被接受（200）且向量错误延迟到首次插入时以 400 暴露，符合契约对无向量配置集合的明文规定。"}
+{"defect_id": "qdrant_011", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "filter {\"should\": null} 被当作无过滤条件处理，返回与不带 filter 完全一致的点集，包内契约对 null 过滤子句无任何校验断言可违反。"}
+{"defect_id": "qdrant_012", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "must_not 以对象而非文档数组形态传入虽属宽松解析，但过滤结果语义正确（排除 tag=x 只剩 id 2），包内契约无 filter 类型校验相关断言。"}
+{"defect_id": "qdrant_013", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "query:null 等价于 Query API 未提供 query 时的 match-all 默认行为（全部点 score=1.0），属文档化的默认查询语义而非缺陷。"}

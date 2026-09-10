@@ -1,0 +1,14 @@
+{"defect_id": "milvus_029", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "limit=0 与 64 维向量均被服务端以明确错误码（65535/1801）正确拒绝，与契约的 limit>0、维度匹配约束一致，仅 HTTP 200+body code 的统一信封与 400 表述不同，不构成行为缺陷。"}
+{"defect_id": "milvus_030", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "契约声明密码 8-64 字符且弱密码返回 400，但 v2.6.17 源码 ValidatePassword 仅校验长度且默认范围 6-72（错误信息自证 6<=value<=72），复杂度检查完全缺失，属真实文档-实现偏差。"}
+{"defect_id": "milvus_031", "verdict": "FALSE_POSITIVE", "confidence": 0.75, "rationale": "1804 错误实因向未开 dynamic schema 的集合传入未声明字段 color（control insert 同样报错），属正确拒绝行为，未演示任何 upsert/autoID 主键契约违约。"}
+{"defect_id": "milvus_032", "verdict": "FALSE_POSITIVE", "confidence": 0.65, "rationale": "v2.6.19 CollectionReq 结构无顶层 consistencyLevel 字段、仅 params.consistencyLevel 被严格枚举校验，顶层传入属未被消费的冗余字段按设计被忽略（与 issue 50351 维护者表态一致），默认 Bounded 即文档默认值。"}
+{"defect_id": "milvus_033", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "v2.6.19 快建路径根本不消费 vectorFieldType（向量类型硬编码 FloatVector），InvalidVectorType 等同未知字段被静默忽略且回退值恰为文档默认 FloatVector。"}
+{"defect_id": "milvus_034", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "v3.0.0 upsert 与 insert 共用 checkAndSetData，JSON 字段以 []byte(dataString) 存储裸字符串（无引号的非法 JSON），同一输入被 gRPC 侧判为 Invalid JSON string，REST 面写入了系统自身认定为非法的 JSON 数据。"}
+{"defect_id": "milvus_035", "verdict": "CONFIRMED", "confidence": 0.65, "rationale": "字符串主键 \"123\" 被 json.Number().Int64() 静默强转为 123，而同产品 gRPC 侧按 schema 类型契约拒绝字符串 PK（should be int64, got str），文档类型约束在 REST 面未被强制。"}
+{"defect_id": "milvus_036", "verdict": "FALSE_POSITIVE", "confidence": 0.7, "rationale": "请求把分组参数放进 REST v2 不存在的 groupParams 嵌套对象（真实顶层字段为 groupingField/groupSize），参数完全未被消费，观察到的只是普通 search 成功，groupSize 校验路径从未被行使。"}
+{"defect_id": "milvus_038", "verdict": "FALSE_POSITIVE", "confidence": 0.6, "rationale": "groupByField=vector 藏在未被消费的 groupParams 包装对象里从未到达服务端分组逻辑，返回的只是普通 top-5 搜索结果，按向量字段分组被静默接受这一契约违约并未被真实触发。"}
+{"defect_id": "milvus_039", "verdict": "CONFIRMED", "confidence": 0.65, "rationale": "upsert 字符串主键 \"100\" 被静默强转后改写 id=100 行，gRPC 侧对同输入按类型契约报错拒绝，REST 面未强制 schema 主键类型契约。"}
+{"defect_id": "milvus_040", "verdict": "CONFIRMED", "confidence": 0.85, "rationale": "checkAndSetData 对 JSON 字段直接存 []byte(dataString) 导致裸字符串以未加引号字节落盘，REST 写入的值经 gRPC get 报 unexpected character 完全不可读，跨接口数据完整性损坏有直接实证。"}
+{"defect_id": "milvus_041", "verdict": "CONFIRMED", "confidence": 0.65, "rationale": "字符串→DOUBLE/BOOL、int→BOOL、字符串→INT16 四类跨类型写入均被 cast.To*E 静默强转接受，gRPC 侧拒绝同类输入，schema 数据类型匹配契约在 REST 面系统性失效。"}
+{"defect_id": "milvus_042", "verdict": "CONFIRMED", "confidence": 0.55, "rationale": "向量字段接受字符串编码的 \"[0.1,0.2,0.3,0.4]\" 并静默重解析为 float 数组，违反数据须为数组的类型契约且 gRPC 侧按同契约拒绝，尽管存储结果碰巧正确。"}
+{"defect_id": "milvus_037", "verdict": "CONFIRMED", "confidence": 0.7, "rationale": "string→INT64、int 123→VARCHAR、string→BOOL 三种跨类型写入全部静默强转成功，其中 int→VARCHAR 把数字悄悄变为字符串，schema 类型契约在 REST 面完全未强制而 gRPC 侧强制。"}
