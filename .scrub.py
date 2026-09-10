@@ -112,7 +112,7 @@ def main() -> int:
         if not path.is_file():
             continue
         rel = path.relative_to(ROOT)
-        if path.name == Path(__file__).name:
+        if path.name == Path(__file__).name or ".git" in path.parts:
             continue
 
         if path.suffix in BINARY_EXT:

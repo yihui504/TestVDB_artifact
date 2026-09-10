@@ -28,7 +28,8 @@ rq2/          RQ2 — false-positive interception
   dispatches/   The exact judge dispatch text sent for each arm.
   verdicts/     Per-case judge verdicts for every arm and run, plus the aggregation scripts.
   pool/         Candidate-pool assembly: how the 81 packages were built from pipeline output.
-  analyses/     Scripts that compute every rate, interval, and paired test reported in the paper.
+  analyses/     Scripts that compute every rate, interval, and paired test reported in the paper,
+                including the extraction-fidelity audit (sample, verdicts, builder).
 rq3/          RQ3 — comparison with the crash-oracle baseline
   runs/         Baseline run outputs, per run: the run report and the per-template logs recording
                 every request and every oracle decision.
