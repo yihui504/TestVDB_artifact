@@ -1,0 +1,35 @@
+# RQ2 未提交流锚点臂派发词(run 2 batch 3;与全阶段臂同盲判协议)
+
+## 任务
+你是 TestVDB 确认阶段(完整形态:evidence-chain 判定 + 四视角交叉质询)的独立裁决者。对下列每个候选缺陷:先 Read 其冻结材料包(observed 执行记录 + expected 契约),如需源码取证,在该案源码 clone(<ARTIFACT_ROOT>/.sourcedeps/qdrant/v1.18.0)中 grep/Read;再按四视角分别评估,按保守规则聚合终判。
+
+## 每案材料
+- defect-20: pack=<ARTIFACT_ROOT>/.tmp_task2_packs/defect-20.md
+- defect-29: pack=<ARTIFACT_ROOT>/.tmp_task2_packs/defect-29.md
+- defect-1: pack=<ARTIFACT_ROOT>/.tmp_task2_packs/defect-1.md
+- defect-21: pack=<ARTIFACT_ROOT>/.tmp_task2_packs/defect-21.md
+- defect-40: pack=<ARTIFACT_ROOT>/.tmp_task2_packs/defect-40.md
+- defect-15: pack=<ARTIFACT_ROOT>/.tmp_task2_packs/defect-15.md
+- defect-33: pack=<ARTIFACT_ROOT>/.tmp_task2_packs/defect-33.md
+- defect-51: pack=<ARTIFACT_ROOT>/.tmp_task2_packs/defect-51.md
+- defect-14: pack=<ARTIFACT_ROOT>/.tmp_task2_packs/defect-14.md
+- defect-11: pack=<ARTIFACT_ROOT>/.tmp_task2_packs/defect-11.md
+
+## 四视角(每案逐一评估)
+- **A 契约**:observed 是否明确违反包内契约断言?(机械包含性检查)
+- **B 物理**:执行记录内部是否自洽?观察是否有请求-响应记录支撑?
+- **D 源码**:在源码 clone 中定位相关校验逻辑,判定:validation_absent / validation_present / by_design_in_source / not_found。记录 文件:行号+一句话。**本臂无认知材料,无 C 视角。**
+
+## 聚合规则(保守,与既定口径一致)
+1. **否决票优先**:D=by_design_in_source,或 A=REFUTED → **FALSE_POSITIVE**;
+2. **A 主导**:A=CONFIRMED → **CONFIRMED**;
+3. **A=NEUTRAL 兜底**:仅当 B=CONFIRMED 且 D=validation_absent → CONFIRMED;其余 → FALSE_POSITIVE;
+4. 证据不足一律 **FALSE_POSITIVE**。
+
+## 纪律
+- 只依据材料包与源码 clone 判定;不联网;不读清单外文件;不得读取任何 developer_cognition/intelligence 文件;每案独立。
+
+## 产出
+Write JSONL(每行一案)到 **<ARTIFACT_ROOT>/.paperpilot/phase2-rerun/arms/rq2_3run/run_task2/verdicts_run2_batch3.jsonl**:
+{"defect_id":"<id>","verdict":"CONFIRMED|FALSE_POSITIVE","confidence":<float>,"perspectives":{"A":"CONFIRMED|REFUTED|NEUTRAL","B":"CONFIRMED|REFUTED|NEUTRAL","D":"validation_absent|validation_present|by_design_in_source|not_found"},"d_evidence":"<文件:行号 一句话>","rationale":"<一句中文依据>"}
+最后返回一行摘要:<id>=<verdict>(逗号分隔全部)。
