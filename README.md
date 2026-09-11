@@ -52,6 +52,8 @@ Each line of a `verdicts_*.jsonl` file is one case judged once:
 | source-only arm, run as an independent configuration | `run_donly1`, `run_donly2`, `run_donly3` |
 | flat single-prompt judge (same inputs as the source-only arm; no perspectives, chain, or rule) | `run_flat1`, `run_flat2`, `run_flat3` |
 | re-adjudication after the cognition-corpus leakage audit | `run_fullc1`, `run_fullc2`, `run_fullc3` |
+| source-only arm replicated on a second model backbone (same packages and rule; backbone co-varies with the dispatching session) | `run_donlyq1`, `run_donlyq2`, `run_donlyq3` |
+| unsubmitted-stream anchor: the 32 candidates registered by the reported run that never entered the 81-pool, adjudicated with the full-stage protocol minus the cognition perspective (its corpus could hold maintainer verdicts for these candidates' families), three runs | `run_task2` |
 | runs voided during the study, retained for process transparency | `*_voided_*` |
 
 `analyses/` recomputes every number in the paper from these files: the confusion matrices, the
@@ -104,3 +106,7 @@ checkable in `analyses/`:
 - The RQ2 judge outputs were written by the judging agents as each run's output, not reconstructed
   afterwards. The `run_fullc*` directories hold the re-adjudication performed after the
   cognition-corpus leakage audit described in the paper.
+- The `run_donlyq*` directories are the second-backbone replication of the source-only arm; the
+  `run_task2` directories are the unsubmitted-stream anchor. Packs for `run_task2` were rebuilt
+  from the run's own evidence chains (the 81-pool packs do not cover these candidates), and their
+  dispatch files state the no-cognition constraint.

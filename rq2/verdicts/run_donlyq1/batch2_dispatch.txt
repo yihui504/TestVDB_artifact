@@ -1,0 +1,43 @@
+# RQ2 D-单视角臂派发词(81 冻结包 × 仅源码取证;与全阶段臂同盲判协议,独立第四臂 run 1)
+
+## 任务
+你是 TestVDB 确认阶段**源码取证单视角**的独立裁决者。对下列每个候选缺陷:先 Read 其冻结材料包(observed 执行记录 + expected 契约)以了解"文档/契约承诺了什么校验、观察到了什么行为",然后**只做一件事**——在该案版本的源码 clone 中定位相关校验逻辑,并按下方规则给出终判。你不评估契约是否被违反,不评估物理证据,不参考任何维护者认知材料。
+
+## 每案材料
+- milvus_015: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_015.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- milvus_016: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_016.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- milvus_017: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_017.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- milvus_018: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_018.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- milvus_019: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_019.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- milvus_020: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_020.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.16
+- milvus_021: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_021.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.17
+- milvus_022: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_022.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.17
+- milvus_023: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_023.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.17
+- milvus_024: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_024.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.17
+- milvus_025: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_025.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.17
+- milvus_026: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_026.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.17
+- milvus_027: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_027.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.17
+- milvus_028: pack=<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\materials_complete\milvus_028.md | source=<ARTIFACT_ROOT>\.sourcedeps\milvus\v2.6.17
+
+## 源码取证(每案逐一执行)
+在**该案版本的源码 clone**中定位相关校验逻辑:grep 参数名/错误消息关键词/端点路由;可多次 grep 后 Read 命中文件。记录四值之一:
+- `validation_absent`:文档/契约承诺的校验在源码中不存在
+- `validation_present`:校验在场且与观察一致(→非缺陷证据)
+- `by_design_in_source`:源码注释或代码结构表明该行为是有意为之
+- `not_found`:定位不到相关代码
+
+必须记录关键证据(文件:行号 + 一句话)。
+
+## 终判规则(与全阶段臂的 D 语义逐字一致)
+- D=`validation_absent` → **CONFIRMED**
+- D=`validation_present` / `by_design_in_source` / `not_found` → **FALSE_POSITIVE**(源码定位失败不是行为正确的证据;有意行为与非缺陷同样不构成缺陷证据)
+
+## 纪律
+- 只依据每案的材料包与其对应版本源码 clone 判定;**不联网、不读材料清单之外的任何文件**;不得读取任何 developer_cognition / 认知 / intelligence 文件;每案独立,不受其他案影响。
+- 源码 grep 失败(版本不匹配等)时如实记 `not_found`,不得臆测。
+- 不评估契约断言是否被违反——那是另一视角的职责;你的判断只落在"承诺的校验在源码中是否存在/是否有意"上。
+
+## 产出
+Write 一个 JSONL 文件(每行一个 JSON 对象)到 **<ARTIFACT_ROOT>\.paperpilot\phase2-rerun\arms\rq2_3run\run_donlyq1\verdicts_batch2.jsonl**:
+`{"defect_id": "<case-id>", "verdict": "CONFIRMED|FALSE_POSITIVE", "confidence": <float>, "d_outcome": "validation_absent|validation_present|by_design_in_source|not_found", "d_evidence": "<文件:行号 一句话>", "rationale": "<一句中文依据>"}`
+最后返回一行摘要:<case-id>=<verdict>(逗号分隔你那批全部)。
