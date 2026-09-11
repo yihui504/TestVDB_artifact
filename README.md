@@ -106,7 +106,7 @@ checkable in `analyses/`:
 - The RQ2 judge outputs were written by the judging agents as each run's output, not reconstructed
   afterwards. The `run_fullc*` directories hold the re-adjudication performed after the
   cognition-corpus leakage audit described in the paper.
-- The `run_donlyq*` directories are the second-backbone replication of the source-only arm; the
-  `run_task2` directories are the unsubmitted-stream anchor. Packs for `run_task2` were rebuilt
-  from the run's own evidence chains (the 81-pool packs do not cover these candidates), and their
-  dispatch files state the no-cognition constraint.
+- The `run_donlyq*` directories are the second-backbone replication of the source-only arm. The
+  unsubmitted-stream anchor lives in `analyses/unsubmitted-anchor/`: 32 packs rebuilt from the
+  reported run's own evidence chains (the 81-pool packs do not cover these candidates), with the
+  no-cognition constraint stated in every dispatch file.
